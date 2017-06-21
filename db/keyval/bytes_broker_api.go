@@ -53,7 +53,7 @@ type BytesKeyIterator interface {
 }
 
 // BytesPluginBroker is a wrapper of BytesBroker. It allows to share BytesBroker's connection
-// to datastore. Each BytesPluginBroker is able to create/modify/delete key-value
+// to datastore. Every BytesPluginBroker is able to create/modify/delete key-value
 // pairs and watch distinct set of keys.
 type BytesPluginBroker interface {
 	BytesBroker

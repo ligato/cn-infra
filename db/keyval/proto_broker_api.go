@@ -57,8 +57,8 @@ type ProtoKeyValIterator interface {
 	GetNext() (kv ProtoKeyVal, allReceived bool)
 }
 
-// PluginBroker is a wrapper of Broker. It allows a plugin to access etcd. Since the PluginBroker uses Broker's connection
-// to etcd, multiple pluginBrokers can share the same underlying connection. Each of them is able to create/modify/delete key-value
+// ProtoPluginBroker is a wrapper of ProtoBroker. It allows to share ProtoBroker's connection
+// to datastore. Every ProtoPluginBroker is able to create/modify/delete key-value
 // pairs and watch distinct set of etcd keys.
 type ProtoPluginBroker interface {
 	ProtoBroker

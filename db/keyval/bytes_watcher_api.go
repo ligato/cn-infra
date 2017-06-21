@@ -23,7 +23,7 @@ type BytesWatcher interface {
 	Watch(respChan chan BytesWatchResp, keys ...string) error
 }
 
-// WatchResp represents a notification about change. It is sent through the watch resp channel.
+// BytesWatchResp represents a notification about change. It is sent through the watch resp channel.
 type BytesWatchResp interface {
 	GetChangeType() data.PutDel
 	// GetKey returns the key associated with the change
