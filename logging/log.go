@@ -4,13 +4,18 @@ package logging
 type LogLevel int
 
 const (
-	// DebugLevel is the lowest log level
+	// DebugLevel - the most verbose logging
 	DebugLevel LogLevel = iota
+	// InfoLevel level - general operational entries about what's going on inside the application.
 	InfoLevel
+	// WarningLevel - non-critical entries that deserve eyes.
 	WarningLevel
+	// ErrorLevel level - used for errors that should definitely be noted.
 	ErrorLevel
-	PanicLevel
+	// FatalLevel - logs and then calls `os.Exit(1)`.
 	FatalLevel
+	// PanicLevel - highest level of severity. Logs and then calls panic with the message passed in.
+	PanicLevel
 )
 
 // Logger provides logging capabilities
