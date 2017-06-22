@@ -70,7 +70,7 @@ type Registry interface {
 	// GetLevel returns the currently set log level of the logger from registry
 	GetLevel(logger string) (string, error)
 	// GetLoggerByName returns a logger instance identified by name from registry
-	GetLoggerByName(name string) (*Logger, bool)
+	GetLoggerByName(name string) (Logger, bool)
 	// ClearRegistry removes all loggers except the default one from registry
 	ClearRegistry()
 }

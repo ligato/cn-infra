@@ -16,7 +16,7 @@ package keyval
 
 import (
 	"github.com/golang/protobuf/proto"
-	"github.com/ligato/cnf-infra/db"
+	"github.com/ligato/cn-infra/db"
 )
 
 // ProtoWatcher define API for monitoring changes in a datastore

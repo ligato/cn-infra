@@ -14,7 +14,7 @@
 
 package keyval
 
-import "github.com/ligato/cnf-infra/db"
+import "github.com/ligato/cn-infra/db"
 
 // BytesWatcher define API for monitoring changes in datastore
 type BytesWatcher interface {
