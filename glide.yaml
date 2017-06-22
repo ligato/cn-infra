@@ -1,0 +1,15 @@
+package: github.com/ligato/cn-infra
+import:
+- package: github.com/Sirupsen/logrus
+  version: v1.0.0
+- package: github.com/golang/protobuf
+  version: 2bba0603135d7d7f5cb73b2125beeda19c09f4ef
+  subpackages:
+  - proto
+- package: github.com/gorilla/mux
+  version: v1.4.0
+- package: github.com/satori/go.uuid
+  version: v1.1.0
+testImport:
+- package: github.com/onsi/gomega
+  version: v1.1.0
