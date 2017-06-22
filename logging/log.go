@@ -1,3 +1,17 @@
+// Copyright (c) 2017 Cisco and/or its affiliates.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package logging
 
 // LogLevel represents severity of log record
@@ -8,8 +22,8 @@ const (
 	DebugLevel LogLevel = iota
 	// InfoLevel level - general operational entries about what's going on inside the application.
 	InfoLevel
-	// WarningLevel - non-critical entries that deserve eyes.
-	WarningLevel
+	// WarnLevel - non-critical entries that deserve eyes.
+	WarnLevel
 	// ErrorLevel level - used for errors that should definitely be noted.
 	ErrorLevel
 	// FatalLevel - logs and then calls `os.Exit(1)`.
@@ -38,7 +52,7 @@ type LogWithLevel interface {
 	// Info logs using Info level
 	Info(args ...interface{})
 	// Warning logs using Warning level
-	Warning(args ...interface{})
+	Warn(args ...interface{})
 	// Error logs using Error level
 	Error(args ...interface{})
 	// Panic logs using Panic level and panics
@@ -59,4 +73,24 @@ type Registry interface {
 	GetLoggerByName(name string) (*Logger, bool)
 	// ClearRegistry removes all loggers except the default one from registry
 	ClearRegistry()
+}
+
+// Convert the Level to a string. E.g. PanicLevel becomes "panic".
+func (level LogLevel) String() string {
+	switch level {
+	case DebugLevel:
+		return "debug"
+	case InfoLevel:
+		return "info"
+	case WarnLevel:
+		return "warning"
+	case ErrorLevel:
+		return "error"
+	case FatalLevel:
+		return "fatal"
+	case PanicLevel:
+		return "panic"
+	}
+
+	return "unknown"
 }
