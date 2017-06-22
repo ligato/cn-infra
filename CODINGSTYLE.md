@@ -1,5 +1,5 @@
 # Coding style
 
-- use `gofmt` to format all the source files.
-- address issues discovered by `golint` tool.
-- try to follow recommendations in [effective go](https://golang.org/doc/effective_go.html)
+- Use `gofmt` to format all source files.
+- Address any issues that were discovered by the `golint` tool.
+- Follow recommendations in [effective go](https://golang.org/doc/effective_go.html)
