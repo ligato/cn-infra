@@ -327,7 +327,7 @@ func TestParseLevel(t *testing.T) {
 	gomega.Expect(err).To(gomega.BeNil())
 	gomega.Expect(l).To(gomega.BeEquivalentTo(DebugLevel))
 
-	l, err = lg.ParseLevel("invalid")
+	_, err = lg.ParseLevel("invalid")
 	gomega.Expect(err).NotTo(gomega.BeNil())
 	gomega.Expect(err.Error()).To(gomega.BeEquivalentTo("not a valid logrus Level: \"invalid\""))
 }

@@ -87,7 +87,7 @@ func NewNamed(name string) (*Logger, error) {
 
 func checkLoggerName(name string) error {
 	if !validLoggerName(name) {
-		return fmt.Errorf("Logger name can contain only alphanum charecters, dash and comma.")
+		return fmt.Errorf("Logger name can contain only alphanum characters, dash and comma.")
 	}
 	return nil
 }

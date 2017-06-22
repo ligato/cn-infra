@@ -16,10 +16,10 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/gorilla/mux"
-	"net/http"
-	"github.com/ligato/cn-infra/logging/logrus"
 	"fmt"
+	"github.com/gorilla/mux"
+	"github.com/ligato/cn-infra/logging/logrus"
+	"net/http"
 	"time"
 )
 
