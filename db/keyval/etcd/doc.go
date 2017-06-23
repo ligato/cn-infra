@@ -14,17 +14,17 @@
 
 // Package etcd contains abstraction on top of the key-value data store. The package uses etcd version 3.
 //
-// The entity that provides access to the data store is called BytesDataBrokerEtcd.
+// The entity that provides access to the data store is called BytesBrokerEtcd.
 //
-//      +-----------------------+       crud/watch         ______
-//      |  BytesDataBrokerEtcd  |          ---->          | ETCD |
-//      +-----------------------+        []byte           +------+
+//      +-------------------+       crud/watch         ______
+//      |  BytesBrokerEtcd  |          ---->          | ETCD |
+//      +-------------------+        []byte           +------+
 //
-// To create a BytesDataBrokerEtcd use the following function
+// To create a BytesBrokerEtcd use the following function
 //
 //   import  "github.com/ligato/cn-infra/db/keyval/etcd"
 //
-//   db := etcd.NewBytesDataBroker(config)
+//   db := etcd.NewBytesBrokerEtcd(config)
 //
 // config is a path to a file with the following format:
 //
@@ -44,9 +44,9 @@
 //
 // Alternatively, you may connect to etcd by your self and initialize data broker with a given client.
 //
-//    db := etcd.NewBytesDataBrokerUsingClient(client)
+//    db := etcd.NewBytesBrokerUsingClient(client)
 //
-// Created BytesDataBrokerEtcd implements Broker and Watcher interfaces. The example of usage can be seen below.
+// Created BytesBrokerEtcd implements Broker and Watcher interfaces. The example of usage can be seen below.
 //
 // To insert single key-value pair into etcd run:
 //		db.Put(key, data)
@@ -133,9 +133,9 @@
 //     }
 //
 //
-// BytesDataBrokerEtcd also allows to create BytesPluginBrokerEtcd. BytesPluginBrokerEtcd instances share BytesDataBrokerEtcd's connection
+// BytesBrokerEtcd also allows to create BytesPluginBrokerEtcd. BytesPluginBrokerEtcd instances share BytesBrokerEtcd's connection
 // to the etcd. Another benefit gained by using BytesPluginBrokerEtcd is the option to setup a prefix. The prefix
-// will be automatically prepended to all keys in the put/delete requests made from the BytesPluginDataBroker. In case of
+// will be automatically prepended to all keys in the put/delete requests made from the BytesPluginBrokerEtcd. In case of
 // get-like calls (GetValue, ListValues, ...) the prefixed is trimmed from key and returned value contains only part following the
 // prefix in the key field.
 //
@@ -144,9 +144,9 @@
 //      +-----------------------+
 //              |
 //              |
-//               ----------------->   +-----------------------+       crud/watch         ______
-//			                          |  BytesDataBrokerEtcd  |       ---->             | ETCD |
-//               ----------------->   +-----------------------+        ([]byte)         +------+
+//               ----------------->   +-------------------+       crud/watch         ______
+//			                          |  BytesBrokerEtcd  |       ---->             | ETCD |
+//               ----------------->   +-------------------+        ([]byte)         +------+
 //              |
 //              |
 //      +-----------------------+
@@ -154,7 +154,7 @@
 //      +-----------------------+
 //
 // To create a BytesPluginBrokerEtcd run
-//    pdb := db.NewPluginDataBroker(prefix)
+//    pdb := db.NewPluginBroker(prefix)
 //
 // BytesPluginBrokerEtcd implements Broker and Watcher interfaces thus the usage is the same as shown above.
 //
@@ -163,18 +163,18 @@
 // into []byte behind the scenes.
 //
 //
-//      +-----------------+-----------------------+       crud/watch         ______
-//      |  ProtoDecorator |  ProtoDataBrokerEtcd  |       ---->             | ETCD |
-//      +-----------------+-----------------------+        ([]byte)         +------+
+//      +-----------------+-------------------+       crud/watch         ______
+//      |  ProtoDecorator |  ProtoBrokerEtcd  |       ---->             | ETCD |
+//      +-----------------+-------------------+        ([]byte)         +------+
 //        (proto.Message)
 //
-// The api of proto decorator is very similar to the ProtoDataBrokerEtcd. The difference is that arguments of type []byte
+// The api of proto decorator is very similar to the ProtoBrokerEtcd. The difference is that arguments of type []byte
 // are replaced by arguments of type proto.Message and in some case one of the return values is transformed to output argument.
 //
 // Example of decorator initialization
 //
-//    // db is BytesDataBrokerEtcd initialized as shown at the top of the page
-//    protoBroker := etcd.NewProtoDataBrokerEtcd(db)
+//    // db is BytesBrokerEtcd initialized as shown at the top of the page
+//    protoBroker := etcd.NewProtoBrokerEtcd(db)
 //
 // The only difference in the Put/Delete functions is type of the argument, apart from that usage is the same as described above.
 //

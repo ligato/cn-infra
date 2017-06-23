@@ -42,13 +42,13 @@ func main() {
 	}
 
 	//create connection to etcd
-	db, err := etcd.NewBytesDataBroker(cfg)
+	db, err := etcd.NewBytesBrokerEtcd(cfg)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 	//initialize proto decorator
-	protoBroker := etcd.NewProtoDataBrokerEtcd(db)
+	protoBroker := etcd.NewProtoBrokerEtcd(db)
 
 	respChan := make(chan keyval.ProtoWatchResp, 0)
 	sigChan := make(chan os.Signal, 1)

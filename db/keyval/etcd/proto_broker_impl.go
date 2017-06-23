@@ -19,14 +19,14 @@ import (
 	"github.com/ligato/cn-infra/db/keyval"
 )
 
-// ProtoDataBrokerEtcd is decorator that allows to read/write proto file modelled data.
+// ProtoBrokerEtcd is decorator that allows to read/write proto file modelled data.
 // It marshals/unmarshals go structures to slice of bytes and vice versa behind the scenes.
-type ProtoDataBrokerEtcd struct {
+type ProtoBrokerEtcd struct {
 	broker     *BytesBrokerEtcd
 	serializer keyval.Serializer
 }
 
-// ProtoPluginBrokerEtcd is a wrapper of ProtoDataBrokerEtcd. It allows a plugin to access etcd. Since the PluginBroker uses Broker's connection
+// ProtoPluginBrokerEtcd is a wrapper of ProtoBrokerEtcd. It allows a plugin to access etcd. Since the PluginBroker uses Broker's connection
 // to etcd, multiple pluginDataBrokers can share the same underlying connection. Each of them is able to create/modify/delete key-value
 // pairs and watch distinct set of etcd keys.
 type ProtoPluginBrokerEtcd struct {
@@ -51,20 +51,20 @@ type protoKeyVal struct {
 	serializer keyval.Serializer
 }
 
-// NewProtoDataBrokerEtcd initializes proto decorator. The default serializer is used - SerializerProto.
-func NewProtoDataBrokerEtcd(db *BytesBrokerEtcd) *ProtoDataBrokerEtcd {
-	return &ProtoDataBrokerEtcd{db, &keyval.SerializerProto{}}
+// NewProtoBrokerEtcd initializes proto decorator. The default serializer is used - SerializerProto.
+func NewProtoBrokerEtcd(db *BytesBrokerEtcd) *ProtoBrokerEtcd {
+	return &ProtoBrokerEtcd{db, &keyval.SerializerProto{}}
 }
 
-// NewDataBrokerWithSerializer initializes proto decorator with the specified serializer.
-func NewDataBrokerWithSerializer(db *BytesBrokerEtcd, serializer keyval.Serializer) *ProtoDataBrokerEtcd {
-	return &ProtoDataBrokerEtcd{db, serializer}
+// NewProtoBrokerWithSerializer initializes proto decorator with the specified serializer.
+func NewProtoBrokerWithSerializer(db *BytesBrokerEtcd, serializer keyval.Serializer) *ProtoBrokerEtcd {
+	return &ProtoBrokerEtcd{db, serializer}
 }
 
-// NewPluginDataBroker creates a new instance of the proxy that gives
-// a plugin access to ProtoDataBrokerEtcd
-func (db *ProtoDataBrokerEtcd) NewPluginDataBroker(prefix string) *ProtoPluginBrokerEtcd {
-	return &ProtoPluginBrokerEtcd{db.broker.NewPluginDataBroker(prefix), db.serializer}
+// NewPluginBroker creates a new instance of the proxy that gives
+// a plugin access to ProtoBrokerEtcd
+func (db *ProtoBrokerEtcd) NewPluginBroker(prefix string) *ProtoPluginBrokerEtcd {
+	return &ProtoPluginBrokerEtcd{db.broker.NewPluginBroker(prefix), db.serializer}
 }
 
 // NewTxn creates a new Data Broker transaction. A transaction can
@@ -72,7 +72,7 @@ func (db *ProtoDataBrokerEtcd) NewPluginDataBroker(prefix string) *ProtoPluginBr
 // store together. After a transaction has been created, one or
 // more operations (put or delete) can be added to the transaction
 // before it is committed.
-func (db *ProtoDataBrokerEtcd) NewTxn() keyval.ProtoTxn {
+func (db *ProtoBrokerEtcd) NewTxn() keyval.ProtoTxn {
 	return &protoTxn{txn: db.broker.NewTxn(), serializer: db.serializer}
 }
 
@@ -88,7 +88,7 @@ func (pdb *ProtoPluginBrokerEtcd) NewTxn() keyval.ProtoTxn {
 // Put writes the provided key-value item into the data store.
 //
 // Returns an error if the item could not be written, ok otherwise.
-func (db *ProtoDataBrokerEtcd) Put(key string, value proto.Message) error {
+func (db *ProtoBrokerEtcd) Put(key string, value proto.Message) error {
 	return putProtoInternal(db.broker, db.serializer, key, value)
 }
 
@@ -110,7 +110,7 @@ func putProtoInternal(broker keyval.BytesBroker, serializer keyval.Serializer, k
 }
 
 // Delete removes from data store key-value items stored under key.
-func (db *ProtoDataBrokerEtcd) Delete(key string) (bool, error) {
+func (db *ProtoBrokerEtcd) Delete(key string) (bool, error) {
 	return db.broker.Delete(key)
 }
 
@@ -120,7 +120,7 @@ func (pdb *ProtoPluginBrokerEtcd) Delete(key string) (bool, error) {
 }
 
 // Watch subscribes for changes in Data Store associated with the key. respChannel is used for delivery watch events
-func (db *ProtoDataBrokerEtcd) Watch(resp chan keyval.ProtoWatchResp, keys ...string) error {
+func (db *ProtoBrokerEtcd) Watch(resp chan keyval.ProtoWatchResp, keys ...string) error {
 	byteCh := make(chan keyval.BytesWatchResp, 0)
 	err := db.broker.Watch(byteCh, keys...)
 	if err != nil {
@@ -142,7 +142,7 @@ func (db *ProtoDataBrokerEtcd) Watch(resp chan keyval.ProtoWatchResp, keys ...st
 // If the object was not found, the function returns found=false.
 // Function returns revision=revision of the latest modification
 // If an error was encountered, the function returns an error.
-func (db *ProtoDataBrokerEtcd) GetValue(key string, reqObj proto.Message) (found bool, revision int64, err error) {
+func (db *ProtoBrokerEtcd) GetValue(key string, reqObj proto.Message) (found bool, revision int64, err error) {
 	return getValueProtoInternal(db.broker, db.serializer, key, reqObj)
 }
 
@@ -177,7 +177,7 @@ func getValueProtoInternal(broker keyval.BytesBroker, serializer keyval.Serializ
 }
 
 // ListValues retrieves an iterator for elements stored under the provided key.
-func (db *ProtoDataBrokerEtcd) ListValues(key string) (keyval.ProtoKeyValIterator, error) {
+func (db *ProtoBrokerEtcd) ListValues(key string) (keyval.ProtoKeyValIterator, error) {
 	return listValuesProtoInternal(db.broker, db.serializer, key)
 }
 
@@ -196,7 +196,7 @@ func listValuesProtoInternal(broker keyval.BytesBroker, serializer keyval.Serial
 }
 
 // ListKeys is similar to the ListValues the difference is that values are not fetched
-func (db *ProtoDataBrokerEtcd) ListKeys(prefix string) (keyval.ProtoKeyIterator, error) {
+func (db *ProtoBrokerEtcd) ListKeys(prefix string) (keyval.ProtoKeyIterator, error) {
 	return listKeysProtoInternal(db.broker, prefix)
 }
 
@@ -215,7 +215,7 @@ func listKeysProtoInternal(broker keyval.BytesBroker, prefix string) (keyval.Pro
 }
 
 // ListValuesRange retrieves an iterator for elements stored in specified range.
-func (db *ProtoDataBrokerEtcd) ListValuesRange(fromPrefix string, toPrefix string) (keyval.ProtoKeyValIterator, error) {
+func (db *ProtoBrokerEtcd) ListValuesRange(fromPrefix string, toPrefix string) (keyval.ProtoKeyValIterator, error) {
 
 	ctx, err := db.broker.ListValuesRange(fromPrefix, toPrefix)
 	if err != nil {

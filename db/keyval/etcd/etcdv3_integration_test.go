@@ -220,12 +220,12 @@ func (embd *embededEtcd) cleanDs() {
 
 func setupBrokers(t *testing.T) {
 	var err error
-	db, err = NewBytesDataBrokerUsingClient(v3client.New(embd.etcd.Server))
+	db, err = NewBytesBrokerUsingClient(v3client.New(embd.etcd.Server))
 
 	gomega.Expect(err).To(gomega.BeNil())
 	gomega.Expect(db).NotTo(gomega.BeNil())
 	// create BytesPluginBrokerEtcd with prefix
-	pdb = db.NewPluginDataBroker(prefix)
+	pdb = db.NewPluginBroker(prefix)
 	gomega.Expect(pdb).NotTo(gomega.BeNil())
 
 }

@@ -78,22 +78,22 @@ func SetLogger(l logging.Logger) {
 	log = l
 }
 
-// NewBytesDataBroker creates a new instance of the Etcdv3 Data Broker. Connection
+// NewBytesBrokerEtcd creates a new instance of the Etcdv3 Data Broker. Connection
 // to etcd is created based on the settings in provided config file.
 // Data Broker is a facade (visible front-end) to the configuration
 // data store.
-func NewBytesDataBroker(config string) (*BytesBrokerEtcd, error) {
+func NewBytesBrokerEtcd(config string) (*BytesBrokerEtcd, error) {
 	etcdClientKV, err := initRemoteClient(config)
 	if err != nil {
 		return nil, err
 	}
-	return NewBytesDataBrokerUsingClient(etcdClientKV)
+	return NewBytesBrokerUsingClient(etcdClientKV)
 }
 
-// NewBytesDataBrokerUsingClient creates a new instance of BytesBrokerEtcd using the provided
+// NewBytesBrokerUsingClient creates a new instance of BytesBrokerEtcd using the provided
 // etcdv3 client
-func NewBytesDataBrokerUsingClient(etcdClient *clientv3.Client) (*BytesBrokerEtcd, error) {
-	log.Debug("NewBytesDataBroker", etcdClient)
+func NewBytesBrokerUsingClient(etcdClient *clientv3.Client) (*BytesBrokerEtcd, error) {
+	log.Debug("NewBytesBrokerEtcd", etcdClient)
 
 	dataBroker := BytesBrokerEtcd{}
 	dataBroker.etcdClient = etcdClient
@@ -111,10 +111,10 @@ func (db *BytesBrokerEtcd) Close() error {
 	return nil
 }
 
-// NewPluginDataBroker creates a new instance of the proxy that gives
+// NewPluginBroker creates a new instance of the proxy that gives
 // a plugin access to BytesBrokerEtcd.
 // Prefix (empty string is valid value) will be prepend to key argument in all calls on created BytesPluginBrokerEtcd.
-func (db *BytesBrokerEtcd) NewPluginDataBroker(prefix string) *BytesPluginBrokerEtcd {
+func (db *BytesBrokerEtcd) NewPluginBroker(prefix string) *BytesPluginBrokerEtcd {
 	return &BytesPluginBrokerEtcd{kv: namespace.NewKV(db.etcdClient, prefix), watcher: namespace.NewWatcher(db.etcdClient, prefix), closeCh: db.closeCh}
 }
 

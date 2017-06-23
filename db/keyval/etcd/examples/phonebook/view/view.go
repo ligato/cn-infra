@@ -37,14 +37,14 @@ func main() {
 	}
 
 	//create connection to etcd
-	db, err := etcd.NewBytesDataBroker(cfg)
+	db, err := etcd.NewBytesBrokerEtcd(cfg)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	//initialize proto decorator
-	protoDb := etcd.NewProtoDataBrokerEtcd(db)
+	protoDb := etcd.NewProtoBrokerEtcd(db)
 
 	//retrieve all contacts
 	resp, err := protoDb.ListValues(phonebook.EtcdPath())

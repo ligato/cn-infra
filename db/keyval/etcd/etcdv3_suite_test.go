@@ -239,7 +239,7 @@ func TestDelete(t *testing.T) {
 
 func TestNewPluginDataBroker(t *testing.T) {
 	gomega.RegisterTestingT(t)
-	pdb := dataBroker.NewPluginDataBroker("pluginname")
+	pdb := dataBroker.NewPluginBroker("pluginname")
 	gomega.Expect(pdb).NotTo(gomega.BeNil())
 }
 
