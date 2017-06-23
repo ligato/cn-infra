@@ -34,17 +34,17 @@ func TestEntryWithError(t *testing.T) {
 
 	err := fmt.Errorf("kaboom at layer %d", 4711)
 
-	gomega.Expect(err).To(gomega.BeEquivalentTo(WithError(err).ent.Data["error"]))
+	gomega.Expect(err).To(gomega.BeEquivalentTo(WithError(err).Entry.Data["error"]))
 
 	logger := New()
 	logger.std.Out = &bytes.Buffer{}
 	entry := NewEntry(logger)
 
-	gomega.Expect(err).To(gomega.BeEquivalentTo(entry.WithError(err).ent.Data["error"]))
+	gomega.Expect(err).To(gomega.BeEquivalentTo(entry.WithError(err).Entry.Data["error"]))
 
 	ErrorKey = "err"
 
-	gomega.Expect(err).To(gomega.BeEquivalentTo(entry.WithError(err).ent.Data["err"]))
+	gomega.Expect(err).To(gomega.BeEquivalentTo(entry.WithError(err).Entry.Data["err"]))
 
 }
 
