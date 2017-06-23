@@ -49,18 +49,28 @@ type Logger interface {
 type LogWithLevel interface {
 	// Debug logs using Debug level
 	Debug(args ...interface{})
+	// Debugf prints formatted log using Debug level
+	Debugf(format string, args ...interface{})
 	// Info logs using Info level
 	Info(args ...interface{})
+	// Infof prints formatted log using Info level
+	Infof(format string, args ...interface{})
 	// Warning logs using Warning level
 	Warn(args ...interface{})
+	// Warnf prints formatted log using Warn level
+	Warnf(format string, args ...interface{})
 	// Error logs using Error level
 	Error(args ...interface{})
 	// Errorf prints formatted log using Error level
 	Errorf(format string, args ...interface{})
 	// Panic logs using Panic level and panics
 	Panic(args ...interface{})
+	// Panicf prints formatted log using Panic level and panic
+	Panicf(format string, args ...interface{})
 	// Fatal logs using Fatal level and calls os.Exit(1)
 	Fatal(args ...interface{})
+	// Fatalf prints formatted log using Fatal level and calls os.Exit(1)
+	Fatalf(format string, args ...interface{})
 }
 
 // Registry groups multiple Logger instances and allows to mange their log levels.
