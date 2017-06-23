@@ -31,6 +31,11 @@ import (
 	"regexp"
 )
 
+// Logger is wrapper of Logrus logger. In addition to Logrus functionality it
+// allows to define static log fields that are added to all log entries. It also automatically
+// appends file name and line where the log is coming from. In order to distinguish logs from different
+// go routines a tag (number that is based on the stack address) is computed. To achieve better readability
+// numeric value can be replaced by a string using SetTag function.
 type Logger struct {
 	std          *lg.Logger
 	mu           sync.Mutex
@@ -107,10 +112,12 @@ func NewCustomFormatter() *CustomFormatter {
 	return &CustomFormatter{}
 }
 
+// StandardLogger returns internally used Logrus logger
 func (ref *Logger) StandardLogger() *lg.Logger {
 	return ref.std
 }
 
+// GetLineInfo returns the location (filename + linenumber) of the caller.
 func (ref *Logger) GetLineInfo(depth int) string {
 	_, f, l, ok := runtime.Caller(depth)
 	if !ok {
@@ -129,6 +136,7 @@ func (ref *Logger) GetLineInfo(depth int) string {
 	return fmt.Sprintf("%s(%s)", file, line)
 }
 
+// InitTag sets the tag for the main thread.
 func (ref *Logger) InitTag(tag ...string) {
 	ref.rw.Lock()
 	defer ref.rw.Unlock()
@@ -141,6 +149,7 @@ func (ref *Logger) InitTag(tag ...string) {
 	ref.tagmap[0] = t
 }
 
+// GetTag returns the tag identifying the caller's go routine.
 func (ref *Logger) GetTag() string {
 	ref.rw.RLock()
 	defer ref.rw.RUnlock()
@@ -153,6 +162,8 @@ func (ref *Logger) GetTag() string {
 	return tag
 }
 
+// SetTag allows to define a string tag for the current go routine. Otherwise
+// numeric identification is used.
 func (ref *Logger) SetTag(tag ...string) {
 	ref.rw.Lock()
 	defer ref.rw.Unlock()
@@ -166,6 +177,7 @@ func (ref *Logger) SetTag(tag ...string) {
 	ref.tagmap[ti] = t
 }
 
+// ClearTag removes the previously set string tag for the current go routine.
 func (ref *Logger) ClearTag() {
 	ref.rw.Lock()
 	defer ref.rw.Unlock()
@@ -173,7 +185,7 @@ func (ref *Logger) ClearTag() {
 	delete(ref.tagmap, ti)
 }
 
-// SetStaticField sets a map of fields that will be part of the each subsequent
+// SetStaticFields sets a map of fields that will be part of the each subsequent
 // log entry of the logger
 func (ref *Logger) SetStaticFields(fields map[string]interface{}) {
 	ref.rw.Lock()
@@ -261,11 +273,6 @@ func (ref *Logger) WithError(err error) *Entry {
 	return ref.withField(ErrorKey, err, 1)
 }
 
-// WithField creates an entry from the standard logger and adds a field to
-// it. If you want multiple fields, use `WithFields`.
-//
-// Note that it doesn't log until you call Debug, Print, Info, Warn, Fatal
-// or Panic on the Entry it returns.
 func (ref *Logger) withField(key string, value interface{}, depth ...int) *Entry {
 	d := 1
 	if depth != nil && len(depth) > 0 {
@@ -274,16 +281,15 @@ func (ref *Logger) withField(key string, value interface{}, depth ...int) *Entry
 	return ref.withFields(Fields{key: value}, d)
 }
 
+// WithField creates an entry from the standard logger and adds a field to
+// it. If you want multiple fields, use `WithFields`.
+//
+// Note that it doesn't log until you call Debug, Print, Info, Warn, Fatal
+// or Panic on the Entry it returns.
 func (ref *Logger) WithField(key string, value interface{}) logging.LogWithLevel {
 	return ref.withField(key, value)
 }
 
-// WithFields creates an entry from the standard logger and adds multiple
-// fields to it. This is simply a helper for `WithField`, invoking it
-// once for each field.
-//
-// Note that it doesn't log until you call Debug, Print, Info, Warn, Fatal
-// or Panic on the Entry it returns.
 func (ref *Logger) withFields(fields Fields, depth ...int) *Entry {
 	d := ref.depth
 	if depth != nil && len(depth) > 0 {
@@ -310,10 +316,16 @@ func (ref *Logger) withFields(fields Fields, depth ...int) *Entry {
 	entry := ref.std.WithFields(f)
 	return &Entry{
 		logger: ref,
-		ent:    entry,
+		Entry:  entry,
 	}
 }
 
+// WithFields creates an entry from the standard logger and adds multiple
+// fields to it. This is simply a helper for `WithField`, invoking it
+// once for each field.
+//
+// Note that it doesn't log until you call Debug, Print, Info, Warn, Fatal
+// or Panic on the Entry it returns.
 func (ref *Logger) WithFields(fields map[string]interface{}) logging.LogWithLevel {
 	return ref.withFields(Fields(fields))
 }

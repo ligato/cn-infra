@@ -22,8 +22,10 @@ import (
 )
 
 var (
-	logf     *Logger
-	depth    int
+	// logf is the default logger used by package global functions.
+	logf  *Logger
+	depth int
+	// ErrorKey is the key used to log an error object in structured form. See WithFields function.
 	ErrorKey string
 
 	// PanicLevel level, highest level of severity. Logs and then calls panic with the
@@ -44,6 +46,7 @@ var (
 	DebugLevel = lg.DebugLevel
 )
 
+// Fields is a type for structured log entries.
 type Fields map[string]interface{}
 
 const locKey = "loc"
@@ -58,22 +61,27 @@ func init() {
 	ErrorKey = lg.ErrorKey
 }
 
+// StandardLogger default logger instance used by package level functions.
 func StandardLogger() *Logger {
 	return logf
 }
 
+// InitTag sets the tag for the main go routine in the standard logger.
 func InitTag(tag ...string) {
 	logf.InitTag(tag...)
 }
 
+// GetTag returns the tag set for the current go routine in the standard logger.
 func GetTag() string {
 	return logf.GetTag()
 }
 
+// SetTag sets a tag in the standard logger.
 func SetTag(tag ...string) {
 	logf.SetTag(tag...)
 }
 
+// ClearTag remove a previously set tag in the standard logger.
 func ClearTag() {
 	logf.ClearTag()
 }
