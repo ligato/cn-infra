@@ -45,6 +45,9 @@ type Logger interface {
 	WithFields(fields map[string]interface{}) LogWithLevel
 }
 
+// Fields is a type accepted by WithFields method. It can be used to instantiate map using shorter notation.
+type Fields map[string]interface{}
+
 // LogWithLevel allows to log with different log levels
 type LogWithLevel interface {
 	// Debug logs using Debug level
