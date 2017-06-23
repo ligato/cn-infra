@@ -3,10 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"os"
-	"github.com/ligato/cn-infra/db/keyval/etcd/examples/phonebook/model/phonebook"
-	"github.com/ligato/cn-infra/db/keyval/etcd"
 	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ligato/cn-infra/db/keyval/etcd"
+	"github.com/ligato/cn-infra/db/keyval/etcd/examples/phonebook/model/phonebook"
+	"os"
 )
 
 const (

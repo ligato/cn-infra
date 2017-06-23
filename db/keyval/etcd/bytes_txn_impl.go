@@ -16,15 +16,15 @@ package etcd
 
 import (
 	"github.com/coreos/etcd/clientv3"
-	"golang.org/x/net/context"
 	"github.com/ligato/cn-infra/db/keyval"
+	"golang.org/x/net/context"
 )
 
 // Txn allows to group operations into the transaction. Transaction executes multiple operations
 // in a more efficient way in contrast to executing them one by one.
 type bytesTxn struct {
-	ops    []clientv3.Op
-	kv     clientv3.KV
+	ops []clientv3.Op
+	kv  clientv3.KV
 }
 
 // Put adds a new 'put' operation to a previously created transaction.
