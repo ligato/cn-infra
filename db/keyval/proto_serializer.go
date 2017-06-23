@@ -12,12 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package etcd
+package keyval
 
 import (
 	"encoding/json"
 	"github.com/golang/protobuf/proto"
 )
+
+// Serializer is responsible for transformation of data stored in etcd.
+type Serializer interface {
+	Unmarshal(data []byte, protoData proto.Message) error
+	Marshal(message proto.Message) ([]byte, error)
+}
 
 // SerializerProto serializes proto message using proto serializer
 type SerializerProto struct{}

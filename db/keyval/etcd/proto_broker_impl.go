@@ -53,7 +53,7 @@ type protoKeyVal struct {
 
 // NewProtoDataBrokerEtcd initializes proto decorator. The default serializer is used - SerializerProto.
 func NewProtoDataBrokerEtcd(db *BytesBrokerEtcd) *ProtoDataBrokerEtcd {
-	return &ProtoDataBrokerEtcd{db, &SerializerProto{}}
+	return &ProtoDataBrokerEtcd{db, &keyval.SerializerProto{}}
 }
 
 // NewDataBrokerWithSerializer initializes proto decorator with the specified serializer.
@@ -120,9 +120,9 @@ func (pdb *ProtoPluginBrokerEtcd) Delete(key string) (bool, error) {
 }
 
 // Watch subscribes for changes in Data Store associated with the key. respChannel is used for delivery watch events
-func (db *ProtoDataBrokerEtcd) Watch(resp chan keyval.ProtoWatchResp, key string) error {
+func (db *ProtoDataBrokerEtcd) Watch(resp chan keyval.ProtoWatchResp, keys ...string) error {
 	byteCh := make(chan keyval.BytesWatchResp, 0)
-	err := db.broker.Watch(byteCh, key)
+	err := db.broker.Watch(byteCh, keys...)
 	if err != nil {
 		return err
 	}
@@ -249,9 +249,9 @@ func (ctx *protoKeyIterator) GetNext() (key string, rev int64, lastReceived bool
 }
 
 // Watch for changes in Data Store respChannel is used for receiving watch events
-func (pdb *ProtoPluginBrokerEtcd) Watch(key string, resp chan keyval.ProtoWatchResp) error {
+func (pdb *ProtoPluginBrokerEtcd) Watch(resp chan keyval.ProtoWatchResp, keys ...string) error {
 	byteCh := make(chan keyval.BytesWatchResp, 0)
-	err := pdb.pluginBroker.Watch(byteCh, key)
+	err := pdb.pluginBroker.Watch(byteCh, keys...)
 	if err != nil {
 		return err
 	}
