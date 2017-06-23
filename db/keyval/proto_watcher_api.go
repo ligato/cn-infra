@@ -33,7 +33,5 @@ type ProtoWatchResp interface {
 	// GetValue unmarshals the value after the change into the msg argument
 	GetValue(msg proto.Message) error
 	// GetPrevValue unmarshals the value before the change into the msg argument
-	GetPrevValue(msg proto.Message) error
-	// GetRevision returns a revision associated with the WatchResp
 	GetRevision() int64
 }

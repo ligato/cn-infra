@@ -55,6 +55,8 @@ type LogWithLevel interface {
 	Warn(args ...interface{})
 	// Error logs using Error level
 	Error(args ...interface{})
+	// Errorf prints formatted log using Error level
+	Errorf(format string, args ...interface{})
 	// Panic logs using Panic level and panics
 	Panic(args ...interface{})
 	// Fatal logs using Fatal level and calls os.Exit(1)
