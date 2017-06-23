@@ -63,7 +63,7 @@ type LogWithLevel interface {
 	Fatal(args ...interface{})
 }
 
-// Registry defines a set of public function for interaction with the logger Registry
+// Registry groups multiple Logger instances and allows to mange their log levels.
 type Registry interface {
 	// List Loggers returns a map (loggerName => log level)
 	ListLoggers() map[string]string
@@ -77,7 +77,7 @@ type Registry interface {
 	ClearRegistry()
 }
 
-// Convert the Level to a string. E.g. PanicLevel becomes "panic".
+// String converts the Level to a string. E.g. PanicLevel becomes "panic".
 func (level LogLevel) String() string {
 	switch level {
 	case DebugLevel:
