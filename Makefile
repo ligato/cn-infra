@@ -47,12 +47,25 @@ define lint_only
     @echo "# done"
 endef
 
+# build examples only
+define build_examples_only
+    @echo "# building examples"
+    @cd db/keyval/etcd/examples && make build
+    @cd logging/logrus/examples && make build
+    @echo "# done"
+endef
+
+# clean examples only
+define clean_examples_only
+    @echo "# cleaning examples"
+    @cd db/keyval/etcd/examples && make clean
+    @cd logging/logrus/examples && make clean
+    @echo "# done"
+endef
+
 # build all binaries
 build:
-	$(call build_gen_agent_only)
-	$(call build_vpp_agent_only)
-	$(call build_vpp_agent_ctl_only)
-	$(call build_agentctl_only)
+	$(call build_examples_only)
 
 # install dependencies
 install-dep:
@@ -86,6 +99,7 @@ lint:
 # clean
 clean:
 	@echo "# cleanup completed"
+	$(call clean_examples_only)
 
 # run all targets
 all:
@@ -93,4 +107,4 @@ all:
 	$(call test_only)
 	$(call install_only)
 
-.PHONY: build install-dep test lint clean
+.PHONY: build update-dep install-dep test lint clean

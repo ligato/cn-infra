@@ -12,9 +12,9 @@ generate:
 	@echo "# done"
 
 clean:
-	rm phonebook/editor/editor
-	rm phonebook/view/view
-	rm phonebook/watcher/watcher
+	rm -f phonebook/editor/editor
+	rm -f phonebook/view/view
+	rm -f phonebook/watcher/watcher
 
 build:
 	cd phonebook/view && go build
