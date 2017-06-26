@@ -25,6 +25,8 @@ import:
   - context
 - package: github.com/namsral/flag
   version: v1.7.4-pre
+- package: github.com/wadey/gocovmerge
+  version: b5bfa59ec0adc420475f97f89b58045c721d761c
 testImport:
 - package: github.com/onsi/gomega
   version: v1.1.0
