@@ -249,8 +249,8 @@ func putInternal(kv clientv3.KV, lessor clientv3.Lease, key string, binData []by
 
 	var etcdOpts []clientv3.OpOption
 	for _, o := range opts {
-		if withTTL, ok := o.(*keyval.WithTTLOpt); ok {
-			lease, err := lessor.Grant(context.Background(), withTTL.TTL)
+		if withTTL, ok := o.(*keyval.WithTTLOpt); ok && withTTL.TTL > 0 {
+			lease, err := lessor.Grant(context.Background(), int64(withTTL.TTL/time.Second))
 			if err != nil {
 				return err
 			}

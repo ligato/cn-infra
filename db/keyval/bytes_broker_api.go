@@ -59,18 +59,3 @@ type BytesPluginBroker interface {
 	BytesBroker
 	BytesWatcher
 }
-
-// PutOption defines options for Put operation. The particular options can be found below.
-type PutOption interface {
-}
-
-// WithTTLOpt defines a TTL for data being put. Once TTL seconds elapses the data is removed from data store.
-type WithTTLOpt struct {
-	// TTL is number of seconds until data is deleted.
-	TTL int64
-}
-
-// WithTTL returns new instance of TTL option
-func WithTTL(seconds int64) *WithTTLOpt {
-	return &WithTTLOpt{seconds}
-}
