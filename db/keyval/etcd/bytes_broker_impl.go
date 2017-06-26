@@ -29,6 +29,7 @@ import (
 // BytesBrokerEtcd allows to store, read and watch values from etcd.
 type BytesBrokerEtcd struct {
 	etcdClient *clientv3.Client
+	lessor     clientv3.Lease
 
 	// closeCh is a channel closed when Close method of data broker is closed.
 	// It is used for giving go routines a signal to stop.
@@ -41,6 +42,7 @@ type BytesBrokerEtcd struct {
 // all keys in its requests.
 type BytesPluginBrokerEtcd struct {
 	closeCh chan struct{}
+	lessor  clientv3.Lease
 	kv      clientv3.KV
 	watcher clientv3.Watcher
 }
@@ -98,7 +100,7 @@ func NewBytesBrokerUsingClient(etcdClient *clientv3.Client) (*BytesBrokerEtcd, e
 	dataBroker := BytesBrokerEtcd{}
 	dataBroker.etcdClient = etcdClient
 	dataBroker.closeCh = make(chan struct{})
-
+	dataBroker.lessor = clientv3.NewLease(etcdClient)
 	return &dataBroker, nil
 }
 
@@ -115,12 +117,12 @@ func (db *BytesBrokerEtcd) Close() error {
 // a plugin access to BytesBrokerEtcd.
 // Prefix (empty string is valid value) will be prepend to key argument in all calls on created BytesPluginBrokerEtcd.
 func (db *BytesBrokerEtcd) NewPluginBroker(prefix string) *BytesPluginBrokerEtcd {
-	return &BytesPluginBrokerEtcd{kv: namespace.NewKV(db.etcdClient, prefix), watcher: namespace.NewWatcher(db.etcdClient, prefix), closeCh: db.closeCh}
+	return &BytesPluginBrokerEtcd{kv: namespace.NewKV(db.etcdClient, prefix), lessor: db.lessor, watcher: namespace.NewWatcher(db.etcdClient, prefix), closeCh: db.closeCh}
 }
 
 // Put calls Put function of BytesBrokerEtcd. BytesPluginBrokerEtcd's prefix is prepended to key argument.
-func (pdb *BytesPluginBrokerEtcd) Put(key string, data []byte) error {
-	return putInternal(pdb.kv, key, data)
+func (pdb *BytesPluginBrokerEtcd) Put(key string, data []byte, opts ...keyval.PutOption) error {
+	return putInternal(pdb.kv, pdb.lessor, key, data, opts)
 }
 
 // NewTxn creates new transaction. BytesPluginBrokerEtcd's prefix will be prepended to all key arguments in the transaction.
@@ -239,12 +241,24 @@ func watchInternal(watcher clientv3.Watcher, closeCh chan struct{}, key string, 
 
 // Put writes the provided key-value item into the data store.
 // Returns an error if the item could not be written, nil otherwise.
-func (db *BytesBrokerEtcd) Put(key string, binData []byte) error {
-	return putInternal(db.etcdClient, key, binData)
+func (db *BytesBrokerEtcd) Put(key string, binData []byte, opts ...keyval.PutOption) error {
+	return putInternal(db.etcdClient, db.lessor, key, binData, opts...)
 }
 
-func putInternal(kv clientv3.KV, key string, binData []byte) error {
-	_, err := kv.Put(context.Background(), key, string(binData))
+func putInternal(kv clientv3.KV, lessor clientv3.Lease, key string, binData []byte, opts ...keyval.PutOption) error {
+
+	var etcdOpts []clientv3.OpOption
+	for _, o := range opts {
+		if withTTL, ok := o.(*keyval.WithTTLOpt); ok {
+			lease, err := lessor.Grant(context.Background(), withTTL.TTL)
+			if err != nil {
+				return err
+			}
+			etcdOpts = append(etcdOpts, clientv3.WithLease(lease.ID))
+		}
+	}
+
+	_, err := kv.Put(context.Background(), key, string(binData), etcdOpts...)
 	if err != nil {
 		log.Error("etcdv3 put error: ", err)
 		return err

@@ -22,7 +22,7 @@ import (
 // It marshals/unmarshals go structures to slice of bytes and vice versa behind the scenes.
 type ProtoBroker interface {
 	// Put puts single key-value pair into etcd
-	Put(key string, data proto.Message) error
+	Put(key string, data proto.Message, opts ...PutOption) error
 	// NewTxn creates a transaction
 	NewTxn() ProtoTxn
 	// GetValue retrieves one item under the provided key. If the item exists it is unmarshaled into the reqObj.

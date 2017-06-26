@@ -88,24 +88,24 @@ func (pdb *ProtoPluginBrokerEtcd) NewTxn() keyval.ProtoTxn {
 // Put writes the provided key-value item into the data store.
 //
 // Returns an error if the item could not be written, ok otherwise.
-func (db *ProtoBrokerEtcd) Put(key string, value proto.Message) error {
-	return putProtoInternal(db.broker, db.serializer, key, value)
+func (db *ProtoBrokerEtcd) Put(key string, value proto.Message, opts ...keyval.PutOption) error {
+	return putProtoInternal(db.broker, db.serializer, key, value, opts...)
 }
 
 // Put writes the provided key-value item into the data store.
 //
 // Returns an error if the item could not be written, ok otherwise.
-func (pdb *ProtoPluginBrokerEtcd) Put(key string, value proto.Message) error {
-	return putProtoInternal(pdb.pluginBroker, pdb.serializer, key, value)
+func (pdb *ProtoPluginBrokerEtcd) Put(key string, value proto.Message, opts ...keyval.PutOption) error {
+	return putProtoInternal(pdb.pluginBroker, pdb.serializer, key, value, opts...)
 }
 
-func putProtoInternal(broker keyval.BytesBroker, serializer keyval.Serializer, key string, value proto.Message) error {
+func putProtoInternal(broker keyval.BytesBroker, serializer keyval.Serializer, key string, value proto.Message, opts ...keyval.PutOption) error {
 	// Marshal value to protobuf
 	binData, err := serializer.Marshal(value)
 	if err != nil {
 		return err
 	}
-	broker.Put(key, binData)
+	broker.Put(key, binData, opts...)
 	return nil
 }
 

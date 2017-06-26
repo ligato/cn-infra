@@ -16,8 +16,8 @@ package keyval
 
 // BytesBroker allows to store, retrieve and remove data in a key-value form
 type BytesBroker interface {
-	// Put puts single key-value pair into etcd
-	Put(key string, data []byte) error
+	// Put puts single key-value pair into etcd. The behavior of put can be adjusted using PutOptions.
+	Put(key string, data []byte, opts ...PutOption) error
 	// NewTxn creates a transaction
 	NewTxn() BytesTxn
 	// GetValue retrieves one item under the provided key
@@ -58,4 +58,19 @@ type BytesKeyIterator interface {
 type BytesPluginBroker interface {
 	BytesBroker
 	BytesWatcher
+}
+
+// PutOption defines options for Put operation. The particular options can be found below.
+type PutOption interface {
+}
+
+// WithTTLOpt defines a TTL for data being put. Once TTL seconds elapses the data is removed from data store.
+type WithTTLOpt struct {
+	// TTL is number of seconds until data is deleted.
+	TTL int64
+}
+
+// WithTTL returns new instance of TTL option
+func WithTTL(seconds int64) *WithTTLOpt {
+	return &WithTTLOpt{seconds}
 }
