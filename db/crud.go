@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package data
+package db
 
 // PutDel enumerates 'Put' (meaning 'Create' or 'Update') and 'Delete' operations
 type PutDel string

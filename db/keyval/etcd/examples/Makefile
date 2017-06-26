@@ -20,4 +20,3 @@ build:
 	cd phonebook/view && go build
 	cd phonebook/editor && go build
 	cd phonebook/watcher && go build
-	cd monitor && go build

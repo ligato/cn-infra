@@ -29,8 +29,8 @@ func NewBytesWatchPutResp(key string, value []byte, revision int64) *BytesWatchP
 }
 
 // GetChangeType returns "Put" for BytesWatchPutResp
-func (resp *BytesWatchPutResp) GetChangeType() data.PutDel {
-	return data.Put
+func (resp *BytesWatchPutResp) GetChangeType() db.PutDel {
+	return db.Put
 }
 
 // GetKey returns the key that has been inserted
@@ -60,8 +60,8 @@ func NewBytesWatchDelResp(key string, revision int64) *BytesWatchDelResp {
 }
 
 // GetChangeType returns "Delete" for BytesWatchPutResp
-func (resp *BytesWatchDelResp) GetChangeType() data.PutDel {
-	return data.Delete
+func (resp *BytesWatchDelResp) GetChangeType() db.PutDel {
+	return db.Delete
 }
 
 // GetKey returns the key that has been deleted

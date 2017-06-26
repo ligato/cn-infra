@@ -42,13 +42,13 @@ func main() {
 	}
 
 	//create connection to etcd
-	db, err := etcd.NewBytesBrokerEtcd(cfg)
+	broker, err := etcd.NewBytesBrokerEtcd(cfg)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 	//initialize proto decorator
-	protoBroker := etcd.NewProtoBrokerEtcd(db)
+	protoBroker := etcd.NewProtoBrokerEtcd(broker)
 
 	respChan := make(chan keyval.ProtoWatchResp, 0)
 	sigChan := make(chan os.Signal, 1)
@@ -66,12 +66,12 @@ watcherLoop:
 		select {
 		case resp := <-respChan:
 			switch resp.GetChangeType() {
-			case data.Put:
+			case db.Put:
 				contact := &phonebook.Contact{}
 				fmt.Println("Creating ", resp.GetKey())
 				resp.GetValue(contact)
 				printContact(contact)
-			case data.Delete:
+			case db.Delete:
 				fmt.Println("Removing ", resp.GetKey())
 			}
 			fmt.Println("============================================")

@@ -36,9 +36,9 @@ const (
 )
 
 var (
-	db   *BytesBrokerEtcd
-	pdb  keyval.BytesPluginBroker
-	embd embededEtcd
+	broker *BytesBrokerEtcd
+	pdb    keyval.BytesPluginBroker
+	embd   embededEtcd
 )
 
 type embededEtcd struct {
@@ -64,8 +64,8 @@ func TestDataBroker(t *testing.T) {
 }
 
 func teardownBrokers() {
-	db.Close()
-	db = nil
+	broker.Close()
+	broker = nil
 	pdb = nil
 }
 
@@ -76,7 +76,7 @@ func testPutGetValuePrefixed(t *testing.T) {
 	data := []byte{1, 2, 3}
 
 	// insert key-value pair using databroker
-	err := db.Put(prefix+key, data)
+	err := broker.Put(prefix+key, data)
 	gomega.Expect(err).To(gomega.BeNil())
 
 	returnedData, found, _, err := pdb.GetValue(key)
@@ -106,10 +106,10 @@ func testPrefixedWatcher(t *testing.T) {
 	go expectWatchEvent(t, &wg, watchCh, watchKey+"val1")
 
 	// insert kv that doesn't match the watcher subscription
-	db.Put(prefix+"/something/else/val1", []byte{0, 0, 7})
+	broker.Put(prefix+"/something/else/val1", []byte{0, 0, 7})
 
 	// insert kv for watcher
-	db.Put(prefix+watchKey+"val1", []byte{0, 0, 7})
+	broker.Put(prefix+watchKey+"val1", []byte{0, 0, 7})
 
 	wg.Wait()
 }
@@ -126,7 +126,7 @@ func testPrefixedTxn(t *testing.T) {
 	tx.Put("b/val3", []byte{0, 1})
 	tx.Commit()
 
-	kvi, err := db.ListValues(prefix + "b")
+	kvi, err := broker.ListValues(prefix + "b")
 	gomega.Expect(err).To(gomega.BeNil())
 	gomega.Expect(kvi).NotTo(gomega.BeNil())
 
@@ -145,11 +145,11 @@ func testPrefixedListValues(t *testing.T) {
 
 	var err error
 	// insert values using databroker
-	err = db.Put(prefix+"a/val1", []byte{0, 0, 7})
+	err = broker.Put(prefix+"a/val1", []byte{0, 0, 7})
 	gomega.Expect(err).To(gomega.BeNil())
-	err = db.Put(prefix+"a/val2", []byte{0, 0, 7})
+	err = broker.Put(prefix+"a/val2", []byte{0, 0, 7})
 	gomega.Expect(err).To(gomega.BeNil())
-	err = db.Put(prefix+"a/val3", []byte{0, 0, 7})
+	err = broker.Put(prefix+"a/val3", []byte{0, 0, 7})
 	gomega.Expect(err).To(gomega.BeNil())
 
 	// list values using pluginDatabroker
@@ -220,12 +220,12 @@ func (embd *embededEtcd) cleanDs() {
 
 func setupBrokers(t *testing.T) {
 	var err error
-	db, err = NewBytesBrokerUsingClient(v3client.New(embd.etcd.Server))
+	broker, err = NewBytesBrokerUsingClient(v3client.New(embd.etcd.Server))
 
 	gomega.Expect(err).To(gomega.BeNil())
-	gomega.Expect(db).NotTo(gomega.BeNil())
+	gomega.Expect(broker).NotTo(gomega.BeNil())
 	// create BytesPluginBrokerEtcd with prefix
-	pdb = db.NewPluginBroker(prefix)
+	pdb = broker.NewPluginBroker(prefix)
 	gomega.Expect(pdb).NotTo(gomega.BeNil())
 
 }

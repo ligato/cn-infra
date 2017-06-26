@@ -27,7 +27,7 @@ type ProtoWatcher interface {
 
 // ProtoWatchResp represents a notification about change. It is sent through the watch resp channel.
 type ProtoWatchResp interface {
-	GetChangeType() data.PutDel
+	GetChangeType() db.PutDel
 	// GetKey returns the key associated with the change
 	GetKey() string
 	// GetValue unmarshals the value after the change into the msg argument

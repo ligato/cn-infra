@@ -7,7 +7,6 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/etcd"
 	"github.com/ligato/cn-infra/db/keyval/etcd/examples/phonebook/model/phonebook"
 	"os"
-	"time"
 )
 
 const (
