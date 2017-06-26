@@ -41,7 +41,7 @@ type yamlConfig struct {
 // default timeout for connecting to etcd.
 const defaultTimeout = 1 * time.Second
 
-// ConfigFromFile loads the Etcd client configuration from the
+// configFromFile loads the Etcd client configuration from the
 // specified file. If the specified file is valid and contains
 // valid configuration, the parsed client configuration is
 // returned; otherwise, an error is returned.

@@ -12,10 +12,16 @@ type DbMuxEtcd struct {
 	dbRoot *ProtoBrokerEtcd
 }
 
-func NewEtcdPlugin(etcdConfig string) keyval.Plugin {
-	return &DbMuxEtcd{}
+// NewEtcdPlugin creates a new instance of DbMuxEtcd. Configuration of etcd connection is loaded from file.
+func NewEtcdPlugin(etcdConfig string) (*DbMuxEtcd, error) {
+	client, err := initRemoteClient(etcdConfig)
+	if err != nil {
+		return  nil, err
+	}
+	return NewEtcdPluginUsingClient(client), nil
 }
 
+// NewEtcdPluginUsingClient creates a new instance of DbMuxEtcd using given etcd client
 func NewEtcdPluginUsingClient(client *clientv3.Client) *DbMuxEtcd {
 	return &DbMuxEtcd{client: client}
 }
@@ -50,7 +56,7 @@ func (plugin *DbMuxEtcd) NewRootWatcher() keyval.ProtoWatcher {
 	return plugin.dbRoot.NewPluginBroker("")
 }
 
-// NewPrefixedBroker returns a ProtoBroker instance that prepend given keyPrefix to all keys in its calls.
+// NewPrefixedBroker returns a ProtoBroker instance that prepends given keyPrefix to all keys in its calls.
 func (plugin *DbMuxEtcd) NewPrefixedBroker(keyPrefix string) keyval.ProtoBroker {
 	return plugin.dbRoot.NewPluginBroker(keyPrefix)
 }
