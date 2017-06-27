@@ -20,12 +20,12 @@ import (
 )
 
 // create logger instance
-var logger = log.New()
+var logger = logrus.New()
 
 func init() {
 	logger.SetLevel(logging.DebugLevel)
 	// set formatter
-	logger.SetFormatter(log.NewCustomFormatter())
+	logger.SetFormatter(logrus.NewCustomFormatter())
 }
 
 func main() {
@@ -36,13 +36,13 @@ func main() {
 	// setup fields that will be added to all subsequent log entries
 	logger.SetStaticFields(map[string]interface{}{"component": "componentXY", "key": "value"})
 
-	logger.WithFields(log.Fields{
+	logger.WithFields(logging.Fields{
 		"CM_IP": "10.1.10",
 	}).Debug("Cable modem is online")
 
 	logger.Warn("This should not be happening.")
 
-	logger.WithFields(log.Fields{
+	logger.WithFields(logging.Fields{
 		"errCode":       42,
 		"retryAttempts": 122,
 		"string":        "quoted",
