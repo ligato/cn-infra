@@ -15,8 +15,8 @@
 package main
 
 import (
-	"github.com/ligato/cn-infra.bak/logging/logrus"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logrus"
 )
 
 // create logger instance
