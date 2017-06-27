@@ -15,7 +15,6 @@
 package keyval
 
 import (
-	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/db"
 )
 
@@ -27,11 +26,8 @@ type ProtoWatcher interface {
 
 // ProtoWatchResp represents a notification about change. It is sent through the watch resp channel.
 type ProtoWatchResp interface {
+	ProtoKvPair
 	GetChangeType() db.PutDel
-	// GetKey returns the key associated with the change
-	GetKey() string
-	// GetValue unmarshals the value after the change into the msg argument
-	GetValue(msg proto.Message) error
 	// GetPrevValue unmarshals the value before the change into the msg argument
 	GetRevision() int64
 }

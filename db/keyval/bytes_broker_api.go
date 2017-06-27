@@ -30,12 +30,17 @@ type BytesBroker interface {
 	Delete(key string) (bool, error)
 }
 
-// BytesKeyVal represents a single key-value pair
-type BytesKeyVal interface {
+// BytesKvPair groups getters for key-value pair
+type BytesKvPair interface {
 	// GetKey returns the key of the pair
 	GetKey() string
 	// GetValue returns the value of the pair
 	GetValue() []byte
+}
+
+// BytesKeyVal represents a single item in data store
+type BytesKeyVal interface {
+	BytesKvPair
 	// GetRevision returns revision associated with the latest change in the key-value pair
 	GetRevision() int64
 }

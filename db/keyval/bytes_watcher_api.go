@@ -25,11 +25,9 @@ type BytesWatcher interface {
 
 // BytesWatchResp represents a notification about change. It is sent through the watch resp channel.
 type BytesWatchResp interface {
+	BytesKvPair
+	// GetChangeType type of the change associated with the WatchResp
 	GetChangeType() db.PutDel
-	// GetKey returns the key associated with the change
-	GetKey() string
-	// GetValue returns the value after the change
-	GetValue() []byte
-	// GetRevision returns a revision associated with the WatchResp
+	// GetRevision returns revision associated with the WatchResp
 	GetRevision() int64
 }

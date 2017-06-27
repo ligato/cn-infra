@@ -35,6 +35,14 @@ type ProtoBroker interface {
 	Delete(key string) (bool, error)
 }
 
+// ProtoKvPair group getter for single key-value pair
+type ProtoKvPair interface {
+	// GetKey returns the key of the pair
+	GetKey() string
+	// GetValue returns the value of the pair
+	GetValue(proto.Message) error
+}
+
 // ProtoKeyIterator is an iterator returned by ListKeys call
 type ProtoKeyIterator interface {
 	// GetNext retrieves the following item from the context.
@@ -43,10 +51,7 @@ type ProtoKeyIterator interface {
 
 // ProtoKeyVal represents a single key-value pair
 type ProtoKeyVal interface {
-	// GetKey returns the key of the pair
-	GetKey() string
-	// GetValue returns the value of the pair
-	GetValue(proto.Message) error
+	ProtoKvPair
 	// GetRevision returns revision associated with the latest change in the key-value pair
 	GetRevision() int64
 }
