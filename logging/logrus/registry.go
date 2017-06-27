@@ -66,17 +66,17 @@ func (lr *LogRegistry) SetLevel(logger, level string) error {
 	lvl, err := logrus.ParseLevel(level)
 	if err == nil {
 		switch lvl {
-		case DebugLevel:
+		case logrus.DebugLevel:
 			lg.SetLevel(logging.DebugLevel)
-		case InfoLevel:
+		case logrus.InfoLevel:
 			lg.SetLevel(logging.InfoLevel)
-		case WarnLevel:
+		case logrus.WarnLevel:
 			lg.SetLevel(logging.WarnLevel)
-		case ErrorLevel:
+		case logrus.ErrorLevel:
 			lg.SetLevel(logging.ErrorLevel)
-		case PanicLevel:
+		case logrus.PanicLevel:
 			lg.SetLevel(logging.PanicLevel)
-		case FatalLevel:
+		case logrus.FatalLevel:
 			lg.SetLevel(logging.FatalLevel)
 		}
 

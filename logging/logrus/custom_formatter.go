@@ -60,7 +60,6 @@ func (f *CustomFormatter) logLevelToString(level log.Level) string {
 	case log.PanicLevel:
 		return "panic"
 	}
-	//TODO: trace?
 
 	return "unknown"
 }

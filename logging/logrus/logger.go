@@ -32,10 +32,10 @@ import (
 )
 
 // Logger is wrapper of Logrus logger. In addition to Logrus functionality it
-// allows to define static log fields that are added to all log entries. It also automatically
+// allows to define static log fields that are added to all subsequent log entries. It also automatically
 // appends file name and line where the log is coming from. In order to distinguish logs from different
 // go routines a tag (number that is based on the stack address) is computed. To achieve better readability
-// numeric value can be replaced by a string using SetTag function.
+// numeric value of a tag can be replaced by a string using SetTag function.
 type Logger struct {
 	std          *lg.Logger
 	mu           sync.Mutex
