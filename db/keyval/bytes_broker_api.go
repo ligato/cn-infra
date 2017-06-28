@@ -56,11 +56,3 @@ type BytesKeyIterator interface {
 	// GetNext retrieves the following item from the context.
 	GetNext() (key string, rev int64, allReceived bool)
 }
-
-// BytesPluginBroker is a wrapper of BytesBroker. It allows to share BytesBroker's connection
-// to datastore. Every BytesPluginBroker is able to create/modify/delete key-value
-// pairs and watch distinct set of keys.
-type BytesPluginBroker interface {
-	BytesBroker
-	BytesWatcher
-}

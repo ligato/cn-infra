@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package etcd
+package etcdv3
 
 import (
 	"time"
@@ -26,21 +26,20 @@ import (
 	"golang.org/x/net/context"
 )
 
-// BytesBrokerEtcd allows to store, read and watch values from etcd.
-type BytesBrokerEtcd struct {
+// BytesConnectionEtcd encapsulates the connection to etcd. It provides API to read/edit and watch values from etcd.
+type BytesConnectionEtcd struct {
 	etcdClient *clientv3.Client
 	lessor     clientv3.Lease
 
-	// closeCh is a channel closed when Close method of data broker is closed.
-	// It is used for giving go routines a signal to stop.
+	// closeCh is a channel closed when Close method is called.
+	// It is leveraged to stop go routines.
 	closeCh chan struct{}
 }
 
-// BytesPluginBrokerEtcd is a wrapper of Broker. It allows a plugin to access etcd. Since the PluginBroker uses Broker's connection
-// to etcd, multiple pluginBrokers can share the same underlying connection. Each of them is able to create/modify/delete key-value
-// pairs and watch distinct set of etcd keys. BytesPluginBrokerEtcd allows also to define prefix that will be automatically prepended to
-// all keys in its requests.
-type BytesPluginBrokerEtcd struct {
+// BytesBrokerWatcherEtcd uses BytesConnectionEtcd to access the datastore. The connection can be shared among multiple BytesBrokerWatcherEtcd.
+// In case of accessing a particular subtree in etcd only, BytesBrokerWatcherEtcd allows to define a keyPrefix that is prepended to all keys
+// in its methods in order to shorten keys used in arguments.
+type BytesBrokerWatcherEtcd struct {
 	closeCh chan struct{}
 	lessor  clientv3.Lease
 	kv      clientv3.KV
@@ -59,7 +58,7 @@ type bytesKeyIterator struct {
 	index int
 	len   int
 	resp  *clientv3.GetResponse
-	db    *BytesBrokerEtcd
+	db    *BytesConnectionEtcd
 }
 
 // bytesKeyVal represents a single key-value pair
@@ -80,32 +79,30 @@ func SetLogger(l logging.Logger) {
 	log = l
 }
 
-// NewBytesBrokerEtcd creates a new instance of the Etcdv3 Data Broker. Connection
-// to etcd is created based on the settings in provided config file.
-// Data Broker is a facade (visible front-end) to the configuration
-// data store.
-func NewBytesBrokerEtcd(config string) (*BytesBrokerEtcd, error) {
-	etcdClientKV, err := initRemoteClient(config)
+// NewEtcdConnectionWithBytes creates new connection to etcd based on the given config file.
+func NewEtcdConnectionWithBytes(config clientv3.Config) (*BytesConnectionEtcd, error) {
+	etcdClient, err := clientv3.New(config)
 	if err != nil {
+		log.Errorf("Failed to connect to Etcd etcd(s) %v, Error: '%s'", config.Endpoints, err)
 		return nil, err
 	}
-	return NewBytesBrokerUsingClient(etcdClientKV)
+	return NewEtcdConnectionUsingClient(etcdClient)
 }
 
-// NewBytesBrokerUsingClient creates a new instance of BytesBrokerEtcd using the provided
+// NewEtcdConnectionUsingClient creates a new instance of BytesConnectionEtcd using the provided
 // etcdv3 client
-func NewBytesBrokerUsingClient(etcdClient *clientv3.Client) (*BytesBrokerEtcd, error) {
-	log.Debug("NewBytesBrokerEtcd", etcdClient)
+func NewEtcdConnectionUsingClient(etcdClient *clientv3.Client) (*BytesConnectionEtcd, error) {
+	log.Debug("NewEtcdConnectionWithBytes", etcdClient)
 
-	dataBroker := BytesBrokerEtcd{}
-	dataBroker.etcdClient = etcdClient
-	dataBroker.closeCh = make(chan struct{})
-	dataBroker.lessor = clientv3.NewLease(etcdClient)
-	return &dataBroker, nil
+	conn := BytesConnectionEtcd{}
+	conn.etcdClient = etcdClient
+	conn.closeCh = make(chan struct{})
+	conn.lessor = clientv3.NewLease(etcdClient)
+	return &conn, nil
 }
 
 // Close closes the connection to ETCD.
-func (db *BytesBrokerEtcd) Close() error {
+func (db *BytesConnectionEtcd) Close() error {
 	close(db.closeCh)
 	if db.etcdClient != nil {
 		return db.etcdClient.Close()
@@ -113,51 +110,62 @@ func (db *BytesBrokerEtcd) Close() error {
 	return nil
 }
 
-// NewPluginBroker creates a new instance of the proxy that gives
-// a plugin access to BytesBrokerEtcd.
-// Prefix (empty string is valid value) will be prepend to key argument in all calls on created BytesPluginBrokerEtcd.
-func (db *BytesBrokerEtcd) NewPluginBroker(prefix string) *BytesPluginBrokerEtcd {
-	return &BytesPluginBrokerEtcd{kv: namespace.NewKV(db.etcdClient, prefix), lessor: db.lessor, watcher: namespace.NewWatcher(db.etcdClient, prefix), closeCh: db.closeCh}
+// NewBroker creates a new instance of a proxy that provides
+// access to etcd. BytesConnectionEtcd is used to access the etcd
+// Prefix will be prepend to key argument in all calls on created BytesBrokerWatcherEtcd. To avoid
+// using a prefix pass keyval.Root constant as argument.
+func (db *BytesConnectionEtcd) NewBroker(prefix string) keyval.BytesBroker {
+	return &BytesBrokerWatcherEtcd{kv: namespace.NewKV(db.etcdClient, prefix), lessor: db.lessor, watcher: namespace.NewWatcher(db.etcdClient, prefix), closeCh: db.closeCh}
 }
 
-// Put calls Put function of BytesBrokerEtcd. BytesPluginBrokerEtcd's prefix is prepended to key argument.
-func (pdb *BytesPluginBrokerEtcd) Put(key string, data []byte, opts ...keyval.PutOption) error {
+// NewWatcher creates a new instance of a proxy that provides
+// access to etcd. BytesConnectionEtcd is used to access the etcd.
+// Prefix will be prepend to key argument in all calls on created BytesBrokerWatcherEtcd. To avoid
+// using a prefix pass keyval.Root constant as argument.
+func (db *BytesConnectionEtcd) NewWatcher(prefix string) keyval.BytesWatcher {
+	return &BytesBrokerWatcherEtcd{kv: namespace.NewKV(db.etcdClient, prefix), lessor: db.lessor, watcher: namespace.NewWatcher(db.etcdClient, prefix), closeCh: db.closeCh}
+}
+
+// Put calls Put function of BytesConnectionEtcd. KeyPrefix defined in constructor is prepended to key argument.
+func (pdb *BytesBrokerWatcherEtcd) Put(key string, data []byte, opts ...keyval.PutOption) error {
 	return putInternal(pdb.kv, pdb.lessor, key, data, opts)
 }
 
-// NewTxn creates new transaction. BytesPluginBrokerEtcd's prefix will be prepended to all key arguments in the transaction.
-func (pdb *BytesPluginBrokerEtcd) NewTxn() keyval.BytesTxn {
+// NewTxn creates new transaction. KeyPrefix defined in constructor will be prepended to all key arguments in the transaction.
+func (pdb *BytesBrokerWatcherEtcd) NewTxn() keyval.BytesTxn {
 	return newTxnInternal(pdb.kv)
 }
 
-// GetValue call GetValue function of databroker. BytesPluginBrokerEtcd's prefix is prepended to key argument.
-func (pdb *BytesPluginBrokerEtcd) GetValue(key string) (data []byte, found bool, revision int64, err error) {
+// GetValue calls GetValue function of BytesConnectionEtcd. KeyPrefix defined in constructor is prepended to key argument.
+func (pdb *BytesBrokerWatcherEtcd) GetValue(key string) (data []byte, found bool, revision int64, err error) {
 	return getValueInternal(pdb.kv, key)
 }
 
-// ListValues calls ListValues function of databroker. BytesPluginBrokerEtcd's prefix is prepended to key argument.
-func (pdb *BytesPluginBrokerEtcd) ListValues(key string) (keyval.BytesKeyValIterator, error) {
+// ListValues calls ListValues function of BytesConnectionEtcd. KeyPrefix defined in constructor is prepended to key argument. The prefix
+// is removed from the keys of the returned values.
+func (pdb *BytesBrokerWatcherEtcd) ListValues(key string) (keyval.BytesKeyValIterator, error) {
 	return listValuesInternal(pdb.kv, key)
 }
 
-// ListValuesRange calls ListValuesRange function of databroker. BytesPluginBrokerEtcd's prefix is prepended to the arguments.
-func (pdb *BytesPluginBrokerEtcd) ListValuesRange(fromPrefix string, toPrefix string) (keyval.BytesKeyValIterator, error) {
+// ListValuesRange calls ListValuesRange function of BytesConnectionEtcd. KeyPrefix defined in constructor is prepended to the arguments. The prefix
+// is removed from the keys of the returned values.
+func (pdb *BytesBrokerWatcherEtcd) ListValuesRange(fromPrefix string, toPrefix string) (keyval.BytesKeyValIterator, error) {
 	return listValuesRangeInternal(pdb.kv, fromPrefix, toPrefix)
 }
 
-// ListKeys calls ListKeys function of databroker. BytesPluginBrokerEtcd's prefix is prepended to the argument.
-func (pdb *BytesPluginBrokerEtcd) ListKeys(prefix string) (keyval.BytesKeyIterator, error) {
+// ListKeys calls ListKeys function of BytesConnectionEtcd. KeyPrefix defined in constructor is prepended to the argument.
+func (pdb *BytesBrokerWatcherEtcd) ListKeys(prefix string) (keyval.BytesKeyIterator, error) {
 	return listKeysInternal(pdb.kv, prefix)
 }
 
-// Delete calls delete function of databroker. BytesPluginBrokerEtcd's prefix is prepended to key argument.
-func (pdb *BytesPluginBrokerEtcd) Delete(key string) (bool, error) {
+// Delete calls delete function of BytesConnectionEtcd. KeyPrefix defined in constructor is prepended to the key argument.
+func (pdb *BytesBrokerWatcherEtcd) Delete(key string) (bool, error) {
 	return deleteInternal(pdb.kv, key)
 }
 
-// Watch starts subscription for changes associated with the selected key. Watch events will be delivered to respChan.
-// Subscription can be canceled by StopWatch call.
-func (pdb *BytesPluginBrokerEtcd) Watch(respChan chan keyval.BytesWatchResp, keys ...string) error {
+// Watch starts subscription for changes associated with the selected keys. KeyPrefix defined in constructor is prepended to all
+// keys in the argument list. The prefix is removed from the keys used in watch events. Watch events will be delivered to respChan.
+func (pdb *BytesBrokerWatcherEtcd) Watch(respChan chan keyval.BytesWatchResp, keys ...string) error {
 	var err error
 	for _, k := range keys {
 		err = watchInternal(pdb.watcher, pdb.closeCh, k, respChan)
@@ -189,12 +197,12 @@ func handleWatchEvent(respChan chan keyval.BytesWatchResp, ev *clientv3.Event) {
 
 }
 
-// NewTxn creates a new Data Broker transaction. A transaction can
+// NewTxn creates a new transaction. A transaction can
 // holds multiple operations that are all committed to the data
 // store together. After a transaction has been created, one or
 // more operations (put or delete) can be added to the transaction
 // before it is committed.
-func (db *BytesBrokerEtcd) NewTxn() keyval.BytesTxn {
+func (db *BytesConnectionEtcd) NewTxn() keyval.BytesTxn {
 	return newTxnInternal(db.etcdClient)
 }
 
@@ -204,9 +212,8 @@ func newTxnInternal(kv clientv3.KV) keyval.BytesTxn {
 	return &tx
 }
 
-// Watch starts subscription for changes associated with the selected key. Watch events will be delivered to respChan.
-// Subscription can be canceled by StopWatch call.
-func (db *BytesBrokerEtcd) Watch(respChan chan keyval.BytesWatchResp, keys ...string) error {
+// Watch starts subscription for changes associated with the selected keys. Watch events will be delivered to respChan.
+func (db *BytesConnectionEtcd) Watch(respChan chan keyval.BytesWatchResp, keys ...string) error {
 	var err error
 	for _, k := range keys {
 		err = watchInternal(db.etcdClient, db.closeCh, k, respChan)
@@ -217,8 +224,7 @@ func (db *BytesBrokerEtcd) Watch(respChan chan keyval.BytesWatchResp, keys ...st
 	return err
 }
 
-// watchInternal starts the watch subscription for key. Name argument identifies the subscriber, it allows to cancel the subscription.
-// BytesPluginBrokerEtcd fills this field automatically. BytesBrokerEtcd uses predefined defaultWatchID.
+// watchInternal starts the watch subscription for key.
 func watchInternal(watcher clientv3.Watcher, closeCh chan struct{}, key string, respChan chan keyval.BytesWatchResp) error {
 
 	recvChan := watcher.Watch(context.Background(), key, clientv3.WithPrefix(), clientv3.WithPrevKV())
@@ -241,7 +247,7 @@ func watchInternal(watcher clientv3.Watcher, closeCh chan struct{}, key string, 
 
 // Put writes the provided key-value item into the data store.
 // Returns an error if the item could not be written, nil otherwise.
-func (db *BytesBrokerEtcd) Put(key string, binData []byte, opts ...keyval.PutOption) error {
+func (db *BytesConnectionEtcd) Put(key string, binData []byte, opts ...keyval.PutOption) error {
 	return putInternal(db.etcdClient, db.lessor, key, binData, opts...)
 }
 
@@ -267,7 +273,7 @@ func putInternal(kv clientv3.KV, lessor clientv3.Lease, key string, binData []by
 }
 
 // Delete removes data identified by the key.
-func (db *BytesBrokerEtcd) Delete(key string) (bool, error) {
+func (db *BytesConnectionEtcd) Delete(key string) (bool, error) {
 	return deleteInternal(db.etcdClient, key)
 }
 
@@ -288,7 +294,7 @@ func deleteInternal(kv clientv3.KV, key string) (bool, error) {
 
 // GetValue retrieves one key-value item from the data store. The item
 // is identified by the provided key.
-func (db *BytesBrokerEtcd) GetValue(key string) (data []byte, found bool, revision int64, err error) {
+func (db *BytesConnectionEtcd) GetValue(key string) (data []byte, found bool, revision int64, err error) {
 	return getValueInternal(db.etcdClient, key)
 }
 
@@ -307,7 +313,7 @@ func getValueInternal(kv clientv3.KV, key string) (data []byte, found bool, revi
 }
 
 // ListValues returns an iterator that enables to traverse values stored under the provided key.
-func (db *BytesBrokerEtcd) ListValues(key string) (keyval.BytesKeyValIterator, error) {
+func (db *BytesConnectionEtcd) ListValues(key string) (keyval.BytesKeyValIterator, error) {
 	return listValuesInternal(db.etcdClient, key)
 }
 
@@ -323,7 +329,7 @@ func listValuesInternal(kv clientv3.KV, key string) (keyval.BytesKeyValIterator,
 }
 
 // ListKeys is similar to the ListValues the difference is that values are not fetched
-func (db *BytesBrokerEtcd) ListKeys(prefix string) (keyval.BytesKeyIterator, error) {
+func (db *BytesConnectionEtcd) ListKeys(prefix string) (keyval.BytesKeyIterator, error) {
 	return listKeysInternal(db.etcdClient, prefix)
 }
 
@@ -339,7 +345,7 @@ func listKeysInternal(kv clientv3.KV, prefix string) (keyval.BytesKeyIterator, e
 }
 
 // ListValuesRange returns an iterator that enables to traverse values stored under the provided key.
-func (db *BytesBrokerEtcd) ListValuesRange(fromPrefix string, toPrefix string) (keyval.BytesKeyValIterator, error) {
+func (db *BytesConnectionEtcd) ListValuesRange(fromPrefix string, toPrefix string) (keyval.BytesKeyValIterator, error) {
 	return listValuesRangeInternal(db.etcdClient, fromPrefix, toPrefix)
 }
 

@@ -5,22 +5,28 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ligato/cn-infra/db/keyval/etcd"
-	"github.com/ligato/cn-infra/db/keyval/etcd/examples/phonebook/model/phonebook"
+	"github.com/coreos/etcd/clientv3"
+	"github.com/ligato/cn-infra/db/keyval/etcdv3"
+	"github.com/ligato/cn-infra/db/keyval/etcdv3/examples/phonebook/model/phonebook"
+	"github.com/ligato/cn-infra/utils/config"
 )
 
-func processArgs() (string, error) {
-	cfg := ""
-	if len(os.Args) > 1 {
+func processArgs() (*clientv3.Config, error) {
+	fileConfig := &etcdv3.Config{}
+	if len(os.Args) > 2 {
 		if os.Args[1] == "--cfg" {
-			cfg = os.Args[2]
+
+			err := config.ParseConfigFromYamlFile(os.Args[2], fileConfig)
+			if err != nil {
+				return nil, err
+			}
 
 		} else {
-			return "", fmt.Errorf("Incorrect arguments.")
+			return nil, fmt.Errorf("Incorrect arguments.")
 		}
 	}
 
-	return cfg, nil
+	return etcdv3.ConfigToClientv3(fileConfig)
 }
 
 func printUsage() {
@@ -37,14 +43,14 @@ func main() {
 	}
 
 	//create connection to etcd
-	db, err := etcd.NewBytesBrokerEtcd(cfg)
+	db, err := etcdv3.NewEtcdConnectionWithBytes(*cfg)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	//initialize proto decorator
-	protoDb := etcd.NewProtoBrokerEtcd(db)
+	protoDb := etcdv3.NewProtoWrapperEtcd(db)
 
 	//retrieve all contacts
 	resp, err := protoDb.ListValues(phonebook.EtcdPath())
@@ -75,4 +81,5 @@ func main() {
 
 	}
 	fmt.Println("Revision", revision)
+	protoDb.Close()
 }

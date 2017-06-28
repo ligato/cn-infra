@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package etcd
+package etcdv3
 
 import (
 	"context"
@@ -36,9 +36,10 @@ const (
 )
 
 var (
-	broker *BytesBrokerEtcd
-	pdb    keyval.BytesPluginBroker
-	embd   embededEtcd
+	broker          *BytesConnectionEtcd
+	prefixedBroker  keyval.BytesBroker
+	prefixedWatcher keyval.BytesWatcher
+	embd            embededEtcd
 )
 
 type embededEtcd struct {
@@ -66,7 +67,8 @@ func TestDataBroker(t *testing.T) {
 func teardownBrokers() {
 	broker.Close()
 	broker = nil
-	pdb = nil
+	prefixedBroker = nil
+	prefixedWatcher = nil
 }
 
 func testPutGetValuePrefixed(t *testing.T) {
@@ -79,14 +81,14 @@ func testPutGetValuePrefixed(t *testing.T) {
 	err := broker.Put(prefix+key, data)
 	gomega.Expect(err).To(gomega.BeNil())
 
-	returnedData, found, _, err := pdb.GetValue(key)
+	returnedData, found, _, err := prefixedBroker.GetValue(key)
 
 	gomega.Expect(returnedData).NotTo(gomega.BeNil())
 	gomega.Expect(found).To(gomega.BeTrue())
 	gomega.Expect(err).To(gomega.BeNil())
 
 	// not existing value
-	returnedData, found, _, err = pdb.GetValue("unknown")
+	returnedData, found, _, err = prefixedBroker.GetValue("unknown")
 	gomega.Expect(returnedData).To(gomega.BeNil())
 	gomega.Expect(found).To(gomega.BeFalse())
 	gomega.Expect(err).To(gomega.BeNil())
@@ -98,7 +100,7 @@ func testPrefixedWatcher(t *testing.T) {
 	defer teardownBrokers()
 
 	watchCh := make(chan keyval.BytesWatchResp)
-	err := pdb.Watch(watchCh, watchKey)
+	err := prefixedWatcher.Watch(watchCh, watchKey)
 	gomega.Expect(err).To(gomega.BeNil())
 
 	wg := sync.WaitGroup{}
@@ -118,7 +120,7 @@ func testPrefixedTxn(t *testing.T) {
 	setupBrokers(t)
 	defer teardownBrokers()
 
-	tx := pdb.NewTxn()
+	tx := prefixedBroker.NewTxn()
 	gomega.Expect(tx).NotTo(gomega.BeNil())
 
 	tx.Put("b/val1", []byte{0, 1})
@@ -153,7 +155,7 @@ func testPrefixedListValues(t *testing.T) {
 	gomega.Expect(err).To(gomega.BeNil())
 
 	// list values using pluginDatabroker
-	kvi, err := pdb.ListValues("a")
+	kvi, err := prefixedBroker.ListValues("a")
 	gomega.Expect(err).To(gomega.BeNil())
 	gomega.Expect(kvi).NotTo(gomega.BeNil())
 
@@ -162,7 +164,7 @@ func testPrefixedListValues(t *testing.T) {
 		kv, all := kvi.GetNext()
 		gomega.Expect(kv).NotTo(gomega.BeNil())
 		gomega.Expect(all).To(gomega.BeFalse())
-		// verify that prefix of BytesPluginBrokerEtcd is trimmed
+		// verify that prefix of BytesBrokerWatcherEtcd is trimmed
 		gomega.Expect(kv.GetKey()).To(gomega.BeEquivalentTo(expectedKeys[i]))
 	}
 }
@@ -220,12 +222,14 @@ func (embd *embededEtcd) cleanDs() {
 
 func setupBrokers(t *testing.T) {
 	var err error
-	broker, err = NewBytesBrokerUsingClient(v3client.New(embd.etcd.Server))
+	broker, err = NewEtcdConnectionUsingClient(v3client.New(embd.etcd.Server))
 
 	gomega.Expect(err).To(gomega.BeNil())
 	gomega.Expect(broker).NotTo(gomega.BeNil())
-	// create BytesPluginBrokerEtcd with prefix
-	pdb = broker.NewPluginBroker(prefix)
-	gomega.Expect(pdb).NotTo(gomega.BeNil())
+	// create BytesBrokerWatcherEtcd with prefix
+	prefixedBroker = broker.NewBroker(prefix)
+	prefixedWatcher = broker.NewWatcher(prefix)
+	gomega.Expect(prefixedBroker).NotTo(gomega.BeNil())
+	gomega.Expect(prefixedWatcher).NotTo(gomega.BeNil())
 
 }

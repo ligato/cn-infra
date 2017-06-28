@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package etcd contains abstraction on top of the key-value data store. The package uses etcd version 3.
+// Package etcdv3 contains abstraction on top of the key-value data store.
 //
-// The entity that provides access to the data store is called BytesBrokerEtcd.
+// The entity that provides access to the data store is called BytesConnectionEtcd.
 //
-//      +-------------------+       crud/watch         ______
-//      |  BytesBrokerEtcd  |          ---->          | ETCD |
-//      +-------------------+        []byte           +------+
+//      +-----------------------+       crud/watch         ______
+//      |  BytesConnectionEtcd  |          ---->          | ETCD |
+//      +-----------------------+        []byte           +------+
 //
-// To create a BytesBrokerEtcd use the following function
+// To create a BytesConnectionEtcd use the following function
 //
 //   import  "github.com/ligato/cn-infra/db/keyval/etcd"
 //
-//   db := etcd.NewBytesBrokerEtcd(config)
+//   db := etcd.NewEtcdConnectionWithBytes(config)
 //
 // config is a path to a file with the following format:
 //
@@ -42,11 +42,11 @@
 //
 // Connection to etcd is established using the provided config behind the scenes.
 //
-// Alternatively, you may connect to etcd by your self and initialize data broker with a given client.
+// Alternatively, you may connect to etcd by your self and initialize the connection object with a given client.
 //
-//    db := etcd.NewBytesBrokerUsingClient(client)
+//    db := etcd.NewEtcdConnectionUsingClient(client)
 //
-// Created BytesBrokerEtcd implements Broker and Watcher interfaces. The example of usage can be seen below.
+// Created BytesConnectionEtcd implements Broker and Watcher interfaces. The example of usage can be seen below.
 //
 // To insert single key-value pair into etcd run:
 //		db.Put(key, data)
@@ -133,48 +133,48 @@
 //     }
 //
 //
-// BytesBrokerEtcd also allows to create BytesPluginBrokerEtcd. BytesPluginBrokerEtcd instances share BytesBrokerEtcd's connection
-// to the etcd. Another benefit gained by using BytesPluginBrokerEtcd is the option to setup a prefix. The prefix
-// will be automatically prepended to all keys in the put/delete requests made from the BytesPluginBrokerEtcd. In case of
-// get-like calls (GetValue, ListValues, ...) the prefixed is trimmed from key and returned value contains only part following the
-// prefix in the key field.
+// BytesConnectionEtcd also allows to create proxy instances(BytesBrokerWatcherEtcd) using NewBroker and NewWatcher methods.
+// Both of them accepts prefix argument. The prefix will be automatically prepended to all keys in the put/delete requests made from the
+// proxy instances. In case of get-like calls (GetValue, ListValues, ...) the prefixed is trimmed from key of the returned values.
+// They contain only a part following the prefix in the key field. The created proxy instances share the connection of the BytesConnectionEtcd.
 //
 //      +-----------------------+
-//      | BytesPluginBrokerEtcd |
+//      | BytesBrokerWatcherEtcd |
 //      +-----------------------+
 //              |
 //              |
-//               ----------------->   +-------------------+       crud/watch         ______
-//			                          |  BytesBrokerEtcd  |       ---->             | ETCD |
-//               ----------------->   +-------------------+        ([]byte)         +------+
+//               ----------------->   +-----------------------+       crud/watch         ______
+//			                          |  BytesConnectionEtcd  |       ---->             | ETCD |
+//               ----------------->   +-----------------------+        ([]byte)         +------+
 //              |
 //              |
-//      +-----------------------+
-//      | BytesPluginBrokerEtcd |
-//      +-----------------------+
+//      +------------------------+
+//      | BytesBrokerWatcherEtcd |
+//      +------------------------+
 //
-// To create a BytesPluginBrokerEtcd run
-//    pdb := db.NewPluginBroker(prefix)
+// To create proxy instances run
+//    prefixedBroker := db.NewBroker(prefix)
+//    prefixedWatcher := db.NewWatcher(prefix)
 //
-// BytesPluginBrokerEtcd implements Broker and Watcher interfaces thus the usage is the same as shown above.
+// The usage is the same as shown above.
 //
 // The package also provides a proto decorator that aims to simplify manipulation of proto modelled data.
 // Proto decorator accepts arguments of type proto.message and the data are marshaled
 // into []byte behind the scenes.
 //
 //
-//      +-----------------+-------------------+       crud/watch         ______
-//      |  ProtoDecorator |  ProtoBrokerEtcd  |       ---->             | ETCD |
-//      +-----------------+-------------------+        ([]byte)         +------+
+//      +-------------------+--------------------+       crud/watch         ______
+//      |  ProtoWrapperEtcd |  ProtoWrapperEtcd  |       ---->             | ETCD |
+//      +-------------------+--------------------+        ([]byte)         +------+
 //        (proto.Message)
 //
-// The api of proto decorator is very similar to the ProtoBrokerEtcd. The difference is that arguments of type []byte
+// The api of ProtoWrapperEtcd is very similar to the BytesConnectionEtcd. The difference is that arguments of type []byte
 // are replaced by arguments of type proto.Message and in some case one of the return values is transformed to output argument.
 //
 // Example of decorator initialization
 //
-//    // db is BytesBrokerEtcd initialized as shown at the top of the page
-//    protoBroker := etcd.NewProtoBrokerEtcd(db)
+//    // conn is BytesConnectionEtcd initialized as shown at the top of the page
+//    protoBroker := etcd.NewProtoWrapperEtcd(conn)
 //
 // The only difference in the Put/Delete functions is type of the argument, apart from that usage is the same as described above.
 //
@@ -203,4 +203,6 @@
 //      }
 //      ... use contact
 //  }
-package etcd
+//
+//
+package etcdv3

@@ -3,9 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/coreos/etcd/clientv3"
 	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/db/keyval/etcd"
-	"github.com/ligato/cn-infra/db/keyval/etcd/examples/phonebook/model/phonebook"
+	"github.com/ligato/cn-infra/db/keyval/etcdv3"
+	"github.com/ligato/cn-infra/db/keyval/etcdv3/examples/phonebook/model/phonebook"
+	"github.com/ligato/cn-infra/utils/config"
 	"os"
 )
 
@@ -18,26 +20,34 @@ const (
 	Delete = iota
 )
 
-func processArgs() (cfg string, op int, data []string, err error) {
+func processArgs() (cfg *clientv3.Config, op int, data []string, err error) {
 	var task []string
 
 	//default args
-	cfg = ""
+	fileConfig := &etcdv3.Config{}
 	op = Put
 
 	if len(os.Args) > 2 {
 		if os.Args[1] == "--cfg" {
-			cfg = os.Args[2]
+			err = config.ParseConfigFromYamlFile(os.Args[2], fileConfig)
+			if err != nil {
+				return
+			}
+			cfg, err = etcdv3.ConfigToClientv3(fileConfig)
+			if err != nil {
+				return
+			}
+
 			task = os.Args[3:]
 		} else {
 			task = os.Args[1:]
 		}
 	} else {
-		return "", 0, nil, fmt.Errorf("Incorrect arguments.")
+		return cfg, 0, nil, fmt.Errorf("Incorrect arguments.")
 	}
 
 	if len(task) < 2 || (task[0] == "put" && len(task) < 4) {
-		return "", 0, nil, fmt.Errorf("Incorrect arguments.")
+		return cfg, 0, nil, fmt.Errorf("Incorrect arguments.")
 	}
 
 	if task[0] == "delete" {
@@ -100,14 +110,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	db, err := etcd.NewBytesBrokerEtcd(cfg)
+	db, err := etcdv3.NewEtcdConnectionWithBytes(*cfg)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	//initialize proto decorator
-	protoDb := etcd.NewProtoBrokerEtcd(db)
+	protoDb := etcdv3.NewProtoWrapperEtcd(db)
 
 	switch op {
 	case Put:
@@ -119,5 +129,7 @@ func main() {
 	default:
 		fmt.Println("Unknown operation")
 	}
+
+	protoDb.Close()
 
 }

@@ -61,11 +61,3 @@ type ProtoKeyValIterator interface {
 	// GetNext retrieves the following value from the context. GetValue is unmarshaled into the provided argument.
 	GetNext() (kv ProtoKeyVal, allReceived bool)
 }
-
-// ProtoPluginBroker is a wrapper of ProtoBroker. It allows to share ProtoBroker's connection
-// to datastore. Every ProtoPluginBroker is able to create/modify/delete key-value
-// pairs and watch distinct set of etcd keys.
-type ProtoPluginBroker interface {
-	ProtoBroker
-	ProtoWatcher
-}

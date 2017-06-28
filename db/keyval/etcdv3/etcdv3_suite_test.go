@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package etcd
+package etcdv3
 
 import (
 	"errors"
@@ -20,16 +20,16 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/mvcc/mvccpb"
+	"github.com/ligato/cn-infra/db"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
-	"github.com/ligato/cn-infra/db"
 )
 
-var dataBroker *BytesBrokerEtcd
-var dataBrokerErr *BytesBrokerEtcd
-var pluginDataBroker *BytesPluginBrokerEtcd
-var pluginDataBrokerErr *BytesPluginBrokerEtcd
+var dataBroker *BytesConnectionEtcd
+var dataBrokerErr *BytesConnectionEtcd
+var pluginDataBroker *BytesBrokerWatcherEtcd
+var pluginDataBrokerErr *BytesBrokerWatcherEtcd
 
 // Mock data broker err
 type MockKVErr struct {
@@ -137,10 +137,10 @@ func (mock *MockTxn) Commit() (*clientv3.TxnResponse, error) {
 func init() {
 	mockKv := &MockKV{}
 	mockKvErr := &MockKVErr{}
-	dataBroker = &BytesBrokerEtcd{etcdClient: &clientv3.Client{KV: mockKv, Watcher: mockKv}}
-	dataBrokerErr = &BytesBrokerEtcd{etcdClient: &clientv3.Client{KV: mockKvErr, Watcher: mockKvErr}}
-	pluginDataBroker = &BytesPluginBrokerEtcd{kv: mockKv, watcher: mockKv}
-	pluginDataBrokerErr = &BytesPluginBrokerEtcd{kv: mockKvErr, watcher: mockKvErr}
+	dataBroker = &BytesConnectionEtcd{etcdClient: &clientv3.Client{KV: mockKv, Watcher: mockKv}}
+	dataBrokerErr = &BytesConnectionEtcd{etcdClient: &clientv3.Client{KV: mockKvErr, Watcher: mockKvErr}}
+	pluginDataBroker = &BytesBrokerWatcherEtcd{kv: mockKv, watcher: mockKv}
+	pluginDataBrokerErr = &BytesBrokerWatcherEtcd{kv: mockKvErr, watcher: mockKvErr}
 }
 
 func TestNewTxn(t *testing.T) {
@@ -237,9 +237,15 @@ func TestDelete(t *testing.T) {
 	gomega.Expect(err.Error()).To(gomega.BeEquivalentTo("test-error"))
 }
 
-func TestNewPluginDataBroker(t *testing.T) {
+func TestNewBroker(t *testing.T) {
 	gomega.RegisterTestingT(t)
-	pdb := dataBroker.NewPluginBroker("pluginname")
+	pdb := dataBroker.NewBroker("/pluginname")
+	gomega.Expect(pdb).NotTo(gomega.BeNil())
+}
+
+func TestNewWatcher(t *testing.T) {
+	gomega.RegisterTestingT(t)
+	pdb := dataBroker.NewWatcher("/pluginname")
 	gomega.Expect(pdb).NotTo(gomega.BeNil())
 }
 
@@ -273,11 +279,4 @@ func TestWatchDeleteResp(t *testing.T) {
 	gomega.Expect(createResp.GetKey()).To(gomega.BeEquivalentTo(key))
 	gomega.Expect(createResp.GetValue()).To(gomega.BeNil())
 	gomega.Expect(createResp.GetRevision()).To(gomega.BeEquivalentTo(rev))
-}
-
-func TestConfigFromFile(t *testing.T) {
-	gomega.RegisterTestingT(t)
-	cfg, err := configFromFile("test_resources/etcd.conf")
-	gomega.Expect(cfg).NotTo(gomega.BeNil())
-	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 }

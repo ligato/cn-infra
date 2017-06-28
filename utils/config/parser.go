@@ -12,27 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package etcd
+package config
 
 import (
-	"github.com/golang/protobuf/proto"
-	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ghodss/yaml"
+	"io/ioutil"
 )
 
-// protoWatchResp represents watch notification. Data is unmarshaled data to proto.Message structure
-type protoWatchResp struct {
-	serializer keyval.Serializer
-	keyval.BytesWatchResp
-}
+// ParseConfigFromYamlFile parses a configuration from a file
+// in yaml format specified by path into cfg structure.
+func ParseConfigFromYamlFile(path string, cfg interface{}) error {
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
 
-// NewWatchResp initialize proto watch response from byte WatchResponse
-func NewWatchResp(serializer keyval.Serializer, resp keyval.BytesWatchResp) keyval.ProtoWatchResp {
-	return &protoWatchResp{serializer, resp}
-}
-
-// GetValue returns the value after the change
-func (wr *protoWatchResp) GetValue(msg proto.Message) error {
-	err := wr.serializer.Unmarshal(wr.BytesWatchResp.GetValue(), msg)
+	err = yaml.Unmarshal(b, cfg)
 	if err != nil {
 		return err
 	}
