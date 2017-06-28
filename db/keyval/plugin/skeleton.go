@@ -22,8 +22,7 @@ import (
 
 // Connection defines an access to a particular key-value data store implementation.
 type Connection interface {
-	NewBroker(keyPrefix string) keyval.ProtoBroker
-	NewWatcher(keyPrefix string) keyval.ProtoWatcher
+	keyval.KvPlugin
 	io.Closer
 }
 
