@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"github.com/ligato/cn-infra/db"
 	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/db/keyval/etcd"
-	"github.com/ligato/cn-infra/db/keyval/etcd/examples/phonebook/model/phonebook"
+	"github.com/ligato/cn-infra/db/keyval/etcdv3"
+	"github.com/ligato/cn-infra/db/keyval/etcdv3/examples/phonebook/model/phonebook"
 	"os"
 	"os/signal"
 )
@@ -42,13 +42,13 @@ func main() {
 	}
 
 	//create connection to etcd
-	broker, err := etcd.NewBytesBrokerEtcd(cfg)
+	broker, err := etcdv3.NewBytesBrokerEtcd(cfg)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 	//initialize proto decorator
-	protoBroker := etcd.NewProtoBrokerEtcd(broker)
+	protoBroker := etcdv3.NewProtoBrokerEtcd(broker)
 
 	respChan := make(chan keyval.ProtoWatchResp, 0)
 	sigChan := make(chan os.Signal, 1)

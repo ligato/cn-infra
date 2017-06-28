@@ -12,19 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package etcd
+package etcdv3
 
 import (
-	"github.com/coreos/etcd/clientv3"
+	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/db/keyval"
-	"golang.org/x/net/context"
 )
 
-// Txn allows to group operations into the transaction. Transaction executes multiple operations
-// in a more efficient way in contrast to executing them one by one.
-type bytesTxn struct {
-	ops []clientv3.Op
-	kv  clientv3.KV
+// protoTxn represents etcd transaction.
+type protoTxn struct {
+	serializer keyval.Serializer
+	err        error
+	txn        keyval.BytesTxn
 }
 
 // Put adds a new 'put' operation to a previously created transaction.
@@ -32,25 +31,38 @@ type bytesTxn struct {
 // will be added to the data store. If key exists in the data store,
 // the existing value will be overwritten with the value from this
 // operation.
-func (tx *bytesTxn) Put(key string, value []byte) keyval.BytesTxn {
-	tx.ops = append(tx.ops, clientv3.OpPut(key, string(value)))
+func (tx *protoTxn) Put(key string, value proto.Message) keyval.ProtoTxn {
+	if tx.err != nil {
+		return tx
+	}
+
+	// Marshal value to protobuf
+	binData, err := tx.serializer.Marshal(value)
+	if err != nil {
+		tx.err = err
+		return tx
+	}
+	tx.txn = tx.txn.Put(key, binData)
 	return tx
 }
 
 // Delete adds a new 'delete' operation to a previously created
 // transaction.
-func (tx *bytesTxn) Delete(key string) keyval.BytesTxn {
-	tx.ops = append(tx.ops, clientv3.OpDelete(key))
+func (tx *protoTxn) Delete(key string) keyval.ProtoTxn {
+	if tx.err != nil {
+		return tx
+	}
+
+	tx.txn = tx.txn.Delete(key)
 	return tx
 }
 
 // Commit commits all operations in a transaction to the data store.
 // Commit is atomic - either all operations in the transaction are
 // committed to the data store, or none of them.
-func (tx *bytesTxn) Commit() error {
-	_, err := tx.kv.Txn(context.Background()).Then(tx.ops...).Commit()
-	if err != nil {
-		return err
+func (tx *protoTxn) Commit() error {
+	if tx.err != nil {
+		return tx.err
 	}
-	return nil
+	return tx.txn.Commit()
 }
