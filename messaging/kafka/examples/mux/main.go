@@ -48,7 +48,7 @@ func main() {
 	}
 
 	consumerChan := make(chan *client.ConsumerMessage)
-	err = cn.ConsumeTopic("test", consumerChan)
+	err = cn.ConsumeTopic(consumerChan, "test")
 	mx.Start()
 	if err == nil {
 		fmt.Println("Consuming test partition")
