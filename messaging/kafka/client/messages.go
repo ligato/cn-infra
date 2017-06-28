@@ -47,7 +47,8 @@ func (cm *ConsumerMessage) GetValue() []byte {
 	return cm.Value
 }
 
-// ConsumerMessage encapsulates a Kafka message returned by the consumer.
+// ProtoConsumerMessage encapsulates a Kafka message returned by the consumer and provides means
+// to unmarshal the value into proto.Message.
 type ProtoConsumerMessage struct {
 	*ConsumerMessage
 	serializer keyval.Serializer
