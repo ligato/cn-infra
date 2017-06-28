@@ -54,7 +54,7 @@ type ProtoConsumerMessage struct {
 	serializer keyval.Serializer
 }
 
-// NewProtoConsumerMessage creates new instace of ProtoConsumerMessage
+// NewProtoConsumerMessage creates new instance of ProtoConsumerMessage
 func NewProtoConsumerMessage(msg *ConsumerMessage, serializer keyval.Serializer) *ProtoConsumerMessage {
 	return &ProtoConsumerMessage{msg, serializer}
 }
