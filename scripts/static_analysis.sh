@@ -11,9 +11,11 @@ function static_analysis() {
 
   local DB=$(${TOOL} "${PWD}/db${SELECTOR}")
   local LOGGING=$(${TOOL} "${PWD}/logging${SELECTOR}")
+  local UTILS=$(${TOOL} "${PWD}/utils${SELECTOR}")
 
   local ALL="$DB
 $LOGGING
+$UTILS
 "
 
   local OUT=$(echo "${ALL}" | grep -F "${FILES}" | grep -v "${WHITELIST_ERRORS}")
