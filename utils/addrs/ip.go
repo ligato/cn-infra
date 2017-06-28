@@ -98,52 +98,42 @@ func protoAddrToStruct(addrs []string) ([]*net.IPNet, error) {
 	return result, nil
 }
 
-// ParseIPWithPrefix returns net representation of the IP address and the ipv6 flag (parsed IP are all the same byte length).
-// If the prefix is missing, a default one is added to address (/32 for IPv4, /128 for IPv6)
-func ParseIPWithPrefix(input string) (*net.IPNet, bool, error) {
-	ipv4Prefix := "/32"
-	ipv6Prefix := "/128"
+// ParseIPWithPrefix parses string representation of ip address into net.IPNet structure.
+// If the prefix is missing default one is added (/32 for IPv4, /128 for IPv6)
+func ParseIPWithPrefix(input string) (addr *net.IPNet, isIpv6 bool, err error) {
+	defaultIpv4Mask := net.CIDRMask(32, 32)
+	defaultIpv6Mask := net.CIDRMask(128, 128)
 
 	hasPrefix := strings.Contains(input, "/")
 
 	if hasPrefix {
-		ipAddressWithPrefix := strings.Split(input, "/")
-		if len(ipAddressWithPrefix) != 2 {
-			return nil, false, fmt.Errorf("Incorrect ip address and prefix format: %v", input)
-		}
 		ip, network, err := net.ParseCIDR(input)
+		if err != nil {
+			return nil, false, err
+		}
 		network.IP = ip
-		if err != nil {
-			return nil, false, err
-		}
-		ipv6, err := IsIPv6(ip.String())
-		if err != nil {
-			return nil, false, err
-		}
-		if ipv6 {
-			return network, true, nil
-		}
-		return network, false, nil
+		isIpv6, err = IsIPv6(ip.String())
+		return network, isIpv6, err
 	}
+
 	// Ip prefix was not set
-	ipv6, err := IsIPv6(input)
+	ip := net.ParseIP(input)
+	if ip == nil {
+		return nil, false, fmt.Errorf("Unable to parse IP address: %v", input)
+	}
+	isIpv6, err = IsIPv6(ip.String())
 	if err != nil {
-		return nil, false, err
+		return
 	}
-	if ipv6 {
-		ip, network, err := net.ParseCIDR(input + ipv6Prefix)
-		network.IP = ip
-		if err != nil {
-			return nil, false, err
-		}
-		return network, true, nil
-	}
-	ip, network, err := net.ParseCIDR(input + ipv4Prefix)
-	if err != nil {
-		return nil, false, err
-	}
+
+	network := net.IPNet{}
 	network.IP = ip
-	return network, false, nil
+	if isIpv6 {
+		network.Mask = defaultIpv6Mask
+	} else {
+		network.Mask = defaultIpv4Mask
+	}
+	return &network, isIpv6, nil
 }
 
 // IsIPv6 returns true if provided IP address is IPv6, false otherwise

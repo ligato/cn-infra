@@ -11,6 +11,7 @@ define test_only
 	@go test ./db/keyval/etcdv3
 	@go test ./messaging/kafka/client
     @go test ./messaging/kafka/mux
+    @go test ./utils/addrs
     @echo "# done"
 endef
 
@@ -21,9 +22,10 @@ define test_cover_only
 	@go test -coverprofile=${COVER_DIR}coverage_unit2.out ./db/keyval/etcdv3
 	@go test -coverprofile=${COVER_DIR}coverage_unit3.out ./messaging/kafka/client
 	@go test -coverprofile=${COVER_DIR}coverage_unit4.out ./messaging/kafka/mux
+	@go test -coverprofile=${COVER_DIR}coverage_unit5.out ./utils/addrs
     @echo "# merging coverage results"
     @cd vendor/github.com/wadey/gocovmerge && go install -v
-    @gocovmerge ${COVER_DIR}coverage_unit1.out ${COVER_DIR}coverage_unit2.out ${COVER_DIR}coverage_unit3.out ${COVER_DIR}coverage_unit4.out > ${COVER_DIR}coverage.out
+    @gocovmerge ${COVER_DIR}coverage_unit1.out ${COVER_DIR}coverage_unit2.out ${COVER_DIR}coverage_unit3.out ${COVER_DIR}coverage_unit4.out ${COVER_DIR}coverage_unit5.out > ${COVER_DIR}coverage.out
     @echo "# coverage data generated into ${COVER_DIR}coverage.out"
     @echo "# done"
 endef
