@@ -1,7 +1,7 @@
-# Kafka client
+# Kafka
 
-The package provides functions to consume topic/partition and produce to sync/async messages
-for kafka. Minimal supported version of kafka is determined by [sarama](github.com/Shopify/sarama)
+The package provides functions to consume topics and to produce sync/async messages
+to kafka. Minimal supported version of kafka is determined by [sarama](github.com/Shopify/sarama)
  library - Kafka 0.10 and 0.9, although older releases are still likely to work.
 
 If you don't have kafka installed locally you can use docker image for testing:
