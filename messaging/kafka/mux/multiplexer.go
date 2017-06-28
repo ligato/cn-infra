@@ -42,6 +42,7 @@ type Multiplexer struct {
 
 	// factory that crates consumer used in the Multiplexer
 	consumerFactory func(topics []string, groupId string) (*client.Consumer, error)
+	closeCh         chan struct{}
 }
 
 // Connection is an entity that provides access to shared producers/consumers of multiplexer.
@@ -79,7 +80,9 @@ func NewMultiplexer(consumerFactory ConsumerFactory, syncP *client.SyncProducer,
 		syncProducer:  syncP,
 		asyncProducer: asyncP,
 		name:          name,
-		mapping:       map[string]*map[string]chan *client.ConsumerMessage{}}
+		mapping:       map[string]*map[string]chan *client.ConsumerMessage{},
+		closeCh:       make(chan struct{}),
+	}
 
 	go cl.watchAsyncProducerChannels()
 	return cl
@@ -154,6 +157,7 @@ func (mux *Multiplexer) Start() error {
 
 // Close cleans up the resources used by the Multiplexer
 func (mux *Multiplexer) Close() {
+	close(mux.closeCh)
 	mux.consumer.Close()
 	mux.syncProducer.Close()
 	mux.asyncProducer.Close()
@@ -344,7 +348,7 @@ func (conn *ProtoConnection) ConsumeTopic(msgChan chan *client.ProtoConsumerMess
 				default:
 					log.Warn("Unable to deliver message to consumer")
 				}
-			case <-conn.multiplexer.consumer.GetCloseChannel():
+			case <-conn.multiplexer.closeCh:
 				break messageHandler
 			}
 		}
