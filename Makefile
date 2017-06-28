@@ -9,6 +9,7 @@ define test_only
 	@echo "# running unit tests"
 	@go test ./logging/logrus
 	@go test ./db/keyval/etcd
+	@go test ./messaging/kafka/...
     @echo "# done"
 endef
 
@@ -17,9 +18,11 @@ define test_cover_only
 	@echo "# running unit tests with coverage analysis"
 	@go test -coverprofile=${COVER_DIR}coverage_unit1.out ./logging/logrus
 	@go test -coverprofile=${COVER_DIR}coverage_unit2.out ./db/keyval/etcd
+	@go test -coverprofile=${COVER_DIR}coverage_unit3.out ./messaging/kafka/client
+	@go test -coverprofile=${COVER_DIR}coverage_unit4.out ./messaging/kafka/mux
     @echo "# merging coverage results"
     @cd vendor/github.com/wadey/gocovmerge && go install -v
-    @gocovmerge ${COVER_DIR}coverage_unit1.out ${COVER_DIR}coverage_unit2.out > ${COVER_DIR}coverage.out
+    @gocovmerge ${COVER_DIR}coverage_unit1.out ${COVER_DIR}coverage_unit2.out ${COVER_DIR}coverage_unit3.out ${COVER_DIR}coverage_unit4.out > ${COVER_DIR}coverage.out
     @echo "# coverage data generated into ${COVER_DIR}coverage.out"
     @echo "# done"
 endef
@@ -52,6 +55,7 @@ define build_examples_only
     @echo "# building examples"
     @cd db/keyval/etcd/examples && make build
     @cd logging/logrus/examples && make build
+    @cd messaging/kafka/examples && make build
     @echo "# done"
 endef
 
@@ -60,6 +64,7 @@ define clean_examples_only
     @echo "# cleaning examples"
     @cd db/keyval/etcd/examples && make clean
     @cd logging/logrus/examples && make clean
+    @cd messaging/kafka/examples && make clean
     @echo "# done"
 endef
 
