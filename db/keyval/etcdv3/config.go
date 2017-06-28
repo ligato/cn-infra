@@ -17,7 +17,7 @@ package etcdv3
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
+
 	"time"
 
 	"os"
@@ -25,10 +25,12 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/pkg/tlsutil"
-	"github.com/ghodss/yaml"
 )
 
-type yamlConfig struct {
+// Config represents a part of etcd configuration that can be
+// loaded from a file. The Config might be afterwards transformed into
+// clientv3.Config using ConfigToClienv3 function.
+type Config struct {
 	Endpoints             []string      `json:"endpoints"`
 	DialTimeout           time.Duration `json:"dial-timeout"`
 	InsecureTransport     bool          `json:"insecure-transport"`
@@ -41,22 +43,10 @@ type yamlConfig struct {
 // default timeout for connecting to etcd.
 const defaultTimeout = 1 * time.Second
 
-// configFromFile loads the Etcd client configuration from the
-// specified file. If the specified file is valid and contains
-// valid configuration, the parsed client configuration is
-// returned; otherwise, an error is returned.
-func configFromFile(fpath string) (*clientv3.Config, error) {
-	b, err := ioutil.ReadFile(fpath)
-	if err != nil {
-		return nil, err
-	}
-
-	yc := &yamlConfig{}
-
-	err = yaml.Unmarshal(b, yc)
-	if err != nil {
-		return nil, err
-	}
+// ConfigToClientv3 transforms the configuration modelled by yaml structure
+// into clientv3.Config. If the endpoints are not specified the function tries to load endpoints
+// ETCDV3_ENDPOINTS environment variable.
+func ConfigToClientv3(yc *Config) (*clientv3.Config, error) {
 
 	timeout := defaultTimeout
 
@@ -69,6 +59,14 @@ func configFromFile(fpath string) (*clientv3.Config, error) {
 		DialTimeout: timeout,
 	}
 
+	if len(cfg.Endpoints) == 0 {
+		if ep := os.Getenv("ETCDV3_ENDPOINTS"); ep != "" {
+			cfg.Endpoints = strings.Split(ep, ",")
+		} else {
+			cfg.Endpoints = []string{"127.0.0.1:2379"}
+		}
+	}
+
 	if yc.InsecureTransport {
 		cfg.TLS = nil
 		return cfg, nil
@@ -77,6 +75,7 @@ func configFromFile(fpath string) (*clientv3.Config, error) {
 	var (
 		cert *tls.Certificate
 		cp   *x509.CertPool
+		err  error
 	)
 
 	if yc.Certfile != "" && yc.Keyfile != "" {
@@ -104,35 +103,4 @@ func configFromFile(fpath string) (*clientv3.Config, error) {
 	cfg.TLS = tlscfg
 
 	return cfg, nil
-}
-
-// initRemoteClient initializes the Connection to ETCD. ETCD clientv3
-// config file contains the settings of the ETCD connection. A new clientv3
-// is created in the function and returned to the caller.
-func initRemoteClient(configFile string) (*clientv3.Client, error) {
-	var config *clientv3.Config
-	var err error
-
-	if configFile != "" {
-		config, err = configFromFile(configFile)
-		if err != nil {
-			return nil, err
-		}
-	} else if ep := os.Getenv("ETCDV3_ENDPOINTS"); ep != "" {
-		config = &clientv3.Config{
-			Endpoints:   strings.Split(ep, ","),
-			DialTimeout: defaultTimeout}
-	} else {
-		config = &clientv3.Config{
-			Endpoints:   []string{"127.0.0.1:2379"},
-			DialTimeout: defaultTimeout}
-	}
-
-	var etcdClient *clientv3.Client
-	etcdClient, err = clientv3.New(*config)
-	if err != nil {
-		log.Errorf("Failed to connect to Etcd etcd(s) %v, Error: '%s'", config.Endpoints, err)
-		return nil, err
-	}
-	return etcdClient, nil
 }

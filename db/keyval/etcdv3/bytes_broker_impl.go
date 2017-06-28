@@ -80,12 +80,13 @@ func SetLogger(l logging.Logger) {
 }
 
 // NewEtcdConnectionWithBytes creates new connection to etcd based on the given config file.
-func NewEtcdConnectionWithBytes(config string) (*BytesConnectionEtcd, error) {
-	etcdClientKV, err := initRemoteClient(config)
+func NewEtcdConnectionWithBytes(config clientv3.Config) (*BytesConnectionEtcd, error) {
+	etcdClient, err := clientv3.New(config)
 	if err != nil {
+		log.Errorf("Failed to connect to Etcd etcd(s) %v, Error: '%s'", config.Endpoints, err)
 		return nil, err
 	}
-	return NewEtcdConnectionUsingClient(etcdClientKV)
+	return NewEtcdConnectionUsingClient(etcdClient)
 }
 
 // NewEtcdConnectionUsingClient creates a new instance of BytesConnectionEtcd using the provided

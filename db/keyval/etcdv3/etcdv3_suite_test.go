@@ -280,10 +280,3 @@ func TestWatchDeleteResp(t *testing.T) {
 	gomega.Expect(createResp.GetValue()).To(gomega.BeNil())
 	gomega.Expect(createResp.GetRevision()).To(gomega.BeEquivalentTo(rev))
 }
-
-func TestConfigFromFile(t *testing.T) {
-	gomega.RegisterTestingT(t)
-	cfg, err := configFromFile("test_resources/etcd.conf")
-	gomega.Expect(cfg).NotTo(gomega.BeNil())
-	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-}

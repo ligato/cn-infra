@@ -20,14 +20,14 @@ import (
 	"io"
 )
 
-// Connection defines an access to the particular key-value data store implementation.
+// Connection defines an access to a particular key-value data store implementation.
 type Connection interface {
 	NewBroker(keyPrefix string) keyval.ProtoBroker
 	NewWatcher(keyPrefix string) keyval.ProtoWatcher
 	io.Closer
 }
 
-// Skeleton of a KV plugin (reusable somewhere else)
+// Skeleton of a KV plugin is a generic part of KV plugin.
 type Skeleton struct {
 	conn    Connection
 	connect func() (Connection, error)
@@ -44,7 +44,8 @@ func (plugin *Skeleton) Init() (err error) {
 	return nil
 }
 
-// AfterInit is called once all plugin have been initialized.
+// AfterInit is called once all plugin have been initialized. The connection to datastore
+// is established in this phase.
 func (plugin *Skeleton) AfterInit() (err error) {
 	plugin.conn, err = plugin.connect()
 	return err

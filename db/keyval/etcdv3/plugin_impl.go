@@ -23,20 +23,18 @@ import (
 // ProtoPluginEtcd implements Plugin interface therefore can be loaded with other plugins
 type ProtoPluginEtcd struct {
 	*plugin.Skeleton
+	/*TODO
 	Config *clientv3.Config //TODO `inject:""`
 	client *clientv3.Client
+	*/
 }
 
 // NewEtcdPlugin creates a new instance of ProtoPluginEtcd. Configuration of etcd connection is loaded from file.
-func NewEtcdPlugin(etcdConfig string /*TODO clientv3.Config*/) *ProtoPluginEtcd {
+func NewEtcdPlugin(etcdConfig clientv3.Config) *ProtoPluginEtcd {
 
 	skeleton := plugin.NewSkeleton(
 		func() (plugin.Connection, error) {
-			client, err := initRemoteClient(etcdConfig)
-			if err != nil {
-				return nil, err
-			}
-			coreBroker, err := NewEtcdConnectionUsingClient(client)
+			coreBroker, err := NewEtcdConnectionWithBytes(etcdConfig)
 			if err != nil {
 				return nil, err
 			}
