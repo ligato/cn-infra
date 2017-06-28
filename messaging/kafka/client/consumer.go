@@ -18,9 +18,9 @@ import (
 	"fmt"
 	"github.com/Shopify/sarama"
 	"github.com/bsm/sarama-cluster"
+	"github.com/ligato/cn-infra/logging"
 	"sync"
 	"time"
-	"github.com/ligato/cn-infra/logging"
 )
 
 // clusterConsumer defines an interface that allows to mock the implementation of
@@ -220,7 +220,7 @@ func (ref *Consumer) notificationHandler(in <-chan *cluster.Notification) {
 		case note := <-in:
 			ref.Config.RecvNotificationChan <- note
 		case <-ref.closeChannel:
-			log.Debug("Canceling noitification handler")
+			log.Debug("Canceling notification handler")
 			return
 		}
 	}

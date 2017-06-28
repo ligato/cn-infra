@@ -31,16 +31,16 @@ func TestMultiplexer(t *testing.T) {
 	ch1 := make(chan *client.ConsumerMessage)
 	ch2 := make(chan *client.ConsumerMessage)
 
-	err := c1.ConsumeTopic("topic1", ch1)
+	err := c1.ConsumeTopic(ch1, "topic1")
 	gomega.Expect(err).To(gomega.BeNil())
-	err = c2.ConsumeTopic("topic1", ch2)
+	err = c2.ConsumeTopic(ch2, "topic2", "topic3")
 	gomega.Expect(err).To(gomega.BeNil())
 
 	mux.Start()
 	gomega.Expect(mux.started).To(gomega.BeTrue())
 
 	// once the multiplexer is start an attempt to subscribe returns an error
-	err = c1.ConsumeTopic("anotherTopic1", ch1)
+	err = c1.ConsumeTopic(ch1, "anotherTopic1")
 	gomega.Expect(err).NotTo(gomega.BeNil())
 
 	mux.Close()

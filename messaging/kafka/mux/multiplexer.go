@@ -3,10 +3,12 @@ package mux
 import (
 	"fmt"
 	"github.com/Shopify/sarama"
-	"sync"
-	"time"
+	"github.com/golang/protobuf/proto"
+	"github.com/ligato/cn-infra/db/keyval"
 	lg "github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
+	"sync"
+	"time"
 )
 
 // Multiplexer encapsulates clients to kafka cluster (syncProducer, asyncProducer, consumer).
@@ -23,7 +25,7 @@ type Multiplexer struct {
 	// asyncProducer used by the Multiplexer
 	asyncProducer *client.AsyncProducer
 
-	// name is used for identification of stored offset in kafka. This allows
+	// name is used for identification of stored last consumed offset in kafka. This allows
 	// to follow up messages after restart.
 	name string
 
@@ -49,6 +51,19 @@ type Connection struct {
 
 	// name identifies the connection
 	name string
+}
+
+// ProtoConnection is an entity that provides access to shared producers/consumers of multiplexer.
+// The value of message are marshaled and unmarshaled to/from proto.message behind the scene.
+type ProtoConnection struct {
+	// multiplexer is used for access to kafka brokers
+	multiplexer *Multiplexer
+
+	// name identifies the connection
+	name string
+
+	// serializer marshals and unmarshals data to/from proto.Message
+	serializer keyval.Serializer
 }
 
 // asyncMeta is auxiliary structure used by Multiplexer to distribute consumer messages
@@ -149,6 +164,11 @@ func (mux *Multiplexer) NewConnection(name string) *Connection {
 	return &Connection{multiplexer: mux, name: name}
 }
 
+// NewProtoConnection creates instance of the ProtoConnection that will be provide access to shared Multiplexer's clients.
+func (mux *Multiplexer) NewProtoConnection(name string, serializer keyval.Serializer) *ProtoConnection {
+	return &ProtoConnection{multiplexer: mux, serializer: serializer, name: name}
+}
+
 func (mux *Multiplexer) propagateMessage(msg *client.ConsumerMessage) {
 	mux.rwlock.RLock()
 	defer mux.rwlock.RUnlock()
@@ -195,10 +215,26 @@ func (mux *Multiplexer) genericConsumer() {
 
 }
 
+func (mux *Multiplexer) stopConsuming(topic string, name string) error {
+	mux.rwlock.Lock()
+	defer mux.rwlock.Unlock()
+
+	subs, found := mux.mapping[topic]
+	if !found {
+		return fmt.Errorf("Topic %s was not consumed by '%s'", topic, name)
+	}
+	_, found = (*subs)[name]
+	if !found {
+		return fmt.Errorf("Topic %s was not consumed by '%s'", topic, name)
+	}
+	delete(*subs, name)
+	return nil
+}
+
 // ConsumeTopic is called to start consuming of a topic.
 // Function can be called until the multiplexer is started, it returns an error otherwise.
 // The provided channel should be buffered, otherwise messages might be lost.
-func (conn *Connection) ConsumeTopic(topic string, msgChan chan *client.ConsumerMessage) error {
+func (conn *Connection) ConsumeTopic(msgChan chan *client.ConsumerMessage, topics ...string) error {
 	conn.multiplexer.rwlock.Lock()
 	defer conn.multiplexer.rwlock.Unlock()
 
@@ -206,35 +242,24 @@ func (conn *Connection) ConsumeTopic(topic string, msgChan chan *client.Consumer
 		return fmt.Errorf("ConsumeTopic can be called only if the multiplexer has not been started yet")
 	}
 
-	// check if we have already consumed the topic and partition
-	subs, found := conn.multiplexer.mapping[topic]
+	for _, topic := range topics {
+		// check if we have already consumed the topic and partition
+		subs, found := conn.multiplexer.mapping[topic]
 
-	if !found {
-		subs = &map[string]chan *client.ConsumerMessage{}
+		if !found {
+			subs = &map[string]chan *client.ConsumerMessage{}
+			conn.multiplexer.mapping[topic] = subs
+		}
+		// add subscription to consumerList
+		(*subs)[conn.name] = msgChan
 		conn.multiplexer.mapping[topic] = subs
 	}
-	// add subscription to consumerList
-	(*subs)[conn.name] = msgChan
-	conn.multiplexer.mapping[topic] = subs
-
 	return nil
 }
 
 // StopConsuming cancels the previously created subscription for consuming the topic.
 func (conn *Connection) StopConsuming(topic string) error {
-	conn.multiplexer.rwlock.Lock()
-	defer conn.multiplexer.rwlock.Unlock()
-
-	subs, found := conn.multiplexer.mapping[topic]
-	if !found {
-		return fmt.Errorf("Topic %s was not consumed by '%s'", topic, conn.name)
-	}
-	_, found = (*subs)[conn.name]
-	if !found {
-		return fmt.Errorf("Topic %s was not consumed by '%s'", topic, conn.name)
-	}
-	delete(*subs, conn.name)
-	return nil
+	return conn.multiplexer.stopConsuming(topic, conn.name)
 }
 
 // SendSyncByte sends a message that uses byte encoder using the sync API
@@ -270,4 +295,78 @@ func (conn *Connection) SendAsyncString(topic string, key string, value string, 
 func (conn *Connection) SendAsyncMessage(topic string, key client.Encoder, value client.Encoder, meta interface{}, successChan chan *client.ProducerMessage, errChan chan *client.ProducerError) {
 	auxMeta := &asyncMeta{successChan: successChan, errorChan: errChan, usersMeta: meta}
 	conn.multiplexer.asyncProducer.SendMsg(topic, key, value, auxMeta)
+}
+
+// SendSyncMessage sends a message using the sync API
+func (conn *ProtoConnection) SendSyncMessage(topic string, key string, value proto.Message) (partition int32, offset int64, err error) {
+	data, err := conn.serializer.Marshal(value)
+	if err != nil {
+		return 0, 0, err
+	}
+	msg, err := conn.multiplexer.syncProducer.SendMsg(topic, sarama.StringEncoder(key), sarama.ByteEncoder(data))
+	if err != nil {
+		return 0, 0, err
+	}
+	return msg.Partition, msg.Offset, err
+}
+
+// SendAsyncMessage sends a message using the async API
+func (conn *ProtoConnection) SendAsyncMessage(topic string, key string, value proto.Message, meta interface{}, successChan chan *client.ProducerMessage, errChan chan *client.ProducerError) error {
+	data, err := conn.serializer.Marshal(value)
+	if err != nil {
+		return err
+	}
+	auxMeta := &asyncMeta{successChan: successChan, errorChan: errChan, usersMeta: meta}
+	conn.multiplexer.asyncProducer.SendMsg(topic, sarama.StringEncoder(key), sarama.ByteEncoder(data), auxMeta)
+	return nil
+}
+
+// ConsumeTopic is called to start consuming given topics.
+// Function can be called until the multiplexer is started, it returns an error otherwise.
+// The provided channel should be buffered, otherwise messages might be lost.
+func (conn *ProtoConnection) ConsumeTopic(msgChan chan *client.ProtoConsumerMessage, topics ...string) error {
+	conn.multiplexer.rwlock.Lock()
+	defer conn.multiplexer.rwlock.Unlock()
+
+	if conn.multiplexer.started {
+		return fmt.Errorf("ConsumeTopic can be called only if the multiplexer has not been started yet")
+	}
+
+	internalChannel := make(chan *client.ConsumerMessage)
+
+	go func() {
+	messageHandler:
+		for {
+			select {
+			case msg := <-internalChannel:
+				select {
+				case msgChan <- client.NewProtoConsumerMessage(msg, conn.serializer):
+				default:
+					log.Warn("Unable to deliver message to consumer")
+				}
+			case <-conn.multiplexer.consumer.GetCloseChannel():
+				break messageHandler
+			}
+		}
+		close(internalChannel)
+	}()
+
+	for _, topic := range topics {
+		// check if we have already consumed the topic and partition
+		subs, found := conn.multiplexer.mapping[topic]
+
+		if !found {
+			subs = &map[string]chan *client.ConsumerMessage{}
+			conn.multiplexer.mapping[topic] = subs
+		}
+		// add subscription to consumerList
+		(*subs)[conn.name] = internalChannel
+		conn.multiplexer.mapping[topic] = subs
+	}
+	return nil
+}
+
+// StopConsuming cancels the previously created subscription for consuming the topic.
+func (conn *ProtoConnection) StopConsuming(topic string) error {
+	return conn.multiplexer.stopConsuming(topic, conn.name)
 }

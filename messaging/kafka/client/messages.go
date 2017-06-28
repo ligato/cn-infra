@@ -17,6 +17,8 @@ package client
 import (
 	"fmt"
 	"github.com/Shopify/sarama"
+	"github.com/golang/protobuf/proto"
+	"github.com/ligato/cn-infra/db/keyval"
 	"time"
 )
 
@@ -33,6 +35,41 @@ type ConsumerMessage struct {
 	Partition  int32
 	Offset     int64
 	Timestamp  time.Time
+}
+
+// GetKey returns key associated with the message
+func (cm *ConsumerMessage) GetKey() string {
+	return string(cm.Key)
+}
+
+// GetValue return value associated with the message
+func (cm *ConsumerMessage) GetValue() []byte {
+	return cm.Value
+}
+
+// ConsumerMessage encapsulates a Kafka message returned by the consumer.
+type ProtoConsumerMessage struct {
+	*ConsumerMessage
+	serializer keyval.Serializer
+}
+
+// NewProtoConsumerMessage creates new instace of ProtoConsumerMessage
+func NewProtoConsumerMessage(msg *ConsumerMessage, serializer keyval.Serializer) *ProtoConsumerMessage {
+	return &ProtoConsumerMessage{msg, serializer}
+}
+
+// GetKey returns key associated with the message
+func (cm *ProtoConsumerMessage) GetKey() string {
+	return string(cm.Key)
+}
+
+// GetValue return value associated with the message
+func (cm *ProtoConsumerMessage) GetValue(msg proto.Message) error {
+	err := cm.serializer.Unmarshal(cm.ConsumerMessage.GetValue(), msg)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // ProducerMessage is the collection of elements passed to the Producer in order to send a message.
