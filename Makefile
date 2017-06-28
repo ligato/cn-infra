@@ -8,7 +8,7 @@ COVER_DIR=/tmp/
 define test_only
 	@echo "# running unit tests"
 	@go test ./logging/logrus
-	@go test ./db/keyval/etcd
+	@go test ./db/keyval/etcdv3
     @echo "# done"
 endef
 
@@ -16,7 +16,7 @@ endef
 define test_cover_only
 	@echo "# running unit tests with coverage analysis"
 	@go test -coverprofile=${COVER_DIR}coverage_unit1.out ./logging/logrus
-	@go test -coverprofile=${COVER_DIR}coverage_unit2.out ./db/keyval/etcd
+	@go test -coverprofile=${COVER_DIR}coverage_unit2.out ./db/keyval/etcdv3
     @echo "# merging coverage results"
     @cd vendor/github.com/wadey/gocovmerge && go install -v
     @gocovmerge ${COVER_DIR}coverage_unit1.out ${COVER_DIR}coverage_unit2.out > ${COVER_DIR}coverage.out
@@ -50,7 +50,7 @@ endef
 # build examples only
 define build_examples_only
     @echo "# building examples"
-    @cd db/keyval/etcd/examples && make build
+    @cd db/keyval/etcdv3/examples && make build
     @cd logging/logrus/examples && make build
     @echo "# done"
 endef
@@ -58,7 +58,7 @@ endef
 # clean examples only
 define clean_examples_only
     @echo "# cleaning examples"
-    @cd db/keyval/etcd/examples && make clean
+    @cd db/keyval/etcdv3/examples && make clean
     @cd logging/logrus/examples && make clean
     @echo "# done"
 endef

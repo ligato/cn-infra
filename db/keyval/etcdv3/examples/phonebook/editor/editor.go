@@ -100,14 +100,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	db, err := etcdv3.NewBytesBrokerEtcd(cfg)
+	db, err := etcdv3.NewEtcdConnectionWithBytes(cfg)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	//initialize proto decorator
-	protoDb := etcdv3.NewProtoBrokerEtcd(db)
+	protoDb := etcdv3.NewProtoWrapperEtcd(db)
 
 	switch op {
 	case Put:
