@@ -46,6 +46,6 @@ func TestParseIPWithPrefix(t *testing.T) {
 	gomega.Expect(maskOnes).To(gomega.BeEquivalentTo(120))
 	gomega.Expect(maskBits).To(gomega.BeEquivalentTo(128))
 
-	ip, isIpv6, err = ParseIPWithPrefix("127.0.0.1/abcd")
+	_, _, err = ParseIPWithPrefix("127.0.0.1/abcd")
 	gomega.Expect(err).NotTo(gomega.BeNil())
 }
