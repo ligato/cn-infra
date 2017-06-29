@@ -116,9 +116,8 @@ func WithField(key string, value interface{}) logging.LogWithLevel {
 //
 // Note that it doesn't log until you call Debug, Print, Info, Warn, Fatal
 // or Panic on the Entry it returns.
-//func WithFields(fields lg.Fields) *Entry {
-func WithFields(fields Fields) *Entry {
-	entry := logf.withFields(fields, 1)
+func WithFields(fields map[string]interface{}) *Entry {
+	entry := logf.withFields(Fields(fields), 1)
 	return entry
 }
 
