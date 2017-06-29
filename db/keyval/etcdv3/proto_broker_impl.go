@@ -124,12 +124,12 @@ func putProtoInternal(broker keyval.BytesBroker, serializer keyval.Serializer, k
 }
 
 // Delete removes from data store key-value items stored under key.
-func (db *ProtoWrapperEtcd) Delete(key string) (bool, error) {
+func (db *ProtoWrapperEtcd) Delete(key string) (existed bool, err error) {
 	return db.broker.Delete(key)
 }
 
 // Delete removes from data store key-value items stored under key.
-func (pdb *protoBrokerEtcd) Delete(key string) (bool, error) {
+func (pdb *protoBrokerEtcd) Delete(key string) (existed bool, err error) {
 	return pdb.broker.Delete(key)
 }
 

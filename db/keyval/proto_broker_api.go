@@ -26,13 +26,13 @@ type ProtoBroker interface {
 	// NewTxn creates a transaction
 	NewTxn() ProtoTxn
 	// GetValue retrieves one item under the provided key. If the item exists it is unmarshaled into the reqObj.
-	GetValue(key string, reqObj proto.Message) (bool, int64, error)
+	GetValue(key string, reqObj proto.Message) (found bool, revision int64, err error)
 	// ListValues returns an iterator that enables to traverse all items stored under the provided key
 	ListValues(key string) (ProtoKeyValIterator, error)
 	// ListKeys is similar to the ListValues the difference is that values are not fetched
 	ListKeys(prefix string) (ProtoKeyIterator, error)
 	// Delete removes data stored under the key
-	Delete(key string) (bool, error)
+	Delete(key string) (existed bool, err error)
 }
 
 // ProtoKvPair group getter for single key-value pair

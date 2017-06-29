@@ -159,7 +159,7 @@ func (pdb *BytesBrokerWatcherEtcd) ListKeys(prefix string) (keyval.BytesKeyItera
 }
 
 // Delete calls delete function of BytesConnectionEtcd. KeyPrefix defined in constructor is prepended to the key argument.
-func (pdb *BytesBrokerWatcherEtcd) Delete(key string) (bool, error) {
+func (pdb *BytesBrokerWatcherEtcd) Delete(key string) (existed bool, err error) {
 	return deleteInternal(pdb.kv, key)
 }
 
@@ -273,11 +273,11 @@ func putInternal(kv clientv3.KV, lessor clientv3.Lease, key string, binData []by
 }
 
 // Delete removes data identified by the key.
-func (db *BytesConnectionEtcd) Delete(key string) (bool, error) {
+func (db *BytesConnectionEtcd) Delete(key string) (existed bool, err error) {
 	return deleteInternal(db.etcdClient, key)
 }
 
-func deleteInternal(kv clientv3.KV, key string) (bool, error) {
+func deleteInternal(kv clientv3.KV, key string) (existed bool, err error) {
 	// delete data from etcdv3
 	resp, err := kv.Delete(context.Background(), key)
 	if err != nil {
@@ -285,7 +285,7 @@ func deleteInternal(kv clientv3.KV, key string) (bool, error) {
 		return false, err
 	}
 
-	if len(resp.PrevKvs) == 0 {
+	if len(resp.PrevKvs) != 0 {
 		return true, nil
 	}
 

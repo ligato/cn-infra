@@ -229,7 +229,7 @@ func TestDelete(t *testing.T) {
 	gomega.RegisterTestingT(t)
 	response, err := dataBroker.Delete("vnf")
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-	gomega.Expect(response).To(gomega.BeTrue())
+	gomega.Expect(response).To(gomega.BeFalse())
 	// error case
 	response, err = dataBrokerErr.Delete("vnf")
 	gomega.Expect(err).Should(gomega.HaveOccurred())
