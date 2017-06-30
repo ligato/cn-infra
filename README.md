@@ -7,7 +7,7 @@ The CN infra is a framework that can be used to build a customized management/co
 plane for cloud-native Virtual Network Functions (VNFs). Cloud-native VNFs are also 
 known as "CNFs".
 
-The tool used for management of third-party dependencies is [Glide](https://github.com/Masterminds/glide). After adding or updating
-a dependency in `glide.yaml` run `make install-dep` to download the specified dependencies into vendor folder. 
+The tool used for managing third-party dependencies is [Glide](https://github.com/Masterminds/glide). After adding or updating
+a dependency in `glide.yaml` run `make install-dep` to download specified dependencies into the vendor folder. 
 
 If you are interested in contributing, please see the [contribution guidelines](CONTRIBUTING.md).
