@@ -19,8 +19,8 @@ import (
 	"github.com/ligato/cn-infra/db/keyval"
 )
 
-// ProtoWrapperEtcd is decorator that allows to read/write proto file modelled data.
-// It marshals/unmarshals go structures to slice of bytes and vice versa behind the scenes.
+// ProtoWrapperEtcd is a decorator which allows to read/write proto file modelled data.
+// It marshals/unmarshals go structures to slice off bytes and vice versa behind the scenes.
 type ProtoWrapperEtcd struct {
 	broker     *BytesConnectionEtcd
 	serializer keyval.Serializer
@@ -91,7 +91,7 @@ func (db *ProtoWrapperEtcd) NewTxn() keyval.ProtoTxn {
 }
 
 // NewTxn creates a new Data Broker transaction. A transaction can
-// holds multiple operations that are all committed to the data
+// hold multiple operations that are all committed to the data
 // store together. After a transaction has been created, one or
 // more operations (put or delete) can be added to the transaction
 // before it is committed.
@@ -123,17 +123,17 @@ func putProtoInternal(broker keyval.BytesBroker, serializer keyval.Serializer, k
 	return nil
 }
 
-// Delete removes from data store key-value items stored under key.
+// Delete removes from datastore key-value items stored under key.
 func (db *ProtoWrapperEtcd) Delete(key string) (existed bool, err error) {
 	return db.broker.Delete(key)
 }
 
-// Delete removes from data store key-value items stored under key.
+// Delete removes from datastore key-value items stored under key.
 func (pdb *protoBrokerEtcd) Delete(key string) (existed bool, err error) {
 	return pdb.broker.Delete(key)
 }
 
-// Watch subscribes for changes in Data Store associated with the key. respChannel is used for delivery watch events
+// Watch subscribes for changes in datastore associated with the key. respChannel is used for delivery watch events
 func (db *ProtoWrapperEtcd) Watch(resp chan keyval.ProtoWatchResp, keys ...string) error {
 	byteCh := make(chan keyval.BytesWatchResp, 0)
 	err := db.broker.Watch(byteCh, keys...)
@@ -148,7 +148,7 @@ func (db *ProtoWrapperEtcd) Watch(resp chan keyval.ProtoWatchResp, keys ...strin
 	return nil
 }
 
-// GetValue retrieves one key-value item from the data store. The item
+// GetValue retrieves one key-value item from the datastore. The item
 // is identified by the provided key.
 //
 // If the item was found, its value is unmarshaled and placed in
@@ -160,7 +160,7 @@ func (db *ProtoWrapperEtcd) GetValue(key string, reqObj proto.Message) (found bo
 	return getValueProtoInternal(db.broker, db.serializer, key, reqObj)
 }
 
-// GetValue retrieves one key-value item from the data store. The item
+// GetValue retrieves one key-value item from the datastore. The item
 // is identified by the provided key.
 //
 // If the item was found, its value is unmarshaled and placed in
@@ -238,7 +238,7 @@ func (db *ProtoWrapperEtcd) ListValuesRange(fromPrefix string, toPrefix string) 
 	return &protoKeyValIterator{ctx, db.serializer}, nil
 }
 
-// GetNext returns the following item from the result set. If data was returned found is set to true.
+// GetNext returns the following item from the result set. If data was returned, found is set to true.
 func (ctx *protoKeyValIterator) GetNext() (kv keyval.ProtoKeyVal, lastReceived bool) {
 	pair, allReceived := ctx.ctx.GetNext()
 	if allReceived {
@@ -248,12 +248,12 @@ func (ctx *protoKeyValIterator) GetNext() (kv keyval.ProtoKeyVal, lastReceived b
 	return &protoKeyVal{pair, ctx.serializer}, allReceived
 }
 
-// GetNext returns the following item from the result set. If data was returned found is set to true.
+// GetNext returns the following item from the result set. If data was returned, found is set to true.
 func (ctx *protoKeyIterator) GetNext() (key string, rev int64, lastReceived bool) {
 	return ctx.ctx.GetNext()
 }
 
-// Watch for changes in Data Store respChannel is used for receiving watch events
+// Watch for changes in datastore respChannel is used for receiving watch events
 func (pdb *protoWatcherEtcd) Watch(resp chan keyval.ProtoWatchResp, keys ...string) error {
 	byteCh := make(chan keyval.BytesWatchResp, 0)
 	err := pdb.watcher.Watch(byteCh, keys...)
