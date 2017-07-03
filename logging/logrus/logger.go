@@ -64,7 +64,7 @@ func New() *Logger {
 func NewNamed(name string) (*Logger, error) {
 	_, exists := LoggerRegistry.mapping[name]
 	if exists {
-		return nil, fmt.Errorf("Logger with name '%s' already exists.", name)
+		return nil, fmt.Errorf("logger with name '%s' already exists", name)
 	}
 
 	err := checkLoggerName(name)
@@ -92,7 +92,7 @@ func NewNamed(name string) (*Logger, error) {
 
 func checkLoggerName(name string) error {
 	if !validLoggerName(name) {
-		return fmt.Errorf("Logger name can contain only alphanum characters, dash and comma.")
+		return fmt.Errorf("logger name can contain only alphanum characters, dash and comma")
 	}
 	return nil
 }

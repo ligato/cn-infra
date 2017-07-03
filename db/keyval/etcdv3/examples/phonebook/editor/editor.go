@@ -43,11 +43,11 @@ func processArgs() (cfg *clientv3.Config, op int, data []string, err error) {
 			task = os.Args[1:]
 		}
 	} else {
-		return cfg, 0, nil, fmt.Errorf("Incorrect arguments.")
+		return cfg, 0, nil, fmt.Errorf("incorrect arguments")
 	}
 
 	if len(task) < 2 || (task[0] == "put" && len(task) < 4) {
-		return cfg, 0, nil, fmt.Errorf("Incorrect arguments.")
+		return cfg, 0, nil, fmt.Errorf("incorrect arguments")
 	}
 
 	if task[0] == "delete" {

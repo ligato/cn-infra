@@ -145,7 +145,7 @@ func (ref *SyncProducer) SendMsgByte(topic string, key []byte, msg []byte) (*Pro
 // SendMsg sends a message to Kafka
 func (ref *SyncProducer) SendMsg(topic string, key sarama.Encoder, msg sarama.Encoder) (*ProducerMessage, error) {
 	if msg == nil {
-		err := errors.New("Nil message can not be sent.")
+		err := errors.New("nil message can not be sent")
 		log.Error(err)
 		return nil, err
 	}
