@@ -9,3 +9,4 @@ before_install:
 script:
   - make
   - make test
+  - make test-cover
