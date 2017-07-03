@@ -81,8 +81,8 @@ func DiffAddr(newConfig []*net.IPNet, oldConfig []*net.IPNet) (toBeDeleted []*ne
 	return del, add
 }
 
-// Converts ipv4 configuration from protobuf representation to IPNet
-func protoAddrToStruct(addrs []string) ([]*net.IPNet, error) {
+// StrAddrsToStruct converts slice of strings representing ipv4 addresses to IPNet structures
+func StrAddrsToStruct(addrs []string) ([]*net.IPNet, error) {
 	var result []*net.IPNet
 	for _, addressWithPrefix := range addrs {
 		if addressWithPrefix == "" {
