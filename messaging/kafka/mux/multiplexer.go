@@ -5,6 +5,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval"
 	lg "github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
+	"github.com/ligato/cn-infra/utils/safeclose"
 	"sync"
 	"time"
 )
@@ -118,6 +119,11 @@ func (mux *Multiplexer) Start() error {
 		topics = append(topics, topic)
 	}
 
+	if len(topics) == 0 {
+		log.Debug("No topics to be consumed")
+		return nil
+	}
+
 	log.WithFields(lg.Fields{"topics": topics}).Debug("Consuming started")
 
 	mux.consumer, err = mux.consumerFactory(topics, mux.name)
@@ -134,9 +140,9 @@ func (mux *Multiplexer) Start() error {
 // Close cleans up the resources used by the Multiplexer
 func (mux *Multiplexer) Close() {
 	close(mux.closeCh)
-	mux.consumer.Close()
-	mux.syncProducer.Close()
-	mux.asyncProducer.Close()
+	safeclose.Close(mux.consumer)
+	safeclose.Close(mux.syncProducer)
+	safeclose.Close(mux.asyncProducer)
 }
 
 // NewConnection creates instance of the Connection that will be provide access to shared Multiplexer's clients.
