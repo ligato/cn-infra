@@ -21,7 +21,7 @@ $MESSAGING
 "
 
   local OUT=$(echo "${ALL}" | grep -F "${FILES}" | grep -v "${WHITELIST_ERRORS}")
-  if [[ !  -z  $OUT  ]] ; then
+  if [[ ! -z $OUT ]] ; then
     echo "${OUT}" 1>&2
     exit 1
   fi
