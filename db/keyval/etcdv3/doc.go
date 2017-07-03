@@ -42,11 +42,11 @@
 //
 // Connection to etcd is established using the provided config behind the scenes.
 //
-// Alternatively, you may connect to etcd by your self and initialize the connection object with a given client.
+// Alternatively, you may connect to etcd by yourself and initialize the connection object with a given client.
 //
 //    db := etcd.NewEtcdConnectionUsingClient(client)
 //
-// Created BytesConnectionEtcd implements Broker and Watcher interfaces. The example of usage can be seen below.
+// Created BytesConnectionEtcd implements Broker and Watcher interfaces. The example of use can be seen below.
 //
 // To insert single key-value pair into etcd run:
 //		db.Put(key, data)
@@ -134,8 +134,8 @@
 //
 //
 // BytesConnectionEtcd also allows to create proxy instances(BytesBrokerWatcherEtcd) using NewBroker and NewWatcher methods.
-// Both of them accepts prefix argument. The prefix will be automatically prepended to all keys in the put/delete requests made from the
-// proxy instances. In case of get-like calls (GetValue, ListValues, ...) the prefixed is trimmed from key of the returned values.
+// Both of them accept prefix argument. The prefix will be automatically prepended to all keys in the put/delete requests made from the
+// proxy instances. In case of get-like calls (GetValue, ListValues, ...) the prefix is trimmed from key of the returned values.
 // They contain only a part following the prefix in the key field. The created proxy instances share the connection of the BytesConnectionEtcd.
 //
 //      +-----------------------+
@@ -168,15 +168,15 @@
 //      +-------------------+--------------------+        ([]byte)         +------+
 //        (proto.Message)
 //
-// The api of ProtoWrapperEtcd is very similar to the BytesConnectionEtcd. The difference is that arguments of type []byte
-// are replaced by arguments of type proto.Message and in some case one of the return values is transformed to output argument.
+// The API of ProtoWrapperEtcd is very similar to the BytesConnectionEtcd. The difference is that arguments of type []byte
+// are replaced by arguments of type proto.Message and in some case one of the return values is transformed into output argument.
 //
 // Example of decorator initialization
 //
 //    // conn is BytesConnectionEtcd initialized as shown at the top of the page
 //    protoBroker := etcd.NewProtoWrapperEtcd(conn)
 //
-// The only difference in the Put/Delete functions is type of the argument, apart from that usage is the same as described above.
+// The only difference in Put/Delete functions is the type of the argument, apart from that the usage is the same as described above.
 //
 // Example of retrieving single key-value pair using proto decorator:
 //   // if the value exists it is unmarshalled into the msg
