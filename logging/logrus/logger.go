@@ -287,7 +287,7 @@ func (ref *Logger) withField(key string, value interface{}, depth ...int) *Entry
 // Note that it doesn't log until you call Debug, Print, Info, Warn, Fatal
 // or Panic on the Entry it returns.
 func (ref *Logger) WithField(key string, value interface{}) logging.LogWithLevel {
-	return ref.withField(key, value)
+	return ref.withField(key, value, 1)
 }
 
 func (ref *Logger) withFields(fields Fields, depth ...int) *Entry {
@@ -327,7 +327,7 @@ func (ref *Logger) withFields(fields Fields, depth ...int) *Entry {
 // Note that it doesn't log until you call Debug, Print, Info, Warn, Fatal
 // or Panic on the Entry it returns.
 func (ref *Logger) WithFields(fields map[string]interface{}) logging.LogWithLevel {
-	return ref.withFields(Fields(fields))
+	return ref.withFields(Fields(fields), 1)
 }
 
 func (ref *Logger) header(depth int) *Entry {
