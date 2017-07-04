@@ -23,13 +23,13 @@ import (
 func EventLoopWithInterrupt(agent *Agent, closeChan chan *struct{}) {
 	err := agent.Start()
 	if err != nil {
-		agent.log.Error("Error loading core", err)
+		agent.Error("Error loading core", err)
 		os.Exit(1)
 	}
 	defer func() {
 		err := agent.Stop()
 		if err != nil {
-			agent.log.Errorf("Agent stop error '%+v'", err)
+			agent.Errorf("Agent stop error '%+v'", err)
 			os.Exit(1)
 		}
 	}()
@@ -39,13 +39,13 @@ func EventLoopWithInterrupt(agent *Agent, closeChan chan *struct{}) {
 	signal.Notify(sigChan, os.Interrupt)
 	select {
 	case <-sigChan:
-		agent.log.Println("Interrupt received, returning.")
+		agent.Println("Interrupt received, returning.")
 		return
 	case _, ok := <-closeChan:
 		if ok {
 			err := agent.Stop()
 			if err != nil {
-				agent.log.Errorf("Agent stop error '%v'", err)
+				agent.Errorf("Agent stop error '%v'", err)
 				os.Exit(1)
 			}
 			os.Exit(0)
