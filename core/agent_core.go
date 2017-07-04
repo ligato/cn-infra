@@ -58,7 +58,7 @@ func NewAgent(logger logging.Logger, maxStartup time.Duration, plugins ...*Named
 func (agent *Agent) Start() error {
 	agent.WithFields(logging.Fields{"BuildVersion": BuildVersion, "BuildDate": BuildDate}).Info("Starting the agent...")
 
-	doneChannel := make(chan *struct{}, 0)
+	doneChannel := make(chan struct{}, 0)
 	errChannel := make(chan error, 0)
 
 	flag.Parse()
@@ -74,7 +74,7 @@ func (agent *Agent) Start() error {
 			errChannel <- err
 			return
 		}
-		doneChannel <- &struct{}{}
+		close(doneChannel)
 	}()
 
 	//block until all Plugins are initialized or timeout expires
@@ -99,9 +99,10 @@ func (agent *Agent) Stop() error {
 		err := safeclose.Close(agent.plugins[i].Plugin)
 		if err != nil {
 			if len(errMsg) > 0 {
-				errMsg += "; " + string(agent.plugins[i].PluginName)
-				errMsg += ": " + err.Error()
+				errMsg += "; "
 			}
+			errMsg += string(agent.plugins[i].PluginName)
+			errMsg += ": " + err.Error()
 		}
 		agent.WithField("pluginName", agent.plugins[i].PluginName).Debug("Stopping plugin end ", err)
 	}

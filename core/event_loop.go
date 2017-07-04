@@ -19,36 +19,25 @@ import (
 	"os/signal"
 )
 
-// EventLoopWithInterrupt initializes Agent with plugins. Agent can be interrupted from outside using public CloseChannel.
-func EventLoopWithInterrupt(agent *Agent, closeChan chan *struct{}) {
+// EventLoopWithInterrupt initializes Agent with plugins. Agent is stopped when CloseChannel is closed or SIGINT is received.
+func EventLoopWithInterrupt(agent *Agent, closeChan chan struct{}) error {
 	err := agent.Start()
 	if err != nil {
 		agent.Error("Error loading core", err)
-		os.Exit(1)
+		return err
 	}
-	defer func() {
-		err := agent.Stop()
-		if err != nil {
-			agent.Errorf("Agent stop error '%+v'", err)
-			os.Exit(1)
-		}
-	}()
 
 	sigChan := make(chan os.Signal, 1)
-
 	signal.Notify(sigChan, os.Interrupt)
 	select {
 	case <-sigChan:
 		agent.Println("Interrupt received, returning.")
-		return
-	case _, ok := <-closeChan:
-		if ok {
-			err := agent.Stop()
-			if err != nil {
-				agent.Errorf("Agent stop error '%v'", err)
-				os.Exit(1)
-			}
-			os.Exit(0)
-		}
+	case <-closeChan:
 	}
+
+	err = agent.Stop()
+	if err != nil {
+		agent.Errorf("Agent stop error '%+v'", err)
+	}
+	return err
 }
