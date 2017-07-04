@@ -64,7 +64,7 @@ func New() *Logger {
 func NewNamed(name string) (*Logger, error) {
 	_, exists := LoggerRegistry.mapping[name]
 	if exists {
-		return nil, fmt.Errorf("Logger with name '%s' already exists.", name)
+		return nil, fmt.Errorf("logger with name '%s' already exists", name)
 	}
 
 	err := checkLoggerName(name)
@@ -92,7 +92,7 @@ func NewNamed(name string) (*Logger, error) {
 
 func checkLoggerName(name string) error {
 	if !validLoggerName(name) {
-		return fmt.Errorf("Logger name can contain only alphanum characters, dash and comma.")
+		return fmt.Errorf("logger name can contain only alphanum characters, dash and comma")
 	}
 	return nil
 }
@@ -287,7 +287,7 @@ func (ref *Logger) withField(key string, value interface{}, depth ...int) *Entry
 // Note that it doesn't log until you call Debug, Print, Info, Warn, Fatal
 // or Panic on the Entry it returns.
 func (ref *Logger) WithField(key string, value interface{}) logging.LogWithLevel {
-	return ref.withField(key, value)
+	return ref.withField(key, value, 1)
 }
 
 func (ref *Logger) withFields(fields Fields, depth ...int) *Entry {
@@ -327,7 +327,7 @@ func (ref *Logger) withFields(fields Fields, depth ...int) *Entry {
 // Note that it doesn't log until you call Debug, Print, Info, Warn, Fatal
 // or Panic on the Entry it returns.
 func (ref *Logger) WithFields(fields map[string]interface{}) logging.LogWithLevel {
-	return ref.withFields(Fields(fields))
+	return ref.withFields(Fields(fields), 1)
 }
 
 func (ref *Logger) header(depth int) *Entry {

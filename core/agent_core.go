@@ -34,7 +34,7 @@ var (
 type Agent struct {
 	MaxStartupTime time.Duration
 	plugins        []*NamedPlugin
-	log            logging.Logger
+	logging.Logger
 }
 
 const (
@@ -56,7 +56,7 @@ func NewAgent(logger logging.Logger, maxStartup time.Duration, plugins ...*Named
 
 // Start starts/initializes all plugins on the Start/Stop list.
 func (agent *Agent) Start() error {
-	agent.log.WithFields(logging.Fields{"BuildVersion": BuildVersion, "BuildDate": BuildDate}).Info("Starting the agent...")
+	agent.WithFields(logging.Fields{"BuildVersion": BuildVersion, "BuildDate": BuildDate}).Info("Starting the agent...")
 
 	doneChannel := make(chan *struct{}, 0)
 	errChannel := make(chan error, 0)
@@ -82,7 +82,7 @@ func (agent *Agent) Start() error {
 	case err := <-errChannel:
 		return err
 	case <-doneChannel:
-		agent.log.Info("All plugins initialized successfully")
+		agent.Info("All plugins initialized successfully")
 		return nil
 	case <-time.After(agent.MaxStartupTime):
 		return fmt.Errorf("%s", "Some plugins not intialized before timeout")
@@ -92,10 +92,10 @@ func (agent *Agent) Start() error {
 // Stop gracefully shuts down the Agent. It is called when the user
 // interrupts the Agent.
 func (agent *Agent) Stop() error {
-	agent.log.Info("Stopping agent...")
+	agent.Info("Stopping agent...")
 	errMsg := ""
 	for i := len(agent.plugins) - 1; i >= 0; i-- {
-		agent.log.WithField("pluginName", agent.plugins[i].PluginName).Debug("Stopping plugin begin")
+		agent.WithField("pluginName", agent.plugins[i].PluginName).Debug("Stopping plugin begin")
 		err := safeclose.Close(agent.plugins[i].Plugin)
 		if err != nil {
 			if len(errMsg) > 0 {
@@ -103,10 +103,10 @@ func (agent *Agent) Stop() error {
 				errMsg += ": " + err.Error()
 			}
 		}
-		agent.log.WithField("pluginName", agent.plugins[i].PluginName).Debug("Stopping plugin end ", err)
+		agent.WithField("pluginName", agent.plugins[i].PluginName).Debug("Stopping plugin end ", err)
 	}
 
-	agent.log.Debug("Agent stopped")
+	agent.Debug("Agent stopped")
 
 	if len(errMsg) > 0 {
 		return errors.New(errMsg)
@@ -123,13 +123,13 @@ func (agent *Agent) initPlugins() error {
 			for j := i; j >= 0; j-- {
 				err := safeclose.Close(agent.plugins[j])
 				if err != nil {
-					agent.log.Warn("err closing ", agent.plugins[j].PluginName, " ", err)
+					agent.Warn("err closing ", agent.plugins[j].PluginName, " ", err)
 				}
 			}
 
 			return fmt.Errorf(logErrorFmt, plug.PluginName, err)
 		}
-		agent.log.Info(fmt.Sprintf(logSuccessFmt, plug.PluginName))
+		agent.Info(fmt.Sprintf(logSuccessFmt, plug.PluginName))
 	}
 	return nil
 }
@@ -140,14 +140,14 @@ func (agent *Agent) initPlugins() error {
 func (agent *Agent) handleAfterInit() error {
 	for _, plug := range agent.plugins {
 		if plug2, ok := plug.Plugin.(PostInit); ok {
-			agent.log.Debug("afterInit begin for ", plug.PluginName)
+			agent.Debug("afterInit begin for ", plug.PluginName)
 			err := plug2.AfterInit()
 			if err != nil {
 				agent.Stop()
 
 				return fmt.Errorf(logPostErrorFmt, plug.PluginName, err)
 			}
-			agent.log.Info(fmt.Sprintf(logPostSuccessFmt, plug.PluginName))
+			agent.Info(fmt.Sprintf(logPostSuccessFmt, plug.PluginName))
 		}
 	}
 	return nil

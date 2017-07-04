@@ -100,7 +100,9 @@ func ConfigToClientv3(yc *Config) (*clientv3.Config, error) {
 	if cert != nil {
 		tlscfg.Certificates = []tls.Certificate{*cert}
 	}
-	cfg.TLS = tlscfg
+	if yc.Certfile != "" || yc.Keyfile != "" || yc.CAfile != "" {
+		cfg.TLS = tlscfg
+	}
 
 	return cfg, nil
 }

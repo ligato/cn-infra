@@ -22,7 +22,7 @@ func processArgs() (*clientv3.Config, error) {
 			}
 
 		} else {
-			return nil, fmt.Errorf("Incorrect arguments.")
+			return nil, fmt.Errorf("incorrect arguments")
 		}
 	}
 
