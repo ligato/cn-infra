@@ -26,7 +26,7 @@
 //   import  "github.com/ligato/cn-infra/db/keyval/redis"
 //
 //   config := redis.ServerConfig{
-//       Address: "localhost:6379",
+//       Endpoint: "localhost:6379",
 //       Pool: redis.ConnPool{
 //               MaxIdle:     10,
 //               MaxActive:   10,
