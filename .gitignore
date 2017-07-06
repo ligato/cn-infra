@@ -10,3 +10,13 @@ messaging/kafka/examples/asyncproducer/asyncproducer
 messaging/kafka/examples/consumer/consumer
 messaging/kafka/examples/mux/mux
 messaging/kafka/examples/syncproducer/syncproducer
+
+#---------
+# eclipse
+*.classpath
+*.project
+*.settings
+
+#---------
+# oops...
+.gitignore.swp
