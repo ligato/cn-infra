@@ -8,6 +8,7 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3/examples/phonebook/model/phonebook"
+	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/utils/config"
 )
 
@@ -50,7 +51,7 @@ func main() {
 	}
 
 	//initialize proto decorator
-	protoDb := etcdv3.NewProtoWrapperEtcd(db)
+	protoDb := kvproto.NewProtoWrapper(db)
 
 	//retrieve all contacts
 	resp, err := protoDb.ListValues(phonebook.EtcdPath())

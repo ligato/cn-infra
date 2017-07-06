@@ -7,6 +7,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3/examples/phonebook/model/phonebook"
+	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/utils/config"
 	"os"
 	"os/signal"
@@ -54,7 +55,7 @@ func main() {
 		os.Exit(1)
 	}
 	//initialize proto decorator
-	protoBroker := etcdv3.NewProtoWrapperEtcd(broker)
+	protoBroker := kvproto.NewProtoWrapper(broker)
 
 	respChan := make(chan keyval.ProtoWatchResp, 0)
 	sigChan := make(chan os.Signal, 1)

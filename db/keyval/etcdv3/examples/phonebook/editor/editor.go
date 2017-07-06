@@ -9,6 +9,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/etcdv3/examples/phonebook/model/phonebook"
 	"github.com/ligato/cn-infra/utils/config"
 	"os"
+	"github.com/ligato/cn-infra/db/keyval/kvproto"
 )
 
 const (
@@ -117,7 +118,7 @@ func main() {
 	}
 
 	//initialize proto decorator
-	protoDb := etcdv3.NewProtoWrapperEtcd(db)
+	protoDb := kvproto.NewProtoWrapper(db)
 
 	switch op {
 	case Put:
