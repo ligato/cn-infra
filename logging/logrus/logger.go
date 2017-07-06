@@ -231,6 +231,8 @@ func (ref *Logger) SetLevel(level logging.LogLevel) {
 		ref.std.Level = lg.FatalLevel
 	case logging.ErrorLevel:
 		ref.std.Level = lg.ErrorLevel
+	case logging.WarnLevel:
+		ref.std.Level = lg.WarnLevel
 	case logging.InfoLevel:
 		ref.std.Level = lg.InfoLevel
 	case logging.DebugLevel:
