@@ -36,6 +36,8 @@ import:
   version: 0.1.0
 - package: github.com/garyburd/redigo
   version: v1.1.0
+- package: github.com/rafaeljusto/redigomock
+  version: v2.0
 testImport:
 - package: github.com/onsi/gomega
   version: v1.1.0
