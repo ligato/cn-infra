@@ -16,7 +16,7 @@ package safeclose
 
 import (
 	"errors"
-	"github.com/prometheus/common/log"
+	log "github.com/ligato/cn-infra/logging/logrus"
 	"io"
 	"reflect"
 )
