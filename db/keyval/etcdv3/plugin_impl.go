@@ -16,7 +16,6 @@ package etcdv3
 
 import (
 	"github.com/coreos/etcd/clientv3"
-	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/plugin"
 )
 
@@ -30,15 +29,15 @@ type ProtoPluginEtcd struct {
 }
 
 // NewEtcdPlugin creates a new instance of ProtoPluginEtcd. Configuration of etcd connection is loaded from file.
-func NewEtcdPlugin(etcdConfig clientv3.Config) *ProtoPluginEtcd {
+func NewEtcdPlugin(cfg *Config) *ProtoPluginEtcd {
 
 	skeleton := plugin.NewSkeleton(
 		func() (plugin.Connection, error) {
-			coreBroker, err := NewEtcdConnectionWithBytes(etcdConfig)
+			etcdConfig, err := ConfigToClientv3(cfg)
 			if err != nil {
 				return nil, err
 			}
-			return NewProtoWrapperWithSerializer(coreBroker, &keyval.SerializerJSON{}), nil
+			return NewEtcdConnectionWithBytes(*etcdConfig)
 		},
 	)
 	return &ProtoPluginEtcd{Skeleton: skeleton}
@@ -48,11 +47,7 @@ func NewEtcdPlugin(etcdConfig clientv3.Config) *ProtoPluginEtcd {
 func NewEtcdPluginUsingClient(client *clientv3.Client) *ProtoPluginEtcd {
 	skeleton := plugin.NewSkeleton(
 		func() (plugin.Connection, error) {
-			coreBroker, err := NewEtcdConnectionUsingClient(client)
-			if err != nil {
-				return nil, err
-			}
-			return NewProtoWrapperWithSerializer(coreBroker, &keyval.SerializerJSON{}), nil
+			return NewEtcdConnectionUsingClient(client)
 		},
 	)
 	return &ProtoPluginEtcd{Skeleton: skeleton}

@@ -16,20 +16,20 @@ package plugin
 
 import (
 	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/utils/safeclose"
-	"io"
 )
 
 // Connection defines an access to a particular key-value data store implementation.
 type Connection interface {
-	keyval.KvPlugin
-	io.Closer
+	keyval.CoreBrokerWatcher
 }
 
 // Skeleton of a KV plugin is a generic part of KV plugin.
 type Skeleton struct {
-	conn    Connection
-	connect func() (Connection, error)
+	conn         Connection
+	protoWrapper *kvproto.ProtoWrapper
+	connect      func() (Connection, error)
 }
 
 // NewSkeleton creates a new instance of the Skeleton with the given connector.
@@ -47,10 +47,23 @@ func (plugin *Skeleton) Init() (err error) {
 // is established in this phase.
 func (plugin *Skeleton) AfterInit() (err error) {
 	plugin.conn, err = plugin.connect()
+	if err == nil {
+		plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.conn, &keyval.SerializerJSON{})
+	}
 	return err
 }
 
 // Close cleans up the resources
 func (plugin *Skeleton) Close() error {
 	return safeclose.Close(plugin.conn)
+}
+
+// NewBroker creates new instance of prefixed broker that provides API with arguments of type proto.Message
+func (plugin *Skeleton) NewBroker(keyPrefix string) keyval.ProtoBroker {
+	return plugin.protoWrapper.NewBroker(keyPrefix)
+}
+
+// NewWatcher creates new instance of prefixed broker that provides API with arguments of type proto.Message
+func (plugin *Skeleton) NewWatcher(keyPrefix string) keyval.ProtoWatcher {
+	return plugin.protoWrapper.NewWatcher(keyPrefix)
 }

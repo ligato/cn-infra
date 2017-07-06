@@ -56,3 +56,12 @@ type BytesKeyIterator interface {
 	// GetNext retrieves the following item from the context.
 	GetNext() (key string, rev int64, allReceived bool)
 }
+
+// CoreBrokerWatcher defines methods for full datastore access.
+type CoreBrokerWatcher interface {
+	BytesBroker
+	BytesWatcher
+	NewBroker(prefix string) BytesBroker
+	NewWatcher(prefix string) BytesWatcher
+	Close() error
+}

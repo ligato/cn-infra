@@ -12,26 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package etcdv3
+package kvproto
 
 import (
 	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/db/keyval"
 )
 
-// ProtoWrapperEtcd is a decorator which allows to read/write proto file modelled data.
+// ProtoWrapper is a decorator which allows to read/write proto file modelled data.
 // It marshals/unmarshals go structures to slice off bytes and vice versa behind the scenes.
-type ProtoWrapperEtcd struct {
-	broker     *BytesConnectionEtcd
+type ProtoWrapper struct {
+	broker     keyval.CoreBrokerWatcher
 	serializer keyval.Serializer
 }
 
-type protoBrokerEtcd struct {
+type protoBroker struct {
 	broker     keyval.BytesBroker
 	serializer keyval.Serializer
 }
 
-type protoWatcherEtcd struct {
+type protoWatcher struct {
 	watcher    keyval.BytesWatcher
 	serializer keyval.Serializer
 }
@@ -53,32 +53,32 @@ type protoKeyVal struct {
 	serializer keyval.Serializer
 }
 
-// NewProtoWrapperEtcd initializes proto decorator. The default serializer is used - SerializerProto.
-func NewProtoWrapperEtcd(db *BytesConnectionEtcd) *ProtoWrapperEtcd {
-	return &ProtoWrapperEtcd{db, &keyval.SerializerProto{}}
+// NewProtoWrapper initializes proto decorator. The default serializer is used - SerializerProto.
+func NewProtoWrapper(db keyval.CoreBrokerWatcher) *ProtoWrapper {
+	return &ProtoWrapper{db, &keyval.SerializerProto{}}
 }
 
 // NewProtoWrapperWithSerializer initializes proto decorator with the specified serializer.
-func NewProtoWrapperWithSerializer(db *BytesConnectionEtcd, serializer keyval.Serializer) *ProtoWrapperEtcd {
-	return &ProtoWrapperEtcd{db, serializer}
+func NewProtoWrapperWithSerializer(db keyval.CoreBrokerWatcher, serializer keyval.Serializer) *ProtoWrapper {
+	return &ProtoWrapper{db, serializer}
 }
 
 // Close closes underlying connection to etcd. Beware: if the connection is shared among multiple instances this might
 // unintentionally cancel the connection.
-func (db *ProtoWrapperEtcd) Close() error {
+func (db *ProtoWrapper) Close() error {
 	return db.broker.Close()
 }
 
 // NewBroker creates a new instance of the proxy that shares the underlying connection
 // and allows to read/edit key-value pairs.
-func (db *ProtoWrapperEtcd) NewBroker(prefix string) keyval.ProtoBroker {
-	return &protoBrokerEtcd{db.broker.NewBroker(prefix), db.serializer}
+func (db *ProtoWrapper) NewBroker(prefix string) keyval.ProtoBroker {
+	return &protoBroker{db.broker.NewBroker(prefix), db.serializer}
 }
 
 // NewWatcher creates a new instance of the proxy that shares the underlying connection
 // and allows to subscribe for watching of the changes.
-func (db *ProtoWrapperEtcd) NewWatcher(prefix string) keyval.ProtoWatcher {
-	return &protoWatcherEtcd{db.broker.NewWatcher(prefix), db.serializer}
+func (db *ProtoWrapper) NewWatcher(prefix string) keyval.ProtoWatcher {
+	return &protoWatcher{db.broker.NewWatcher(prefix), db.serializer}
 }
 
 // NewTxn creates a new Data Broker transaction. A transaction can
@@ -86,7 +86,7 @@ func (db *ProtoWrapperEtcd) NewWatcher(prefix string) keyval.ProtoWatcher {
 // store together. After a transaction has been created, one or
 // more operations (put or delete) can be added to the transaction
 // before it is committed.
-func (db *ProtoWrapperEtcd) NewTxn() keyval.ProtoTxn {
+func (db *ProtoWrapper) NewTxn() keyval.ProtoTxn {
 	return &protoTxn{txn: db.broker.NewTxn(), serializer: db.serializer}
 }
 
@@ -95,21 +95,21 @@ func (db *ProtoWrapperEtcd) NewTxn() keyval.ProtoTxn {
 // store together. After a transaction has been created, one or
 // more operations (put or delete) can be added to the transaction
 // before it is committed.
-func (pdb *protoBrokerEtcd) NewTxn() keyval.ProtoTxn {
+func (pdb *protoBroker) NewTxn() keyval.ProtoTxn {
 	return &protoTxn{txn: pdb.broker.NewTxn(), serializer: pdb.serializer}
 }
 
 // Put writes the provided key-value item into the data store.
 //
 // Returns an error if the item could not be written, ok otherwise.
-func (db *ProtoWrapperEtcd) Put(key string, value proto.Message, opts ...keyval.PutOption) error {
+func (db *ProtoWrapper) Put(key string, value proto.Message, opts ...keyval.PutOption) error {
 	return putProtoInternal(db.broker, db.serializer, key, value, opts...)
 }
 
 // Put writes the provided key-value item into the data store.
 //
 // Returns an error if the item could not be written, ok otherwise.
-func (pdb *protoBrokerEtcd) Put(key string, value proto.Message, opts ...keyval.PutOption) error {
+func (pdb *protoBroker) Put(key string, value proto.Message, opts ...keyval.PutOption) error {
 	return putProtoInternal(pdb.broker, pdb.serializer, key, value, opts...)
 }
 
@@ -124,17 +124,17 @@ func putProtoInternal(broker keyval.BytesBroker, serializer keyval.Serializer, k
 }
 
 // Delete removes from datastore key-value items stored under key.
-func (db *ProtoWrapperEtcd) Delete(key string) (existed bool, err error) {
+func (db *ProtoWrapper) Delete(key string) (existed bool, err error) {
 	return db.broker.Delete(key)
 }
 
 // Delete removes from datastore key-value items stored under key.
-func (pdb *protoBrokerEtcd) Delete(key string) (existed bool, err error) {
+func (pdb *protoBroker) Delete(key string) (existed bool, err error) {
 	return pdb.broker.Delete(key)
 }
 
 // Watch subscribes for changes in datastore associated with the key. respChannel is used for delivery watch events
-func (db *ProtoWrapperEtcd) Watch(resp chan keyval.ProtoWatchResp, keys ...string) error {
+func (db *ProtoWrapper) Watch(resp chan keyval.ProtoWatchResp, keys ...string) error {
 	byteCh := make(chan keyval.BytesWatchResp, 0)
 	err := db.broker.Watch(byteCh, keys...)
 	if err != nil {
@@ -156,7 +156,7 @@ func (db *ProtoWrapperEtcd) Watch(resp chan keyval.ProtoWatchResp, keys ...strin
 // If the object was not found, the function returns found=false.
 // Function returns revision=revision of the latest modification
 // If an error was encountered, the function returns an error.
-func (db *ProtoWrapperEtcd) GetValue(key string, reqObj proto.Message) (found bool, revision int64, err error) {
+func (db *ProtoWrapper) GetValue(key string, reqObj proto.Message) (found bool, revision int64, err error) {
 	return getValueProtoInternal(db.broker, db.serializer, key, reqObj)
 }
 
@@ -168,7 +168,7 @@ func (db *ProtoWrapperEtcd) GetValue(key string, reqObj proto.Message) (found bo
 // If the object was not found, the function returns found=false.
 // Function returns revision=revision of the latest modification
 // If an error was encountered, the function returns an error.
-func (pdb *protoBrokerEtcd) GetValue(key string, reqObj proto.Message) (found bool, revision int64, err error) {
+func (pdb *protoBroker) GetValue(key string, reqObj proto.Message) (found bool, revision int64, err error) {
 	return getValueProtoInternal(pdb.broker, pdb.serializer, key, reqObj)
 }
 
@@ -191,17 +191,16 @@ func getValueProtoInternal(broker keyval.BytesBroker, serializer keyval.Serializ
 }
 
 // ListValues retrieves an iterator for elements stored under the provided key.
-func (db *ProtoWrapperEtcd) ListValues(key string) (keyval.ProtoKeyValIterator, error) {
+func (db *ProtoWrapper) ListValues(key string) (keyval.ProtoKeyValIterator, error) {
 	return listValuesProtoInternal(db.broker, db.serializer, key)
 }
 
 // ListValues retrieves an iterator for elements stored under the provided key.
-func (pdb *protoBrokerEtcd) ListValues(key string) (keyval.ProtoKeyValIterator, error) {
+func (pdb *protoBroker) ListValues(key string) (keyval.ProtoKeyValIterator, error) {
 	return listValuesProtoInternal(pdb.broker, pdb.serializer, key)
 }
 
 func listValuesProtoInternal(broker keyval.BytesBroker, serializer keyval.Serializer, key string) (keyval.ProtoKeyValIterator, error) {
-	// get data from etcdv3
 	ctx, err := broker.ListValues(key)
 	if err != nil {
 		return nil, err
@@ -210,32 +209,21 @@ func listValuesProtoInternal(broker keyval.BytesBroker, serializer keyval.Serial
 }
 
 // ListKeys is similar to the ListValues the difference is that values are not fetched
-func (db *ProtoWrapperEtcd) ListKeys(prefix string) (keyval.ProtoKeyIterator, error) {
+func (db *ProtoWrapper) ListKeys(prefix string) (keyval.ProtoKeyIterator, error) {
 	return listKeysProtoInternal(db.broker, prefix)
 }
 
 // ListKeys is similar to the ListValues the difference is that values are not fetched
-func (pdb *protoBrokerEtcd) ListKeys(prefix string) (keyval.ProtoKeyIterator, error) {
+func (pdb *protoBroker) ListKeys(prefix string) (keyval.ProtoKeyIterator, error) {
 	return listKeysProtoInternal(pdb.broker, prefix)
 }
 
 func listKeysProtoInternal(broker keyval.BytesBroker, prefix string) (keyval.ProtoKeyIterator, error) {
-	// get data from etcdv3
 	ctx, err := broker.ListKeys(prefix)
 	if err != nil {
 		return nil, err
 	}
 	return &protoKeyIterator{ctx}, nil
-}
-
-// ListValuesRange retrieves an iterator for elements stored in specified range.
-func (db *ProtoWrapperEtcd) ListValuesRange(fromPrefix string, toPrefix string) (keyval.ProtoKeyValIterator, error) {
-
-	ctx, err := db.broker.ListValuesRange(fromPrefix, toPrefix)
-	if err != nil {
-		return nil, err
-	}
-	return &protoKeyValIterator{ctx, db.serializer}, nil
 }
 
 // GetNext returns the following item from the result set. If data was returned, found is set to true.
@@ -254,7 +242,7 @@ func (ctx *protoKeyIterator) GetNext() (key string, rev int64, lastReceived bool
 }
 
 // Watch for changes in datastore respChannel is used for receiving watch events
-func (pdb *protoWatcherEtcd) Watch(resp chan keyval.ProtoWatchResp, keys ...string) error {
+func (pdb *protoWatcher) Watch(resp chan keyval.ProtoWatchResp, keys ...string) error {
 	byteCh := make(chan keyval.BytesWatchResp, 0)
 	err := pdb.watcher.Watch(byteCh, keys...)
 	if err != nil {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package etcdv3
+package kvproto
 
 import (
 	"github.com/golang/protobuf/proto"
