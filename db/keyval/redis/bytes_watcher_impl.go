@@ -216,7 +216,10 @@ func (db *BytesConnectionRedis) handleChange(val interface{}, respChan chan<- ke
 }
 
 // Watch starts subscription for changes associated with the selected key. Watch events will be delivered to respChan.
-// Subscription can be canceled by StopWatch call.
 func (pdb *BytesBrokerWatcherRedis) Watch(respChan chan keyval.BytesWatchResp, keys ...string) error {
-	return pdb.delegate.watch(respChan, pdb.closeCh, pdb.trimPrefix, keys...)
+	prefixedKeys := make([]string, len(keys))
+	for i, k := range keys {
+		prefixedKeys[i] = pdb.prefix + k
+	}
+	return pdb.delegate.watch(respChan, pdb.closeCh, pdb.trimPrefix, prefixedKeys...)
 }
