@@ -460,7 +460,7 @@ func (pdb *BytesBrokerWatcherRedis) trimPrefix(key string) string {
 func (pdb *BytesBrokerWatcherRedis) Put(key string, data []byte, opts ...keyval.PutOption) error {
 	log.Debugf("BytesBrokerWatcherRedis.Put(%s)", key)
 
-	return pdb.delegate.Put(pdb.addPrefix(key), data)
+	return pdb.delegate.Put(pdb.addPrefix(key), data, opts...)
 }
 
 // NewTxn creates new transaction. Prefix will be prepended to key argument.
