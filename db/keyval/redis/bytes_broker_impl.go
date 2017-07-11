@@ -33,7 +33,7 @@ import (
 
 // BytesConnectionRedis allows to store, read and watch values from Redis.
 type BytesConnectionRedis struct {
-	pool *redis.Pool
+	pool ConnPool
 
 	// closeCh will be closed when this connection is closed -- i.e., by the Close() method.
 	// It is used to give go routines a signal to stop.
@@ -73,8 +73,8 @@ func SetLogger(l logging.Logger) {
 }
 
 // NewBytesConnectionRedis creates a new instance of BytesConnectionRedis using the provided
-// redis.Pool
-func NewBytesConnectionRedis(pool *redis.Pool) (*BytesConnectionRedis, error) {
+// ConnPool
+func NewBytesConnectionRedis(pool ConnPool) (*BytesConnectionRedis, error) {
 	return &BytesConnectionRedis{pool, make(chan struct{}), false}, nil
 }
 

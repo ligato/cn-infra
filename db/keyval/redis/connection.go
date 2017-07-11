@@ -26,8 +26,16 @@ import (
 	"github.com/ghodss/yaml"
 )
 
-// ConnPool configures connection pool
-type ConnPool struct {
+// ConnPool provides abstraction of connection pool.
+type ConnPool interface {
+	// Get returns a vlid connection. The application must close the returned connection.
+	Get() redis.Conn
+	// Close releases the resources used by the pool.
+	Close() error
+}
+
+// ConnPoolConfig configures connection pool
+type ConnPoolConfig struct {
 	// Properties mimic those in github.com/garyburd/redigo/redis/Pool
 
 	// Maximum number of idle connections in the pool.
@@ -58,13 +66,13 @@ type TLS struct {
 
 // NodeClientConfig configures a node client that will connect to a single Redis server
 type NodeClientConfig struct {
-	Endpoint     string        `json:"endpoint"`      // like "172.17.0.1:6379"
-	Db           int           `json:"db"`            // ID of the DB
-	Password     string        `json:"password"`      // password, if required
-	ReadTimeout  time.Duration `json:"read-timeout"`  // timeout for read operations
-	WriteTimeout time.Duration `json:"write-timeout"` // timeout for write operations
-	TLS          TLS           `json:"tls"`           // TLS configuration
-	Pool         ConnPool      `json:"pool"`          // connection pool configuration
+	Endpoint     string         `json:"endpoint"`      // like "172.17.0.1:6379"
+	Db           int            `json:"db"`            // ID of the DB
+	Password     string         `json:"password"`      // password, if required
+	ReadTimeout  time.Duration  `json:"read-timeout"`  // timeout for read operations
+	WriteTimeout time.Duration  `json:"write-timeout"` // timeout for write operations
+	TLS          TLS            `json:"tls"`           // TLS configuration
+	Pool         ConnPoolConfig `json:"pool"`          // connection pool configuration
 }
 
 // CreateNodeClientConnPool creates a Redis connection pool

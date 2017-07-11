@@ -176,7 +176,7 @@ func txn() {
 func generateServerConfig(path string) {
 	config := redis.NodeClientConfig{
 		Endpoint: "localhost:6379",
-		Pool: redis.ConnPool{
+		Pool: redis.ConnPoolConfig{
 			MaxIdle:     10,
 			MaxActive:   10,
 			IdleTimeout: 60,

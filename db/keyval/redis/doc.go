@@ -25,9 +25,9 @@
 // Connection
 //   import  "github.com/ligato/cn-infra/db/keyval/redis"
 //
-//   config := redis.ServerConfig{
+//   config := redis.NodeClientConfig{
 //       Endpoint: "localhost:6379",
-//       Pool: redis.ConnPool{
+//       Pool: redis.ConnPoolConfig{
 //               MaxIdle:     10,
 //               MaxActive:   10,
 //               IdleTimeout: 60,
