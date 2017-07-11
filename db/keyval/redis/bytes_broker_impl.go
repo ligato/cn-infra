@@ -456,6 +456,11 @@ func (pdb *BytesBrokerWatcherRedis) trimPrefix(key string) string {
 	return strings.TrimPrefix(key, pdb.prefix)
 }
 
+// GetPrefix returns the prefix associated with this BytesBrokerWatcherRedis.
+func (pdb *BytesBrokerWatcherRedis) GetPrefix() string {
+	return pdb.prefix
+}
+
 // Put calls Put function of BytesConnectionRedis. Prefix will be prepended to key argument.
 func (pdb *BytesBrokerWatcherRedis) Put(key string, data []byte, opts ...keyval.PutOption) error {
 	log.Debugf("BytesBrokerWatcherRedis.Put(%s)", key)
