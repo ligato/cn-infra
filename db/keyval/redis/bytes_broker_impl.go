@@ -180,12 +180,11 @@ func (db *BytesConnectionRedis) ListValues(match string) (keyval.BytesKeyValIter
 
 	conn := db.pool.Get()
 	defer conn.Close()
-	keys, err := db.listKeys(conn, match)
+	keys, err := db.scanKeys(conn, match)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO NICE-to-HAVE optmize with Redis Cursor - see Redis SCAN comman
 	values, err := db.listValues(conn, keys)
 	if err != nil {
 		return nil, err
@@ -267,7 +266,7 @@ func (db *BytesConnectionRedis) ListKeys(match string) (keyval.BytesKeyIterator,
 
 	conn := db.pool.Get()
 	defer conn.Close()
-	keys, err := db.listKeys(conn, match)
+	keys, err := db.scanKeys(conn, match)
 	if err != nil {
 		return nil, err
 	}
@@ -319,6 +318,47 @@ func (db *BytesConnectionRedis) listKeys(conn redis.Conn, match string) (keys []
 	return nil, err
 }
 
+func (db *BytesConnectionRedis) scanKeys(conn redis.Conn, match string) (keys []string, err error) {
+	if db.closed {
+		return nil, fmt.Errorf("scanKeys(%s) called on a closed broker", match)
+	}
+	log.Debugf("scanKeys(%s)", match)
+	pattern := wildcard(match)
+	log.Debugf("scanKeys: pattern %s", pattern)
+
+	cursor := "0"
+	keys = make([]string, 0)
+	for {
+		reply, err := conn.Do("SCAN", cursor, "MATCH", pattern)
+		if err != nil {
+			return nil, fmt.Errorf("Do(SCAN) failed: %s", err)
+		}
+		log.Debugf("SCAN returned %v", reply)
+		switch reply := reply.(type) {
+		case []interface{}:
+			cursor = string(reply[0].([]byte))
+			log.Debugf("cursor = %s", cursor)
+			for _, k := range reply[1].([]interface{}) {
+				if k == nil {
+					continue
+				}
+				switch k := k.(type) {
+				case []byte:
+					keys = append(keys, string(k))
+				case string:
+					keys = append(keys, k)
+				}
+			}
+			if cursor == "0" {
+				return keys, nil
+			}
+		case redis.Error:
+			return nil, reply
+		}
+	}
+	return keys, nil
+}
+
 const redisWildcardChars = "*?[]"
 
 func wildcard(match string) string {
@@ -338,7 +378,7 @@ func (db *BytesConnectionRedis) Delete(match string) (found bool, err error) {
 
 	conn := db.pool.Get()
 	defer conn.Close()
-	deleting, err := db.listKeys(conn, match)
+	deleting, err := db.scanKeys(conn, match)
 	if err != nil {
 		return false, err
 	}
@@ -496,12 +536,11 @@ func (pdb *BytesBrokerWatcherRedis) ListValues(match string) (keyval.BytesKeyVal
 	conn := pdb.delegate.pool.Get()
 	defer conn.Close()
 
-	keys, err := pdb.delegate.listKeys(conn, pdb.addPrefix(match))
+	keys, err := pdb.delegate.scanKeys(conn, pdb.addPrefix(match))
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO NICE-to-HAVE optmize with Redis Cursor - see Redis SCAN comman
 	values, err := pdb.delegate.listValues(conn, keys)
 	if err != nil {
 		return nil, errors.New(err.Error() + " for " + match)
@@ -524,7 +563,7 @@ func (pdb *BytesBrokerWatcherRedis) ListKeys(match string) (keyval.BytesKeyItera
 	conn := pdb.delegate.pool.Get()
 	defer conn.Close()
 
-	keys, err := pdb.delegate.listKeys(conn, pdb.addPrefix(match))
+	keys, err := pdb.delegate.scanKeys(conn, pdb.addPrefix(match))
 	if err != nil {
 		return nil, err
 	}

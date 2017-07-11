@@ -93,6 +93,7 @@ func runSimpleExmple(redisConn *redis.BytesConnectionRedis) {
 	get(key2)
 	get(key3)      // key3 should've expired
 	get(keyPrefix) // keyPrefix shouldn't find anything
+	listKeys(keyPrefix)
 	listVal(keyPrefix)
 
 	del(keyPrefix)
@@ -134,6 +135,21 @@ func get(key string) {
 			log.Infof("GetValue(%s) = %t ; val = %s ; revision = %d", key, found, val, revision)
 		} else {
 			log.Infof("GetValue(%s) = %t", key, found)
+		}
+	}
+}
+
+func listKeys(keyPrefix string) {
+	k, err := broker.ListKeys(keyPrefix)
+	if err != nil {
+		log.Errorf("ListKeys(%s): %s", keyPrefix, err)
+	} else {
+		for {
+			key, rev, done := k.GetNext()
+			if done {
+				break
+			}
+			log.Infof("ListKeys(%s):  %s (rev %d)", keyPrefix, key, rev)
 		}
 	}
 }
