@@ -2,18 +2,17 @@ package main
 
 import (
 	"fmt"
-	"github.com/coreos/etcd/clientv3"
+	"os"
+	"os/signal"
+
 	"github.com/ligato/cn-infra/db"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3/examples/phonebook/model/phonebook"
-	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/utils/config"
-	"os"
-	"os/signal"
 )
 
-func processArgs() (*clientv3.Config, error) {
+func processArgs() (*etcdv3.ClientConfig, error) {
 	fileConfig := &etcdv3.Config{}
 	if len(os.Args) > 2 {
 		if os.Args[1] == "--cfg" {
@@ -55,7 +54,7 @@ func main() {
 		os.Exit(1)
 	}
 	//initialize proto decorator
-	protoBroker := kvproto.NewProtoWrapper(broker)
+	protoBroker := etcdv3.NewProtoWrapperEtcd(broker)
 
 	respChan := make(chan keyval.ProtoWatchResp, 0)
 	sigChan := make(chan os.Signal, 1)

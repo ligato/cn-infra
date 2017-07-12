@@ -30,6 +30,7 @@ import (
 type BytesConnectionEtcd struct {
 	etcdClient *clientv3.Client
 	lessor     clientv3.Lease
+	opTimeout  time.Duration
 
 	// closeCh is a channel closed when Close method is called.
 	// It is leveraged to stop go routines.
@@ -40,10 +41,11 @@ type BytesConnectionEtcd struct {
 // In case of accessing a particular subtree in etcd only, BytesBrokerWatcherEtcd allows to define a keyPrefix that is prepended to all keys
 // in its methods in order to shorten keys used in arguments.
 type BytesBrokerWatcherEtcd struct {
-	closeCh chan struct{}
-	lessor  clientv3.Lease
-	kv      clientv3.KV
-	watcher clientv3.Watcher
+	closeCh   chan struct{}
+	lessor    clientv3.Lease
+	kv        clientv3.KV
+	watcher   clientv3.Watcher
+	opTimeout time.Duration
 }
 
 // bytesKeyValIterator is an iterator returned by ListValues call
@@ -80,13 +82,15 @@ func SetLogger(l logging.Logger) {
 }
 
 // NewEtcdConnectionWithBytes creates new connection to etcd based on the given config file.
-func NewEtcdConnectionWithBytes(config clientv3.Config) (*BytesConnectionEtcd, error) {
-	etcdClient, err := clientv3.New(config)
+func NewEtcdConnectionWithBytes(config ClientConfig) (*BytesConnectionEtcd, error) {
+	etcdClient, err := clientv3.New(*config.Config)
 	if err != nil {
 		log.Errorf("Failed to connect to Etcd etcd(s) %v, Error: '%s'", config.Endpoints, err)
 		return nil, err
 	}
-	return NewEtcdConnectionUsingClient(etcdClient)
+	conn, err := NewEtcdConnectionUsingClient(etcdClient)
+	conn.opTimeout = config.OpTimeout
+	return conn, err
 }
 
 // NewEtcdConnectionUsingClient creates a new instance of BytesConnectionEtcd using the provided
@@ -98,6 +102,7 @@ func NewEtcdConnectionUsingClient(etcdClient *clientv3.Client) (*BytesConnection
 	conn.etcdClient = etcdClient
 	conn.closeCh = make(chan struct{})
 	conn.lessor = clientv3.NewLease(etcdClient)
+	conn.opTimeout = defaultOpTimeout
 	return &conn, nil
 }
 
@@ -115,7 +120,8 @@ func (db *BytesConnectionEtcd) Close() error {
 // Prefix will be prepend to key argument in all calls on created BytesBrokerWatcherEtcd. To avoid
 // using a prefix pass keyval.Root constant as argument.
 func (db *BytesConnectionEtcd) NewBroker(prefix string) keyval.BytesBroker {
-	return &BytesBrokerWatcherEtcd{kv: namespace.NewKV(db.etcdClient, prefix), lessor: db.lessor, watcher: namespace.NewWatcher(db.etcdClient, prefix), closeCh: db.closeCh}
+	return &BytesBrokerWatcherEtcd{kv: namespace.NewKV(db.etcdClient, prefix), lessor: db.lessor,
+		opTimeout: db.opTimeout, watcher: namespace.NewWatcher(db.etcdClient, prefix), closeCh: db.closeCh}
 }
 
 // NewWatcher creates a new instance of a proxy that provides
@@ -123,12 +129,13 @@ func (db *BytesConnectionEtcd) NewBroker(prefix string) keyval.BytesBroker {
 // Prefix will be prepend to key argument in all calls on created BytesBrokerWatcherEtcd. To avoid
 // using a prefix pass keyval.Root constant as argument.
 func (db *BytesConnectionEtcd) NewWatcher(prefix string) keyval.BytesWatcher {
-	return &BytesBrokerWatcherEtcd{kv: namespace.NewKV(db.etcdClient, prefix), lessor: db.lessor, watcher: namespace.NewWatcher(db.etcdClient, prefix), closeCh: db.closeCh}
+	return &BytesBrokerWatcherEtcd{kv: namespace.NewKV(db.etcdClient, prefix), lessor: db.lessor,
+		opTimeout: db.opTimeout, watcher: namespace.NewWatcher(db.etcdClient, prefix), closeCh: db.closeCh}
 }
 
 // Put calls Put function of BytesConnectionEtcd. KeyPrefix defined in constructor is prepended to key argument.
 func (pdb *BytesBrokerWatcherEtcd) Put(key string, data []byte, opts ...keyval.PutOption) error {
-	return putInternal(pdb.kv, pdb.lessor, key, data, opts)
+	return putInternal(pdb.kv, pdb.lessor, pdb.opTimeout, key, data, opts)
 }
 
 // NewTxn creates new transaction. KeyPrefix defined in constructor will be prepended to all key arguments in the transaction.
@@ -138,29 +145,29 @@ func (pdb *BytesBrokerWatcherEtcd) NewTxn() keyval.BytesTxn {
 
 // GetValue calls GetValue function of BytesConnectionEtcd. KeyPrefix defined in constructor is prepended to key argument.
 func (pdb *BytesBrokerWatcherEtcd) GetValue(key string) (data []byte, found bool, revision int64, err error) {
-	return getValueInternal(pdb.kv, key)
+	return getValueInternal(pdb.kv, pdb.opTimeout, key)
 }
 
 // ListValues calls ListValues function of BytesConnectionEtcd. KeyPrefix defined in constructor is prepended to key argument. The prefix
 // is removed from the keys of the returned values.
 func (pdb *BytesBrokerWatcherEtcd) ListValues(key string) (keyval.BytesKeyValIterator, error) {
-	return listValuesInternal(pdb.kv, key)
+	return listValuesInternal(pdb.kv, pdb.opTimeout, key)
 }
 
 // ListValuesRange calls ListValuesRange function of BytesConnectionEtcd. KeyPrefix defined in constructor is prepended to the arguments. The prefix
 // is removed from the keys of the returned values.
 func (pdb *BytesBrokerWatcherEtcd) ListValuesRange(fromPrefix string, toPrefix string) (keyval.BytesKeyValIterator, error) {
-	return listValuesRangeInternal(pdb.kv, fromPrefix, toPrefix)
+	return listValuesRangeInternal(pdb.kv, pdb.opTimeout, fromPrefix, toPrefix)
 }
 
 // ListKeys calls ListKeys function of BytesConnectionEtcd. KeyPrefix defined in constructor is prepended to the argument.
 func (pdb *BytesBrokerWatcherEtcd) ListKeys(prefix string) (keyval.BytesKeyIterator, error) {
-	return listKeysInternal(pdb.kv, prefix)
+	return listKeysInternal(pdb.kv, pdb.opTimeout, prefix)
 }
 
 // Delete calls delete function of BytesConnectionEtcd. KeyPrefix defined in constructor is prepended to the key argument.
 func (pdb *BytesBrokerWatcherEtcd) Delete(key string) (existed bool, err error) {
-	return deleteInternal(pdb.kv, key)
+	return deleteInternal(pdb.kv, pdb.opTimeout, key)
 }
 
 // Watch starts subscription for changes associated with the selected keys. KeyPrefix defined in constructor is prepended to all
@@ -190,7 +197,7 @@ func handleWatchEvent(respChan chan keyval.BytesWatchResp, ev *clientv3.Event) {
 	if resp != nil {
 		select {
 		case respChan <- resp:
-		case <-time.After(defaultTimeout):
+		case <-time.After(defaultOpTimeout):
 			log.Warn("Unable to deliver watch event before timeout.")
 		}
 	}
@@ -248,15 +255,19 @@ func watchInternal(watcher clientv3.Watcher, closeCh chan struct{}, key string, 
 // Put writes the provided key-value item into the data store.
 // Returns an error if the item could not be written, nil otherwise.
 func (db *BytesConnectionEtcd) Put(key string, binData []byte, opts ...keyval.PutOption) error {
-	return putInternal(db.etcdClient, db.lessor, key, binData, opts...)
+	return putInternal(db.etcdClient, db.lessor, db.opTimeout, key, binData, opts...)
 }
 
-func putInternal(kv clientv3.KV, lessor clientv3.Lease, key string, binData []byte, opts ...keyval.PutOption) error {
+func putInternal(kv clientv3.KV, lessor clientv3.Lease, opTimeout time.Duration, key string, binData []byte, opts ...keyval.PutOption) error {
+
+	deadline := time.Now().Add(opTimeout)
+	ctx, cancel := context.WithDeadline(context.Background(), deadline)
+	defer cancel()
 
 	var etcdOpts []clientv3.OpOption
 	for _, o := range opts {
 		if withTTL, ok := o.(*keyval.WithTTLOpt); ok && withTTL.TTL > 0 {
-			lease, err := lessor.Grant(context.Background(), int64(withTTL.TTL/time.Second))
+			lease, err := lessor.Grant(ctx, int64(withTTL.TTL/time.Second))
 			if err != nil {
 				return err
 			}
@@ -264,7 +275,7 @@ func putInternal(kv clientv3.KV, lessor clientv3.Lease, key string, binData []by
 		}
 	}
 
-	_, err := kv.Put(context.Background(), key, string(binData), etcdOpts...)
+	_, err := kv.Put(ctx, key, string(binData), etcdOpts...)
 	if err != nil {
 		log.Error("etcdv3 put error: ", err)
 		return err
@@ -274,12 +285,16 @@ func putInternal(kv clientv3.KV, lessor clientv3.Lease, key string, binData []by
 
 // Delete removes data identified by the key.
 func (db *BytesConnectionEtcd) Delete(key string) (existed bool, err error) {
-	return deleteInternal(db.etcdClient, key)
+	return deleteInternal(db.etcdClient, db.opTimeout, key)
 }
 
-func deleteInternal(kv clientv3.KV, key string) (existed bool, err error) {
+func deleteInternal(kv clientv3.KV, opTimeout time.Duration, key string) (existed bool, err error) {
+	deadline := time.Now().Add(opTimeout)
+	ctx, cancel := context.WithDeadline(context.Background(), deadline)
+	defer cancel()
+
 	// delete data from etcdv3
-	resp, err := kv.Delete(context.Background(), key)
+	resp, err := kv.Delete(ctx, key)
 	if err != nil {
 		log.Error("etcdv3 error: ", err)
 		return false, err
@@ -295,12 +310,16 @@ func deleteInternal(kv clientv3.KV, key string) (existed bool, err error) {
 // GetValue retrieves one key-value item from the data store. The item
 // is identified by the provided key.
 func (db *BytesConnectionEtcd) GetValue(key string) (data []byte, found bool, revision int64, err error) {
-	return getValueInternal(db.etcdClient, key)
+	return getValueInternal(db.etcdClient, db.opTimeout, key)
 }
 
-func getValueInternal(kv clientv3.KV, key string) (data []byte, found bool, revision int64, err error) {
+func getValueInternal(kv clientv3.KV, opTimeout time.Duration, key string) (data []byte, found bool, revision int64, err error) {
+	deadline := time.Now().Add(opTimeout)
+	ctx, cancel := context.WithDeadline(context.Background(), deadline)
+	defer cancel()
+
 	// get data from etcdv3
-	resp, err := kv.Get(context.Background(), key)
+	resp, err := kv.Get(ctx, key)
 	if err != nil {
 		log.Error("etcdv3 error: ", err)
 		return nil, false, 0, err
@@ -314,12 +333,16 @@ func getValueInternal(kv clientv3.KV, key string) (data []byte, found bool, revi
 
 // ListValues returns an iterator that enables to traverse values stored under the provided key.
 func (db *BytesConnectionEtcd) ListValues(key string) (keyval.BytesKeyValIterator, error) {
-	return listValuesInternal(db.etcdClient, key)
+	return listValuesInternal(db.etcdClient, db.opTimeout, key)
 }
 
-func listValuesInternal(kv clientv3.KV, key string) (keyval.BytesKeyValIterator, error) {
+func listValuesInternal(kv clientv3.KV, opTimeout time.Duration, key string) (keyval.BytesKeyValIterator, error) {
+	deadline := time.Now().Add(opTimeout)
+	ctx, cancel := context.WithDeadline(context.Background(), deadline)
+	defer cancel()
+
 	// get data from etcdv3
-	resp, err := kv.Get(context.Background(), key, clientv3.WithPrefix())
+	resp, err := kv.Get(ctx, key, clientv3.WithPrefix())
 	if err != nil {
 		log.Error("etcdv3 error: ", err)
 		return nil, err
@@ -330,12 +353,16 @@ func listValuesInternal(kv clientv3.KV, key string) (keyval.BytesKeyValIterator,
 
 // ListKeys is similar to the ListValues the difference is that values are not fetched
 func (db *BytesConnectionEtcd) ListKeys(prefix string) (keyval.BytesKeyIterator, error) {
-	return listKeysInternal(db.etcdClient, prefix)
+	return listKeysInternal(db.etcdClient, db.opTimeout, prefix)
 }
 
-func listKeysInternal(kv clientv3.KV, prefix string) (keyval.BytesKeyIterator, error) {
+func listKeysInternal(kv clientv3.KV, opTimeout time.Duration, prefix string) (keyval.BytesKeyIterator, error) {
+	deadline := time.Now().Add(opTimeout)
+	ctx, cancel := context.WithDeadline(context.Background(), deadline)
+	defer cancel()
+
 	// get data from etcdv3
-	resp, err := kv.Get(context.Background(), prefix, clientv3.WithPrefix(), clientv3.WithKeysOnly())
+	resp, err := kv.Get(ctx, prefix, clientv3.WithPrefix(), clientv3.WithKeysOnly())
 	if err != nil {
 		log.Error("etcdv3 error: ", err)
 		return nil, err
@@ -346,12 +373,16 @@ func listKeysInternal(kv clientv3.KV, prefix string) (keyval.BytesKeyIterator, e
 
 // ListValuesRange returns an iterator that enables to traverse values stored under the provided key.
 func (db *BytesConnectionEtcd) ListValuesRange(fromPrefix string, toPrefix string) (keyval.BytesKeyValIterator, error) {
-	return listValuesRangeInternal(db.etcdClient, fromPrefix, toPrefix)
+	return listValuesRangeInternal(db.etcdClient, db.opTimeout, fromPrefix, toPrefix)
 }
 
-func listValuesRangeInternal(kv clientv3.KV, fromPrefix string, toPrefix string) (keyval.BytesKeyValIterator, error) {
+func listValuesRangeInternal(kv clientv3.KV, opTimeout time.Duration, fromPrefix string, toPrefix string) (keyval.BytesKeyValIterator, error) {
+	deadline := time.Now().Add(opTimeout)
+	ctx, cancel := context.WithDeadline(context.Background(), deadline)
+	defer cancel()
+
 	// get data from etcdv3
-	resp, err := kv.Get(context.Background(), fromPrefix, clientv3.WithRange(toPrefix))
+	resp, err := kv.Get(ctx, fromPrefix, clientv3.WithRange(toPrefix))
 	if err != nil {
 		log.Error("etcdv3 error: ", err)
 		return nil, err

@@ -3,13 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/coreos/etcd/clientv3"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3/examples/phonebook/model/phonebook"
 	"github.com/ligato/cn-infra/utils/config"
 	"os"
-	"github.com/ligato/cn-infra/db/keyval/kvproto"
 )
 
 const (
@@ -21,7 +19,7 @@ const (
 	Delete = iota
 )
 
-func processArgs() (cfg *clientv3.Config, op int, data []string, err error) {
+func processArgs() (cfg *etcdv3.ClientConfig, op int, data []string, err error) {
 	var task []string
 
 	//default args
@@ -118,7 +116,7 @@ func main() {
 	}
 
 	//initialize proto decorator
-	protoDb := kvproto.NewProtoWrapper(db)
+	protoDb := etcdv3.NewProtoWrapperEtcd(db)
 
 	switch op {
 	case Put:

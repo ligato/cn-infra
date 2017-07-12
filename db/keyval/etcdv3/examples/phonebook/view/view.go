@@ -5,14 +5,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/coreos/etcd/clientv3"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3/examples/phonebook/model/phonebook"
-	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/utils/config"
 )
 
-func processArgs() (*clientv3.Config, error) {
+func processArgs() (*etcdv3.ClientConfig, error) {
 	fileConfig := &etcdv3.Config{}
 	if len(os.Args) > 2 {
 		if os.Args[1] == "--cfg" {
@@ -51,7 +49,7 @@ func main() {
 	}
 
 	//initialize proto decorator
-	protoDb := kvproto.NewProtoWrapper(db)
+	protoDb := etcdv3.NewProtoWrapperEtcd(db)
 
 	//retrieve all contacts
 	resp, err := protoDb.ListValues(phonebook.EtcdPath())
