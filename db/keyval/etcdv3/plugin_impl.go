@@ -38,7 +38,7 @@ func NewEtcdPlugin(cfg *Config) *ProtoPluginEtcd {
 			if err != nil {
 				return nil, err
 			}
-			return NewEtcdConnectionWithBytes(log, *etcdConfig)
+			return NewEtcdConnectionWithBytes(*etcdConfig, log)
 		},
 	)
 	return &ProtoPluginEtcd{Skeleton: skeleton}
@@ -48,7 +48,7 @@ func NewEtcdPlugin(cfg *Config) *ProtoPluginEtcd {
 func NewEtcdPluginUsingClient(client *clientv3.Client) *ProtoPluginEtcd {
 	skeleton := plugin.NewSkeleton(
 		func(log logging.Logger) (plugin.Connection, error) {
-			return NewEtcdConnectionUsingClient(log, client)
+			return NewEtcdConnectionUsingClient(client, log)
 		},
 	)
 	return &ProtoPluginEtcd{Skeleton: skeleton}

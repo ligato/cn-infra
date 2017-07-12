@@ -10,6 +10,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3/examples/phonebook/model/phonebook"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
+	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/utils/config"
 )
 
@@ -49,7 +50,7 @@ func main() {
 	}
 
 	//create connection to etcd
-	broker, err := etcdv3.NewEtcdConnectionWithBytes(*cfg)
+	broker, err := etcdv3.NewEtcdConnectionWithBytes(*cfg, logroot.Logger())
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

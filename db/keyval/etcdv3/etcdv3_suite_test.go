@@ -22,7 +22,7 @@ import (
 	"github.com/coreos/etcd/mvcc/mvccpb"
 	"github.com/ligato/cn-infra/db"
 	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/logging/global"
+	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
 )
@@ -138,10 +138,10 @@ func (mock *MockTxn) Commit() (*clientv3.TxnResponse, error) {
 func init() {
 	mockKv := &MockKV{}
 	mockKvErr := &MockKVErr{}
-	dataBroker = &BytesConnectionEtcd{Logger: global.DefaultLogger(), etcdClient: &clientv3.Client{KV: mockKv, Watcher: mockKv}}
-	dataBrokerErr = &BytesConnectionEtcd{Logger: global.DefaultLogger(), etcdClient: &clientv3.Client{KV: mockKvErr, Watcher: mockKvErr}}
-	pluginDataBroker = &BytesBrokerWatcherEtcd{Logger: global.DefaultLogger(), kv: mockKv, watcher: mockKv}
-	pluginDataBrokerErr = &BytesBrokerWatcherEtcd{Logger: global.DefaultLogger(), kv: mockKvErr, watcher: mockKvErr}
+	dataBroker = &BytesConnectionEtcd{Logger: logroot.Logger(), etcdClient: &clientv3.Client{KV: mockKv, Watcher: mockKv}}
+	dataBrokerErr = &BytesConnectionEtcd{Logger: logroot.Logger(), etcdClient: &clientv3.Client{KV: mockKvErr, Watcher: mockKvErr}}
+	pluginDataBroker = &BytesBrokerWatcherEtcd{Logger: logroot.Logger(), kv: mockKv, watcher: mockKv}
+	pluginDataBrokerErr = &BytesBrokerWatcherEtcd{Logger: logroot.Logger(), kv: mockKvErr, watcher: mockKvErr}
 }
 
 func TestNewTxn(t *testing.T) {

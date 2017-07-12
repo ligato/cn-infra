@@ -20,7 +20,7 @@ import (
 	"github.com/coreos/etcd/embed"
 	"github.com/coreos/etcd/etcdserver/api/v3client"
 	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/logging/global"
+	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/onsi/gomega"
 	"io/ioutil"
 	"os"
@@ -200,7 +200,7 @@ func (embd *embededEtcd) start(t *testing.T) {
 
 	select {
 	case <-embd.etcd.Server.ReadyNotify():
-		global.DefaultLogger().Debug("Server is ready!")
+		logroot.Logger().Debug("Server is ready!")
 	case <-time.After(etcdStartTimeout * time.Second):
 		embd.etcd.Server.Stop() // trigger a shutdown
 		t.Error("Server took too long to start!")
@@ -223,7 +223,7 @@ func (embd *embededEtcd) cleanDs() {
 
 func setupBrokers(t *testing.T) {
 	var err error
-	broker, err = NewEtcdConnectionUsingClient(global.DefaultLogger(), v3client.New(embd.etcd.Server))
+	broker, err = NewEtcdConnectionUsingClient(v3client.New(embd.etcd.Server), logroot.Logger())
 
 	gomega.Expect(err).To(gomega.BeNil())
 	gomega.Expect(broker).NotTo(gomega.BeNil())

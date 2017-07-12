@@ -29,6 +29,7 @@ import (
 	"github.com/ligato/cn-infra/logging"
 	"github.com/satori/go.uuid"
 	"regexp"
+	"sync/atomic"
 )
 
 // Logger is wrapper of Logrus logger. In addition to Logrus functionality it
@@ -242,9 +243,8 @@ func (ref *Logger) SetLevel(level logging.LogLevel) {
 
 // GetLevel returns the standard logger level.
 func (ref *Logger) GetLevel() logging.LogLevel {
-	ref.RLock()
-	defer ref.RUnlock()
-	switch ref.std.Level {
+	l := lg.Level(atomic.LoadUint32((*uint32)(&ref.std.Level)))
+	switch l {
 	case lg.PanicLevel:
 		return logging.PanicLevel
 	case lg.FatalLevel:

@@ -72,20 +72,20 @@ type bytesKeyVal struct {
 }
 
 // NewEtcdConnectionWithBytes creates new connection to etcd based on the given config file.
-func NewEtcdConnectionWithBytes(log logging.Logger, config ClientConfig) (*BytesConnectionEtcd, error) {
+func NewEtcdConnectionWithBytes(config ClientConfig, log logging.Logger) (*BytesConnectionEtcd, error) {
 	etcdClient, err := clientv3.New(*config.Config)
 	if err != nil {
 		log.Errorf("Failed to connect to Etcd etcd(s) %v, Error: '%s'", config.Endpoints, err)
 		return nil, err
 	}
-	conn, err := NewEtcdConnectionUsingClient(log, etcdClient)
+	conn, err := NewEtcdConnectionUsingClient(etcdClient, log)
 	conn.opTimeout = config.OpTimeout
 	return conn, err
 }
 
 // NewEtcdConnectionUsingClient creates a new instance of BytesConnectionEtcd using the provided
 // etcdv3 client
-func NewEtcdConnectionUsingClient(log logging.Logger, etcdClient *clientv3.Client) (*BytesConnectionEtcd, error) {
+func NewEtcdConnectionUsingClient(etcdClient *clientv3.Client, log logging.Logger) (*BytesConnectionEtcd, error) {
 	log.Debug("NewEtcdConnectionWithBytes", etcdClient)
 
 	conn := BytesConnectionEtcd{}

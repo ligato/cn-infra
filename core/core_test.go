@@ -20,13 +20,13 @@ import (
 	"sync"
 	"testing"
 	"time"
-	"github.com/ligato/cn-infra/logging/global"
+	"github.com/ligato/cn-infra/logging/logroot"
 )
 
 func TestEmptyAgent(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
-	agent := NewAgent(global.DefaultLogger(), 1*time.Second)
+	agent := NewAgent(logroot.Logger(), 1*time.Second)
 	gomega.Expect(agent).NotTo(gomega.BeNil())
 	err := agent.Start()
 	gomega.Expect(err).To(gomega.BeNil())
@@ -49,7 +49,7 @@ func TestEventLoopWithInterrupt(t *testing.T) {
 		gomega.Expect(p.Closed()).To(gomega.BeFalse())
 	}
 
-	agent := NewAgent(global.DefaultLogger(), 100*time.Millisecond, namedPlugins...)
+	agent := NewAgent(logroot.Logger(), 100*time.Millisecond, namedPlugins...)
 	closeCh := make(chan struct{})
 	errCh := make(chan error)
 	go func() {
@@ -91,7 +91,7 @@ func TestEventLoopFailInit(t *testing.T) {
 		gomega.Expect(p.Closed()).To(gomega.BeFalse())
 	}
 
-	agent := NewAgent(global.DefaultLogger(), 100*time.Millisecond, namedPlugins...)
+	agent := NewAgent(logroot.Logger(), 100*time.Millisecond, namedPlugins...)
 	closeCh := make(chan struct{})
 	errCh := make(chan error)
 	go func() {
@@ -130,7 +130,7 @@ func TestEventLoopAfterInitFailed(t *testing.T) {
 		gomega.Expect(p.Closed()).To(gomega.BeFalse())
 	}
 
-	agent := NewAgent(global.DefaultLogger(), 100*time.Millisecond, namedPlugins...)
+	agent := NewAgent(logroot.Logger(), 100*time.Millisecond, namedPlugins...)
 	closeCh := make(chan struct{})
 	errCh := make(chan error)
 	go func() {
@@ -172,7 +172,7 @@ func TestEventLoopCloseFailed(t *testing.T) {
 		gomega.Expect(p.Closed()).To(gomega.BeFalse())
 	}
 
-	agent := NewAgent(global.DefaultLogger(), 100*time.Millisecond, namedPlugins...)
+	agent := NewAgent(logroot.Logger(), 100*time.Millisecond, namedPlugins...)
 	closeCh := make(chan struct{})
 	errCh := make(chan error)
 	go func() {

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package root contains default global logger.
-package global
+// Package logroot contains default global logger.
+package logroot
 
 import (
 	"github.com/ligato/cn-infra/logging"
@@ -26,8 +26,8 @@ func init() {
 	defaultLogger = logrus.StandardLogger()
 }
 
-// DefaultLogger returns global logger. Please notice that recommended
+// Logger returns global logger. Please notice that recommended
 // approach is to create a custom logger.
-func DefaultLogger() logging.Logger {
+func Logger() logging.Logger {
 	return defaultLogger
 }
