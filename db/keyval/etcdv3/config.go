@@ -29,10 +29,11 @@ import (
 
 // Config represents a part of etcd configuration that can be
 // loaded from a file. The Config might be afterwards transformed into
-// clientv3.Config using ConfigToClienv3 function.
+// ClientConfig using ConfigToClientv3 function.
 type Config struct {
 	Endpoints             []string      `json:"endpoints"`
 	DialTimeout           time.Duration `json:"dial-timeout"`
+	OpTimeout             time.Duration `json:"operation-timeout"`
 	InsecureTransport     bool          `json:"insecure-transport"`
 	InsecureSkipTLSVerify bool          `json:"insecure-skip-tls-verify"`
 	Certfile              string        `json:"cert-file"`
@@ -40,24 +41,42 @@ type Config struct {
 	CAfile                string        `json:"ca-file"`
 }
 
+// ClientConfig extends clientv3.Config with configuration options introduced by this package.
+type ClientConfig struct {
+	*clientv3.Config
+
+	// OpTimeout is the maximum amount of time the client will wait on a pending operation before timing out.
+	OpTimeout time.Duration
+}
+
 // default timeout for connecting to etcd.
-const defaultTimeout = 1 * time.Second
+const defaultDialTimeout = 1 * time.Second
+
+// default timeout for any request-reply etcd operation.
+const defaultOpTimeout = 3 * time.Second
 
 // ConfigToClientv3 transforms the configuration modelled by yaml structure
-// into clientv3.Config. If the endpoints are not specified the function tries to load endpoints
+// into ClientConfig. If the endpoints are not specified the function tries to load endpoints
 // ETCDV3_ENDPOINTS environment variable.
-func ConfigToClientv3(yc *Config) (*clientv3.Config, error) {
+func ConfigToClientv3(yc *Config) (*ClientConfig, error) {
 
-	timeout := defaultTimeout
+	dialTimeout := defaultDialTimeout
 
 	if yc.DialTimeout != 0 {
-		timeout = yc.DialTimeout
+		dialTimeout = yc.DialTimeout
 	}
 
-	cfg := &clientv3.Config{
-		Endpoints:   yc.Endpoints,
-		DialTimeout: timeout,
+	opTimeout := defaultOpTimeout
+
+	if yc.OpTimeout != 0 {
+		opTimeout = yc.OpTimeout
 	}
+
+	clientv3Cfg := &clientv3.Config{
+		Endpoints:   yc.Endpoints,
+		DialTimeout: dialTimeout,
+	}
+	cfg := &ClientConfig{Config: clientv3Cfg, OpTimeout: opTimeout}
 
 	if len(cfg.Endpoints) == 0 {
 		if ep := os.Getenv("ETCDV3_ENDPOINTS"); ep != "" {
