@@ -102,7 +102,7 @@ func (db *BytesConnectionRedis) watch(respChan chan<- keyval.BytesWatchResp,
 	if db.closed {
 		return fmt.Errorf("watch(%v) called on a closed broker", keys)
 	}
-	log.Debugf("watch(%v)", keys)
+	db.Debugf("watch(%v)", keys)
 	var buf bytes.Buffer
 	for _, k := range keys {
 		err := db.watchPattern(respChan, k, db.closeCh, trimPrefix)
@@ -122,7 +122,7 @@ func (db *BytesConnectionRedis) watch(respChan chan<- keyval.BytesWatchResp,
 func (db *BytesConnectionRedis) watchPattern(respChan chan<- keyval.BytesWatchResp, key string,
 	closeChan <-chan struct{}, trimPrefix func(key string) string) error {
 	pattern := keySpaceEventPrefix + wildcard(key)
-	log.Debugf("PSubscribe %s\n", pattern)
+	db.Debugf("PSubscribe %s\n", pattern)
 
 	// Allocate 1 connection per watch...
 	conn := db.pool.Get()
@@ -130,16 +130,16 @@ func (db *BytesConnectionRedis) watchPattern(respChan chan<- keyval.BytesWatchRe
 	err := pubSub.PSubscribe(pattern)
 	if err != nil {
 		pubSub.Close()
-		log.Errorf("PSubscribe %s failed: %s", pattern, err)
+		db.Errorf("PSubscribe %s failed: %s", pattern, err)
 		return err
 	}
 	go func() {
-		defer func() { log.Debugf("Watcher on %s exited", pattern) }()
+		defer func() { db.Debugf("Watcher on %s exited", pattern) }()
 		for {
 			val := pubSub.Receive()
 			closing, err := db.handleChange(val, respChan, closeChan, trimPrefix)
 			if err != nil && !db.closed {
-				log.Error(err)
+				db.Error(err)
 			}
 			if closing {
 				return
@@ -149,10 +149,10 @@ func (db *BytesConnectionRedis) watchPattern(respChan chan<- keyval.BytesWatchRe
 	go func() {
 		_, active := <-closeChan
 		if !active {
-			log.Debugf("Received signal to close watcher on %s", pattern)
+			db.Debugf("Received signal to close watcher on %s", pattern)
 			err := pubSub.PUnsubscribe(pattern)
 			if err != nil {
-				log.Errorf("PUnsubscribe %s failed: %s", pattern, err)
+				db.Errorf("PUnsubscribe %s failed: %s", pattern, err)
 			}
 			pubSub.Close()
 		}
@@ -177,22 +177,22 @@ func (db *BytesConnectionRedis) handleChange(val interface{}, respChan chan<- ke
 
 	switch n := val.(type) {
 	case redis.Subscription:
-		log.Debugf("Subscription: %s %s %d", n.Kind, n.Channel, n.Count)
+		db.Debugf("Subscription: %s %s %d", n.Kind, n.Channel, n.Count)
 		if n.Count == 0 {
 			return true, nil
 		}
 	case redis.PMessage:
-		log.Debugf("PMessage: %s %s %s", n.Pattern, n.Channel, n.Data)
+		db.Debugf("PMessage: %s %s %s", n.Pattern, n.Channel, n.Data)
 		key := strings.Split(n.Channel, ":")[1]
 		switch cmd := string(n.Data); cmd {
 		case "set":
-			// Ouch, keyspace event does not convey value.  Need to retreive it.
+			// Ouch, keyspace event does not convey value.  Need to retrieve it.
 			val, _, rev, err := db.GetValue(key)
 			if err != nil {
-				log.Errorf("GetValue(%s) failed with error %s", key, err)
+				db.Errorf("GetValue(%s) failed with error %s", key, err)
 			}
 			if val == nil {
-				log.Errorf("GetValue(%s) returned nil", key)
+				db.Errorf("GetValue(%s) returned nil", key)
 			}
 			if trimPrefix != nil {
 				key = trimPrefix(key)
@@ -207,7 +207,7 @@ func (db *BytesConnectionRedis) handleChange(val interface{}, respChan chan<- ke
 		//TODO NICE-to-HAVE no block here if buffer is overflown
 	case redis.Message:
 		// Not subscribing to this event type yet
-		log.Debugf("Message: %s %s which I did not subscribe !", n.Channel, n.Data)
+		db.Debugf("Message: %s %s which I did not subscribe !", n.Channel, n.Data)
 	case error:
 		return true, n
 	}
