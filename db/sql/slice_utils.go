@@ -23,11 +23,11 @@ import (
 // It closes the iterator (since nothing left in the iterator)
 func SliceIt(pointerToASlice interface{}, it ValIterator) error {
 	/* TODO defer func() {
-		if exp := recover(); exp != nil && it != nil {
-			logger.Error(exp)
-			exp = safeclose.Close(it)
-			if exp != nil {
-				logger.Error(exp)
+		if e := recover(); e != nil && it != nil {
+			logger.Error(e)
+			e = safeclose.Close(it)
+			if e != nil {
+				logger.Error(e)
 			}
 		}
 	}()*/
