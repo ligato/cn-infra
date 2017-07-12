@@ -17,6 +17,8 @@ package plugin
 import (
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
+	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/global"
 	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
@@ -29,12 +31,12 @@ type Connection interface {
 type Skeleton struct {
 	conn         Connection
 	protoWrapper *kvproto.ProtoWrapper
-	connect      func() (Connection, error)
+	connect      func(logger logging.Logger) (Connection, error)
 }
 
 // NewSkeleton creates a new instance of the Skeleton with the given connector.
 // The connection is established in AfterInit phase.
-func NewSkeleton(connector func() (Connection, error)) *Skeleton {
+func NewSkeleton(connector func(log logging.Logger) (Connection, error)) *Skeleton {
 	return &Skeleton{connect: connector}
 }
 
@@ -46,7 +48,7 @@ func (plugin *Skeleton) Init() (err error) {
 // AfterInit is called once all plugin have been initialized. The connection to datastore
 // is established in this phase.
 func (plugin *Skeleton) AfterInit() (err error) {
-	plugin.conn, err = plugin.connect()
+	plugin.conn, err = plugin.connect(global.DefaultLogger()) // TODO: use injected logger
 	if err == nil {
 		plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.conn, &keyval.SerializerJSON{})
 	}
