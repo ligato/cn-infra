@@ -22,11 +22,12 @@ import (
 	"github.com/ligato/cn-infra/messaging/kafka/mux"
 	"os"
 	"os/signal"
+	"github.com/ligato/cn-infra/logging/logroot"
 )
 
 func main() {
 	log.SetLevel(logging.DebugLevel)
-	mx, err := mux.InitMultiplexer("", "default")
+	mx, err := mux.InitMultiplexer("", "default", logroot.Logger())
 	if err != nil {
 		os.Exit(1)
 	}

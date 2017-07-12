@@ -4,6 +4,7 @@ import (
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/onsi/gomega"
 	"testing"
+	"github.com/ligato/cn-infra/logging/logroot"
 )
 
 func getMockConsumerFactory(t *testing.T) ConsumerFactory {
@@ -15,7 +16,7 @@ func getMockConsumerFactory(t *testing.T) ConsumerFactory {
 func getMultiplexerMock(t *testing.T) *Multiplexer {
 	asyncP, _ := client.GetAsyncProducerMock(t)
 	syncP, _ := client.GetSyncProducerMock(t)
-	return NewMultiplexer(getMockConsumerFactory(t), syncP, asyncP, "name")
+	return NewMultiplexer(getMockConsumerFactory(t), syncP, asyncP, "name", logroot.Logger())
 }
 
 func TestMultiplexer(t *testing.T) {

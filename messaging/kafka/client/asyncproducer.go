@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Shopify/sarama"
+	"github.com/ligato/cn-infra/logging"
 	"sync"
 )
 
@@ -27,6 +28,7 @@ import (
 // The status whether message was sent successfully or not is delivered using channels
 // specified in config structure.
 type AsyncProducer struct {
+	logging.Logger
 	Config       *Config
 	Client       sarama.Client
 	Producer     sarama.AsyncProducer
@@ -40,7 +42,7 @@ type AsyncProducer struct {
 // NewAsyncProducer returns an AsyncProducer instance
 func NewAsyncProducer(config *Config, wg *sync.WaitGroup) (*AsyncProducer, error) {
 
-	log.Debug("NewAsyncProducer created")
+	config.Logger.Debug("NewAsyncProducer created")
 	if err := config.ValidateAsyncProducerConfig(); err != nil {
 		return nil, err
 	}
@@ -59,7 +61,7 @@ func NewAsyncProducer(config *Config, wg *sync.WaitGroup) (*AsyncProducer, error
 	config.ProducerConfig().Producer.Return.Errors = config.SendError
 	config.ProducerConfig().Producer.Partitioner = config.Partitioner
 
-	log.Debugf("AsyncProducer config: %#v", config)
+	config.Logger.Debugf("AsyncProducer config: %#v", config)
 
 	// init a new client
 	client, err := sarama.NewClient(config.Brokers, &config.Config.Config)
@@ -75,6 +77,7 @@ func NewAsyncProducer(config *Config, wg *sync.WaitGroup) (*AsyncProducer, error
 
 	// initAsyncProducer object
 	ap := &AsyncProducer{
+		Logger:       config.Logger,
 		Config:       config,
 		Client:       client,
 		Producer:     producer,
@@ -133,7 +136,7 @@ func (ref *AsyncProducer) SendMsg(topic string, key Encoder, msg Encoder, metada
 
 	ref.Producer.Input() <- message
 
-	log.Debugf("message sent: %s", message)
+	ref.Debugf("message sent: %s", message)
 
 	return
 }
@@ -162,19 +165,19 @@ func (ref *AsyncProducer) Close(async ...bool) error {
 	}
 
 	if async != nil && len(async) > 0 {
-		log.Debug("async close")
+		ref.Debug("async close")
 		ref.Producer.AsyncClose()
 	} else {
-		log.Debug("sync close")
+		ref.Debug("sync close")
 		ref.Producer.Close()
 	}
 	if err != nil {
-		log.Errorf("asyncProducer close error: %v", err)
+		ref.Errorf("asyncProducer close error: %v", err)
 		return err
 	}
 	err = ref.Client.Close()
 	if err != nil {
-		log.Errorf("client close error: %v", err)
+		ref.Errorf("client close error: %v", err)
 		return err
 	}
 
@@ -183,17 +186,17 @@ func (ref *AsyncProducer) Close(async ...bool) error {
 
 // successHandler handles success messages
 func (ref *AsyncProducer) successHandler(in <-chan *sarama.ProducerMessage) {
-	log.Debug("starting success handler ...")
+	ref.Debug("starting success handler ...")
 	for {
 		select {
 		case <-ref.closeChannel:
-			log.Debug("success handler exited ...")
+			ref.Debug("success handler exited ...")
 			return
 		case msg := <-in:
 			if msg == nil {
 				continue
 			}
-			log.Debugf("Message is stored in topic(%s)/partition(%d)/offset(%d)\n", msg.Topic, msg.Partition, msg.Offset)
+			ref.Debugf("Message is stored in topic(%s)/partition(%d)/offset(%d)\n", msg.Topic, msg.Partition, msg.Offset)
 			pmsg := &ProducerMessage{
 				Topic:     msg.Topic,
 				Key:       msg.Key,
@@ -209,11 +212,11 @@ func (ref *AsyncProducer) successHandler(in <-chan *sarama.ProducerMessage) {
 
 // errorHandler handles error messages
 func (ref *AsyncProducer) errorHandler(in <-chan *sarama.ProducerError) {
-	log.Debug("starting error handler ...")
+	ref.Debug("starting error handler ...")
 	for {
 		select {
 		case <-ref.closeChannel:
-			log.Debug("error handler exited ...")
+			ref.Debug("error handler exited ...")
 			return
 		case perr := <-in:
 			if perr == nil {
@@ -235,8 +238,8 @@ func (ref *AsyncProducer) errorHandler(in <-chan *sarama.ProducerError) {
 				Err: err,
 			}
 			val, _ := msg.Value.Encode()
-			log.Errorf("message %s errored in topic(%s)/partition(%d)/offset(%d)\n", string(val), pmsg.Topic, pmsg.Partition, pmsg.Offset)
-			log.Errorf("message error: %v", perr.Err)
+			ref.Errorf("message %s errored in topic(%s)/partition(%d)/offset(%d)\n", string(val), pmsg.Topic, pmsg.Partition, pmsg.Offset)
+			ref.Errorf("message error: %v", perr.Err)
 			ref.Config.ErrorChan <- perr2
 		}
 	}

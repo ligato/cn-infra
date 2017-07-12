@@ -3,11 +3,11 @@ package mux
 import (
 	"fmt"
 	"github.com/ligato/cn-infra/db/keyval"
-	lg "github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"sync"
 	"time"
+	"github.com/ligato/cn-infra/logging"
 )
 
 // Multiplexer encapsulates clients to kafka cluster (syncProducer, asyncProducer, consumer).
@@ -17,6 +17,7 @@ import (
 // consumer in Multiplexer is started. Once the Multiplexer's consumer has been
 // started new topics can not be added.
 type Multiplexer struct {
+	logging.Logger
 	// consumer used by the Multiplexer
 	consumer *client.Consumer
 	// syncProducer used by the Multiplexer
@@ -52,8 +53,9 @@ type asyncMeta struct {
 }
 
 // NewMultiplexer creates new instance of Kafka Multiplexer
-func NewMultiplexer(consumerFactory ConsumerFactory, syncP *client.SyncProducer, asyncP *client.AsyncProducer, name string) *Multiplexer {
+func NewMultiplexer(consumerFactory ConsumerFactory, syncP *client.SyncProducer, asyncP *client.AsyncProducer, name string, log logging.Logger) *Multiplexer {
 	cl := &Multiplexer{consumerFactory: consumerFactory,
+		Logger: log,
 		syncProducer:  syncP,
 		asyncProducer: asyncP,
 		name:          name,
@@ -69,7 +71,7 @@ func (mux *Multiplexer) watchAsyncProducerChannels() {
 	for {
 		select {
 		case err := <-mux.asyncProducer.Config.ErrorChan:
-			log.Println("Failed to produce message", err.Err)
+			mux.Println("Failed to produce message", err.Err)
 			errMsg := err.Msg
 
 			if errMeta, ok := errMsg.Metadata.(*asyncMeta); ok && errMeta.errorChan != nil {
@@ -78,7 +80,7 @@ func (mux *Multiplexer) watchAsyncProducerChannels() {
 				case errMeta.errorChan <- err:
 				default:
 					//case <-time.NewTimer(time.Second).C:
-					log.Warn("Unable to send error notification")
+					mux.Warn("Unable to send error notification")
 				}
 			}
 		case success := <-mux.asyncProducer.Config.SuccessChan:
@@ -89,11 +91,11 @@ func (mux *Multiplexer) watchAsyncProducerChannels() {
 				case succMeta.successChan <- success:
 				default:
 					//case <-time.NewTimer(time.Second).C:
-					log.Warn("Unable to send success notification")
+					mux.Warn("Unable to send success notification")
 				}
 			}
 		case <-mux.asyncProducer.GetCloseChannel():
-			log.Debug("Closing watch loop for async producer")
+			mux.Debug("Closing watch loop for async producer")
 		}
 	}
 }
@@ -120,15 +122,15 @@ func (mux *Multiplexer) Start() error {
 	}
 
 	if len(topics) == 0 {
-		log.Debug("No topics to be consumed")
+		mux.Debug("No topics to be consumed")
 		return nil
 	}
 
-	log.WithFields(lg.Fields{"topics": topics}).Debug("Consuming started")
+	mux.WithFields(logging.Fields{"topics": topics}).Debug("Consuming started")
 
 	mux.consumer, err = mux.consumerFactory(topics, mux.name)
 	if err != nil {
-		log.Error(err)
+		mux.Error(err)
 		return err
 	}
 
@@ -169,12 +171,12 @@ func (mux *Multiplexer) propagateMessage(msg *client.ConsumerMessage) {
 		for _, ch := range *cons {
 			// if we are not able to write into the channel we should skip the receiver
 			// and report an error to avoid deadlock
-			log.Debug("offset ", msg.Offset, string(msg.Value), string(msg.Key), msg.Partition)
+			mux.Debug("offset ", msg.Offset, string(msg.Value), string(msg.Key), msg.Partition)
 
 			select {
 			case ch <- msg:
 			case <-time.After(time.Second):
-				log.Error("Unable to deliver message before the timeout.")
+				mux.Error("Unable to deliver message before the timeout.")
 			}
 		}
 	}
@@ -182,20 +184,20 @@ func (mux *Multiplexer) propagateMessage(msg *client.ConsumerMessage) {
 
 // genericConsumer handles incoming messages to the multiplexer and distributes them among the subscribers
 func (mux *Multiplexer) genericConsumer() {
-	log.Debug("Generic consumer started")
+	mux.Debug("Generic consumer started")
 	for {
 		select {
 		case <-mux.consumer.GetCloseChannel():
-			log.Debug("Closing consumer")
+			mux.Debug("Closing consumer")
 			return
 		case msg := <-mux.consumer.Config.RecvMessageChan:
-			log.Debug("Kafka message received")
+			mux.Debug("Kafka message received")
 			mux.propagateMessage(msg)
 			// Mark offset as read. If the Multiplexer is restarted it
 			// continues to receive message after the last committed offset.
 			mux.consumer.MarkOffset(msg, "")
 		case err := <-mux.consumer.Config.RecvErrorChan:
-			log.Error("Received partitionConsumer error ", err)
+			mux.Error("Received partitionConsumer error ", err)
 		}
 	}
 

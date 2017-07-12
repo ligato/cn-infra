@@ -23,6 +23,7 @@ import (
 	"github.com/ligato/cn-infra/messaging/kafka/examples/utils"
 	"os"
 	"strings"
+	"github.com/ligato/cn-infra/logging/logroot"
 )
 
 var (
@@ -42,7 +43,7 @@ func main() {
 	}
 
 	// init config
-	config := client.NewConfig()
+	config := client.NewConfig(logroot.Logger())
 	config.SetDebug(*debug)
 	config.SetPartition(int32(*partition))
 	config.SetPartitioner(*partitioner)
