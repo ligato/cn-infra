@@ -23,7 +23,8 @@
 // The code snippets below provide examples on using BytesConnectionRedis.  For simplicity, error handling is omitted:
 //
 // Connection
-//   import  "github.com/ligato/cn-infra/db/keyval/redis"
+//   import "github.com/ligato/cn-infra/db/keyval/kvproto"
+//   import "github.com/ligato/cn-infra/db/keyval/redis"
 //
 //   config := redis.NodeClientConfig{
 //       Endpoint: "localhost:6379",
@@ -36,6 +37,10 @@
 //   }
 //   pool, err := redis.CreateNodeClientConnPool(config)
 //   db, err := redis.NewBytesConnectionRedis(pool)
+//
+//   wrapper := kvproto.NewProtoWrapper(db)
+//   protoBroker := wrapper.NewBroker("some-prefix")
+//   protoWatcher := wrapper.NewWatcher("some-prefix")
 //
 // You can also define server configuraton in a yaml file, and load it into memory using ParseConfigFromYamlFile(yamlFile, &config) from the package github.com/ligato/cn-infra/utils/config.
 // See github.com/ligato/cn-infra/db/keyval/redis/examples/node-client.yaml for an example of server configuration.

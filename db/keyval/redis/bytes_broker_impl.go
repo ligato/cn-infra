@@ -334,11 +334,11 @@ func (db *BytesConnectionRedis) scanKeys(conn redis.Conn, match string) (keys []
 			return nil, fmt.Errorf("Do(SCAN) failed: %s", err)
 		}
 		log.Debugf("SCAN returned %v", reply)
-		switch reply := reply.(type) {
+		switch r := reply.(type) {
 		case []interface{}:
-			cursor = string(reply[0].([]byte))
+			cursor = string(r[0].([]byte))
 			log.Debugf("cursor = %s", cursor)
-			for _, k := range reply[1].([]interface{}) {
+			for _, k := range r[1].([]interface{}) {
 				if k == nil {
 					continue
 				}
@@ -353,10 +353,14 @@ func (db *BytesConnectionRedis) scanKeys(conn redis.Conn, match string) (keys []
 				return keys, nil
 			}
 		case redis.Error:
-			return nil, reply
+			return nil, r
+		default:
+			if reply == nil {
+				return nil, errors.New("Do(SCAN) returned nil")
+			}
+			return nil, fmt.Errorf("Do(SCAN) returned unexpected type %T", reply)
 		}
 	}
-	return keys, nil
 }
 
 const redisWildcardChars = "*?[]"

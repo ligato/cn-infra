@@ -29,18 +29,18 @@ import (
 var mockConn *redigomock.Conn
 var mockPool *redis.Pool
 var bytesBroker *BytesConnectionRedis
+var iKeys = []interface{}{}
+var iVals = []interface{}{}
+var iAll = []interface{}{}
 
 var keyValues = map[string]string{
 	"keyWest": "a place",
 	"keyMap":  "a map",
 }
 
-//func TestMain(m *testing.M) {
-func init() {
+//func init() {
+func TestMain(m *testing.M) {
 	mockConn = redigomock.NewConn()
-	iKeys := make([]interface{}, 0)
-	iVals := make([]interface{}, 0)
-	iAll := make([]interface{}, 0)
 	for k, v := range keyValues {
 		mockConn.Command("SET", k, v).Expect("not used")
 		mockConn.Command("GET", k).Expect(v)
@@ -53,8 +53,11 @@ func init() {
 	mockConn.Command("GET", "nil").Expect(nil)
 
 	mockConn.Command("MGET", iKeys...).Expect(iVals)
-	mockConn.Command("KEYS", "key*").Expect(iKeys)
 	mockConn.Command("DEL", iKeys...).Expect(len(keyValues))
+
+	// Additional SCAN (or previous, "KEYS") are set on demand in each test that implicitly calls them.
+	mockConn.Command("SCAN", "0", "MATCH", "key*").Expect([]interface{}{[]byte("0"), iKeys})
+	//mockConn.Command("KEYS", "key*").Expect(iKeys)
 
 	mockConn.Command("MSET", []interface{}{"keyMap", keyValues["keyMap"]}...).Expect(nil)
 	mockConn.Command("DEL", []interface{}{"keyWest"}...).Expect(1).Expect(nil)
@@ -128,6 +131,10 @@ func TestGetShouldNotApplyWildcard(t *testing.T) {
 }
 
 func TestListValues(t *testing.T) {
+	// Implicitly call SCAN (or previous, "KEYS")
+	mockConn.Command("SCAN", "0", "MATCH", "key*").Expect([]interface{}{[]byte("0"), iKeys})
+	//mockConn.Command("KEYS", "key*").Expect(iKeys)
+
 	gomega.RegisterTestingT(t)
 	keyVals, err := bytesBroker.ListValues("key")
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -155,10 +162,14 @@ func TestListKeys(t *testing.T) {
 }
 
 func TestDel(t *testing.T) {
+	// Implicitly call SCAN (or previous, "KEYS")
+	mockConn.Command("SCAN", "0", "MATCH", "key*").Expect([]interface{}{[]byte("0"), iKeys})
+	//mockConn.Command("KEYS", "key*").Expect(iKeys)
+
 	gomega.RegisterTestingT(t)
-	/*found*/ _, err := bytesBroker.Delete("key")
+	found, err := bytesBroker.Delete("key")
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-	//gomega.Expect(found).Should(gomega.BeTrue()) // why is this not found, all of a sudden?
+	gomega.Expect(found).Should(gomega.BeTrue())
 }
 
 func TestTxn(t *testing.T) {
