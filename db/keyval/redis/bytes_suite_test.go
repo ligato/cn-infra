@@ -38,8 +38,10 @@ var keyValues = map[string]string{
 	"keyMap":  "a map",
 }
 
-//func init() {
-func TestMain(m *testing.M) {
+// Seriously, must do init() instead of TestMain().
+// Or test coverage will generated profile.
+// func TestMain(m *testing.M) {
+func init() {
 	mockConn = redigomock.NewConn()
 	for k, v := range keyValues {
 		mockConn.Command("SET", k, v).Expect("not used")
@@ -54,10 +56,6 @@ func TestMain(m *testing.M) {
 
 	mockConn.Command("MGET", iKeys...).Expect(iVals)
 	mockConn.Command("DEL", iKeys...).Expect(len(keyValues))
-
-	// Additional SCAN (or previous, "KEYS") are set on demand in each test that implicitly calls them.
-	mockConn.Command("SCAN", "0", "MATCH", "key*").Expect([]interface{}{[]byte("0"), iKeys})
-	//mockConn.Command("KEYS", "key*").Expect(iKeys)
 
 	mockConn.Command("MSET", []interface{}{"keyMap", keyValues["keyMap"]}...).Expect(nil)
 	mockConn.Command("DEL", []interface{}{"keyWest"}...).Expect(1).Expect(nil)
@@ -149,6 +147,10 @@ func TestListValues(t *testing.T) {
 }
 
 func TestListKeys(t *testing.T) {
+	// Each SCAN (or previous, "KEYS") is set on demand in individual test that calls it.
+	mockConn.Command("SCAN", "0", "MATCH", "key*").Expect([]interface{}{[]byte("0"), iKeys})
+	//mockConn.Command("KEYS", "key*").Expect(iKeys)
+
 	gomega.RegisterTestingT(t)
 	keys, err := bytesBroker.ListKeys("key")
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
