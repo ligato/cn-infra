@@ -25,8 +25,8 @@ func main() {
 	log.SetLevel(logging.DebugLevel)
 
 	redisConn := createConnection(os.Args[1])
-	broker = redisConn
-	watcher = redisConn
+	broker = redisConn.NewBroker("")
+	watcher = redisConn.NewWatcher("")
 
 	runSimpleExmple(redisConn)
 }

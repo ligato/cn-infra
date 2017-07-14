@@ -26,9 +26,9 @@ import (
 )
 
 var diagram = `
-                                            ====================
-                                             Airport Simulation
-                                            ====================
+                                                 =========
+                                                  Airport
+                                                 =========
 
 
          +---------+               +----------+
@@ -74,7 +74,7 @@ const (
 	flightIDFormat     = "%s%02d"
 	hangarKeyFormat    = "%2s%2d:%d"
 	columnSep          = "      "
-	redisPause         = 0.3
+	redisPause         = 0.05
 )
 
 var motions = []string{" ->", "<- "}
@@ -240,7 +240,8 @@ func runArrivals() {
 		for i := 0; i < flightSlotCount-1; i++ {
 			newArrival()
 		}
-		pause := 2*(runwayClearance+float64(runwayLength)*runwaySpeedBump*runwayInterval) +
+		pause := 2*(runwayClearance+runwayInterval*float64(runwayLength-flightIDLength)) +
+			(hangarDurationLow+hangarDurationHigh)*hangarThreshold/2 +
 			9*redisPause
 		low := pause - 0.3*pause
 		high := pause + 0.3*pause

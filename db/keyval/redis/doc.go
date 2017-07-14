@@ -20,7 +20,10 @@
 //   | app |                       |  BytesConnectionRedis  |                  | Redis |
 //   +-----+    <-- (BytesWatcher) +------------------------+   <--  events    +-------+
 //
-// The code snippets below provide examples on using BytesConnectionRedis.  For simplicity, error handling is omitted:
+// The code snippets below provide examples on using BytesConnectionRedis.  For simplicity, error handling is omitted.
+// Deailed examples are available in
+//   ligato/cn-infra/db/keyval/redis/examples/simple
+//   ligato/cn-infra/db/keyval/redis/examples/airport
 //
 // Connection
 //   import "github.com/ligato/cn-infra/db/keyval/kvproto"
@@ -38,12 +41,17 @@
 //   pool, err := redis.CreateNodeClientConnPool(config)
 //   db, err := redis.NewBytesConnectionRedis(pool)
 //
+//   // create broker/watcher that share the same connection pools.
+//   bytesBroker := db.NewBroker("some-prefix")
+//   bytesWatcher := db.NewWatcher("some-prefix")
+//
+//   // create broker/watcher that share the same connection pools, capable of processing protocol-buffer generated data.
 //   wrapper := kvproto.NewProtoWrapper(db)
 //   protoBroker := wrapper.NewBroker("some-prefix")
 //   protoWatcher := wrapper.NewWatcher("some-prefix")
 //
 // You can also define server configuraton in a yaml file, and load it into memory using ParseConfigFromYamlFile(yamlFile, &config) from the package github.com/ligato/cn-infra/utils/config.
-// See github.com/ligato/cn-infra/db/keyval/redis/examples/node-client.yaml for an example of server configuration.
+// See ligato/cn-infra/db/keyval/redis/examples/node-client.yaml for an example of server configuration.
 //
 // CRUD
 //   // put
@@ -55,6 +63,16 @@
 //   if found {
 //       ...
 //   }
+//
+//   // Note: flight.Info implements proto.Message.
+//   f := flight.Info{
+//           Airline:  "UA",
+//           Number:   1573,
+//           Priority: 1,
+//        }
+//   err = protoBroker.Put("some-key-prefix", &f)
+//   f2 := flight.Info{}
+//   found, revision, err = protoBroker.GetValue("some-key-prefix", &f2)
 //
 //   // list
 //   keyPrefix := "some"
