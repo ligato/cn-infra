@@ -41,19 +41,35 @@ type Broker interface {
 	GetValue(query string, outBinding interface{}) (found bool, err error)
 
 	// ListValues returns an iterator that enables to traverse all items returned by the query
-	// Example usage:
+	// Example usage 1:
 	//
 	//    query := sql.SelectFrom(UserTable) + sql.Where(sql.FieldEq(&UserTable.LastName, UserTable, "Bond"))
 	//    iterator := db.ListValues(query)
 	//    users := &[]User{}
 	//    err := sql.SliceIt(users, iterator)
 	//
+	// Example usage 2:
+	//
+	//    query := sql.SelectFrom(UserTable) + "where last_name='Bond'")
+	//    iterator := db.ListValues(query)
+	//    users := &[]User{}
+	//    err := sql.SliceIt(users, iterator)
+	//
+	// Example usage 3:
+	//
+	//    iterator := db.ListValues("select ID, first_name, last_name from User where last_name='Bond'")
+	//    user := map[string]interface{}
+	//    stop := iterator.GetNext(user)
+	//
 	ListValues(query string) ValIterator
 
 	// Delete removes data that from the data store
-	// Example usage:
+	// Example usage 1:
 	//
-	//    err := db.Delete("from User wher eID='James Bond'")
+	//    err := db.Delete(sql.From(UserTable) + sql.Where(sql.FieldEq(&UserTable.ID, UserTable, "James Bond")))
+	//
+	// Example usage 2:
+	//    err := db.Delete("from User where ID='James Bond'")
 	//
 	Delete(fromWhere string) error
 
