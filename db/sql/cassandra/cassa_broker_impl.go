@@ -134,8 +134,12 @@ func (pdb *BrokerCassa) ListValues(statement string) *ValIterator {
 
 // GetNext returns the following item from the result set. If data was returned, found is set to true.
 func (it *ValIterator) GetNext(val interface{}) (stop bool) {
-	ptrs := structFieldPtrs(val)
+	if m, ok := val.(map[string]interface{}); ok {
+		ok = it.Delegate.ScanMap(m)
+		return !ok //if not ok than stop
+	}
 
+	ptrs := structFieldPtrs(val)
 	ok := it.Delegate.Scan(ptrs...)
 	return !ok //if not ok than stop
 }
