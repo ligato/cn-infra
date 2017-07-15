@@ -41,15 +41,8 @@ func mockQuery(sessionMock *gockle.SessionMock, query string, rows ...*row) {
 }
 
 // mockPut is a helper for testing. It setups mock iterator with any parameters/arguments
-func mockPut(sessionMock *gockle.SessionMock, entity interface{}) {
-	row := cells(entity)
-	len := len(row.values) + 1
-	params := make([]interface{}, len)
-	for i := 0; i < len; i++ {
-		params[i] = mock.Any
-	}
-
-	sessionMock.When("Exec", params...).Return(nil)
+func mockPut(sessionMock *gockle.SessionMock, query string, binding []interface{}) {
+	sessionMock.When("Exec", query, mock.Any).Return(nil)
 	sessionMock.When("Close").Return()
 }
 
