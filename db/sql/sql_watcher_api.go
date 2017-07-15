@@ -31,7 +31,6 @@ type WatchResp interface {
 	GetValue(outBinding interface{}) error
 }
 
-// ToChan TODO
 func ToChan(respChan chan WatchResp) func(event WatchResp) {
 	return func(WatchResp) {
 		/*select {
