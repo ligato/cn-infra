@@ -30,7 +30,7 @@ func TestPut1_convenient(t *testing.T) {
 	defer session.Close()
 	db := cassandra.NewBrokerUsingSession(session)
 
-	mockPut(session, "UPDATE User SET id = ?, first_name = ?, last_name = ? WHERE id = James Bond",
+	mockPut(session, "UPDATE User SET id = ?, first_name = ?, last_name = ? WHERE id = 'James Bond'",
 		[]interface{}{
 			"James Bond",
 			"James",

@@ -112,7 +112,7 @@ func FieldEq(field interface{}, containerStruct interface{}, arg string) (statem
 func Eq(field string, arg string) (statement string) {
 	statement += field
 	statement += " = "
-	statement += arg
+	statement += "'" + arg + "'"
 
 	return statement
 }
