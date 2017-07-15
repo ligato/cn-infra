@@ -49,7 +49,7 @@ func Where(ands ...string) (statement string) {
 	return " where " + strings.Join(x, " AND ")
 }
 
-// Where TODO
+// Delete TODO
 func Delete(ands ...string) (statement string) {
 	return " where " + AND(ands...)
 }
