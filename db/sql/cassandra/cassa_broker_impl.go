@@ -59,9 +59,12 @@ func (pdb *BrokerCassa) Put(statement string, value interface{}, opts ...keyval.
 }
 */
 
-// Put writes the provided key-value item into the data store.
-//
+// Put writes the entity into the data store.
 // Returns an error if the item could not be written, ok otherwise.
+//
+// Example usage:
+//
+//    err = db.Put("ID='James Bond'", &User{"James Bond", "James", "Bond"})
 func (pdb *BrokerCassa) Put(where string, value interface{} /*TODO TTL, opts ...keyval.PutOption*/) error {
 	statement, _, err := sql.Update(r.ValueOf(value).Type().Name() /*TODO extract method / make customizable*/ ,
 		value                                                      /*, TODO TTL*/)
