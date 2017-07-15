@@ -20,6 +20,7 @@ import (
 	"github.com/onsi/gomega"
 	"github.com/ligato/cn-infra/db/sql"
 	"github.com/ligato/cn-infra/db/sql/cassandra"
+	"fmt"
 )
 
 // TestListValues1_convenient is most convenient way of selecting slice of entities
@@ -110,4 +111,33 @@ func TestListValues4_iterator(t *testing.T) {
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	gomega.Expect(users).ToNot(gomega.BeNil())
 	gomega.Expect(users).To(gomega.BeEquivalentTo([]*User{&JamesBond, &PeterBond}))
+}
+
+
+// TestListValues4_iteratorScanMap does not use reflection to fill slice of users (but the iterator)
+// All other is same as in TestListValues1
+func TestListValues4_iteratorScanMap(t *testing.T) {
+	gomega.RegisterTestingT(t)
+
+	session := mockSession()
+	defer session.Close()
+	db := cassandra.NewBrokerUsingSession(session)
+
+	query := sql.SelectFrom(UserTable) + sql.Where(sql.FieldEq(&UserTable.LastName, UserTable, "Bond"))
+	mockQuery(session, query, cells(JamesBond), cells(PeterBond))
+
+	it := db.ListValues(query)
+	for {
+		user := map[string]interface{}{}
+		stop := it.GetNext(user)
+		if stop {
+			break
+		}
+		fmt.Println("user: ", user)
+	}
+	err := it.Close()
+
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+	//gomega.Expect(users).ToNot(gomega.BeNil())
+	//gomega.Expect(users).To(gomega.BeEquivalentTo([]*User{&JamesBond, &PeterBond}))
 }
