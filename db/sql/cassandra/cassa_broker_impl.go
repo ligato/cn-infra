@@ -37,7 +37,7 @@ type BrokerCassa struct {
 	session gockle.Session
 }
 
-// KeyValIterator is an iterator returned by ListValues call
+// ValIterator is an iterator returned by ListValues call
 type ValIterator struct {
 	Delegate gockle.Iterator
 }
@@ -80,12 +80,8 @@ func (pdb *BrokerCassa) Exec(statement string, binding ...interface{}) error {
 	return pdb.session.Exec(statement, binding...)
 }
 
-//TODO delete one object or multiple
-// alternative 1: like in gocassa table
-// alternative 2: allow to pass query
-//
-// Delete removes from datastore key-value items stored under key.
-func (pdb *BrokerCassa) Delete(where string) (existed bool, err error) {
+// Delete removes from datastore values.
+func (pdb *BrokerCassa) Delete(fromWhere string) (existed bool, err error) {
 	/*	statement, _, err := sql.Delete(pdb.KeyNamespace, pdb.TableName, where)
 		if err != nil {
 			return err

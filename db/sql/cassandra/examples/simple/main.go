@@ -24,11 +24,13 @@ import (
 	"github.com/ligato/cn-infra/db/sql/cassandra"
 )
 
+// UserTable global variable reused when building queries/statements
 var UserTable = &User{}
 
+// User is simple structure used in automated tests
 type User struct {
-	First_name string
-	Last_name  string
+	FirstName string `gocql:"first_name"`
+	LastName  string `gocql:"last_name"`
 	//NetIP      net.IP //mapped to native cassandra type
 	//WrapIP  string //Wrapper01 used for custom (un)marshalling
 	WrapIP2 *Wrapper01
@@ -110,17 +112,19 @@ func example() (err error) {
 	}
 
 	users := &[]User{}
-	err = sql.SliceIt(users, db.ListValues(sql.SelectFrom(users)+sql.Where(sql.FieldEq(&UserTable.Last_name, UserTable, "Mrkva"))))
+	err = sql.SliceIt(users, db.ListValues(sql.SelectFrom(users)+sql.Where(sql.FieldEq(&UserTable.LastName, UserTable, "Mrkva"))))
 	fmt.Println("users ", err, " ", users)
 
 	return nil
 }
 
-// implements gocql.Marshaller, gocql.Unmarshaller
+// Wrapper01 implements gocql.Marshaller, gocql.Unmarshaller
+// it uses string representation of net.IPNet
 type Wrapper01 struct {
 	ip *net.IPNet
 }
 
+// MarshalCQL serializes the string representation of net.IPNet
 func (w *Wrapper01) MarshalCQL(info gocql.TypeInfo) ([]byte, error) {
 
 	if w.ip == nil {
@@ -129,6 +133,8 @@ func (w *Wrapper01) MarshalCQL(info gocql.TypeInfo) ([]byte, error) {
 
 	return []byte(w.ip.String()), nil
 }
+
+// UnmarshalCQL deserializes the string representation of net.IPNet
 func (w *Wrapper01) UnmarshalCQL(info gocql.TypeInfo, data []byte) error {
 
 	if len(data) > 0 {
@@ -143,6 +149,7 @@ func (w *Wrapper01) UnmarshalCQL(info gocql.TypeInfo, data []byte) error {
 	return nil
 }
 
+// String delegates to the ip.String()
 func (w *Wrapper01) String() string {
 	if w.ip != nil {
 		return w.ip.String()
@@ -151,6 +158,7 @@ func (w *Wrapper01) String() string {
 	return ""
 }
 
+// Udt03 is a simple User Defined Type with two string fields
 type Udt03 struct {
 	Tx  string `cql:"tx"`
 	Tx2 string `cql:"tx2"`
@@ -161,6 +169,7 @@ func (u *Udt03) String() string {
 	return "{" + u.Tx + ", " + u.Tx2 /*+ ", " + u.Inet1*/ + "}"
 }
 
+// Udt04 is a nested User Defined Type
 type Udt04 struct {
 	Ahoj string `cql:"ahoj"`
 	Caf  *Udt03 `cql:"caf"`
