@@ -72,7 +72,7 @@ func (pdb *BrokerCassa) Put(where string, value interface{} /*TODO TTL, opts ...
 		return err
 	}
 
-	return pdb.session.Exec(statement+" WHERE "+where, structFieldPtrs(value)...)
+	return pdb.session.Exec(statement+" WHERE "+where, structFieldPtrs(value)...)//TODO prepared statement also in where
 }
 
 // Exec runs statement (AS-IS) using gocql
