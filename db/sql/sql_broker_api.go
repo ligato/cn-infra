@@ -22,16 +22,45 @@ import (
 // It marshals/un-marshals go structures.
 type Broker interface {
 	// Put puts single value (inBinding) into the data store
+	// Example usage:
+	//
+	//    err = db.Put("ID='James Bond'", &User{"James Bond", "James", "Bond"})
+	//
 	Put(inBinding interface{}, /* TODO opts ...PutOption*/) error
+
 	// NewTxn creates a transaction / batch
 	NewTxn() Txn
+
 	// GetValue retrieves one item based on the query. If the item exists it is un-marshaled into the outBinding.
+	// Example usage:
+	//
+	//    query := sql.SelectFrom(UserTable) + sql.Where(sql.FieldEq(&UserTable.ID, UserTable, "James Bond"))
+	//    user := &User{}
+	//    found, err := db.GetValue(query, user)
+	//
 	GetValue(query string, outBinding interface{}) (found bool, err error)
+
 	// ListValues returns an iterator that enables to traverse all items returned by the query
-	ListValues(query string) (ValIterator, error)
+	// Example usage:
+	//
+	//    query := sql.SelectFrom(UserTable) + sql.Where(sql.FieldEq(&UserTable.LastName, UserTable, "Bond"))
+	//    iterator := db.ListValues(query)
+	//    users := &[]User{}
+	//    err := sql.SliceIt(users, iterator)
+	//
+	ListValues(query string) ValIterator
+
 	// Delete removes data that from the data store
+	// Example usage:
+	//
+	//    err := db.Delete("from User wher eID='James Bond'")
+	//
 	Delete(fromWhere string) error
+
 	// Executes the SQL statement (can be used for example for create "table/type" if not exits...)
+	// Example usage:
+	//
+	//  	 err := db.Exec("CREATE INDEX IF NOT EXISTS...")
 	Exec(statement string) error
 }
 

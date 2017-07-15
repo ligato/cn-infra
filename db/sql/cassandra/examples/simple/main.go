@@ -98,7 +98,7 @@ func example() (err error) {
 	if err != nil {
 		return err
 	}
-	db := cassa.NewBrokerUsingSession(gockle.NewSession(session))
+	db := cassandra.NewBrokerUsingSession(gockle.NewSession(session))
 	err = db.Put("userid='Fero Mrkva'", &User{"Fero", "Mrkva", /*ip01, */
 		//"kkk",
 		&Wrapper01{ipPrefix01}, &Udt03{Tx: "tx1", Tx2: "tx2" /*, Inet1: "201.202.203.204"*/ },
