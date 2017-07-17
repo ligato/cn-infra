@@ -157,8 +157,8 @@ func (pdb *BytesBrokerWatcherEtcd) ListKeys(prefix string) (keyval.BytesKeyItera
 }
 
 // Delete calls delete function of BytesConnectionEtcd. KeyPrefix defined in constructor is prepended to the key argument.
-func (pdb *BytesBrokerWatcherEtcd) Delete(key string) (existed bool, err error) {
-	return deleteInternal(pdb.Logger, pdb.kv, pdb.opTimeout, key)
+func (pdb *BytesBrokerWatcherEtcd) Delete(key string, opts ...keyval.DelOption) (existed bool, err error) {
+	return deleteInternal(pdb.Logger, pdb.kv, pdb.opTimeout, key, opts...)
 }
 
 // Watch starts subscription for changes associated with the selected keys. KeyPrefix defined in constructor is prepended to all
@@ -275,17 +275,24 @@ func putInternal(log logging.Logger, kv clientv3.KV, lessor clientv3.Lease, opTi
 }
 
 // Delete removes data identified by the key.
-func (db *BytesConnectionEtcd) Delete(key string) (existed bool, err error) {
-	return deleteInternal(db.Logger, db.etcdClient, db.opTimeout, key)
+func (db *BytesConnectionEtcd) Delete(key string, opts ...keyval.DelOption) (existed bool, err error) {
+	return deleteInternal(db.Logger, db.etcdClient, db.opTimeout, key, opts...)
 }
 
-func deleteInternal(log logging.Logger, kv clientv3.KV, opTimeout time.Duration, key string) (existed bool, err error) {
+func deleteInternal(log logging.Logger, kv clientv3.KV, opTimeout time.Duration, key string, opts ...keyval.DelOption) (existed bool, err error) {
 	deadline := time.Now().Add(opTimeout)
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
 	defer cancel()
 
+	var etcdOpts []clientv3.OpOption
+	for _, o := range opts {
+		if _, ok := o.(*keyval.WithPrefixOpt); ok {
+			etcdOpts = append(etcdOpts, clientv3.WithPrefix())
+		}
+	}
+
 	// delete data from etcdv3
-	resp, err := kv.Delete(ctx, key)
+	resp, err := kv.Delete(ctx, key, etcdOpts...)
 	if err != nil {
 		log.Error("etcdv3 error: ", err)
 		return false, err

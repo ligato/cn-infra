@@ -63,6 +63,8 @@ func TestDataBroker(t *testing.T) {
 	t.Run("listValues", testPrefixedListValues)
 	embd.cleanDs()
 	t.Run("txn", testPrefixedTxn)
+	embd.cleanDs()
+	t.Run("testDelWithPrefix", testDelWithPrefix)
 }
 
 func teardownBrokers() {
@@ -168,6 +170,46 @@ func testPrefixedListValues(t *testing.T) {
 		// verify that prefix of BytesBrokerWatcherEtcd is trimmed
 		gomega.Expect(kv.GetKey()).To(gomega.BeEquivalentTo(expectedKeys[i]))
 	}
+}
+
+func testDelWithPrefix(t *testing.T) {
+	setupBrokers(t)
+	defer teardownBrokers()
+
+	err := broker.Put("something/a/val1", []byte{0, 0, 7})
+	gomega.Expect(err).To(gomega.BeNil())
+	err = broker.Put("something/a/val2", []byte{0, 0, 7})
+	gomega.Expect(err).To(gomega.BeNil())
+	err = broker.Put("something/a/val3", []byte{0, 0, 7})
+	gomega.Expect(err).To(gomega.BeNil())
+
+	_, found, _, err := broker.GetValue("something/a/val1")
+	gomega.Expect(found).To(gomega.BeTrue())
+	gomega.Expect(err).To(gomega.BeNil())
+
+	_, found, _, err = broker.GetValue("something/a/val2")
+	gomega.Expect(found).To(gomega.BeTrue())
+	gomega.Expect(err).To(gomega.BeNil())
+
+	_, found, _, err = broker.GetValue("something/a/val3")
+	gomega.Expect(found).To(gomega.BeTrue())
+	gomega.Expect(err).To(gomega.BeNil())
+
+	_, err = broker.Delete("something/a", keyval.WithPrefix())
+	gomega.Expect(err).To(gomega.BeNil())
+
+	_, found, _, err = broker.GetValue("something/a/val1")
+	gomega.Expect(found).To(gomega.BeFalse())
+	gomega.Expect(err).To(gomega.BeNil())
+
+	_, found, _, err = broker.GetValue("something/a/val2")
+	gomega.Expect(found).To(gomega.BeFalse())
+	gomega.Expect(err).To(gomega.BeNil())
+
+	_, found, _, err = broker.GetValue("something/a/val3")
+	gomega.Expect(found).To(gomega.BeFalse())
+	gomega.Expect(err).To(gomega.BeNil())
+
 }
 
 func expectWatchEvent(t *testing.T, wg *sync.WaitGroup, watchCh chan keyval.BytesWatchResp, expectedKey string) {

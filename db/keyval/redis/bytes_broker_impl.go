@@ -319,7 +319,8 @@ func wildcard(match string) string {
 }
 
 // Delete deletes all the keys that start with the given match string.
-func (db *BytesConnectionRedis) Delete(match string) (found bool, err error) {
+func (db *BytesConnectionRedis) Delete(match string, opts ...keyval.DelOption) (found bool, err error) {
+	//TODO: process delete opts
 	if db.closed {
 		return false, fmt.Errorf("Delete(%s) called on a closed broker", match)
 	}
@@ -523,7 +524,8 @@ func (pdb *BytesBrokerWatcherRedis) ListKeys(match string) (keyval.BytesKeyItera
 
 // Delete calls Delete function of BytesConnectionRedis.
 // Prefix will be prepended to key argument when searching.
-func (pdb *BytesBrokerWatcherRedis) Delete(match string) (bool, error) {
+func (pdb *BytesBrokerWatcherRedis) Delete(match string, opts ...keyval.DelOption) (bool, error) {
+	//TODO: process delete opts
 	pdb.Debugf("BytesBrokerWatcherRedis.Delete(%s)", match)
 
 	return pdb.delegate.Delete(pdb.addPrefix(match))

@@ -20,6 +20,11 @@ import "time"
 type PutOption interface {
 }
 
+// DelOption defines options for Del operation. The particular options can be found below.
+type DelOption interface {
+}
+
+
 // WithTTLOpt defines a TTL for data being put. Once TTL elapses the data is removed from data store.
 type WithTTLOpt struct {
 	TTL time.Duration
@@ -29,4 +34,13 @@ type WithTTLOpt struct {
 // Beware: some implementation might be using TTL with lower precision.
 func WithTTL(TTL time.Duration) *WithTTLOpt {
 	return &WithTTLOpt{TTL}
+}
+
+// WithPrefixOpt applies an operation to all items with the specified prefix.
+type WithPrefixOpt struct {
+}
+
+// WithPrefix creates new instance of WithPrefixOpt.
+func WithPrefix() *WithPrefixOpt {
+	return &WithPrefixOpt{}
 }

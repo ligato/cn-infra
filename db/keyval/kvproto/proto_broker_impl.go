@@ -124,13 +124,13 @@ func putProtoInternal(broker keyval.BytesBroker, serializer keyval.Serializer, k
 }
 
 // Delete removes from datastore key-value items stored under key.
-func (db *ProtoWrapper) Delete(key string) (existed bool, err error) {
-	return db.broker.Delete(key)
+func (db *ProtoWrapper) Delete(key string, opts ...keyval.DelOption) (existed bool, err error) {
+	return db.broker.Delete(key, opts...)
 }
 
 // Delete removes from datastore key-value items stored under key.
-func (pdb *protoBroker) Delete(key string) (existed bool, err error) {
-	return pdb.broker.Delete(key)
+func (pdb *protoBroker) Delete(key string, opts ...keyval.DelOption) (existed bool, err error) {
+	return pdb.broker.Delete(key, opts...)
 }
 
 // Watch subscribes for changes in datastore associated with the key. respChannel is used for delivery watch events
