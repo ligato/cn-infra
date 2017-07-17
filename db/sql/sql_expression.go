@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	reflect2 "github.com/gocassa/gocassa/reflect"
-	"reflect"
 	"strings"
 )
 
@@ -42,7 +41,8 @@ type Visitor interface {
 	VisitFieldExpression(*FieldExpression)
 }
 
-// PrefixedExp TODO
+// PrefixedExp covers many SQL constructions. It implements sql.Expression interface.
+// Instance of this structure is returned by many helper functions below.
 type PrefixedExp struct {
 	Prefix      string
 	AfterPrefix Expression
@@ -68,7 +68,7 @@ func (exp *PrefixedExp) Accept(visitor Visitor) {
 	visitor.VisitPrefixedExp(exp)
 }
 
-// FieldExpression TODO
+// FieldExpression for addressing field of an entity in SQL expression
 type FieldExpression struct {
 	PointerToAField interface{}
 	AfterField      Expression
@@ -93,8 +93,9 @@ func (exp *FieldExpression) Accept(visitor Visitor) {
 	visitor.VisitFieldExpression(exp)
 }
 
-// EvaluateUpdate TODO
-func EvaluateUpdate(cfName string, val interface{} /*, opts Options*/) (
+// UpdateSetExpToString generates UPDATE + SET part of SQL statement
+// for fields of an entity
+func UpdateSetExpToString(cfName string, val interface{} /*, opts Options*/) (
 	statement string, fields []string, err error) {
 
 	fields, _, ok := reflect2.FieldsAndValues(val)
@@ -106,14 +107,14 @@ func EvaluateUpdate(cfName string, val interface{} /*, opts Options*/) (
 	return statement, fields, nil
 }
 
-// SELECT TODO
+// SELECT keyword of SQL expression
 func SELECT(entity interface{}, afterKeyword Expression, binding ...interface{}) Expression {
 	return &PrefixedExp{"SELECT", FROM(entity, afterKeyword), "", binding}
 }
 
-// FROM TODO
-func FROM(entity interface{}, afterKeyword Expression) Expression {
-	return &PrefixedExp{"FROM", afterKeyword, "", []interface{}{entity}}
+// FROM keyword of SQL expression
+func FROM(pointerToAStruct interface{}, afterKeyword Expression) Expression {
+	return &PrefixedExp{"FROM", afterKeyword, "", []interface{}{pointerToAStruct}}
 }
 
 // SelectFields generates comma separated field names string
@@ -135,12 +136,6 @@ func WHERE(afterKeyword Expression) Expression {
 func DELETE(entity interface{}, afterKeyword Expression) Expression {
 	return &PrefixedExp{"DELETE", afterKeyword, "", nil}
 }
-
-/*
-// Update generate SQL Condition
-func Where(kn, cfName string, val interface{}) string {
-
-}*/
 
 // UPDATE keyspace.Movies SET col1 = val1, col2 = val2
 func updateStatement(cfName string, fields []string /*, opts Options*/) (statement string) {
@@ -170,14 +165,33 @@ func updateStatement(cfName string, fields []string /*, opts Options*/) (stateme
 	return buf.String()
 }
 
-// Exp rarely used parts of SQL statements
+// Exp function creates instance of sql.Expression from string statement & optional binding.
+// Useful for:
+// - rarely used parts of SQL statements
+// - create if not exists... statements
 func Exp(statement string, binding ...interface{}) Expression {
 	return &PrefixedExp{statement, nil, "", binding}
 }
 
-//TODO AND, OR
+// AND keyword of SQL expression
+//
+// Example usage:
+//
+// 		WHERE(FieldEQ(&JamesBond.FirstName), AND(FieldEQ(&JamesBond.LastName)))
+func AND(rigthOperand Expression) Expression {
+	return &PrefixedExp{"AND", rigthOperand, "", nil}
+}
 
-// FieldEQ is a helper function to address field of a structure
+// AND keyword of SQL expression
+//
+// Example usage:
+//
+// 		WHERE(FieldEQ(&PeterBond.FirstName), OR(FieldEQ(&JamesBond.FirstName)))
+func OR(rigthOperand Expression) Expression {
+	return &PrefixedExp{"OR", rigthOperand, "", nil}
+}
+
+// Field is a helper function to address field of a structure
 //
 // Example usage:
 //   Where(Field(&UsersTable.LastName, UsersTable, EQ('Bond'))
@@ -189,59 +203,35 @@ func Field(pointerToAField interface{}, rigthOperand Expression) (exp Expression
 // FieldEQ is combination of Field & EQ on same pointerToAField
 //
 // Example usage:
-//   Where(Field(&UsersTable.LastName, UsersTable, EQ('Bond'))
+//   FROM(JamesBond, Where(FieldEQ(&JamesBond.LastName))
 //   // generates for example "WHERE last_name='Bond'"
+//   // because JamesBond is a pointer to an instance of a structure that in field LastName contains "Bond"
 func FieldEQ(pointerToAField interface{}) (exp Expression) {
 	return &FieldExpression{pointerToAField, EQ(pointerToAField)}
 }
 
-// FindField compares the pointers (pointerToAField with all fields in pointerToAStruct)
-func FindField(pointerToAField interface{}, pointerToAStruct interface{}) (field *reflect.StructField, found bool) {
-	fieldVal := reflect.ValueOf(pointerToAField)
-
-	if fieldVal.Kind() != reflect.Ptr {
-		panic("pointerToAField must be a pointer")
-	}
-
-	strct := reflect.Indirect(reflect.ValueOf(pointerToAStruct))
-	numField := strct.NumField()
-	for i := 0; i < numField; i++ {
-		sf := strct.Field(i)
-
-		if sf.CanAddr() {
-			if fieldVal.Pointer() == sf.Addr().Pointer() {
-				field := strct.Type().Field(i)
-				return &field, true
-			}
-		}
-	}
-
-	return nil, false
+// PK is alias FieldEQ (user for better readability)
+//
+// Example usage:
+//   FROM(JamesBond, Where(PK(&JamesBond.LastName))
+//   // generates for example "WHERE last_name='Bond'"
+//   // because JamesBond is a pointer to an instance of a structure that in field LastName contains "Bond"
+func PK(pointerToAField interface{}) (exp Expression) {
+	return FieldEQ(pointerToAField)
 }
 
-// FieldName TODO
-func FieldName(field *reflect.StructField) (name string, exported bool) {
-	cql := field.Tag.Get("cql")
-	if len(cql) > 0 {
-		if cql == "-" {
-			return cql, false
-		}
-		return cql, true
-	}
-	return field.Name, true
-}
-
-// EQ TODO
+// EQ operator "=" used in SQL expressions
 func EQ(binding interface{}) (exp Expression) {
 	return &PrefixedExp{"=", Exp("?", binding), "", nil}
 }
 
-// Parenthesis TODO
+// Parenthesis expression that surrounds "inside Expression" with "(" and ")"
 func Parenthesis(inside Expression) (exp Expression) {
 	return &PrefixedExp{"(", inside, ")", nil}
 }
 
-// IN TODO
+// IN operator of SQL expression
+// 		FROM(UserTable,WHERE(FieldEQ(&UserTable.FirstName, IN(JamesBond.FirstName, PeterBond.FirstName)))
 func IN(binding ...interface{}) (exp Expression) {
 	return &PrefixedExp{"IN(", nil, ")", binding}
 }

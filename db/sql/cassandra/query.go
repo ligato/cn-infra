@@ -15,11 +15,12 @@
 package cassandra
 
 import (
-	r "reflect"
-	"github.com/ligato/cn-infra/db/sql"
-	"github.com/go-errors/errors"
 	"bytes"
+	"github.com/go-errors/errors"
+	"github.com/ligato/cn-infra/db/sql"
+	r "reflect"
 	"strings"
+	"github.com/ligato/cn-infra/utils/structs"
 )
 
 // PutExpToString converts expression to string & slice of bindings
@@ -29,8 +30,8 @@ func PutExpToString(whereCondition sql.Expression, entity interface{}) (sqlStr s
 	whereCondtionStr := &toStringVisitor{entity: entity}
 	whereCondition.Accept(whereCondtionStr)
 
-	statement, _, err := sql.EvaluateUpdate(r.Indirect(r.ValueOf(entity)).Type().Name() /*TODO extract method / make customizable*/ ,
-		entity                                                                          /*, TODO TTL*/)
+	statement, _, err := sql.UpdateSetExpToString(r.Indirect(r.ValueOf(entity)).Type().Name(), /*TODO extract method / make customizable*/
+		entity                                                                                 /*, TODO TTL*/)
 	if err != nil {
 		return "", nil, err
 	}
@@ -124,12 +125,12 @@ func (visitor *toStringVisitor) VisitFieldExpression(exp *sql.FieldExpression) {
 	if visitor.entity == nil {
 		visitor.lastError = errors.New("not found entity")
 	} else {
-		field, found := sql.FindField(exp.PointerToAField, visitor.entity)
+		field, found := structs.FindField(exp.PointerToAField, visitor.entity)
 		if !found {
 			visitor.lastError = errors.New("not found field in entity")
 			return
 		}
-		fieldName, found := sql.FieldName(field)
+		fieldName, found := fieldName(field)
 		if !found {
 			visitor.lastError = errors.New("not exported field in entity")
 			return
@@ -141,6 +142,18 @@ func (visitor *toStringVisitor) VisitFieldExpression(exp *sql.FieldExpression) {
 			exp.AfterField.Accept(visitor)
 		}
 	}
+}
+
+// fieldName checks the cql tag in StructField and parses the field name
+func fieldName(field *reflect.StructField) (name string, exported bool) {
+	cql := field.Tag.Get("cql")
+	if len(cql) > 0 {
+		if cql == "-" {
+			return cql, false
+		}
+		return cql, true
+	}
+	return field.Name, true
 }
 
 type findEntityVisitor struct {
