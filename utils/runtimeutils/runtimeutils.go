@@ -3,9 +3,9 @@ package runtimeutils
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 	"runtime"
 	"strconv"
-	"reflect"
 	"strings"
 )
 
@@ -29,7 +29,7 @@ func GoroutineID() uint64 {
 	return n
 }
 
-// GetFunctionName returns name of the function
+// GetFunction returns metadata about function based on pointer to a function
 //
 // Example usage:
 //
@@ -50,7 +50,7 @@ func GetFunctionName(function interface{}) string {
 	name := strings.TrimSuffix(fullName, "-fm")
 	dot := strings.LastIndex(name, ".")
 	if dot > 0 && dot+1 < len(name) {
-		return name[dot+1: ]
+		return name[dot+1:]
 	}
 	return fullName
 }
