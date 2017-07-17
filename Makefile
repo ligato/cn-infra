@@ -67,7 +67,7 @@ define build_examples_only
     @echo "# building examples"
     @cd db/keyval/etcdv3/examples && make build
     @cd db/keyval/redis/examples && make build
-    @cd db/sql/cassandra/examples && go build
+    @cd db/sql/cassandra/examples/simple && go build
     @cd logging/logrus/examples && make build
     @cd messaging/kafka/examples && make build
     @echo "# done"
