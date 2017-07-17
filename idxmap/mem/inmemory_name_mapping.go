@@ -24,7 +24,7 @@ import (
 	"time"
 )
 
-// timeout for delivery of notification
+// NotifTimeout for delivery of notification
 const NotifTimeout = 2 * time.Second
 
 // item stored in mapping
