@@ -21,6 +21,8 @@ import (
 	r "reflect"
 	"strings"
 	"github.com/ligato/cn-infra/utils/structs"
+	"github.com/gocassa/gocassa/reflect"
+	"fmt"
 )
 
 // PutExpToString converts expression to string & slice of bindings
@@ -30,8 +32,8 @@ func PutExpToString(whereCondition sql.Expression, entity interface{}) (sqlStr s
 	whereCondtionStr := &toStringVisitor{entity: entity}
 	whereCondition.Accept(whereCondtionStr)
 
-	statement, _, err := sql.UpdateSetExpToString(r.Indirect(r.ValueOf(entity)).Type().Name(), /*TODO extract method / make customizable*/
-		entity                                                                                 /*, TODO TTL*/)
+	statement, _, err := updateSetExpToString(r.Indirect(r.ValueOf(entity)).Type().Name(), /*TODO extract method / make customizable*/
+		entity                                                                             /*, TODO TTL*/)
 	if err != nil {
 		return "", nil, err
 	}
@@ -54,7 +56,7 @@ func SelectExpToString(fromWhere sql.Expression) (sqlStr string, bindings []inte
 	fromWhereStr := &toStringVisitor{entity: findEntity.entity}
 	fromWhere.Accept(fromWhereStr)
 
-	fieldsStr := sql.SelectFields(findEntity.entity)
+	fieldsStr := selectFields(findEntity.entity)
 	if err != nil {
 		return "", nil, err
 	}
@@ -154,6 +156,58 @@ func fieldName(field *r.StructField) (name string, exported bool) {
 		return cql, true
 	}
 	return field.Name, true
+}
+
+// selectFields generates comma separated field names string
+func selectFields(val interface{} /*, opts Options*/) (statement string) {
+	fields, _, ok := reflect.FieldsAndValues(val)
+	if !ok {
+		return ""
+	}
+
+	return strings.Join(fields, ", ")
+}
+
+// updateSetExpToString generates UPDATE + SET part of SQL statement
+// for fields of an entity
+func updateSetExpToString(cfName string, val interface{} /*, opts Options*/) (
+	statement string, fields []string, err error) {
+
+	fields, _, ok := reflect.FieldsAndValues(val)
+	if !ok {
+		return "", []string{}, errors.New("Not ok input val")
+	}
+
+	statement = updateStatement(cfName, fields)
+	return statement, fields, nil
+}
+
+// UPDATE keyspace.Movies SET col1 = val1, col2 = val2
+func updateStatement(cfName string, fields []string /*, opts Options*/) (statement string) {
+	buf := new(bytes.Buffer)
+	buf.WriteString(fmt.Sprintf("UPDATE %s ", cfName))
+
+	/*
+		// Apply options
+		if opts.TTL != 0 {
+			buf.WriteString("USING TTL ")
+			buf.WriteString(strconv.FormatFloat(opts.TTL.Seconds(), 'f', 0, 64))
+			buf.WriteRune(' ')
+		}*/
+
+	buf.WriteString("SET ")
+	first := true
+	for _, fieldName := range fields {
+		if !first {
+			buf.WriteString(", ")
+		} else {
+			first = false
+		}
+		buf.WriteString(fieldName)
+		buf.WriteString(` = ?`)
+	}
+
+	return buf.String()
 }
 
 type findEntityVisitor struct {

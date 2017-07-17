@@ -15,11 +15,7 @@
 package sql
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
-	reflect2 "github.com/gocassa/gocassa/reflect"
-	"strings"
 )
 
 // Expression represents part of SQL statement and optional binding ("?")
@@ -93,20 +89,6 @@ func (exp *FieldExpression) Accept(visitor Visitor) {
 	visitor.VisitFieldExpression(exp)
 }
 
-// UpdateSetExpToString generates UPDATE + SET part of SQL statement
-// for fields of an entity
-func UpdateSetExpToString(cfName string, val interface{} /*, opts Options*/) (
-	statement string, fields []string, err error) {
-
-	fields, _, ok := reflect2.FieldsAndValues(val)
-	if !ok {
-		return "", []string{}, errors.New("Not ok input val")
-	}
-
-	statement = updateStatement(cfName, fields)
-	return statement, fields, nil
-}
-
 // SELECT keyword of SQL expression
 func SELECT(entity interface{}, afterKeyword Expression, binding ...interface{}) Expression {
 	return &PrefixedExp{"SELECT", FROM(entity, afterKeyword), "", binding}
@@ -117,16 +99,6 @@ func FROM(pointerToAStruct interface{}, afterKeyword Expression) Expression {
 	return &PrefixedExp{"FROM", afterKeyword, "", []interface{}{pointerToAStruct}}
 }
 
-// SelectFields generates comma separated field names string
-func SelectFields(val interface{} /*, opts Options*/) (statement string) {
-	fields, _, ok := reflect2.FieldsAndValues(val)
-	if !ok {
-		return ""
-	}
-
-	return strings.Join(fields, ", ")
-}
-
 // WHERE keyword of SQL statement
 func WHERE(afterKeyword Expression) Expression {
 	return &PrefixedExp{"WHERE", afterKeyword, "", nil}
@@ -135,34 +107,6 @@ func WHERE(afterKeyword Expression) Expression {
 // DELETE keyword of SQL statement
 func DELETE(entity interface{}, afterKeyword Expression) Expression {
 	return &PrefixedExp{"DELETE", afterKeyword, "", nil}
-}
-
-// UPDATE keyspace.Movies SET col1 = val1, col2 = val2
-func updateStatement(cfName string, fields []string /*, opts Options*/) (statement string) {
-	buf := new(bytes.Buffer)
-	buf.WriteString(fmt.Sprintf("UPDATE %s ", cfName))
-
-	/*
-		// Apply options
-		if opts.TTL != 0 {
-			buf.WriteString("USING TTL ")
-			buf.WriteString(strconv.FormatFloat(opts.TTL.Seconds(), 'f', 0, 64))
-			buf.WriteRune(' ')
-		}*/
-
-	buf.WriteString("SET ")
-	first := true
-	for _, fieldName := range fields {
-		if !first {
-			buf.WriteString(", ")
-		} else {
-			first = false
-		}
-		buf.WriteString(fieldName)
-		buf.WriteString(` = ?`)
-	}
-
-	return buf.String()
 }
 
 // Exp function creates instance of sql.Expression from string statement & optional binding.
