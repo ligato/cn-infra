@@ -90,7 +90,7 @@ func (pdb *BrokerCassa) ListValues(query sql.Expression) sql.ValIterator {
 		return &ErrIterator{err}
 	}
 
-	it := pdb.session.ScanIterator(queryStr, binding)
+	it := pdb.session.ScanIterator(queryStr, binding...)
 	return &ValIterator{it}
 }
 

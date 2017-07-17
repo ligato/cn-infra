@@ -149,7 +149,7 @@ func exampleDML(session *gocql.Session) (err error) {
 	users := &[]User{}
 	err = sql.SliceIt(users, db.ListValues(sql.FROM(UserTable,
 		sql.WHERE(sql.Field(&UserTable.LastName, sql.EQ("Mrkva"))))))
-	fmt.Println("users ", err, " ", users)
+	fmt.Println("users err: ", err, " slice: ", users)
 
 	return nil
 }
