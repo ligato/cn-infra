@@ -145,7 +145,7 @@ func (visitor *toStringVisitor) VisitFieldExpression(exp *sql.FieldExpression) {
 }
 
 // fieldName checks the cql tag in StructField and parses the field name
-func fieldName(field *reflect.StructField) (name string, exported bool) {
+func fieldName(field *r.StructField) (name string, exported bool) {
 	cql := field.Tag.Get("cql")
 	if len(cql) > 0 {
 		if cql == "-" {
