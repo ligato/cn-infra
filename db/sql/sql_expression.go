@@ -177,13 +177,22 @@ func Exp(statement string, binding ...interface{}) Expression {
 
 //TODO AND, OR
 
-// Field is a helper function
+// FieldEQ is a helper function to address field of a structure
 //
 // Example usage:
 //   Where(Field(&UsersTable.LastName, UsersTable, EQ('Bond'))
 //   // generates for example "WHERE last_name='Bond'"
 func Field(pointerToAField interface{}, rigthOperand Expression) (exp Expression) {
 	return &FieldExpression{pointerToAField, rigthOperand}
+}
+
+// FieldEQ is combination of Field & EQ on same pointerToAField
+//
+// Example usage:
+//   Where(Field(&UsersTable.LastName, UsersTable, EQ('Bond'))
+//   // generates for example "WHERE last_name='Bond'"
+func FieldEQ(pointerToAField interface{}) (exp Expression) {
+	return &FieldExpression{pointerToAField, EQ(pointerToAField)}
 }
 
 // FindField compares the pointers (pointerToAField with all fields in pointerToAStruct)
