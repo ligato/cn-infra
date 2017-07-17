@@ -67,6 +67,7 @@ func TestCrudOps(t *testing.T) {
 
 	meta, found = mapping.UnregisterName("Unknown")
 	gomega.Expect(found).To(gomega.BeFalse())
+	gomega.Expect(meta).To(gomega.BeNil())
 }
 
 func TestSecondaryIndexes(t *testing.T) {
