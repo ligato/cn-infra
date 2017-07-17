@@ -13,11 +13,13 @@ function static_analysis() {
   local LOGGING=$(${TOOL} "${PWD}/logging${SELECTOR}")
   local UTILS=$(${TOOL} "${PWD}/utils${SELECTOR}")
   local MESSAGING=$(${TOOL} "${PWD}/messaging${SELECTOR}")
+  local IDXMAP=$(${TOOL} "${PWD}/idxmap${SELECTOR}")
 
   local ALL="$DB
 $LOGGING
 $UTILS
 $MESSAGING
+$IDXMAP
 "
 
   local OUT=$(echo "${ALL}" | grep -F "${FILES}" | grep -v "${WHITELIST_ERRORS}")
