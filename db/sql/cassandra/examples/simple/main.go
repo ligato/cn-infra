@@ -17,11 +17,11 @@ package main
 import (
 	"fmt"
 	"github.com/gocql/gocql"
-	"net"
-	"github.com/willfaught/gockle"
-	"os"
 	"github.com/ligato/cn-infra/db/sql"
 	"github.com/ligato/cn-infra/db/sql/cassandra"
+	"github.com/willfaught/gockle"
+	"net"
+	"os"
 )
 
 // UserTable global variable reused when building queries/statements
@@ -29,31 +29,35 @@ var UserTable = &User{}
 
 // User is simple structure used in automated tests
 type User struct {
-	FirstName string `gocql:"first_name"`
-	LastName  string `gocql:"last_name"`
+	FirstName string `cql:"first_name"`
+	LastName  string `cql:"last_name"`
 	//NetIP      net.IP //mapped to native cassandra type
-	//WrapIP  string //Wrapper01 used for custom (un)marshalling
-	WrapIP2 *Wrapper01
-	Udt03   *Udt03
-	Udt04   Udt04
+	WrapIP *Wrapper01 //used for custom (un)marshalling
+	Udt03  *Udt03
+	Udt04  Udt04
 }
 
 func main() {
-	err := example()
+	err := exampleKeyspace()
 	if err != nil {
-		fmt.Println("failed ", err)
+		fmt.Println("failed - keyspace ", err)
 		os.Exit(1)
-	} else {
-		fmt.Println("sucessfull")
+	}
+
+	err = example()
+	if err != nil {
+		fmt.Println("failed - example ", err)
+		os.Exit(1)
 	}
 }
 
-func example() (err error) {
+func exampleKeyspace() (err error) {
 	// connect to the cluster
 	cluster := gocql.NewCluster("172.17.0.1")
-	//cluster.Keyspace = "demo"
-	session, _ := cluster.CreateSession()
-
+	session, err := cluster.CreateSession()
+	if err != nil {
+		return err
+	}
 	defer session.Close()
 
 	if err := session.Query("CREATE KEYSPACE IF NOT EXISTS demo WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 1};").
@@ -61,8 +65,36 @@ func example() (err error) {
 		return err
 	}
 
-	session.KeyspaceMetadata("demo")
+	return nil
+}
 
+func example() (err error) {
+	// connect to the cluster
+	cluster := gocql.NewCluster("172.17.0.1")
+	cluster.Keyspace = "demo"
+	session, err := cluster.CreateSession()
+	if err != nil {
+		return err
+	}
+	defer session.Close()
+
+	err = exampleDDL(session)
+	if err != nil {
+		return err
+	}
+	err = exampleDML(session)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func exampleDDL(session *gocql.Session) (err error) {
+	if err := session.Query("CREATE KEYSPACE IF NOT EXISTS demo WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 1};").
+		Exec(); err != nil {
+		return err
+	}
 	if err := session.Query(`CREATE TYPE IF NOT EXISTS udt03 (
 		tx text,
 		tx2 text)`).Exec(); err != nil {
@@ -86,7 +118,6 @@ func example() (err error) {
 				topscores list<int>,
 				todo map<timestamp, text>
 		);`).
-
 		Exec(); err != nil {
 		return err
 	}
@@ -96,6 +127,10 @@ func example() (err error) {
 		return err
 	}
 
+	return nil
+}
+
+func exampleDML(session *gocql.Session) (err error) {
 	_ /*ip01 */ , ipPrefix01, err := net.ParseCIDR("192.168.1.2/24")
 	if err != nil {
 		return err
