@@ -26,7 +26,7 @@ type Broker interface {
 	//
 	//    err = db.Put("ID='James Bond'", &User{"James Bond", "James", "Bond"})
 	//
-	Put(inBinding interface{}, /* TODO opts ...PutOption*/) error
+	Put(where Expression, inBinding interface{} /* TODO opts ...PutOption*/) error
 
 	// NewTxn creates a transaction / batch
 	NewTxn() Txn
@@ -34,16 +34,20 @@ type Broker interface {
 	// GetValue retrieves one item based on the query. If the item exists it is un-marshaled into the outBinding.
 	// Example usage:
 	//
-	//    query := sql.SelectFrom(UserTable) + sql.Where(sql.FieldEq(&UserTable.ID, UserTable, "James Bond"))
+	//    query := sql.SelectFrom(UserTable) + sql.Where(sql.Field(&UserTable.ID, UserTable, "James Bond"))
 	//    user := &User{}
 	//    found, err := db.GetValue(query, user)
 	//
 	GetValue(query string, outBinding interface{}) (found bool, err error)
 
 	// ListValues returns an iterator that enables to traverse all items returned by the query
-	// Example usage 1:
+	// Use utilities to:
+	// - generate query string
+	// - fill slice by values from iterator (SliceIt).
 	//
-	//    query := sql.SelectFrom(UserTable) + sql.Where(sql.FieldEq(&UserTable.LastName, UserTable, "Bond"))
+	// Example usage 1 (fill slice by values from iterator):
+	//
+	//    query := sql.SelectFrom(UserTable) + sql.Where(sql.Field(&UserTable.LastName, UserTable, "Bond"))
 	//    iterator := db.ListValues(query)
 	//    users := &[]User{}
 	//    err := sql.SliceIt(users, iterator)
@@ -61,17 +65,17 @@ type Broker interface {
 	//    user := map[string]interface{}
 	//    stop := iterator.GetNext(user)
 	//
-	ListValues(query string) ValIterator
+	ListValues(query Expression) ValIterator
 
 	// Delete removes data that from the data store
 	// Example usage 1:
 	//
-	//    err := db.Delete(sql.From(UserTable) + sql.Where(sql.FieldEq(&UserTable.ID, UserTable, "James Bond")))
+	//    err := db.Delete(sql.From(UserTable) + sql.Where(sql.Field(&UserTable.ID, UserTable, "James Bond")))
 	//
 	// Example usage 2:
 	//    err := db.Delete("from User where ID='James Bond'")
 	//
-	Delete(fromWhere string) error
+	Delete(fromWhere Expression) error
 
 	// Executes the SQL statement (can be used for example for create "table/type" if not exits...)
 	// Example usage:
@@ -87,7 +91,7 @@ type ValIterator interface {
 	// Whe the stop=true is returned the outBinding was not updated.
 	GetNext(outBinding interface{}) (stop bool)
 
-	// Closer is used to retrieve error (if occurred) & release the cursor
+	// Closer is used to retrieve error (if occurred) & releases the cursor
 	io.Closer
 }
 
@@ -95,9 +99,9 @@ type ValIterator interface {
 // Transaction executes usually multiple operations in a more efficient way in contrast to executing them one by one.
 type Txn interface {
 	// Put adds put operation into the transaction
-	Put(where string, data interface{}) Txn
+	Put(where Expression, data interface{}) Txn
 	// Delete adds delete operation, which removes value identified by the key, into the transaction
-	Delete(where string) Txn
+	Delete(fromWhere Expression) Txn
 	// Commit tries to commit the transaction.
 	Commit() error
 }

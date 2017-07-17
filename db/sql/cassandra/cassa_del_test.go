@@ -22,21 +22,21 @@ import (
 	"github.com/ligato/cn-infra/db/sql/cassandra"
 )
 
-// TestPut1_convenient is most convenient way of putting one entity to cassandra
-func TestPut1_convenient(t *testing.T) {
+// TestDel1_convenient is most convenient way of deletening from cassandra
+func TestDel1_convenient(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
 	session := mockSession()
 	defer session.Close()
 	db := cassandra.NewBrokerUsingSession(session)
 
-	mockPut(session, "UPDATE User SET id = ?, first_name = ?, last_name = ? WHERE id = ?",
+	mockPut(session, "DELETE FROM User WHERE id = ?",
 		[]interface{}{
 			"James Bond",
 			"James",
 			"Bond",
 		})
 
-	err := db.Put(sql.Field(&(JamesBond.ID), sql.EQ(JamesBond.ID)), JamesBond)
+	err := db.Delete(sql.FROM(JamesBond, sql.WHERE(sql.Field(&(JamesBond.ID), sql.EQ(JamesBond.ID)))))
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
