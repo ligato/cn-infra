@@ -32,9 +32,16 @@ type Broker interface {
 	NewTxn() Txn
 
 	// GetValue retrieves one item based on the query. If the item exists it is un-marshaled into the outBinding.
-	// Example usage:
 	//
-	//    query := sql.SelectFrom(UserTable) + sql.Where(sql.Field(&UserTable.ID, UserTable, "James Bond"))
+	// Example usage 1:
+	//
+	//    query := sql.FROM(UserTable, sql.WHERE(sql.Field(&UserTable.ID, sql.EQ("Bond")))
+	//    user := &User{}
+	//    found, err := db.GetValue(query, user)
+	//
+	// Example usage 2:
+	//
+	//    query := sql.FROM(JamesBond, sql.WHERE(sql.PK(&JamesBond.ID))
 	//    user := &User{}
 	//    found, err := db.GetValue(query, user)
 	//
@@ -47,14 +54,14 @@ type Broker interface {
 	//
 	// Example usage 1 (fill slice by values from iterator):
 	//
-	//    query := sql.SelectFrom(UserTable) + sql.Where(sql.Field(&UserTable.LastName, UserTable, "Bond"))
+	//    query := sql.FROM(UserTable, sql.WHERE(sql.Field(&UserTable.LastName, sql.EQ("Bond")))
 	//    iterator := db.ListValues(query)
 	//    users := &[]User{}
 	//    err := sql.SliceIt(users, iterator)
 	//
 	// Example usage 2:
 	//
-	//    query := sql.SelectFrom(UserTable) + "where last_name='Bond'")
+	//    query := sql.FROM(UserTable, sql.WHERE(sql.Exec("last_name='Bond'")))
 	//    iterator := db.ListValues(query)
 	//    users := &[]User{}
 	//    err := sql.SliceIt(users, iterator)
@@ -70,10 +77,17 @@ type Broker interface {
 	// Delete removes data that from the data store
 	// Example usage 1:
 	//
-	//    err := db.Delete(sql.From(UserTable) + sql.Where(sql.Field(&UserTable.ID, UserTable, "James Bond")))
+	//    query := sql.FROM(JamesBond, sql.WHERE(sql.PK(&JamesBond.ID))
+	//    err := db.Delete(query)
 	//
 	// Example usage 2:
+	//
 	//    err := db.Delete("from User where ID='James Bond'")
+	//
+	// Example usage 3:
+	//
+	//    query := sql.FROM(UserTable, sql.WHERE(sql.Field(&UserTable.LastName, sql.EQ("Bond")))
+	//    err := db.Delete(query)
 	//
 	Delete(fromWhere Expression) error
 
