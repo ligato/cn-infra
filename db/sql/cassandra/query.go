@@ -16,7 +16,7 @@ package cassandra
 
 import (
 	"bytes"
-	"github.com/go-errors/errors"
+	"errors"
 	"github.com/ligato/cn-infra/db/sql"
 	r "reflect"
 	"strings"
