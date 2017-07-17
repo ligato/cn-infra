@@ -19,10 +19,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/messaging/kafka/examples/utils"
 	"strings"
-	"github.com/ligato/cn-infra/logging/logroot"
 )
 
 var (

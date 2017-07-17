@@ -1,10 +1,10 @@
 package mux
 
 import (
+	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/onsi/gomega"
 	"testing"
-	"github.com/ligato/cn-infra/logging/logroot"
 )
 
 func getMockConsumerFactory(t *testing.T) ConsumerFactory {

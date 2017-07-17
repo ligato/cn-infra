@@ -24,7 +24,6 @@ type PutOption interface {
 type DelOption interface {
 }
 
-
 // WithTTLOpt defines a TTL for data being put. Once TTL elapses the data is removed from data store.
 type WithTTLOpt struct {
 	TTL time.Duration

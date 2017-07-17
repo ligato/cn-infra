@@ -3,11 +3,11 @@ package mux
 import (
 	"fmt"
 	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"sync"
 	"time"
-	"github.com/ligato/cn-infra/logging"
 )
 
 // Multiplexer encapsulates clients to kafka cluster (syncProducer, asyncProducer, consumer).
@@ -55,7 +55,7 @@ type asyncMeta struct {
 // NewMultiplexer creates new instance of Kafka Multiplexer
 func NewMultiplexer(consumerFactory ConsumerFactory, syncP *client.SyncProducer, asyncP *client.AsyncProducer, name string, log logging.Logger) *Multiplexer {
 	cl := &Multiplexer{consumerFactory: consumerFactory,
-		Logger: log,
+		Logger:        log,
 		syncProducer:  syncP,
 		asyncProducer: asyncP,
 		name:          name,

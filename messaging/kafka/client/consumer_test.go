@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 )
+
 var log = logroot.Logger()
 
 func ExampleConsumer() {
