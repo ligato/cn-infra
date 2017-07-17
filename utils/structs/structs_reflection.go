@@ -11,9 +11,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package structs
 
-import "reflect"
+import (
+	"reflect"
+	"strings"
+)
 
 // FindField compares the pointers (pointerToAField with all fields in pointerToAStruct)
 func FindField(pointerToAField interface{}, pointerToAStruct interface{}) (field *reflect.StructField, found bool) {
@@ -37,4 +41,39 @@ func FindField(pointerToAField interface{}, pointerToAStruct interface{}) (field
 	}
 
 	return nil, false
+}
+
+// ListExportedFields returns all fields of a structure that starts wit uppercase letter
+func ListExportedFields(val interface{}) []*reflect.StructField {
+	valType := reflect.Indirect(reflect.ValueOf(val)).Type()
+	len := valType.NumField()
+	ret := []*reflect.StructField{}
+	for i := 0; i < len; i++ {
+		field := valType.Field(i)
+		if field.Name[0] == strings.ToUpper(string(field.Name[0]))[0] {
+			// if exported
+			ret = append(ret, &field)
+		}
+	}
+
+	return ret
+}
+
+// ListExportedFieldsWithVals returns all fields of a structure that starts wit uppercase letter with values
+func ListExportedFieldsWithVals(val interface{}) (fields []*reflect.StructField, values []interface{}) {
+	valRefl := reflect.Indirect(reflect.ValueOf(val))
+	valType := valRefl.Type()
+	len := valType.NumField()
+	fields = []*reflect.StructField{}
+	values = []interface{}{}
+	for i := 0; i < len; i++ {
+		field := valType.Field(i)
+		if field.Name[0] == strings.ToUpper(string(field.Name[0]))[0] {
+			// if exported
+			fields = append(fields, &field)
+			values = append(values, valRefl.Field(i).Interface())
+		}
+	}
+
+	return fields, values
 }

@@ -18,7 +18,6 @@ import (
 	"github.com/willfaught/gockle"
 	"github.com/maraino/go-mock"
 	"errors"
-	reflect2 "github.com/gocassa/gocassa/reflect"
 	"github.com/gocql/gocql"
 	"github.com/ligato/cn-infra/db/sql"
 	"github.com/ligato/cn-infra/db/sql/cassandra"
@@ -51,7 +50,7 @@ type row struct {
 
 // mockQuery is a helper for testing. It setups mock iterator
 func mockQuery(sessionMock *gockle.SessionMock, query sql.Expression, rows ...*row) {
-	sqlStr, _/*binding*/, err := cassandra.SelectExpToString(query)
+	sqlStr, _ /*binding*/ , err := cassandra.SelectExpToString(query)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -68,7 +67,7 @@ func mockPut(sessionMock *gockle.SessionMock, query string, binding []interface{
 
 // cells is a helper that harvests all exported fields values
 func cells(entity interface{}) (cellsInRow *row) {
-	fields, values, _ := reflect2.FieldsAndValues(entity)
+	fields, values := cassandra.SliceOfFieldsWithVals(entity)
 	return &row{values, fields}
 }
 
