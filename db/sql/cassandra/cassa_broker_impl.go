@@ -131,7 +131,7 @@ func structFieldPtrs(val interface{}) []interface{} {
 			} else if field.IsValid() {
 				ptrs = append(ptrs, field.Interface())
 			} else {
-				panic("ivalid field")
+				panic("invalid field")
 			}
 		}
 	}
@@ -139,7 +139,7 @@ func structFieldPtrs(val interface{}) []interface{} {
 	return ptrs
 }
 
-// Close the iterator. Not the error is important (may occure during marshalling/un-marshalling)
+// Close the iterator. Note, the error is important (may occure during marshalling/un-marshalling)
 func (it *ValIterator) Close() error {
 	return it.Delegate.Close()
 }
@@ -152,7 +152,7 @@ func (it *ErrIterator) GetNext(outVal interface{}) (stop bool) {
 	return true
 }
 
-// Close the iterator. Not the error is important (may occure during marshalling/un-marshalling)
+// Close the iterator. Note, the error is important (may occure during marshalling/un-marshalling)
 func (it *ErrIterator) Close() error {
 	return it.LastError
 }
