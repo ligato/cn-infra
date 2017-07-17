@@ -126,7 +126,7 @@ func AND(rigthOperand Expression) Expression {
 	return &PrefixedExp{"AND", rigthOperand, "", nil}
 }
 
-// AND keyword of SQL expression
+// OR keyword of SQL expression
 //
 // Example usage:
 //
