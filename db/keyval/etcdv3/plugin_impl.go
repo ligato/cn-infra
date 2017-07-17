@@ -17,6 +17,7 @@ package etcdv3
 import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/ligato/cn-infra/db/keyval/plugin"
+	"github.com/ligato/cn-infra/logging"
 )
 
 // ProtoPluginEtcd implements Plugin interface therefore can be loaded with other plugins
@@ -32,12 +33,12 @@ type ProtoPluginEtcd struct {
 func NewEtcdPlugin(cfg *Config) *ProtoPluginEtcd {
 
 	skeleton := plugin.NewSkeleton(
-		func() (plugin.Connection, error) {
+		func(log logging.Logger) (plugin.Connection, error) {
 			etcdConfig, err := ConfigToClientv3(cfg)
 			if err != nil {
 				return nil, err
 			}
-			return NewEtcdConnectionWithBytes(*etcdConfig)
+			return NewEtcdConnectionWithBytes(*etcdConfig, log)
 		},
 	)
 	return &ProtoPluginEtcd{Skeleton: skeleton}
@@ -46,8 +47,8 @@ func NewEtcdPlugin(cfg *Config) *ProtoPluginEtcd {
 // NewEtcdPluginUsingClient creates a new instance of ProtoPluginEtcd using given etcd client
 func NewEtcdPluginUsingClient(client *clientv3.Client) *ProtoPluginEtcd {
 	skeleton := plugin.NewSkeleton(
-		func() (plugin.Connection, error) {
-			return NewEtcdConnectionUsingClient(client)
+		func(log logging.Logger) (plugin.Connection, error) {
+			return NewEtcdConnectionUsingClient(client, log)
 		},
 	)
 	return &ProtoPluginEtcd{Skeleton: skeleton}

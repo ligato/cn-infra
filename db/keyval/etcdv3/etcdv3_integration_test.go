@@ -20,6 +20,7 @@ import (
 	"github.com/coreos/etcd/embed"
 	"github.com/coreos/etcd/etcdserver/api/v3client"
 	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/onsi/gomega"
 	"io/ioutil"
 	"os"
@@ -62,6 +63,8 @@ func TestDataBroker(t *testing.T) {
 	t.Run("listValues", testPrefixedListValues)
 	embd.cleanDs()
 	t.Run("txn", testPrefixedTxn)
+	embd.cleanDs()
+	t.Run("testDelWithPrefix", testDelWithPrefix)
 }
 
 func teardownBrokers() {
@@ -169,6 +172,46 @@ func testPrefixedListValues(t *testing.T) {
 	}
 }
 
+func testDelWithPrefix(t *testing.T) {
+	setupBrokers(t)
+	defer teardownBrokers()
+
+	err := broker.Put("something/a/val1", []byte{0, 0, 7})
+	gomega.Expect(err).To(gomega.BeNil())
+	err = broker.Put("something/a/val2", []byte{0, 0, 7})
+	gomega.Expect(err).To(gomega.BeNil())
+	err = broker.Put("something/a/val3", []byte{0, 0, 7})
+	gomega.Expect(err).To(gomega.BeNil())
+
+	_, found, _, err := broker.GetValue("something/a/val1")
+	gomega.Expect(found).To(gomega.BeTrue())
+	gomega.Expect(err).To(gomega.BeNil())
+
+	_, found, _, err = broker.GetValue("something/a/val2")
+	gomega.Expect(found).To(gomega.BeTrue())
+	gomega.Expect(err).To(gomega.BeNil())
+
+	_, found, _, err = broker.GetValue("something/a/val3")
+	gomega.Expect(found).To(gomega.BeTrue())
+	gomega.Expect(err).To(gomega.BeNil())
+
+	_, err = broker.Delete("something/a", keyval.WithPrefix())
+	gomega.Expect(err).To(gomega.BeNil())
+
+	_, found, _, err = broker.GetValue("something/a/val1")
+	gomega.Expect(found).To(gomega.BeFalse())
+	gomega.Expect(err).To(gomega.BeNil())
+
+	_, found, _, err = broker.GetValue("something/a/val2")
+	gomega.Expect(found).To(gomega.BeFalse())
+	gomega.Expect(err).To(gomega.BeNil())
+
+	_, found, _, err = broker.GetValue("something/a/val3")
+	gomega.Expect(found).To(gomega.BeFalse())
+	gomega.Expect(err).To(gomega.BeNil())
+
+}
+
 func expectWatchEvent(t *testing.T, wg *sync.WaitGroup, watchCh chan keyval.BytesWatchResp, expectedKey string) {
 	select {
 	case resp := <-watchCh:
@@ -199,7 +242,7 @@ func (embd *embededEtcd) start(t *testing.T) {
 
 	select {
 	case <-embd.etcd.Server.ReadyNotify():
-		log.Debug("Server is ready!")
+		logroot.Logger().Debug("Server is ready!")
 	case <-time.After(etcdStartTimeout * time.Second):
 		embd.etcd.Server.Stop() // trigger a shutdown
 		t.Error("Server took too long to start!")
@@ -222,7 +265,7 @@ func (embd *embededEtcd) cleanDs() {
 
 func setupBrokers(t *testing.T) {
 	var err error
-	broker, err = NewEtcdConnectionUsingClient(v3client.New(embd.etcd.Server))
+	broker, err = NewEtcdConnectionUsingClient(v3client.New(embd.etcd.Server), logroot.Logger())
 
 	gomega.Expect(err).To(gomega.BeNil())
 	gomega.Expect(broker).NotTo(gomega.BeNil())

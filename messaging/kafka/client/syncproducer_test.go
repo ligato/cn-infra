@@ -16,13 +16,14 @@ package client
 
 import (
 	"github.com/Shopify/sarama"
+	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/onsi/gomega"
 	"testing"
 )
 
 func ExampleSyncProducer() {
 	// init config
-	config := NewConfig()
+	config := NewConfig(logroot.Logger())
 	config.ProducerConfig().Producer.RequiredAcks = sarama.WaitForAll
 	config.SetBrokers("localhost:9091", "localhost:9092")
 

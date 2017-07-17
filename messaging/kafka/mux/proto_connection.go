@@ -79,7 +79,7 @@ func (conn *ProtoConnection) ConsumeTopic(msgChan chan *client.ProtoConsumerMess
 				select {
 				case msgChan <- client.NewProtoConsumerMessage(msg, conn.serializer):
 				default:
-					log.Warn("Unable to deliver message to consumer")
+					conn.multiplexer.Warn("Unable to deliver message to consumer")
 				}
 			case <-conn.multiplexer.closeCh:
 				break messageHandler

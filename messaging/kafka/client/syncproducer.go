@@ -25,6 +25,7 @@ import (
 
 // SyncProducer allows to publish messages to kafka using synchronous API.
 type SyncProducer struct {
+	logging.Logger
 	Config       *Config
 	Client       sarama.Client
 	Producer     sarama.SyncProducer
@@ -38,10 +39,10 @@ type SyncProducer struct {
 // NewSyncProducer returns a new SyncProducer
 func NewSyncProducer(config *Config, wg *sync.WaitGroup) (*SyncProducer, error) {
 	if config.Debug {
-		log.SetLevel(logging.DebugLevel)
+		config.Logger.SetLevel(logging.DebugLevel)
 	}
 
-	log.Debug("entering NewSyncProducer ...")
+	config.Logger.Debug("entering NewSyncProducer ...")
 	if err := config.ValidateSyncProducerConfig(); err != nil {
 		return nil, err
 	}
@@ -59,7 +60,7 @@ func NewSyncProducer(config *Config, wg *sync.WaitGroup) (*SyncProducer, error) 
 	config.ProducerConfig().Producer.Partitioner = config.Partitioner
 	config.ProducerConfig().Producer.Return.Successes = true
 
-	log.Debugf("SyncProducer config: %#v", config)
+	config.Logger.Debugf("SyncProducer config: %#v", config)
 
 	// init a new client
 	client, err := sarama.NewClient(config.Brokers, &config.Config.Config)
@@ -74,6 +75,7 @@ func NewSyncProducer(config *Config, wg *sync.WaitGroup) (*SyncProducer, error) 
 
 	// initProducer object
 	sp := &SyncProducer{
+		Logger:       config.Logger,
 		Config:       config,
 		Client:       client,
 		Producer:     producer,
@@ -116,14 +118,14 @@ func (ref *SyncProducer) Close() error {
 
 	err := ref.Producer.Close()
 	if err != nil {
-		log.Errorf("SyncProducer close error: %v", err)
+		ref.Errorf("SyncProducer close error: %v", err)
 		return err
 	}
-	log.Debug("SyncProducer closed")
+	ref.Debug("SyncProducer closed")
 
 	err = ref.Client.Close()
 	if err != nil {
-		log.Errorf("client close error: %v", err)
+		ref.Errorf("client close error: %v", err)
 		return err
 	}
 
@@ -133,7 +135,7 @@ func (ref *SyncProducer) Close() error {
 // SendMsgByte sends a message to Kafka
 func (ref *SyncProducer) SendMsgByte(topic string, key []byte, msg []byte) (*ProducerMessage, error) {
 	// generate a key if none supplied (used by hash partitioner)
-	log.WithFields(logging.Fields{"key": key, "msg": msg}).Debug("Sending")
+	ref.WithFields(logging.Fields{"key": key, "msg": msg}).Debug("Sending")
 
 	if key == nil || len(key) == 0 {
 		md5Sum := fmt.Sprintf("%x", md5.Sum(msg))
@@ -146,7 +148,7 @@ func (ref *SyncProducer) SendMsgByte(topic string, key []byte, msg []byte) (*Pro
 func (ref *SyncProducer) SendMsg(topic string, key sarama.Encoder, msg sarama.Encoder) (*ProducerMessage, error) {
 	if msg == nil {
 		err := errors.New("nil message can not be sent")
-		log.Error(err)
+		ref.Error(err)
 		return nil, err
 	}
 	message := &sarama.ProducerMessage{
@@ -170,11 +172,11 @@ func (ref *SyncProducer) SendMsg(topic string, key sarama.Encoder, msg sarama.En
 		Partition: partition,
 	}
 	if err != nil {
-		log.Errorf("message error: %s, err: %v", pmsg, err)
+		ref.Errorf("message error: %s, err: %v", pmsg, err)
 		return pmsg, err
 	}
 
-	log.Debugf("message sent: %s", pmsg)
+	ref.Debugf("message sent: %s", pmsg)
 	return pmsg, nil
 }
 

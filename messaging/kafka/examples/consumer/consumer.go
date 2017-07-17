@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/signal"
 	"time"
+	"github.com/ligato/cn-infra/logging/logroot"
 )
 
 var (
@@ -67,7 +68,7 @@ func main() {
 	}
 
 	//init config
-	config := client.NewConfig()
+	config := client.NewConfig(logroot.Logger())
 	config.SetDebug(*debug)
 	config.SetInitialOffset(initialOffset)
 	config.SetRecvNotification(true)

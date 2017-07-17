@@ -12,21 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package keyval
+// Package logroot contains default global logger.
+package logroot
 
-import "time"
+import (
+	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logrus"
+)
 
-// PutOption defines options for Put operation. The particular options can be found below.
-type PutOption interface {
+var defaultLogger logging.Logger
+
+func init() {
+	defaultLogger = logrus.StandardLogger()
 }
 
-// WithTTLOpt defines a TTL for data being put. Once TTL elapses the data is removed from data store.
-type WithTTLOpt struct {
-	TTL time.Duration
-}
-
-// WithTTL creates new instance of TTL option. Once TTL elapses data is removed.
-// Beware: some implementation might be using TTL with lower precision.
-func WithTTL(TTL time.Duration) *WithTTLOpt {
-	return &WithTTLOpt{TTL}
+// Logger returns global logger. Please notice that recommended
+// approach is to create a custom logger.
+func Logger() logging.Logger {
+	return defaultLogger
 }

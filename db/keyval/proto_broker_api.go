@@ -32,7 +32,7 @@ type ProtoBroker interface {
 	// ListKeys is similar to the ListValues the difference is that values are not fetched
 	ListKeys(prefix string) (ProtoKeyIterator, error)
 	// Delete removes data stored under the key
-	Delete(key string) (existed bool, err error)
+	Delete(key string, opts ...DelOption) (existed bool, err error)
 }
 
 // ProtoKvPair group getter for single key-value pair

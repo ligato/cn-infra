@@ -37,7 +37,7 @@
 //   pool, err := redis.CreateNodeClientConnPool(config)
 //   db, err := redis.NewBytesConnectionRedis(pool)
 //
-// You can also define server configuraton in a yaml file, and load it into memory using ParseConfigFromYamlFile(yamlFile, &config) from the package github.com/ligato/cn-infra/utils/config.
+// You can also define server configuration in a yaml file, and load it into memory using ParseConfigFromYamlFile(yamlFile, &config) from the package github.com/ligato/cn-infra/utils/config.
 // See github.com/ligato/cn-infra/db/keyval/redis/examples/node-client.yaml for an example of server configuration.
 //
 // CRUD

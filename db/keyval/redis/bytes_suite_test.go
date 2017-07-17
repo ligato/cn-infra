@@ -21,6 +21,8 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"github.com/ligato/cn-infra/db"
 	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/onsi/gomega"
 	"github.com/rafaeljusto/redigomock"
 	"strconv"
@@ -29,6 +31,7 @@ import (
 var mockConn *redigomock.Conn
 var mockPool *redis.Pool
 var bytesBroker *BytesConnectionRedis
+var log logging.Logger
 
 var keyValues = map[string]string{
 	"keyWest": "a place",
@@ -37,10 +40,11 @@ var keyValues = map[string]string{
 
 //func TestMain(m *testing.M) {
 func init() {
+	log = logroot.Logger()
 	mockConn = redigomock.NewConn()
-	iKeys := make([]interface{}, 0)
-	iVals := make([]interface{}, 0)
-	iAll := make([]interface{}, 0)
+	var iKeys []interface{}
+	var iVals []interface{}
+	var iAll []interface{}
 	for k, v := range keyValues {
 		mockConn.Command("SET", k, v).Expect("not used")
 		mockConn.Command("GET", k).Expect(v)
@@ -70,7 +74,7 @@ func init() {
 	mockPool = &redis.Pool{
 		Dial: func() (redis.Conn, error) { return mockConn, nil },
 	}
-	bytesBroker, _ = NewBytesConnectionRedis(mockPool)
+	bytesBroker, _ = NewBytesConnectionRedis(mockPool, logroot.Logger())
 }
 
 func TestPut(t *testing.T) {
