@@ -23,8 +23,7 @@ import (
 	"strings"
 )
 
-// WhereStatement is flattened (not structured) part of SQL statement (where condition)
-// and binding referenced ("?") from the statement
+// Expression represents part of SQL statement and optional binding ("?")
 type Expression interface {
 	// Stringer prints default representation of SQL to String
 	// Different implementations can override this using package specific func ExpToString()
@@ -59,7 +58,7 @@ func (exp *PrefixedExp) String() string {
 	return exp.Prefix + " " + exp.AfterPrefix.String()
 }
 
-// Binding is a getter...
+// GetBinding is a getter...
 func (exp *PrefixedExp) GetBinding() []interface{} {
 	return exp.Binding
 }
@@ -84,7 +83,7 @@ func (exp *FieldExpression) String() string {
 	return prefix + " " + exp.AfterField.String()
 }
 
-// Binding is a getter...
+// GetBinding is a getter...
 func (exp *FieldExpression) GetBinding() []interface{} {
 	return nil
 }
@@ -117,11 +116,6 @@ func FROM(entity interface{}, afterKeyword Expression) Expression {
 	return &PrefixedExp{"FROM", afterKeyword, "", []interface{}{entity}}
 }
 
-// From TODO
-func FromEval(val interface{} /*, opts Options*/) (statement string) {
-	return " from " + reflect.TypeOf(val).Name()
-}
-
 // SelectFields generates comma separated field names string
 func SelectFields(val interface{} /*, opts Options*/) (statement string) {
 	fields, _, ok := reflect2.FieldsAndValues(val)
@@ -132,10 +126,12 @@ func SelectFields(val interface{} /*, opts Options*/) (statement string) {
 	return strings.Join(fields, ", ")
 }
 
+// WHERE keyword of SQL statement
 func WHERE(afterKeyword Expression) Expression {
 	return &PrefixedExp{"WHERE", afterKeyword, "", nil}
 }
 
+// DELETE keyword of SQL statement
 func DELETE(entity interface{}, afterKeyword Expression) Expression {
 	return &PrefixedExp{"DELETE", afterKeyword, "", nil}
 }
@@ -190,14 +186,15 @@ func Field(pointerToAField interface{}, rigthOperand Expression) (exp Expression
 	return &FieldExpression{pointerToAField, rigthOperand}
 }
 
-func FindField(pointerToAField interface{}, containerStruct interface{}) (field *reflect.StructField, found bool) {
+// FindField compares the pointers (pointerToAField with all fields in pointerToAStruct)
+func FindField(pointerToAField interface{}, pointerToAStruct interface{}) (field *reflect.StructField, found bool) {
 	fieldVal := reflect.ValueOf(pointerToAField)
 
 	if fieldVal.Kind() != reflect.Ptr {
 		panic("pointerToAField must be a pointer")
 	}
 
-	strct := reflect.Indirect(reflect.ValueOf(containerStruct))
+	strct := reflect.Indirect(reflect.ValueOf(pointerToAStruct))
 	numField := strct.NumField()
 	for i := 0; i < numField; i++ {
 		sf := strct.Field(i)
