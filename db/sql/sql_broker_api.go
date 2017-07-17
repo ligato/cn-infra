@@ -74,7 +74,7 @@ type Broker interface {
 	//
 	ListValues(query Expression) ValIterator
 
-	// Delete removes data that from the data store
+	// Delete removes data from the data store
 	// Example usage 1:
 	//
 	//    query := sql.FROM(JamesBond, sql.WHERE(sql.PK(&JamesBond.ID))
@@ -102,7 +102,7 @@ type Broker interface {
 type ValIterator interface {
 	// GetNext retrieves the current "row" from query result. GetValue is un-marshaled into the provided argument.
 	// The stop=true will be returned if there is no more record or if error occurred (to get the error call Close())
-	// Whe the stop=true is returned the outBinding was not updated.
+	// When the stop=true is returned the outBinding was not updated.
 	GetNext(outBinding interface{}) (stop bool)
 
 	// Closer is used to retrieve error (if occurred) & releases the cursor
