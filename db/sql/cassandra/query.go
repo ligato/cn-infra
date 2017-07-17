@@ -21,7 +21,6 @@ import (
 	r "reflect"
 	"strings"
 	"github.com/ligato/cn-infra/utils/structs"
-	"github.com/gocassa/gocassa/reflect"
 	"fmt"
 )
 
@@ -160,12 +159,51 @@ func fieldName(field *r.StructField) (name string, exported bool) {
 
 // selectFields generates comma separated field names string
 func selectFields(val interface{} /*, opts Options*/) (statement string) {
-	fields, _, ok := reflect.FieldsAndValues(val)
-	if !ok {
-		return ""
+	fields := structs.ListExportedFields(val)
+	ret := bytes.Buffer{}
+	first := true
+	for _, field := range fields {
+		if first {
+			first = false
+		} else {
+			ret.WriteString(", ")
+		}
+		fieldName, exported := fieldName(field)
+		if exported {
+			ret.WriteString(fieldName)
+		}
 	}
 
-	return strings.Join(fields, ", ")
+	return ret.String()
+}
+
+// SliceOfFields generates slice of translated (cql tag) field names
+func sliceOfFields(val interface{} /*, opts Options*/) (fieldNames []string) {
+	fields := structs.ListExportedFields(val)
+	fieldNames = []string{}
+	for _, field := range fields {
+		fieldName, exported := fieldName(field)
+		if exported {
+			fieldNames = append(fieldNames, fieldName)
+		}
+	}
+
+	return fieldNames
+}
+
+// SliceOfFieldsWithVals generates slice of translated (cql tag) field names with field values
+func SliceOfFieldsWithVals(val interface{} /*, opts Options*/) (fieldNames []string, vals []interface{}) {
+	fields, vals := structs.ListExportedFieldsWithVals(val)
+
+	fieldNames = []string{}
+	for _, field := range fields {
+		fieldName, exported := fieldName(field)
+		if exported {
+			fieldNames = append(fieldNames, fieldName)
+		}
+	}
+
+	return fieldNames, vals
 }
 
 // updateSetExpToString generates UPDATE + SET part of SQL statement
@@ -173,10 +211,7 @@ func selectFields(val interface{} /*, opts Options*/) (statement string) {
 func updateSetExpToString(cfName string, val interface{} /*, opts Options*/) (
 	statement string, fields []string, err error) {
 
-	fields, _, ok := reflect.FieldsAndValues(val)
-	if !ok {
-		return "", []string{}, errors.New("Not ok input val")
-	}
+	fields = sliceOfFields(val)
 
 	statement = updateStatement(cfName, fields)
 	return statement, fields, nil
