@@ -51,10 +51,11 @@ type ErrIterator struct {
 // Put generates statement & binding for gocql Exec()
 func (pdb *BrokerCassa) Put(where sql.Expression, pointerToAStruct interface{} /*TODO TTL, opts ...keyval.PutOption*/) error {
 	statement, bindings, err := PutExpToString(where, pointerToAStruct)
+
 	if err != nil {
 		return err
 	}
-	return pdb.session.Exec(statement, bindings)
+	return pdb.session.Exec(statement, bindings...)
 }
 
 // Exec - see the description in interface sql.Broker.ExecPut()
@@ -70,7 +71,7 @@ func (pdb *BrokerCassa) Delete(fromWhere sql.Expression) error {
 	if err != nil {
 		return err
 	}
-	return pdb.session.Exec("DELETE"+statement, bindings)
+	return pdb.session.Exec("DELETE"+statement, bindings...)
 }
 
 // GetValue - see the description in interface sql.Broker.GetValue()
