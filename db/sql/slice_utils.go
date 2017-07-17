@@ -50,7 +50,7 @@ func SliceIt(pointerToASlice interface{}, it ValIterator) error {
 	if sliceElemPtr {
 		sliceElemType = sliceElemType.Elem()
 	}
-	for i := 0; i < 5; i++ {
+	for {
 		row := reflect.New(sliceElemType)
 		if stop := it.GetNext(row.Interface()); stop {
 			break
