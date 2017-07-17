@@ -59,13 +59,9 @@ func SelectExpToString(fromWhere sql.Expression) (sqlStr string, bindings []inte
 	if err != nil {
 		return "", nil, err
 	}
-	bindings = structFieldPtrs(findEntity.entity)
 	fromWhereBindings := fromWhereStr.Binding()
-	if fromWhereBindings != nil {
-		bindings = append(bindings, fromWhereBindings)
-	}
 
-	return "SELECT " + fieldsStr + " " + fromWhereStr.String(), append(bindings, fromWhereBindings...), nil
+	return "SELECT " + fieldsStr + " " + fromWhereStr.String(), fromWhereBindings, nil
 }
 
 // ExpToString converts expression to string & slice of bindings
