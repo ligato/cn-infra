@@ -22,12 +22,12 @@ import (
 	"github.com/coreos/etcd/mvcc/mvccpb"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
 	"golang.org/x/net/context"
 )
 
 // BytesConnectionEtcd encapsulates the connection to etcd. It provides API to read/edit and watch values from etcd.
 type BytesConnectionEtcd struct {
+	logging.Logger
 	etcdClient *clientv3.Client
 	lessor     clientv3.Lease
 	opTimeout  time.Duration
@@ -41,6 +41,7 @@ type BytesConnectionEtcd struct {
 // In case of accessing a particular subtree in etcd only, BytesBrokerWatcherEtcd allows to define a keyPrefix that is prepended to all keys
 // in its methods in order to shorten keys used in arguments.
 type BytesBrokerWatcherEtcd struct {
+	logging.Logger
 	closeCh   chan struct{}
 	lessor    clientv3.Lease
 	kv        clientv3.KV
@@ -70,35 +71,25 @@ type bytesKeyVal struct {
 	revision int64
 }
 
-var log logging.Logger
-
-func init() {
-	log = logrus.StandardLogger()
-}
-
-// SetLogger sets a logger that will be used for library logging.
-func SetLogger(l logging.Logger) {
-	log = l
-}
-
 // NewEtcdConnectionWithBytes creates new connection to etcd based on the given config file.
-func NewEtcdConnectionWithBytes(config ClientConfig) (*BytesConnectionEtcd, error) {
+func NewEtcdConnectionWithBytes(config ClientConfig, log logging.Logger) (*BytesConnectionEtcd, error) {
 	etcdClient, err := clientv3.New(*config.Config)
 	if err != nil {
 		log.Errorf("Failed to connect to Etcd etcd(s) %v, Error: '%s'", config.Endpoints, err)
 		return nil, err
 	}
-	conn, err := NewEtcdConnectionUsingClient(etcdClient)
+	conn, err := NewEtcdConnectionUsingClient(etcdClient, log)
 	conn.opTimeout = config.OpTimeout
 	return conn, err
 }
 
 // NewEtcdConnectionUsingClient creates a new instance of BytesConnectionEtcd using the provided
 // etcdv3 client
-func NewEtcdConnectionUsingClient(etcdClient *clientv3.Client) (*BytesConnectionEtcd, error) {
+func NewEtcdConnectionUsingClient(etcdClient *clientv3.Client, log logging.Logger) (*BytesConnectionEtcd, error) {
 	log.Debug("NewEtcdConnectionWithBytes", etcdClient)
 
 	conn := BytesConnectionEtcd{}
+	conn.Logger = log
 	conn.etcdClient = etcdClient
 	conn.closeCh = make(chan struct{})
 	conn.lessor = clientv3.NewLease(etcdClient)
@@ -120,7 +111,7 @@ func (db *BytesConnectionEtcd) Close() error {
 // Prefix will be prepend to key argument in all calls on created BytesBrokerWatcherEtcd. To avoid
 // using a prefix pass keyval.Root constant as argument.
 func (db *BytesConnectionEtcd) NewBroker(prefix string) keyval.BytesBroker {
-	return &BytesBrokerWatcherEtcd{kv: namespace.NewKV(db.etcdClient, prefix), lessor: db.lessor,
+	return &BytesBrokerWatcherEtcd{Logger: db.Logger, kv: namespace.NewKV(db.etcdClient, prefix), lessor: db.lessor,
 		opTimeout: db.opTimeout, watcher: namespace.NewWatcher(db.etcdClient, prefix), closeCh: db.closeCh}
 }
 
@@ -129,13 +120,13 @@ func (db *BytesConnectionEtcd) NewBroker(prefix string) keyval.BytesBroker {
 // Prefix will be prepend to key argument in all calls on created BytesBrokerWatcherEtcd. To avoid
 // using a prefix pass keyval.Root constant as argument.
 func (db *BytesConnectionEtcd) NewWatcher(prefix string) keyval.BytesWatcher {
-	return &BytesBrokerWatcherEtcd{kv: namespace.NewKV(db.etcdClient, prefix), lessor: db.lessor,
+	return &BytesBrokerWatcherEtcd{Logger: db.Logger, kv: namespace.NewKV(db.etcdClient, prefix), lessor: db.lessor,
 		opTimeout: db.opTimeout, watcher: namespace.NewWatcher(db.etcdClient, prefix), closeCh: db.closeCh}
 }
 
 // Put calls Put function of BytesConnectionEtcd. KeyPrefix defined in constructor is prepended to key argument.
 func (pdb *BytesBrokerWatcherEtcd) Put(key string, data []byte, opts ...keyval.PutOption) error {
-	return putInternal(pdb.kv, pdb.lessor, pdb.opTimeout, key, data, opts)
+	return putInternal(pdb.Logger, pdb.kv, pdb.lessor, pdb.opTimeout, key, data, opts)
 }
 
 // NewTxn creates new transaction. KeyPrefix defined in constructor will be prepended to all key arguments in the transaction.
@@ -145,29 +136,29 @@ func (pdb *BytesBrokerWatcherEtcd) NewTxn() keyval.BytesTxn {
 
 // GetValue calls GetValue function of BytesConnectionEtcd. KeyPrefix defined in constructor is prepended to key argument.
 func (pdb *BytesBrokerWatcherEtcd) GetValue(key string) (data []byte, found bool, revision int64, err error) {
-	return getValueInternal(pdb.kv, pdb.opTimeout, key)
+	return getValueInternal(pdb.Logger, pdb.kv, pdb.opTimeout, key)
 }
 
 // ListValues calls ListValues function of BytesConnectionEtcd. KeyPrefix defined in constructor is prepended to key argument. The prefix
 // is removed from the keys of the returned values.
 func (pdb *BytesBrokerWatcherEtcd) ListValues(key string) (keyval.BytesKeyValIterator, error) {
-	return listValuesInternal(pdb.kv, pdb.opTimeout, key)
+	return listValuesInternal(pdb.Logger, pdb.kv, pdb.opTimeout, key)
 }
 
 // ListValuesRange calls ListValuesRange function of BytesConnectionEtcd. KeyPrefix defined in constructor is prepended to the arguments. The prefix
 // is removed from the keys of the returned values.
 func (pdb *BytesBrokerWatcherEtcd) ListValuesRange(fromPrefix string, toPrefix string) (keyval.BytesKeyValIterator, error) {
-	return listValuesRangeInternal(pdb.kv, pdb.opTimeout, fromPrefix, toPrefix)
+	return listValuesRangeInternal(pdb.Logger, pdb.kv, pdb.opTimeout, fromPrefix, toPrefix)
 }
 
 // ListKeys calls ListKeys function of BytesConnectionEtcd. KeyPrefix defined in constructor is prepended to the argument.
 func (pdb *BytesBrokerWatcherEtcd) ListKeys(prefix string) (keyval.BytesKeyIterator, error) {
-	return listKeysInternal(pdb.kv, pdb.opTimeout, prefix)
+	return listKeysInternal(pdb.Logger, pdb.kv, pdb.opTimeout, prefix)
 }
 
 // Delete calls delete function of BytesConnectionEtcd. KeyPrefix defined in constructor is prepended to the key argument.
-func (pdb *BytesBrokerWatcherEtcd) Delete(key string) (existed bool, err error) {
-	return deleteInternal(pdb.kv, pdb.opTimeout, key)
+func (pdb *BytesBrokerWatcherEtcd) Delete(key string, opts ...keyval.DelOption) (existed bool, err error) {
+	return deleteInternal(pdb.Logger, pdb.kv, pdb.opTimeout, key, opts...)
 }
 
 // Watch starts subscription for changes associated with the selected keys. KeyPrefix defined in constructor is prepended to all
@@ -175,7 +166,7 @@ func (pdb *BytesBrokerWatcherEtcd) Delete(key string) (existed bool, err error) 
 func (pdb *BytesBrokerWatcherEtcd) Watch(respChan chan keyval.BytesWatchResp, keys ...string) error {
 	var err error
 	for _, k := range keys {
-		err = watchInternal(pdb.watcher, pdb.closeCh, k, respChan)
+		err = watchInternal(pdb.Logger, pdb.watcher, pdb.closeCh, k, respChan)
 		if err != nil {
 			break
 		}
@@ -183,7 +174,7 @@ func (pdb *BytesBrokerWatcherEtcd) Watch(respChan chan keyval.BytesWatchResp, ke
 	return err
 }
 
-func handleWatchEvent(respChan chan keyval.BytesWatchResp, ev *clientv3.Event) {
+func handleWatchEvent(log logging.Logger, respChan chan keyval.BytesWatchResp, ev *clientv3.Event) {
 
 	var resp keyval.BytesWatchResp
 	if ev.Type == mvccpb.DELETE {
@@ -223,7 +214,7 @@ func newTxnInternal(kv clientv3.KV) keyval.BytesTxn {
 func (db *BytesConnectionEtcd) Watch(respChan chan keyval.BytesWatchResp, keys ...string) error {
 	var err error
 	for _, k := range keys {
-		err = watchInternal(db.etcdClient, db.closeCh, k, respChan)
+		err = watchInternal(db.Logger, db.etcdClient, db.closeCh, k, respChan)
 		if err != nil {
 			break
 		}
@@ -232,7 +223,7 @@ func (db *BytesConnectionEtcd) Watch(respChan chan keyval.BytesWatchResp, keys .
 }
 
 // watchInternal starts the watch subscription for key.
-func watchInternal(watcher clientv3.Watcher, closeCh chan struct{}, key string, respChan chan keyval.BytesWatchResp) error {
+func watchInternal(log logging.Logger, watcher clientv3.Watcher, closeCh chan struct{}, key string, respChan chan keyval.BytesWatchResp) error {
 
 	recvChan := watcher.Watch(context.Background(), key, clientv3.WithPrefix(), clientv3.WithPrevKV())
 
@@ -241,7 +232,7 @@ func watchInternal(watcher clientv3.Watcher, closeCh chan struct{}, key string, 
 			select {
 			case wresp := <-recvChan:
 				for _, ev := range wresp.Events {
-					handleWatchEvent(respChan, ev)
+					handleWatchEvent(log, respChan, ev)
 				}
 			case <-closeCh:
 				log.WithField("key", key).Debug("Watch ended")
@@ -255,10 +246,10 @@ func watchInternal(watcher clientv3.Watcher, closeCh chan struct{}, key string, 
 // Put writes the provided key-value item into the data store.
 // Returns an error if the item could not be written, nil otherwise.
 func (db *BytesConnectionEtcd) Put(key string, binData []byte, opts ...keyval.PutOption) error {
-	return putInternal(db.etcdClient, db.lessor, db.opTimeout, key, binData, opts...)
+	return putInternal(db.Logger, db.etcdClient, db.lessor, db.opTimeout, key, binData, opts...)
 }
 
-func putInternal(kv clientv3.KV, lessor clientv3.Lease, opTimeout time.Duration, key string, binData []byte, opts ...keyval.PutOption) error {
+func putInternal(log logging.Logger, kv clientv3.KV, lessor clientv3.Lease, opTimeout time.Duration, key string, binData []byte, opts ...keyval.PutOption) error {
 
 	deadline := time.Now().Add(opTimeout)
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
@@ -284,17 +275,24 @@ func putInternal(kv clientv3.KV, lessor clientv3.Lease, opTimeout time.Duration,
 }
 
 // Delete removes data identified by the key.
-func (db *BytesConnectionEtcd) Delete(key string) (existed bool, err error) {
-	return deleteInternal(db.etcdClient, db.opTimeout, key)
+func (db *BytesConnectionEtcd) Delete(key string, opts ...keyval.DelOption) (existed bool, err error) {
+	return deleteInternal(db.Logger, db.etcdClient, db.opTimeout, key, opts...)
 }
 
-func deleteInternal(kv clientv3.KV, opTimeout time.Duration, key string) (existed bool, err error) {
+func deleteInternal(log logging.Logger, kv clientv3.KV, opTimeout time.Duration, key string, opts ...keyval.DelOption) (existed bool, err error) {
 	deadline := time.Now().Add(opTimeout)
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
 	defer cancel()
 
+	var etcdOpts []clientv3.OpOption
+	for _, o := range opts {
+		if _, ok := o.(*keyval.WithPrefixOpt); ok {
+			etcdOpts = append(etcdOpts, clientv3.WithPrefix())
+		}
+	}
+
 	// delete data from etcdv3
-	resp, err := kv.Delete(ctx, key)
+	resp, err := kv.Delete(ctx, key, etcdOpts...)
 	if err != nil {
 		log.Error("etcdv3 error: ", err)
 		return false, err
@@ -310,10 +308,10 @@ func deleteInternal(kv clientv3.KV, opTimeout time.Duration, key string) (existe
 // GetValue retrieves one key-value item from the data store. The item
 // is identified by the provided key.
 func (db *BytesConnectionEtcd) GetValue(key string) (data []byte, found bool, revision int64, err error) {
-	return getValueInternal(db.etcdClient, db.opTimeout, key)
+	return getValueInternal(db.Logger, db.etcdClient, db.opTimeout, key)
 }
 
-func getValueInternal(kv clientv3.KV, opTimeout time.Duration, key string) (data []byte, found bool, revision int64, err error) {
+func getValueInternal(log logging.Logger, kv clientv3.KV, opTimeout time.Duration, key string) (data []byte, found bool, revision int64, err error) {
 	deadline := time.Now().Add(opTimeout)
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
 	defer cancel()
@@ -333,10 +331,10 @@ func getValueInternal(kv clientv3.KV, opTimeout time.Duration, key string) (data
 
 // ListValues returns an iterator that enables to traverse values stored under the provided key.
 func (db *BytesConnectionEtcd) ListValues(key string) (keyval.BytesKeyValIterator, error) {
-	return listValuesInternal(db.etcdClient, db.opTimeout, key)
+	return listValuesInternal(db.Logger, db.etcdClient, db.opTimeout, key)
 }
 
-func listValuesInternal(kv clientv3.KV, opTimeout time.Duration, key string) (keyval.BytesKeyValIterator, error) {
+func listValuesInternal(log logging.Logger, kv clientv3.KV, opTimeout time.Duration, key string) (keyval.BytesKeyValIterator, error) {
 	deadline := time.Now().Add(opTimeout)
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
 	defer cancel()
@@ -353,10 +351,10 @@ func listValuesInternal(kv clientv3.KV, opTimeout time.Duration, key string) (ke
 
 // ListKeys is similar to the ListValues the difference is that values are not fetched
 func (db *BytesConnectionEtcd) ListKeys(prefix string) (keyval.BytesKeyIterator, error) {
-	return listKeysInternal(db.etcdClient, db.opTimeout, prefix)
+	return listKeysInternal(db.Logger, db.etcdClient, db.opTimeout, prefix)
 }
 
-func listKeysInternal(kv clientv3.KV, opTimeout time.Duration, prefix string) (keyval.BytesKeyIterator, error) {
+func listKeysInternal(log logging.Logger, kv clientv3.KV, opTimeout time.Duration, prefix string) (keyval.BytesKeyIterator, error) {
 	deadline := time.Now().Add(opTimeout)
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
 	defer cancel()
@@ -373,10 +371,10 @@ func listKeysInternal(kv clientv3.KV, opTimeout time.Duration, prefix string) (k
 
 // ListValuesRange returns an iterator that enables to traverse values stored under the provided key.
 func (db *BytesConnectionEtcd) ListValuesRange(fromPrefix string, toPrefix string) (keyval.BytesKeyValIterator, error) {
-	return listValuesRangeInternal(db.etcdClient, db.opTimeout, fromPrefix, toPrefix)
+	return listValuesRangeInternal(db.Logger, db.etcdClient, db.opTimeout, fromPrefix, toPrefix)
 }
 
-func listValuesRangeInternal(kv clientv3.KV, opTimeout time.Duration, fromPrefix string, toPrefix string) (keyval.BytesKeyValIterator, error) {
+func listValuesRangeInternal(log logging.Logger, kv clientv3.KV, opTimeout time.Duration, fromPrefix string, toPrefix string) (keyval.BytesKeyValIterator, error) {
 	deadline := time.Now().Add(opTimeout)
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
 	defer cancel()

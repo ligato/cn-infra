@@ -17,6 +17,7 @@ package main
 import (
 	"fmt"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logroot"
 	log "github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/messaging/kafka/mux"
@@ -26,7 +27,7 @@ import (
 
 func main() {
 	log.SetLevel(logging.DebugLevel)
-	mx, err := mux.InitMultiplexer("", "default")
+	mx, err := mux.InitMultiplexer("", "default", logroot.Logger())
 	if err != nil {
 		os.Exit(1)
 	}

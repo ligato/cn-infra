@@ -21,6 +21,8 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"github.com/ligato/cn-infra/db"
 	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/onsi/gomega"
 	"github.com/rafaeljusto/redigomock"
 	"strconv"
@@ -32,6 +34,7 @@ var bytesBroker *BytesConnectionRedis
 var iKeys = []interface{}{}
 var iVals = []interface{}{}
 var iAll = []interface{}{}
+var log logging.Logger
 
 var keyValues = map[string]string{
 	"keyWest": "a place",
@@ -42,6 +45,7 @@ var keyValues = map[string]string{
 // Or test coverage will generated profile.
 // func TestMain(m *testing.M) {
 func init() {
+	log = logroot.Logger()
 	mockConn = redigomock.NewConn()
 	for k, v := range keyValues {
 		mockConn.Command("SET", k, v).Expect("not used")
@@ -71,7 +75,7 @@ func init() {
 	mockPool = &redis.Pool{
 		Dial: func() (redis.Conn, error) { return mockConn, nil },
 	}
-	bytesBroker, _ = NewBytesConnectionRedis(mockPool)
+	bytesBroker, _ = NewBytesConnectionRedis(mockPool, logroot.Logger())
 }
 
 func TestPut(t *testing.T) {

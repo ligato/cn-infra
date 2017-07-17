@@ -16,13 +16,17 @@ package client
 
 import (
 	"github.com/bsm/sarama-cluster"
+	"github.com/ligato/cn-infra/logging/logroot"
 	"testing"
 	"time"
 )
 
+var log = logroot.Logger()
+
 func ExampleConsumer() {
+
 	//init config
-	config := NewConfig()
+	config := NewConfig(logroot.Logger())
 	config.SetBrokers("localhost:9091,localhost:9092")
 	config.SetRecvNotification(true)
 	config.SetRecvNotificationChan(make(chan *cluster.Notification))

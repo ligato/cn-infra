@@ -19,7 +19,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/redis"
 	"github.com/ligato/cn-infra/db/keyval/redis/examples/airport/model"
 	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
+	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/utils/config"
 	"math"
 	"sync/atomic"
@@ -49,11 +49,7 @@ var diagram = `
 
 `
 
-var log logging.Logger
-
-func init() {
-	log = logrus.StandardLogger()
-}
+var log logging.Logger = logroot.Logger()
 
 const (
 	arrival            = "Arrival"
@@ -152,7 +148,7 @@ func createConnection(yamlFile string) *redis.BytesConnectionRedis {
 		log.Panicf("CreateNodeClientConnPool() failed: %s", err)
 	}
 	var redisConn *redis.BytesConnectionRedis
-	redisConn, err = redis.NewBytesConnectionRedis(pool)
+	redisConn, err = redis.NewBytesConnectionRedis(pool, log)
 	if err != nil {
 		pool.Close()
 		log.Panicf("NewBytesConnectionRedis() failed: %s", err)

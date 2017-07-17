@@ -39,6 +39,7 @@ type clusterConsumer interface {
 // Consumer allows to consume message belonging to specified set of kafka
 // topics.
 type Consumer struct {
+	logging.Logger
 	Config       *Config
 	Client       sarama.Client
 	Consumer     clusterConsumer
@@ -51,13 +52,13 @@ type Consumer struct {
 // NewConsumer returns a Consumer instance
 func NewConsumer(config *Config, wg *sync.WaitGroup) (*Consumer, error) {
 	if config.Debug {
-		log.SetLevel(logging.DebugLevel)
+		config.Logger.SetLevel(logging.DebugLevel)
 	}
-	log.Debug("entering NewConsumer ...")
+	config.Logger.Debug("entering NewConsumer ...")
 	if err := config.ValidateConsumerConfig(); err != nil {
 		return nil, err
 	}
-	log.Debugf("Consumer config: %#v", config)
+	config.Logger.Debugf("Consumer config: %#v", config)
 
 	// set consumer config params
 	config.ConsumerConfig().Group.Return.Notifications = config.RecvNotification
@@ -69,7 +70,7 @@ func NewConsumer(config *Config, wg *sync.WaitGroup) (*Consumer, error) {
 		return nil, err
 	}
 
-	log.Debug("new client created successfully ...")
+	config.Logger.Debug("new client created successfully ...")
 
 	consumer, err := cluster.NewConsumerFromClient(client, config.GroupID, config.Topics)
 	if err != nil {
@@ -108,17 +109,17 @@ func NewConsumer(config *Config, wg *sync.WaitGroup) (*Consumer, error) {
 
 // Close closes the client and consumer
 func (ref *Consumer) Close() error {
-	log.Debug("entering consumer close ...")
+	ref.Debug("entering consumer close ...")
 	defer func() {
-		log.Debug("running defer ...")
+		ref.Debug("running defer ...")
 		if ref.closed {
-			log.Debug("consumer already closed ...")
+			ref.Debug("consumer already closed ...")
 			ref.Unlock()
 			return
 		}
-		log.Debug("setting closed ...")
+		ref.Debug("setting closed ...")
 		ref.closed = true
-		log.Debug("closing closeChannel channel ...")
+		ref.Debug("closing closeChannel channel ...")
 		close(ref.closeChannel)
 
 		if ref.xwg != nil {
@@ -127,32 +128,32 @@ func (ref *Consumer) Close() error {
 		ref.Unlock()
 	}()
 
-	log.Debug("about to lock ...")
+	ref.Debug("about to lock ...")
 	ref.Lock()
-	log.Debug("locked ...")
+	ref.Debug("locked ...")
 	if ref.closed {
 		return nil
 	}
 
 	// close consumer
-	log.Debug("calling consumer close ....")
+	ref.Debug("calling consumer close ....")
 	err := ref.Consumer.Close()
 	if err != nil {
-		log.Errorf("consumer close error: %v", err)
+		ref.Errorf("consumer close error: %v", err)
 		return err
 	}
-	log.Debug("consumer closed")
+	ref.Debug("consumer closed")
 
 	// close client
-	log.Debug("closing client ...")
+	ref.Debug("closing client ...")
 	if ref.Client != nil {
 		err = ref.Client.Close()
 		if err != nil {
-			log.Errorf("client close error: %v", err)
+			ref.Errorf("client close error: %v", err)
 			return err
 		}
 	}
-	log.Debug("client closed")
+	ref.Debug("client closed")
 
 	return nil
 }
@@ -165,7 +166,7 @@ func (ref *Consumer) IsClosed() bool {
 // WaitForClose waits for the consumer to close
 func (ref *Consumer) WaitForClose() {
 	<-ref.closeChannel
-	log.Debug("exiting WaitForClose ...")
+	ref.Debug("exiting WaitForClose ...")
 }
 
 // MarkOffset marks the provided message as processed, alongside a metadata string
@@ -213,14 +214,14 @@ func (ref *Consumer) PrintNotification(note map[string][]int32) {
 // notificationHandler processes each message received when the consumer
 // is rebalanced
 func (ref *Consumer) notificationHandler(in <-chan *cluster.Notification) {
-	log.Debug("notificationHandler started ...")
+	ref.Debug("notificationHandler started ...")
 
 	for {
 		select {
 		case note := <-in:
 			ref.Config.RecvNotificationChan <- note
 		case <-ref.closeChannel:
-			log.Debug("Canceling notification handler")
+			ref.Debug("Canceling notification handler")
 			return
 		}
 	}
@@ -228,16 +229,16 @@ func (ref *Consumer) notificationHandler(in <-chan *cluster.Notification) {
 
 // errorHandler processes each error message
 func (ref *Consumer) errorHandler(in <-chan error) {
-	log.Debug("errorHandler started ...")
+	ref.Debug("errorHandler started ...")
 	for {
 		select {
 		case err, more := <-in:
 			if more {
-				log.Errorf("message error: %T, %v", err, err)
+				ref.Errorf("message error: %T, %v", err, err)
 				ref.Config.RecvErrorChan <- err
 			}
 		case <-ref.closeChannel:
-			log.Debug("Canceling error handler")
+			ref.Debug("Canceling error handler")
 			return
 		}
 	}
@@ -245,7 +246,7 @@ func (ref *Consumer) errorHandler(in <-chan error) {
 
 // messageHandler processes each incoming message
 func (ref *Consumer) messageHandler(in <-chan *sarama.ConsumerMessage) {
-	log.Debug("messageHandler started ...")
+	ref.Debug("messageHandler started ...")
 
 	for {
 		select {
@@ -264,10 +265,10 @@ func (ref *Consumer) messageHandler(in <-chan *sarama.ConsumerMessage) {
 			select {
 			case ref.Config.RecvMessageChan <- consumerMsg:
 			case <-time.After(1 * time.Second):
-				log.Warn("Failed to deliver a message")
+				ref.Warn("Failed to deliver a message")
 			}
 		case <-ref.closeChannel:
-			log.Debug("Canceling message handler")
+			ref.Debug("Canceling message handler")
 			return
 		}
 	}

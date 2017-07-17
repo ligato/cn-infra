@@ -8,15 +8,11 @@ import (
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/redis"
 	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
+	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/utils/config"
 )
 
-var log logging.Logger
-
-func init() {
-	log = logrus.StandardLogger()
-}
+var log logging.Logger = logroot.Logger()
 
 var broker keyval.BytesBroker
 var watcher keyval.BytesWatcher
@@ -44,7 +40,7 @@ func createConnection(yamlFile string) *redis.BytesConnectionRedis {
 		log.Panicf("CreateNodeClientConnPool() failed: %s", err)
 	}
 	var redisConn *redis.BytesConnectionRedis
-	redisConn, err = redis.NewBytesConnectionRedis(pool)
+	redisConn, err = redis.NewBytesConnectionRedis(pool, log)
 	if err != nil {
 		pool.Close()
 		log.Panicf("NewBytesConnectionRedis() failed: %s", err)

@@ -12,26 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package redis
+// Package logroot contains default global logger.
+package logroot
 
 import (
-	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logrus"
 )
 
-// ProtoPluginRedis implements Plugin interface therefore can be loaded with other plugins
-type ProtoPluginRedis struct {
-	*plugin.Skeleton
-	//TODO `inject:""`	-- Copied from etcdv3/plugin_impl.go.  What should be done here?
+var defaultLogger logging.Logger
+
+func init() {
+	defaultLogger = logrus.StandardLogger()
 }
 
-// NewRedisPlugin creates a new instance of ProtoPluginRedis.
-func NewRedisPlugin(pool ConnPool, log logging.Logger) *ProtoPluginRedis {
-
-	skeleton := plugin.NewSkeleton(
-		func(log logging.Logger) (plugin.Connection, error) {
-			return NewBytesConnectionRedis(pool, log)
-		},
-	)
-	return &ProtoPluginRedis{Skeleton: skeleton}
+// Logger returns global logger. Please notice that recommended
+// approach is to create a custom logger.
+func Logger() logging.Logger {
+	return defaultLogger
 }

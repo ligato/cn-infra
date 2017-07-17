@@ -20,6 +20,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/bsm/sarama-cluster"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logroot"
 	log "github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"os"
@@ -67,7 +68,7 @@ func main() {
 	}
 
 	//init config
-	config := client.NewConfig()
+	config := client.NewConfig(logroot.Logger())
 	config.SetDebug(*debug)
 	config.SetInitialOffset(initialOffset)
 	config.SetRecvNotification(true)

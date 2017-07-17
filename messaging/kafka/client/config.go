@@ -20,7 +20,6 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/bsm/sarama-cluster"
 	"github.com/ligato/cn-infra/logging"
-	lg "github.com/ligato/cn-infra/logging/logrus"
 	"strings"
 )
 
@@ -41,6 +40,7 @@ const (
 
 // Config struct provides the configuration for a Producer (Sync or Async) and Consumer.
 type Config struct {
+	logging.Logger
 	// Config extends the sarama-cluster.Config with the kafkaclient namespace
 	*cluster.Config
 	// Context Package carries deadlines, cancelation signals, and other values.
@@ -108,21 +108,11 @@ type Config struct {
 	ErrorChan chan *ProducerError
 }
 
-var log logging.Logger
-
-func init() {
-	log = lg.StandardLogger()
-}
-
-// SetLogger sets a logger that will be used for library logging.
-func SetLogger(l logging.Logger) {
-	log = l
-}
-
 // NewConfig return a new Config object.
-func NewConfig() *Config {
+func NewConfig(log logging.Logger) *Config {
 
 	cfg := &Config{
+		Logger:       log,
 		Config:       cluster.NewConfig(),
 		Partition:    -1,
 		Partitioner:  sarama.NewHashPartitioner,
@@ -146,8 +136,8 @@ func (ref *Config) SetTopics(topics string) {
 func (ref *Config) SetDebug(val bool) {
 	if val {
 		ref.Debug = val
-		sarama.Logger = log
-		log.SetLevel(logging.DebugLevel)
+		sarama.Logger = ref.Logger
+		ref.SetLevel(logging.DebugLevel)
 	} else {
 		ref.Debug = val
 	}
@@ -232,7 +222,7 @@ func (ref *Config) SetPartition(val int32) {
 func (ref *Config) SetPartitioner(val string) {
 	switch val {
 	default:
-		log.Errorf("Invalid partitioner %s - defaulting to ''", val)
+		ref.Errorf("Invalid partitioner %s - defaulting to ''", val)
 		fallthrough
 	case "":
 		if ref.Partition >= 0 {
@@ -249,7 +239,7 @@ func (ref *Config) SetPartitioner(val string) {
 	case "manual":
 		ref.Partitioner = sarama.NewManualPartitioner
 		if ref.Partition < 0 {
-			log.Errorf("Invalid partition %d - defaulting to 0", ref.Partition)
+			ref.Errorf("Invalid partition %d - defaulting to 0", ref.Partition)
 			ref.Partition = 0
 		}
 	}

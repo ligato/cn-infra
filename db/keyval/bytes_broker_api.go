@@ -27,7 +27,7 @@ type BytesBroker interface {
 	// ListKeys is similar to the ListValues the difference is that values are not fetched
 	ListKeys(prefix string) (BytesKeyIterator, error)
 	// Delete removes data stored under the key
-	Delete(key string) (existed bool, err error)
+	Delete(key string, opts ...DelOption) (existed bool, err error)
 }
 
 // BytesKvPair groups getters for key-value pair

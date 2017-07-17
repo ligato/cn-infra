@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/messaging/kafka/examples/utils"
 	"strings"
@@ -43,7 +44,7 @@ func main() {
 	errCh := make(chan *client.ProducerError)
 
 	// init config
-	config := client.NewConfig()
+	config := client.NewConfig(logroot.Logger())
 	config.SetDebug(*debug)
 	config.SetPartition(int32(*partition))
 	config.SetPartitioner(*partitioner)
