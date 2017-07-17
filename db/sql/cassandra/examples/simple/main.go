@@ -18,9 +18,9 @@ import (
 	"fmt"
 	"github.com/gocql/gocql"
 	"net"
-	"gitlab.cisco.com/ctao/vnf-agent/examples/gocql/sql"
 	"github.com/willfaught/gockle"
 	"os"
+	"github.com/ligato/cn-infra/db/sql"
 	"github.com/ligato/cn-infra/db/sql/cassandra"
 )
 
@@ -101,7 +101,7 @@ func example() (err error) {
 		return err
 	}
 	db := cassandra.NewBrokerUsingSession(gockle.NewSession(session))
-	err = db.Put("userid='Fero Mrkva'", &User{"Fero", "Mrkva", /*ip01, */
+	err = db.Put(sql.Exp("userid='Fero Mrkva'"), &User{"Fero", "Mrkva", /*ip01, */
 		//"kkk",
 		&Wrapper01{ipPrefix01}, &Udt03{Tx: "tx1", Tx2: "tx2" /*, Inet1: "201.202.203.204"*/ },
 
@@ -112,7 +112,8 @@ func example() (err error) {
 	}
 
 	users := &[]User{}
-	err = sql.SliceIt(users, db.ListValues(sql.SelectFrom(users)+sql.Where(sql.FieldEq(&UserTable.LastName, UserTable, "Mrkva"))))
+	err = sql.SliceIt(users, db.ListValues(sql.FROM(UserTable,
+		sql.WHERE(sql.Field(&UserTable.LastName, sql.EQ("Mrkva"))))))
 	fmt.Println("users ", err, " ", users)
 
 	return nil
