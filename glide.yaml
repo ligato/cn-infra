@@ -48,6 +48,8 @@ import:
   version: e80d13ce29ede4452c43dea11e79b9bc8a15b478
 - package: github.com/willfaught/gockle
   version: 4f254e1e0f0a12485963192ff605f61f1933e71f
+- package: github.com/kr/pretty
+  version: cfb55aafdaf3ec08f0db22699ab822c50091b1c4
 testImport:
 - package: github.com/onsi/gomega
   version: v1.1.0
