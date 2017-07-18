@@ -30,6 +30,7 @@ type Mux interface {
 	NewProtoConnection(name string) *mux.ProtoConnection
 }
 
+// Plugin provides API for interaction with kafka brokers.
 type Plugin struct {
 	muxFactory func(string, logging.Logger) (*mux.Multiplexer, error)
 	mx         *mux.Multiplexer
@@ -37,11 +38,12 @@ type Plugin struct {
 	Lg logging.LogFactory
 }
 
+// NewKafkaPlugin creates a new instance of kafka plugin with the given config.
 func NewKafkaPlugin(configFile string) *Plugin {
 	factory := func(name string, logger logging.Logger) (*mux.Multiplexer, error) {
 		return mux.InitMultiplexer(configFile, name, logger)
 	}
-	return &Plugin{muxFactory:factory}
+	return &Plugin{muxFactory: factory}
 }
 
 // Init is called at plugin initialization.
@@ -54,6 +56,8 @@ func (p *Plugin) Init() error {
 	return err
 }
 
+// AfterInit is called in the second phase of initialization. The kafka multiplexer
+// is started, all consumers have to be subscribed until this phase.
 func (p *Plugin) AfterInit() error {
 	return p.mx.Start()
 }
