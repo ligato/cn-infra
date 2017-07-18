@@ -12,7 +12,7 @@ import (
 	"github.com/ligato/cn-infra/utils/config"
 )
 
-var log logging.Logger = logroot.Logger()
+var log = logroot.Logger()
 
 var broker keyval.BytesBroker
 var watcher keyval.BytesWatcher

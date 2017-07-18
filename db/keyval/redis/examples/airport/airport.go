@@ -18,7 +18,6 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/db/keyval/redis"
 	"github.com/ligato/cn-infra/db/keyval/redis/examples/airport/model"
-	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/utils/config"
 	"math"
@@ -49,7 +48,7 @@ var diagram = `
 
 `
 
-var log logging.Logger = logroot.Logger()
+var log = logroot.Logger()
 
 const (
 	arrival            = "Arrival"
@@ -101,7 +100,6 @@ var hangarBroker keyval.ProtoBroker
 var hangarWatcher keyval.ProtoWatcher
 
 func main() {
-	//log.SetLevel(logging.DebugLevel)
 	setup()
 	startSimulation()
 }
