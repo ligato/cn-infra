@@ -136,20 +136,27 @@ func exampleDML(session *gocql.Session) (err error) {
 		return err
 	}
 	db := cassandra.NewBrokerUsingSession(gockle.NewSession(session))
-	err = db.Put(sql.Exp("userid='Fero Mrkva'"), &User{"Fero", "Mrkva", /*ip01, */
+	written := &User{"Fero", "Mrkva", /*ip01, */
 		//"kkk",
 		&Wrapper01{ipPrefix01}, &Udt03{Tx: "tx1", Tx2: "tx2" /*, Inet1: "201.202.203.204"*/ },
 
 		Udt04{"kuk", &Udt03{Tx: "txxxxxxxxx1", Tx2: "txxxxxxxxx2" /*, Inet1: "201.202.203.204"*/ }},
-	})
+	}
+	err = db.Put(sql.Exp("userid='Fero Mrkva'"), written)
 	if err != nil {
 		return err
+	} else {
+		fmt.Println("Successfully written: ", written)
 	}
 
 	users := &[]User{}
 	err = sql.SliceIt(users, db.ListValues(sql.FROM(UserTable,
 		sql.WHERE(sql.Field(&UserTable.LastName, sql.EQ("Mrkva"))))))
-	fmt.Println("users err: ", err, " slice: ", users)
+	if err != nil {
+		return err
+	} else {
+		fmt.Println("Successfully queried: ", users)
+	}
 
 	return nil
 }
