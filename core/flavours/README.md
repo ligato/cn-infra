@@ -14,7 +14,7 @@ The generic flavour groups commonly used plugins. It currently contains the foll
 
 Usage of the generic flavour consists of the following steps:
 
-1. Create new instance of flavour
+1. Create new instance of the flavour
 
     ```f := generic.Flavour{}```
   
@@ -32,14 +32,17 @@ Usage of the generic flavour consists of the following steps:
 
 5. Retrieve the plugins from the flavour and pass them to the agent constructor.
 
-   ```go
+   ```
        pl := f.Plugins
        agent := core.NewAgent(logger, timeout, pl...)
    ```
     
-
-
 **Note:**
 Steps 2 and 3 can be skipped in tests and plugin can be instantiated using a different mechanism.
  
 The flavour can be reused in order to build more complex agent.
+
+## Extending the generic flavour
+
+TODO:
+  list interfaces that can be specified as dependencies in flavours extend the generic flavour.
