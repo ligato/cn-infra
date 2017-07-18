@@ -22,15 +22,14 @@ import (
 
 // ListPluginsInFlavor uses very simple reflection to traverse top level fields of Flavor structure.
 // Each field is entry in response map. The key of the map is the name of the field.
-func ListPluginsInFlavor(flavor interface{} /*pointer*/) (plugins map[PluginName]Plugin) {
-	plugins = map[PluginName]Plugin{}
-	listPluginsInFlavor(reflect.ValueOf(flavor), plugins)
-
-	return plugins
+func ListPluginsInFlavor(flavor interface{} /*pointer*/) (plugins []*NamedPlugin) {
+	return listPluginsInFlavor(reflect.ValueOf(flavor))
 }
 
 // listPluginsInFlavor checks every field and tries to cast it to Plugin or inspect it's type recursively
-func listPluginsInFlavor(flavorValue reflect.Value, plugins map[PluginName]Plugin) {
+func listPluginsInFlavor(flavorValue reflect.Value) []*NamedPlugin{
+	var res []*NamedPlugin
+
 	flavorType := flavorValue.Type()
 	log.WithField("flavorType", flavorType).Debug("ListPluginsInFlavor")
 
@@ -44,7 +43,7 @@ func listPluginsInFlavor(flavorValue reflect.Value, plugins map[PluginName]Plugi
 
 	if !flavorValue.IsValid() {
 		log.WithField("flavorType", flavorType).Debug("invalid")
-		return
+		return res
 	}
 
 	pluginType := reflect.TypeOf((*Plugin)(nil)).Elem()
@@ -62,14 +61,15 @@ func listPluginsInFlavor(flavorValue reflect.Value, plugins map[PluginName]Plugi
 			fieldVal := flavorValue.Field(i)
 			plug := fieldPlugin(field, fieldVal, pluginType)
 			if plug != nil {
-				plugins[PluginName(field.Name)] = plug
+				res = append(res, &NamedPlugin{PluginName: PluginName(field.Name), Plugin: plug})
 				log.WithField("fieldName", field.Name).Debug("Found plugin ", field.Type)
 			} else {
 				// try to inspect flavor structure recursively
-				listPluginsInFlavor(fieldVal, plugins)
+				res = append(res, listPluginsInFlavor(fieldVal)...)
 			}
 		}
 	}
+	return res
 }
 
 // fieldPlugin tries to cast to Plugin
@@ -91,16 +91,4 @@ func fieldPlugin(field reflect.StructField, fieldVal reflect.Value, pluginType r
 
 	}
 	return nil
-}
-
-// Named translates map of plugins to slice of named plugins
-func Named(plugins map[PluginName]Plugin) (outPlugins []*NamedPlugin) {
-	outPlugins = make([]*NamedPlugin, len(plugins))
-	i := 0
-	for plugName, plug := range plugins {
-		outPlugins[i] = &NamedPlugin{PluginName: plugName, Plugin: plug}
-		i++
-	}
-
-	return outPlugins
 }

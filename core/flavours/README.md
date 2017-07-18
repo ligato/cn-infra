@@ -11,6 +11,7 @@ The generic flavour groups commonly used plugins. It currently contains the foll
 
 - log plugin
 - etcd plugin
+- kafka plugin
 
 Usage of the generic flavour consists of the following steps:
 
@@ -42,7 +43,13 @@ Steps 2 and 3 can be skipped in tests and plugin can be instantiated using a dif
  
 The flavour can be reused in order to build more complex agent.
 
-## Extending the generic flavour
+### Command line arguments
+
+The generic flavour reads the following commandline/env variable arguments:
+- `etcdv3-config` Location of the Etcd configuration file; also set via 'ETCDV3_CONFIG' env variable.
+- `kafka-config` Location of the Kafka configuration file; also set via 'KAFKA_CONFIG' env variable.
+
+### Extending the generic flavour
 
 TODO:
   list interfaces that can be specified as dependencies in flavours extend the generic flavour.
