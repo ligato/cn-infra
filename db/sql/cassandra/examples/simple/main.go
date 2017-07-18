@@ -143,19 +143,19 @@ func exampleDML(session *gocql.Session) (err error) {
 		Udt04{"kuk", &Udt03{Tx: "txxxxxxxxx1", Tx2: "txxxxxxxxx2" /*, Inet1: "201.202.203.204"*/ }},
 	}
 	err = db.Put(sql.Exp("userid='Fero Mrkva'"), written)
-	if err != nil {
-		return err
-	} else {
+	if err == nil {
 		fmt.Println("Successfully written: ", written)
+	} else {
+		return err
 	}
 
 	users := &[]User{}
 	err = sql.SliceIt(users, db.ListValues(sql.FROM(UserTable,
 		sql.WHERE(sql.Field(&UserTable.LastName, sql.EQ("Mrkva"))))))
-	if err != nil {
-		return err
-	} else {
+	if err == nil {
 		fmt.Println("Successfully queried: ", users)
+	} else {
+		return err
 	}
 
 	return nil
