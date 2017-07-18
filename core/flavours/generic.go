@@ -30,7 +30,7 @@ type Generic struct {
 	etcdCfg        etcdv3.Config
 
 	Lg   *logrus.Plugin
-	Etcd *etcdv3.ProtoPluginEtcd
+	Etcd *etcdv3.PluginEtcd
 }
 
 // RegisterFlags registers the options that need to be parsed.

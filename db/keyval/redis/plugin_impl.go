@@ -15,9 +15,13 @@
 package redis
 
 import (
+	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/logging"
 )
+
+// PluginID used in the Agent Core flavors
+const PluginID core.PluginName = "Redis"
 
 // ProtoPluginRedis implements Plugin interface therefore can be loaded with other plugins
 type ProtoPluginRedis struct {
@@ -28,7 +32,7 @@ type ProtoPluginRedis struct {
 // NewRedisPlugin creates a new instance of ProtoPluginRedis.
 func NewRedisPlugin(pool ConnPool, log logging.Logger) *ProtoPluginRedis {
 
-	skeleton := plugin.NewSkeleton("redis",
+	skeleton := plugin.NewSkeleton(string(PluginID),
 		func(log logging.Logger) (plugin.Connection, error) {
 			return NewBytesConnectionRedis(pool, log)
 		},

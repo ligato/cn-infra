@@ -16,19 +16,23 @@ package etcdv3
 
 import (
 	"github.com/coreos/etcd/clientv3"
+	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/logging"
 )
 
-// ProtoPluginEtcd implements Plugin interface therefore can be loaded with other plugins
-type ProtoPluginEtcd struct {
+// PluginID used in the Agent Core flavors
+const PluginID core.PluginName = "ETCD"
+
+// PluginEtcd implements Plugin interface therefore can be loaded with other plugins
+type PluginEtcd struct {
 	*plugin.Skeleton
 }
 
-// NewEtcdPlugin creates a new instance of ProtoPluginEtcd. Configuration of etcd connection is loaded from file.
-func NewEtcdPlugin(cfg *Config) *ProtoPluginEtcd {
+// NewEtcdPlugin creates a new instance of PluginEtcd. Configuration of etcd connection is loaded from file.
+func NewEtcdPlugin(cfg *Config) *PluginEtcd {
 
-	skeleton := plugin.NewSkeleton("etcdv3",
+	skeleton := plugin.NewSkeleton(string(PluginID),
 		func(log logging.Logger) (plugin.Connection, error) {
 			etcdConfig, err := ConfigToClientv3(cfg)
 			if err != nil {
@@ -37,15 +41,15 @@ func NewEtcdPlugin(cfg *Config) *ProtoPluginEtcd {
 			return NewEtcdConnectionWithBytes(*etcdConfig, log)
 		},
 	)
-	return &ProtoPluginEtcd{Skeleton: skeleton}
+	return &PluginEtcd{Skeleton: skeleton}
 }
 
-// NewEtcdPluginUsingClient creates a new instance of ProtoPluginEtcd using given etcd client
-func NewEtcdPluginUsingClient(client *clientv3.Client) *ProtoPluginEtcd {
-	skeleton := plugin.NewSkeleton("etcdv3",
+// NewEtcdPluginUsingClient creates a new instance of PluginEtcd using given etcd client
+func NewEtcdPluginUsingClient(client *clientv3.Client) *PluginEtcd {
+	skeleton := plugin.NewSkeleton(string("etcdv3"),
 		func(log logging.Logger) (plugin.Connection, error) {
 			return NewEtcdConnectionUsingClient(client, log)
 		},
 	)
-	return &ProtoPluginEtcd{Skeleton: skeleton}
+	return &PluginEtcd{Skeleton: skeleton}
 }
