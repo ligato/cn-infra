@@ -23,16 +23,12 @@ import (
 // ProtoPluginEtcd implements Plugin interface therefore can be loaded with other plugins
 type ProtoPluginEtcd struct {
 	*plugin.Skeleton
-	/*TODO
-	Config *clientv3.Config //TODO `inject:""`
-	client *clientv3.Client
-	*/
 }
 
 // NewEtcdPlugin creates a new instance of ProtoPluginEtcd. Configuration of etcd connection is loaded from file.
 func NewEtcdPlugin(cfg *Config) *ProtoPluginEtcd {
 
-	skeleton := plugin.NewSkeleton(
+	skeleton := plugin.NewSkeleton("etcdv3",
 		func(log logging.Logger) (plugin.Connection, error) {
 			etcdConfig, err := ConfigToClientv3(cfg)
 			if err != nil {
@@ -46,7 +42,7 @@ func NewEtcdPlugin(cfg *Config) *ProtoPluginEtcd {
 
 // NewEtcdPluginUsingClient creates a new instance of ProtoPluginEtcd using given etcd client
 func NewEtcdPluginUsingClient(client *clientv3.Client) *ProtoPluginEtcd {
-	skeleton := plugin.NewSkeleton(
+	skeleton := plugin.NewSkeleton("etcdv3",
 		func(log logging.Logger) (plugin.Connection, error) {
 			return NewEtcdConnectionUsingClient(client, log)
 		},

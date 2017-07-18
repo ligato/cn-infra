@@ -24,20 +24,6 @@ import (
 // LoggerRegistry holds all created loggers
 var LoggerRegistry *LogRegistry
 
-// Registry defines a set of public function for interaction with the logger Registry
-type Registry interface {
-	// List Loggers returns a map (loggerName => log level)
-	ListLoggers() map[string]string
-	// SetLevel modifies log level of selected logger in the registry
-	SetLevel(logger, level string) error
-	// GetLevel returns the currently set log level of the logger from registry
-	GetLevel(logger string) (string, error)
-	// GetLoggerByName returns a logger instance identified by name from registry
-	GetLoggerByName(name string) (*Logger, bool)
-	// ClearRegistry removes all loggers except the default one from registry
-	ClearRegistry()
-}
-
 // LogRegistry contains logger map and rwlock guarding access to it
 type LogRegistry struct {
 	mapping map[string]*Logger
@@ -96,7 +82,7 @@ func (lr *LogRegistry) GetLevel(logger string) (string, error) {
 }
 
 // GetLoggerByName returns a logger instance identified by name from registry
-func (lr *LogRegistry) GetLoggerByName(name string) (logger *Logger, found bool) {
+func (lr *LogRegistry) GetLoggerByName(name string) (logger logging.Logger, found bool) {
 	lr.rwmutex.RLock()
 	defer lr.rwmutex.RUnlock()
 	logger, found = lr.mapping[name]

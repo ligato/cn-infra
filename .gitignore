@@ -1,5 +1,6 @@
 .idea/
 glide.lock
+cmd/generic-agent/generic-agent
 db/keyval/etcdv3/examples/phonebook/editor/editor
 db/keyval/etcdv3/examples/phonebook/view/view
 db/keyval/etcdv3/examples/phonebook/watcher/watcher

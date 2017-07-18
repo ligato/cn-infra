@@ -12,26 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package redis
+package logrus
 
 import (
-	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/plugin"
 )
 
-// ProtoPluginRedis implements Plugin interface therefore can be loaded with other plugins
-type ProtoPluginRedis struct {
+// Plugin implements logging plugin using Logrus library.
+type Plugin struct {
 	*plugin.Skeleton
-	//TODO `inject:""`	-- Copied from etcdv3/plugin_impl.go.  What should be done here?
 }
 
-// NewRedisPlugin creates a new instance of ProtoPluginRedis.
-func NewRedisPlugin(pool ConnPool, log logging.Logger) *ProtoPluginRedis {
-
-	skeleton := plugin.NewSkeleton("redis",
-		func(log logging.Logger) (plugin.Connection, error) {
-			return NewBytesConnectionRedis(pool, log)
-		},
-	)
-	return &ProtoPluginRedis{Skeleton: skeleton}
+// NewLogrusPlugin creates a new instance of Logrus logging plugin.
+func NewLogrusPlugin() *Plugin {
+	factory := func(name string) (logging.Logger, error) {
+		return NewNamed(name)
+	}
+	sk := plugin.NewSkeleton(factory, func() logging.Registry { return LoggerRegistry })
+	return &Plugin{sk}
 }

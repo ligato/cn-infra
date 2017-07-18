@@ -12,26 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package redis
+package main
 
 import (
-	"github.com/ligato/cn-infra/db/keyval/plugin"
+	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/core/flavours"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logroot"
+	"github.com/namsral/flag"
+	"os"
+	"time"
 )
 
-// ProtoPluginRedis implements Plugin interface therefore can be loaded with other plugins
-type ProtoPluginRedis struct {
-	*plugin.Skeleton
-	//TODO `inject:""`	-- Copied from etcdv3/plugin_impl.go.  What should be done here?
-}
+func main() {
+	logroot.Logger().SetLevel(logging.DebugLevel)
 
-// NewRedisPlugin creates a new instance of ProtoPluginRedis.
-func NewRedisPlugin(pool ConnPool, log logging.Logger) *ProtoPluginRedis {
+	f := flavours.Generic{}
+	f.RegisterFlags()
+	flag.Parse()
 
-	skeleton := plugin.NewSkeleton("redis",
-		func(log logging.Logger) (plugin.Connection, error) {
-			return NewBytesConnectionRedis(pool, log)
-		},
-	)
-	return &ProtoPluginRedis{Skeleton: skeleton}
+	err := f.ApplyConfig()
+	if err != nil {
+		logroot.Logger().Error(err)
+		os.Exit(1)
+	}
+	f.Inject()
+
+	agent := core.NewAgent(logroot.Logger(), 15*time.Second, f.Plugins()...)
+	core.EventLoopWithInterrupt(agent, nil)
 }
