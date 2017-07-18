@@ -41,7 +41,7 @@ import:
 - package: github.com/gocql/gocql
   version: 88748c7b290d13b288055f5dea4d1c49d44db06d
 - package: gopkg.in/inf.v0
-  version: 44d12bf74ef323f3e38ca75be42cf01bfa058549
+  version: v0.9.0
 - package: github.com/maraino/go-mock
   version: ef7faf3e47cc5395d25e0a1f8ea2b75d5dd6fa7e
 - package: github.com/hailocab/go-hostpool

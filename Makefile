@@ -9,7 +9,6 @@ define test_only
 	@echo "# running unit tests"
 	@go test ./logging/logrus
 	@go test ./db/keyval/etcdv3
-	@go test ./db/keyval/redis
 	@go test ./messaging/kafka/client
     @go test ./messaging/kafka/mux
     @go test ./utils/addrs

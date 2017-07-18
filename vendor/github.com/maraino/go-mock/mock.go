@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/kr/pretty"
@@ -23,6 +24,8 @@ type Mock struct {
 	Functions []*MockFunction
 	inorder   bool
 	order     uint
+
+	mutex sync.Mutex
 }
 
 type MockCountCheckType int
@@ -233,6 +236,9 @@ func AssertVerifyMocks(t HasError, mocks ...HasVerify) {
 
 // Reset removes all stubs defined.
 func (m *Mock) Reset() *Mock {
+	defer m.mutex.Unlock()
+	m.mutex.Lock()
+
 	m.Functions = nil
 	m.order = 0
 	return m
@@ -241,6 +247,9 @@ func (m *Mock) Reset() *Mock {
 // When defines an stub of one method with some specific arguments. It returns a *MockFunction
 // that can be configured with Return, ReturnToArgument, Panic, ...
 func (m *Mock) When(name string, arguments ...interface{}) *MockFunction {
+	defer m.mutex.Unlock()
+	m.mutex.Lock()
+
 	f := &MockFunction{
 		Name:      name,
 		Arguments: arguments,
@@ -258,6 +267,9 @@ func (m *Mock) When(name string, arguments ...interface{}) *MockFunction {
 //			return r.Int(0), r.String(1), r.Error(2)
 // 		}
 func (m *Mock) Called(arguments ...interface{}) *MockResult {
+	defer m.mutex.Unlock()
+	m.mutex.Lock()
+
 	pc, _, _, ok := runtime.Caller(1)
 	if !ok {
 		panic("Could not get the caller information")
