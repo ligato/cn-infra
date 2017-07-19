@@ -27,7 +27,6 @@ func main() {
 	logroot.Logger().SetLevel(logging.DebugLevel)
 
 	f := flavours.Generic{}
-	f.Inject()
 	agent := core.NewAgent(logroot.Logger(), 15*time.Second, f.Plugins()...)
 
 	err := core.EventLoopWithInterrupt(agent, nil)

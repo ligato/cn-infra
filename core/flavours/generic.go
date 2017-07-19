@@ -25,19 +25,27 @@ import (
 // for different flavours. The plugins are initialized in the same order as they appear
 // in the structure.
 type Generic struct {
+	injected bool
+
 	Logrus logrus.Plugin
 	Etcd   etcdv3.Plugin
 	Kafka  kafka.Plugin
 }
 
 // Inject interconnects plugins - inject the dependencies
-func (f *Generic) Inject() error {
-	f.Etcd.LogFactory = &f.Logrus
-	f.Kafka.LogFactory = &f.Logrus
+func (g *Generic) Inject() error {
+	if g.injected {
+		return nil
+	}
+	g.injected = true
+
+	g.Etcd.LogFactory = &g.Logrus
+	g.Kafka.LogFactory = &g.Logrus
 	return nil
 }
 
 // Plugins returns all plugins from the flavour. The set of plugins is supposed to be passed to the agent constructor.
-func (f *Generic) Plugins() []*core.NamedPlugin {
-	return core.ListPluginsInFlavor(f)
+func (g *Generic) Plugins() []*core.NamedPlugin {
+	g.Inject()
+	return core.ListPluginsInFlavor(g)
 }
