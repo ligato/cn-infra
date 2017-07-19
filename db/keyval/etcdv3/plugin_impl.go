@@ -38,8 +38,7 @@ func init() {
 	flag.StringVar(&defaultConfigFileName, "etcdv3-config", "", "Location of the Etcd configuration file; also set via 'ETCDV3_CONFIG' env variable.")
 }
 
-// Init is called at plugin startup. The connection to etcd is established.
-func (p *Plugin) Init() error {
+func (p *Plugin) retrieveConfig() (*Config, error) {
 	cfg := &Config{}
 	var configFile string
 	if p.ConfigFileName != "" {
@@ -51,8 +50,17 @@ func (p *Plugin) Init() error {
 	if configFile != "" {
 		err := config.ParseConfigFromYamlFile(configFile, cfg)
 		if err != nil {
-			return err
+			return nil, err
 		}
+	}
+	return cfg, nil
+}
+
+// Init is called at plugin startup. The connection to etcd is established.
+func (p *Plugin) Init() error {
+	cfg, err := p.retrieveConfig()
+	if err != nil {
+		return err
 	}
 
 	skeleton := plugin.NewSkeleton(string(PluginID), p.LogFactory,
@@ -65,6 +73,5 @@ func (p *Plugin) Init() error {
 		},
 	)
 	p.Skeleton = skeleton
-	p.Skeleton.Init()
-	return nil
+	return p.Skeleton.Init()
 }
