@@ -31,7 +31,7 @@ type Generic struct {
 	kafkaConfigFile string
 
 	Lg    *logrus.Plugin
-	Etcd  *etcdv3.PluginEtcd
+	Etcd  *etcdv3.Plugin
 	Kafka *kafka.Plugin
 }
 

@@ -24,13 +24,13 @@ import (
 // PluginID used in the Agent Core flavors
 const PluginID core.PluginName = "ETCD"
 
-// PluginEtcd implements Plugin interface therefore can be loaded with other plugins
-type PluginEtcd struct {
+// Plugin implements Plugin interface therefore can be loaded with other plugins
+type Plugin struct {
 	*plugin.Skeleton
 }
 
-// NewEtcdPlugin creates a new instance of PluginEtcd. Configuration of etcd connection is loaded from file.
-func NewEtcdPlugin(cfg *Config) *PluginEtcd {
+// NewEtcdPlugin creates a new instance of Plugin. Configuration of etcd connection is loaded from file.
+func NewEtcdPlugin(cfg *Config) *Plugin {
 
 	skeleton := plugin.NewSkeleton(string(PluginID),
 		func(log logging.Logger) (plugin.Connection, error) {
@@ -41,15 +41,15 @@ func NewEtcdPlugin(cfg *Config) *PluginEtcd {
 			return NewEtcdConnectionWithBytes(*etcdConfig, log)
 		},
 	)
-	return &PluginEtcd{Skeleton: skeleton}
+	return &Plugin{Skeleton: skeleton}
 }
 
-// NewEtcdPluginUsingClient creates a new instance of PluginEtcd using given etcd client
-func NewEtcdPluginUsingClient(client *clientv3.Client) *PluginEtcd {
+// NewEtcdPluginUsingClient creates a new instance of Plugin using given etcd client
+func NewEtcdPluginUsingClient(client *clientv3.Client) *Plugin {
 	skeleton := plugin.NewSkeleton(string("etcdv3"),
 		func(log logging.Logger) (plugin.Connection, error) {
 			return NewEtcdConnectionUsingClient(client, log)
 		},
 	)
-	return &PluginEtcd{Skeleton: skeleton}
+	return &Plugin{Skeleton: skeleton}
 }
