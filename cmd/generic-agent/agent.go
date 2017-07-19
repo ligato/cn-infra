@@ -16,7 +16,7 @@ package main
 
 import (
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/core/flavours"
+	"github.com/ligato/cn-infra/core/flavours/generic"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"os"
@@ -26,7 +26,7 @@ import (
 func main() {
 	logroot.Logger().SetLevel(logging.DebugLevel)
 
-	f := flavours.Generic{}
+	f := generic.Flavour{}
 	agent := core.NewAgent(logroot.Logger(), 15*time.Second, f.Plugins()...)
 
 	err := core.EventLoopWithInterrupt(agent, nil)

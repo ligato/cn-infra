@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package flavours
+package generic
 
 import (
 	"github.com/ligato/cn-infra/core"
@@ -21,10 +21,10 @@ import (
 	"github.com/ligato/cn-infra/messaging/kafka"
 )
 
-// Generic is set of common used generic plugins. This flavour can be used as a base
+// Flavour is set of common used generic plugins. This flavour can be used as a base
 // for different flavours. The plugins are initialized in the same order as they appear
 // in the structure.
-type Generic struct {
+type Flavour struct {
 	injected bool
 
 	Logrus logrus.Plugin
@@ -32,8 +32,9 @@ type Generic struct {
 	Kafka  kafka.Plugin
 }
 
-// Inject interconnects plugins - inject the dependencies
-func (g *Generic) Inject() error {
+// Inject interconnects plugins - inject the dependencies. If it has been called
+// already it is no op.
+func (g *Flavour) Inject() error {
 	if g.injected {
 		return nil
 	}
@@ -44,8 +45,10 @@ func (g *Generic) Inject() error {
 	return nil
 }
 
-// Plugins returns all plugins from the flavour. The set of plugins is supposed to be passed to the agent constructor.
-func (g *Generic) Plugins() []*core.NamedPlugin {
+// Plugins returns all plugins from the flavour. The set of plugins is supposed
+// to be passed to the agent constructor. The method calls inject to make sure that
+// dependencies have been injected.
+func (g *Flavour) Plugins() []*core.NamedPlugin {
 	g.Inject()
 	return core.ListPluginsInFlavor(g)
 }
