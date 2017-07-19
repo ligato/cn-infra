@@ -17,27 +17,26 @@ package core
 import (
 	log "github.com/ligato/cn-infra/logging/logrus"
 	"reflect"
-	"strings"
 )
 
 // ListPluginsInFlavor uses very simple reflection to traverse top level fields of Flavor structure.
-// Each field is entry in response map. The key of the map is the name of the field.
-func ListPluginsInFlavor(flavor interface{} /*pointer*/) (plugins []*NamedPlugin) {
+// It extracts all plugins and returns them as slice of NamedPlugins.
+func ListPluginsInFlavor(flavor interface{}) (plugins []*NamedPlugin) {
 	return listPluginsInFlavor(reflect.ValueOf(flavor))
 }
 
 // listPluginsInFlavor checks every field and tries to cast it to Plugin or inspect it's type recursively
-func listPluginsInFlavor(flavorValue reflect.Value) []*NamedPlugin{
+func listPluginsInFlavor(flavorValue reflect.Value) []*NamedPlugin {
 	var res []*NamedPlugin
 
 	flavorType := flavorValue.Type()
 	log.WithField("flavorType", flavorType).Debug("ListPluginsInFlavor")
 
-	if flavorType.Kind() == reflect.Ptr || flavorType.Kind() == reflect.Ptr {
+	if flavorType.Kind() == reflect.Ptr {
 		flavorType = flavorType.Elem()
 	}
 
-	if flavorValue.Kind() == reflect.Ptr || flavorValue.Kind() == reflect.Ptr {
+	if flavorValue.Kind() == reflect.Ptr {
 		flavorValue = flavorValue.Elem()
 	}
 
@@ -52,7 +51,8 @@ func listPluginsInFlavor(flavorValue reflect.Value) []*NamedPlugin{
 		numField := flavorType.NumField()
 		for i := 0; i < numField; i++ {
 			field := flavorType.Field(i)
-			exported := field.Name != "" && strings.ToUpper(string(field.Name[:1]))[0] == field.Name[0]
+
+			exported := field.PkgPath == "" // PkgPath is empty for exported fields
 			if !exported {
 				log.WithField("fieldName", field.Name).Debug("Unexported field")
 				continue
@@ -72,7 +72,7 @@ func listPluginsInFlavor(flavorValue reflect.Value) []*NamedPlugin{
 	return res
 }
 
-// fieldPlugin tries to cast to Plugin
+// fieldPlugin tries to cast given field to Plugin
 func fieldPlugin(field reflect.StructField, fieldVal reflect.Value, pluginType reflect.Type) Plugin {
 	switch fieldVal.Kind() {
 	case reflect.Struct:
