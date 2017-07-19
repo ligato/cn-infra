@@ -1,7 +1,7 @@
 # IDX Map
 
 The idxmap package provides enhanced mapping structure. In addition to basic built-in map structure,
-it allows to create secondary indexes that can also be leveraged for lookup up. One can also subscribe 
+it allows to create secondary indexes that can also be leveraged for lookup. One can also subscribe 
 for changes and receive notification once an item is added or removed.
 
 Function `RegisterName` adds value(item) into the mapping. In the function call the primary index(name) for
