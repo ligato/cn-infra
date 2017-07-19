@@ -32,7 +32,7 @@ type Flavour struct {
 	Kafka  kafka.Plugin
 }
 
-// Inject interconnects plugins - inject the dependencies. If it has been called
+// Inject interconnects plugins - injects the dependencies. If it has been called
 // already it is no op.
 func (g *Flavour) Inject() error {
 	if g.injected {

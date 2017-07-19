@@ -23,7 +23,7 @@ import (
 )
 
 // PluginID used in the Agent Core flavors
-const PluginID core.PluginName = "ETCD"
+const PluginID core.PluginName = "EtcdClient"
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {

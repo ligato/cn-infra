@@ -49,11 +49,11 @@ func (plugin *Skeleton) Init() (err error) {
 // AfterInit is called once all plugin have been initialized. The connection to datastore
 // is established in this phase.
 func (plugin *Skeleton) AfterInit() (err error) {
-	l, err := plugin.logFactory.NewLogger(plugin.name)
+	logger, err := plugin.logFactory.NewLogger(plugin.name)
 	if err != nil {
 		return err
 	}
-	plugin.conn, err = plugin.connect(l)
+	plugin.conn, err = plugin.connect(logger)
 	if err == nil {
 		plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.conn, &keyval.SerializerJSON{})
 	}

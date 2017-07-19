@@ -23,7 +23,7 @@ import (
 )
 
 // PluginID used in the Agent Core flavors
-const PluginID core.PluginName = "Kafka"
+const PluginID core.PluginName = "KafkaClient"
 
 var kafkaConfigFile string
 

@@ -21,7 +21,7 @@ import (
 )
 
 // PluginID used in the Agent Core flavors
-const PluginID core.PluginName = "Redis"
+const PluginID core.PluginName = "RedisClient"
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
