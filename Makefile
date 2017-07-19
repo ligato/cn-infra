@@ -3,6 +3,7 @@ include Makeroutines.mk
 VERSION=$(shell git rev-parse HEAD)
 DATE=$(shell date +'%Y-%m-%dT%H:%M%:z')
 COVER_DIR=/tmp/
+LDFLAGS=-ldflags '-X github.com/ligato/cn-infra/core.BuildVersion=$(VERSION) -X github.com/ligato/cn-infra/core.BuildDate=$(DATE)'
 
 # run all tests
 define test_only
@@ -61,6 +62,14 @@ define lint_only
     @echo "# done"
 endef
 
+# build generic-agent only
+define build_generic_agent_only
+    @echo "# building generic-agent"
+    @cd cmd/generic-agent && go build -v ${LDFLAGS}
+    @echo "# done"
+endef
+
+
 # build examples only
 define build_examples_only
     @echo "# building examples"
@@ -82,9 +91,17 @@ define clean_examples_only
     @echo "# done"
 endef
 
+# clean generic-agent only
+define clean_generic_agent_only
+    @echo "# cleaning generic agent"
+    @rm -f cmd/generic-agent/generic-agent
+    @echo "# done"
+endef
+
 # build all binaries
 build:
 	$(call build_examples_only)
+	$(call build_generic_agent_only)
 
 # install dependencies
 install-dep:

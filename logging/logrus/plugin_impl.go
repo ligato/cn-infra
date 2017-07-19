@@ -12,37 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package redis
+package logrus
 
 import (
-	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/plugin"
 )
 
-// PluginID used in the Agent Core flavors
-const PluginID core.PluginName = "RedisClient"
-
-// Plugin implements Plugin interface therefore can be loaded with other plugins
+// Plugin implements logging plugin using Logrus library.
 type Plugin struct {
-	LogFactory logging.LogFactory
 	*plugin.Skeleton
 }
 
-// Init is called on plugin startup. It establishes the connection to redis.
+// Init is called at the plugin startup phase
 func (p *Plugin) Init() error {
-
-	// FIXME: properly retrieve config
-	pool, err := CreateNodeClientConnPool(NodeClientConfig{})
-	if err != nil {
-		return err
+	factory := func(name string) (logging.Logger, error) {
+		l, err := NewNamed(name)
+		if err != nil {
+			return l, err
+		}
+		l.SetLevel(logging.DebugLevel) //TODO make default level configurable
+		return l, err
 	}
 
-	skeleton := plugin.NewSkeleton(string(PluginID), p.LogFactory,
-		func(log logging.Logger) (plugin.Connection, error) {
-			return NewBytesConnectionRedis(pool, log)
-		},
-	)
-	p.Skeleton = skeleton
-	return p.Skeleton.Init()
+	p.Skeleton = plugin.NewSkeleton(factory, func() logging.Registry { return LoggerRegistry })
+
+	p.Skeleton.Init()
+	return nil
 }
