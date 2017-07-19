@@ -24,16 +24,18 @@ type Plugin struct {
 	*plugin.Skeleton
 }
 
-// NewLogrusPlugin creates a new instance of Logrus logging plugin.
-func NewLogrusPlugin() *Plugin {
+func (p *Plugin) Init() error {
 	factory := func(name string) (logging.Logger, error) {
 		l, err := NewNamed(name)
 		if err != nil {
 			return l, err
 		}
-		l.SetLevel(logging.DebugLevel)
+		l.SetLevel(logging.DebugLevel) //TODO make default level configurable
 		return l, err
 	}
-	sk := plugin.NewSkeleton(factory, func() logging.Registry { return LoggerRegistry })
-	return &Plugin{sk}
+
+	p.Skeleton = plugin.NewSkeleton(factory, func() logging.Registry { return LoggerRegistry })
+
+	p.Skeleton.Init()
+	return nil
 }

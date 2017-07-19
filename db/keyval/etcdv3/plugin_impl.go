@@ -15,10 +15,11 @@
 package etcdv3
 
 import (
-	"github.com/coreos/etcd/clientv3"
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/utils/config"
+	"github.com/namsral/flag"
 )
 
 // PluginID used in the Agent Core flavors
@@ -26,13 +27,34 @@ const PluginID core.PluginName = "ETCD"
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
+	LogFactory     logging.LogFactory
+	ConfigFileName string
 	*plugin.Skeleton
 }
 
-// NewEtcdPlugin creates a new instance of Plugin. Configuration of etcd connection is loaded from file.
-func NewEtcdPlugin(cfg *Config) *Plugin {
+var defaultConfigFileName string
 
-	skeleton := plugin.NewSkeleton(string(PluginID),
+func init() {
+	flag.StringVar(&defaultConfigFileName, "etcdv3-config", "", "Location of the Etcd configuration file; also set via 'ETCDV3_CONFIG' env variable.")
+}
+
+func (p *Plugin) Init() error {
+	cfg := &Config{}
+	var configFile string
+	if p.ConfigFileName != "" {
+		configFile = p.ConfigFileName
+	} else if defaultConfigFileName != "" {
+		configFile = defaultConfigFileName
+	}
+
+	if configFile != "" {
+		err := config.ParseConfigFromYamlFile(configFile, cfg)
+		if err != nil {
+			return err
+		}
+	}
+
+	skeleton := plugin.NewSkeleton(string(PluginID), p.LogFactory,
 		func(log logging.Logger) (plugin.Connection, error) {
 			etcdConfig, err := ConfigToClientv3(cfg)
 			if err != nil {
@@ -41,15 +63,7 @@ func NewEtcdPlugin(cfg *Config) *Plugin {
 			return NewEtcdConnectionWithBytes(*etcdConfig, log)
 		},
 	)
-	return &Plugin{Skeleton: skeleton}
-}
-
-// NewEtcdPluginUsingClient creates a new instance of Plugin using given etcd client
-func NewEtcdPluginUsingClient(client *clientv3.Client) *Plugin {
-	skeleton := plugin.NewSkeleton(string("etcdv3"),
-		func(log logging.Logger) (plugin.Connection, error) {
-			return NewEtcdConnectionUsingClient(client, log)
-		},
-	)
-	return &Plugin{Skeleton: skeleton}
+	p.Skeleton = skeleton
+	p.Skeleton.Init()
+	return nil
 }

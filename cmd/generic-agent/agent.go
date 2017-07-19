@@ -19,7 +19,6 @@ import (
 	"github.com/ligato/cn-infra/core/flavours"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
-	"github.com/namsral/flag"
 	"os"
 	"time"
 )
@@ -28,16 +27,11 @@ func main() {
 	logroot.Logger().SetLevel(logging.DebugLevel)
 
 	f := flavours.Generic{}
-	f.RegisterFlags()
-	flag.Parse()
+	f.Inject()
+	agent := core.NewAgent(logroot.Logger(), 15*time.Second, f.Plugins()...)
 
-	err := f.ApplyConfig()
+	err := core.EventLoopWithInterrupt(agent, nil)
 	if err != nil {
-		logroot.Logger().Error(err)
 		os.Exit(1)
 	}
-	f.Inject()
-
-	agent := core.NewAgent(logroot.Logger(), 15*time.Second, f.Plugins()...)
-	core.EventLoopWithInterrupt(agent, nil)
 }

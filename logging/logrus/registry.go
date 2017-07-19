@@ -26,6 +26,7 @@ var LoggerRegistry *LogRegistry
 
 // LogRegistry contains logger map and rwlock guarding access to it
 type LogRegistry struct {
+	// mapping holds logger instances indexed by their names
 	mapping map[string]*Logger
 	rwmutex sync.RWMutex
 }
@@ -81,11 +82,11 @@ func (lr *LogRegistry) GetLevel(logger string) (string, error) {
 	return lg.GetLevel().String(), nil
 }
 
-// GetLoggerByName returns a logger instance identified by name from registry
-func (lr *LogRegistry) GetLoggerByName(name string) (logger logging.Logger, found bool) {
+// Lookup returns a logger instance identified by name from registry
+func (lr *LogRegistry) Lookup(loggerName string) (logger logging.Logger, found bool) {
 	lr.rwmutex.RLock()
 	defer lr.rwmutex.RUnlock()
-	logger, found = lr.mapping[name]
+	logger, found = lr.mapping[loggerName]
 	return
 }
 

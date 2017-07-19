@@ -19,53 +19,21 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/messaging/kafka"
-	"github.com/ligato/cn-infra/utils/config"
-	"github.com/namsral/flag"
 )
 
 // Generic is set of common used generic plugins. This flavour can be used as a base
 // for different flavours. The plugins are initialized in the same order as they appear
 // in the structure.
 type Generic struct {
-	etcdConfigFile  string
-	kafkaConfigFile string
-
-	Lg    *logrus.Plugin
-	Etcd  *etcdv3.Plugin
-	Kafka *kafka.Plugin
-}
-
-// RegisterFlags registers the options that need to be parsed.
-func (f *Generic) RegisterFlags() {
-	flag.StringVar(&f.etcdConfigFile, "etcdv3-config", "", "Location of the Etcd configuration file; also set via 'ETCDV3_CONFIG' env variable.")
-	flag.StringVar(&f.kafkaConfigFile, "kafka-config", "", "Location of the Kafka configuration file; also set via 'KAFKA_CONFIG' env variable.")
-}
-
-// ApplyConfig loads the config and creates the plugins.
-func (f *Generic) ApplyConfig() error {
-	// config Parsing
-	var etcdCfg etcdv3.Config
-	if f.etcdConfigFile != "" {
-		err := config.ParseConfigFromYamlFile(f.etcdConfigFile, &etcdCfg)
-		if err != nil {
-			return err
-		}
-	}
-
-	// call the constructors
-	f.Lg = logrus.NewLogrusPlugin()
-	f.Etcd = etcdv3.NewEtcdPlugin(&etcdCfg)
-	f.Kafka = kafka.NewKafkaPlugin(f.kafkaConfigFile)
-
-	return nil
+	Logrus logrus.Plugin
+	Etcd   etcdv3.Plugin
+	Kafka  kafka.Plugin
 }
 
 // Inject interconnects plugins - inject the dependencies
 func (f *Generic) Inject() error {
-
-	f.Etcd.Lg = f.Lg
-	f.Kafka.Lg = f.Lg
-
+	f.Etcd.LogFactory = &f.Logrus
+	f.Kafka.LogFactory = &f.Logrus
 	return nil
 }
 
