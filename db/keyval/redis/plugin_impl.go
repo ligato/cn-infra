@@ -23,19 +23,25 @@ import (
 // PluginID used in the Agent Core flavors
 const PluginID core.PluginName = "Redis"
 
-// ProtoPluginRedis implements Plugin interface therefore can be loaded with other plugins
-type ProtoPluginRedis struct {
+// Plugin implements Plugin interface therefore can be loaded with other plugins
+type Plugin struct {
+	LogFactory logging.LogFactory
 	*plugin.Skeleton
-	//TODO `inject:""`	-- Copied from etcdv3/plugin_impl.go.  What should be done here?
 }
 
-// NewRedisPlugin creates a new instance of ProtoPluginRedis.
-func NewRedisPlugin(pool ConnPool, log logging.Logger) *ProtoPluginRedis {
+func (p *Plugin) Init() error {
 
-	skeleton := plugin.NewSkeleton(string(PluginID),
+	// FIXME: properly retrieve config
+	pool, err := CreateNodeClientConnPool(NodeClientConfig{})
+	if err != nil {
+		return err
+	}
+
+	skeleton := plugin.NewSkeleton(string(PluginID), p.LogFactory,
 		func(log logging.Logger) (plugin.Connection, error) {
 			return NewBytesConnectionRedis(pool, log)
 		},
 	)
-	return &ProtoPluginRedis{Skeleton: skeleton}
+	p.Skeleton = skeleton
+	return p.Skeleton.Init()
 }
