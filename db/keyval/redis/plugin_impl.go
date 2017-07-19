@@ -29,6 +29,7 @@ type Plugin struct {
 	*plugin.Skeleton
 }
 
+// Init is called on plugin startup. It establishes the connection to redis.
 func (p *Plugin) Init() error {
 
 	// FIXME: properly retrieve config
