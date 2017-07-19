@@ -51,5 +51,17 @@ The generic flavour reads the following commandline/env variable arguments:
 
 ### Extending the generic flavour
 
-TODO:
-  list interfaces that can be specified as dependencies in flavours extend the generic flavour.
+The following interfaces are exposed by plugins included in the generic flavour:
+
+- LogPlugin
+
+     `logging.LogFactory`
+     `logging.LogManagement`
+
+- EtcdPlugin
+
+     `keyval.KvPlugin`
+
+- KafkaPlugin
+
+     `kafka.Mux`
