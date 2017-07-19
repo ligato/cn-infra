@@ -19,6 +19,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/messaging/kafka"
+	"github.com/ligato/cn-infra/servicelabel"
 	"github.com/ligato/cn-infra/utils/config"
 	"github.com/namsral/flag"
 )
@@ -27,18 +28,21 @@ import (
 // for different flavours. The plugins are initialized in the same order as they appear
 // in the structure.
 type Generic struct {
-	etcdConfigFile  string
-	kafkaConfigFile string
+	microserviceLabel string
+	etcdConfigFile    string
+	kafkaConfigFile   string
 
-	Lg    *logrus.Plugin
-	Etcd  *etcdv3.Plugin
-	Kafka *kafka.Plugin
+	Lg           *logrus.Plugin
+	ServiceLabel *servicelabel.Plugin
+	Etcd         *etcdv3.Plugin
+	Kafka        *kafka.Plugin
 }
 
 // RegisterFlags registers the options that need to be parsed.
 func (f *Generic) RegisterFlags() {
 	flag.StringVar(&f.etcdConfigFile, "etcdv3-config", "", "Location of the Etcd configuration file; also set via 'ETCDV3_CONFIG' env variable.")
 	flag.StringVar(&f.kafkaConfigFile, "kafka-config", "", "Location of the Kafka configuration file; also set via 'KAFKA_CONFIG' env variable.")
+	flag.StringVar(&f.microserviceLabel, "microservice-label", "vpp1", "microservice label; also set via 'MICROSERVICE_LABEL' env variable.")
 }
 
 // ApplyConfig loads the config and creates the plugins.
@@ -54,6 +58,7 @@ func (f *Generic) ApplyConfig() error {
 
 	// call the constructors
 	f.Lg = logrus.NewLogrusPlugin()
+	f.ServiceLabel = servicelabel.NewServiceLabelPlugin(f.microserviceLabel)
 	f.Etcd = etcdv3.NewEtcdPlugin(&etcdCfg)
 	f.Kafka = kafka.NewKafkaPlugin(f.kafkaConfigFile)
 

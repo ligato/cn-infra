@@ -48,15 +48,19 @@ The flavour can be reused in order to build more complex agent.
 The generic flavour reads the following commandline/env variable arguments:
 - `etcdv3-config` Location of the Etcd configuration file; also set via 'ETCDV3_CONFIG' env variable.
 - `kafka-config` Location of the Kafka configuration file; also set via 'KAFKA_CONFIG' env variable.
+- `microservice-label` Microservice label; also set via 'MICROSERVICE_LABEL' env variable.
 
 ### Extending the generic flavour
 
-The following interfaces are exposed by plugins included in the generic flavour:
+The following API is exposed by plugins included in the generic flavour:
 
 - LogPlugin
 
      `logging.LogFactory`
      `logging.LogManagement`
+     
+- ServiceLabel
+     `servicelabel.Plugin`
 
 - EtcdPlugin
 
