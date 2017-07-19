@@ -24,6 +24,7 @@ type Plugin struct {
 	*plugin.Skeleton
 }
 
+// Init is called at the plugin startup phase
 func (p *Plugin) Init() error {
 	factory := func(name string) (logging.Logger, error) {
 		l, err := NewNamed(name)

@@ -38,6 +38,7 @@ func init() {
 	flag.StringVar(&defaultConfigFileName, "etcdv3-config", "", "Location of the Etcd configuration file; also set via 'ETCDV3_CONFIG' env variable.")
 }
 
+// Init is called at plugin startup. The connection to etcd is established.
 func (p *Plugin) Init() error {
 	cfg := &Config{}
 	var configFile string
