@@ -20,6 +20,7 @@ If you are interested in contributing, please see the [contribution guidelines](
 
 ![arch](high_level_arch_cninfra.png "High Level Architecture of cn-infra")
 
+Brief description:
 * RPC - Easily to expose go routines using REST & GRPC
 * DB - provides a common API and connectivity to the data store (etcd, Redis, Casssandra)
 * Messaging - provides a common API and connectivity to message busses (Kafka, ...)
