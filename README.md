@@ -21,10 +21,10 @@ If you are interested in contributing, please see the [contribution guidelines](
 ![arch](high_level_arch_cninfra.png "High Level Architecture of cn-infra")
 
 Brief description:
-* RPC - Easily to expose go routines using REST & GRPC
+* RPC - allows to easily expose go routines (nie radsej go API?) via REST & GRPC
 * DB - provides a common API and connectivity to the data store (etcd, Redis, Casssandra)
 * Messaging - provides a common API and connectivity to message busses (Kafka, ...)
-* Logs - Integrated Logru for logging plugin plus RPC to change log level at runtime.
+* Logs - Integrated Logrus for logging plugin plus RPC to change log level at runtime.
 * Health - Self health check mechanism among plugins plus RPCs:
   *  probes (callable remotely from K8s)
   *  status (health check status) 
