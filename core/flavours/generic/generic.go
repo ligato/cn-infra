@@ -19,6 +19,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/messaging/kafka"
+	"github.com/ligato/cn-infra/servicelabel"
 )
 
 // Flavour is set of common used generic plugins. This flavour can be used as a base
@@ -27,9 +28,10 @@ import (
 type Flavour struct {
 	injected bool
 
-	Logrus logrus.Plugin
-	Etcd   etcdv3.Plugin
-	Kafka  kafka.Plugin
+	Logrus       logrus.Plugin
+	ServiceLabel servicelabel.Plugin
+	Etcd         etcdv3.Plugin
+	Kafka        kafka.Plugin
 }
 
 // Inject interconnects plugins - injects the dependencies. If it has been called
@@ -42,6 +44,7 @@ func (g *Flavour) Inject() error {
 
 	g.Etcd.LogFactory = &g.Logrus
 	g.Kafka.LogFactory = &g.Logrus
+	g.Kafka.ServiceLabel = &g.ServiceLabel
 	return nil
 }
 

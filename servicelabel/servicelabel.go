@@ -14,26 +14,30 @@
 
 package servicelabel
 
-import "fmt"
+import (
+	"github.com/namsral/flag"
+)
 
 // default service key prefix, can be changed in the build time using ldflgs, e.g.
 // -ldflags '-X github.com/ligato/cn-infra/servicelabel.agentPrefix=/xyz/'
 var agentPrefix = "/vnf-agent/"
 
 type Plugin struct {
-	// microserviceLabelFlag identifies particular VNF.
+	// MicroserviceLabel identifies particular VNF.
 	// Used primarily as a key prefix to ETCD data store.
-	microserviceLabelFlag string
+	MicroserviceLabel string
 }
 
-func NewServiceLabelPlugin(label string) *Plugin {
-	return &Plugin{label}
+var microserviceLabelFlag string
+
+func init() {
+	flag.StringVar(&microserviceLabelFlag, "microservice-label", "vpp1", 		"microservice label; also set via 'MICROSERVICE_LABEL' env variable.")
 }
 
 // Init is called at plugin initialization.
 func (p *Plugin) Init() error {
-	if p.microserviceLabelFlag == "" {
-		return fmt.Errorf("Empty service label string is not valid.")
+	if p.MicroserviceLabel == "" {
+		p.MicroserviceLabel = microserviceLabelFlag
 	}
 	return nil
 }
@@ -46,13 +50,13 @@ func (p *Plugin) Close() error {
 // GetAgentLabel returns string that is supposed to be used to distinguish
 // (ETCD) key prefixes for particular VNF (particular VPP Agent configuration)
 func (p *Plugin) GetAgentLabel() string {
-	return p.microserviceLabelFlag
+	return p.MicroserviceLabel
 }
 
 // GetAgentPrefix returns the string that is supposed to be used as the prefix for configuration of current
-// microserviceLabel "subtree" of the particular VPP Agent instance (e.g. in ETCD).
+// MicroserviceLabel "subtree" of the particular VPP Agent instance (e.g. in ETCD).
 func (p *Plugin) GetAgentPrefix() string {
-	return agentPrefix + p.microserviceLabelFlag + "/"
+	return agentPrefix + p.MicroserviceLabel + "/"
 }
 
 // GetDifferentAgentPrefix returns the string that is supposed to be used as the prefix for configuration

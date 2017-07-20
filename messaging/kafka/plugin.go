@@ -18,6 +18,7 @@ import (
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/messaging/kafka/mux"
+	"github.com/ligato/cn-infra/servicelabel"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
 )
@@ -39,8 +40,9 @@ type Mux interface {
 
 // Plugin provides API for interaction with kafka brokers.
 type Plugin struct {
-	LogFactory logging.LogFactory
-	mx         *mux.Multiplexer
+	LogFactory   logging.LogFactory
+	ServiceLabel *servicelabel.Plugin
+	mx           *mux.Multiplexer
 }
 
 // Init is called at plugin initialization.
@@ -50,7 +52,7 @@ func (p *Plugin) Init() error {
 		return err
 	}
 
-	p.mx, err = mux.InitMultiplexer(kafkaConfigFile, string(PluginID), l) // TODO: use service label as a name
+	p.mx, err = mux.InitMultiplexer(kafkaConfigFile, p.ServiceLabel.GetAgentLabel(), l)
 	return err
 }
 
