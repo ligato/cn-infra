@@ -9,9 +9,9 @@ function static_analysis() {
 
   local FILES=$(find "${PWD}" -mount -name "*.go" -type f -not -path "${PWD}/vendor/*" -exec grep -LE "${WHITELIST_CONTENT}"  {} +)
 
-  local CMD=$(${TOOL} "${PWD}/cmd${SELECTOR}")
   local CORE=$(${TOOL} "${PWD}/core${SELECTOR}")
   local DB=$(${TOOL} "${PWD}/db${SELECTOR}")
+  local EXAMPLES=$(${TOOL} "${PWD}/examples${SELECTOR}")
   local HTTP=$(${TOOL} "${PWD}/http${SELECTOR}")
   local IDXMAP=$(${TOOL} "${PWD}/idxmap${SELECTOR}")
   local LOGGING=$(${TOOL} "${PWD}/logging${SELECTOR}")
@@ -19,9 +19,9 @@ function static_analysis() {
   local SERVICELABEL=$(${TOOL} "${PWD}/servicelabel${SELECTOR}")
   local UTILS=$(${TOOL} "${PWD}/utils${SELECTOR}")
 
-  local ALL="$CMD
-$CORE
+  local ALL="$CORE
 $DB
+$EXAMPLES
 $HTTP
 $IDXMAP
 $LOGGING

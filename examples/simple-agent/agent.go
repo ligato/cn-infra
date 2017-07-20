@@ -12,15 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package generic
+package main
 
 import (
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/http"
+	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/messaging/kafka"
 	"github.com/ligato/cn-infra/servicelabel"
+	"os"
+	"time"
 )
 
 // Flavour is set of common used generic plugins. This flavour can be used as a base
@@ -57,4 +61,16 @@ func (g *Flavour) Inject() error {
 func (g *Flavour) Plugins() []*core.NamedPlugin {
 	g.Inject()
 	return core.ListPluginsInFlavor(g)
+}
+
+func main() {
+	logroot.Logger().SetLevel(logging.DebugLevel)
+
+	f := Flavour{}
+	agent := core.NewAgent(logroot.Logger(), 15*time.Second, f.Plugins()...)
+
+	err := core.EventLoopWithInterrupt(agent, nil)
+	if err != nil {
+		os.Exit(1)
+	}
 }

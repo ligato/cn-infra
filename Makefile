@@ -62,10 +62,10 @@ define lint_only
     @echo "# done"
 endef
 
-# build generic-agent only
-define build_generic_agent_only
-    @echo "# building generic-agent"
-    @cd cmd/generic-agent && go build -v ${LDFLAGS}
+# build simple-agent only
+define build_simple_agent_only
+    @echo "# building simple-agent"
+    @cd examples/simple-agent && go build -v ${LDFLAGS}
     @echo "# done"
 endef
 
@@ -86,22 +86,23 @@ define clean_examples_only
     @echo "# cleaning examples"
     @cd db/keyval/etcdv3/examples && make clean
     @cd db/keyval/redis/examples && make clean
+    @cd db/sql/cassandra/examples/simple && rm -f simple
     @cd logging/logrus/examples && make clean
     @cd messaging/kafka/examples && make clean
     @echo "# done"
 endef
 
-# clean generic-agent only
-define clean_generic_agent_only
-    @echo "# cleaning generic agent"
-    @rm -f cmd/generic-agent/generic-agent
+# clean simple-agent only
+define clean_simple_agent_only
+    @echo "# cleaning simple agent"
+    @rm -f examples/simple-agent/simple-agent
     @echo "# done"
 endef
 
 # build all binaries
 build:
 	$(call build_examples_only)
-	$(call build_generic_agent_only)
+	$(call build_simple_agent_only)
 
 # install dependencies
 install-dep:
@@ -136,7 +137,7 @@ lint:
 clean:
 	@echo "# cleanup completed"
 	$(call clean_examples_only)
-
+	$(call clean_simple_agent_only)
 # run all targets
 all:
 	$(call lint_only)
