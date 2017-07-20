@@ -22,6 +22,7 @@ import (
 // -ldflags '-X github.com/ligato/cn-infra/servicelabel.agentPrefix=/xyz/'
 var agentPrefix = "/vnf-agent/"
 
+// Plugin exposes the service label(i.e. the string used to identify the particular VNF) to the other plugins.
 type Plugin struct {
 	// MicroserviceLabel identifies particular VNF.
 	// Used primarily as a key prefix to ETCD data store.

@@ -47,12 +47,12 @@ type Plugin struct {
 
 // Init is called at plugin initialization.
 func (p *Plugin) Init() error {
-	l, err := p.LogFactory.NewLogger(string(PluginID))
+	logger, err := p.LogFactory.NewLogger(string(PluginID))
 	if err != nil {
 		return err
 	}
 
-	p.mx, err = mux.InitMultiplexer(kafkaConfigFile, p.ServiceLabel.GetAgentLabel(), l)
+	p.mx, err = mux.InitMultiplexer(kafkaConfigFile, p.ServiceLabel.GetAgentLabel(), logger)
 	return err
 }
 
