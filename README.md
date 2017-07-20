@@ -9,11 +9,6 @@ The CN infra is a framework that can be used to build a customized management/co
 plane for cloud-native Virtual Network Functions (VNFs). Cloud-native VNFs are also 
 known as "CNFs".
 
-GoDoc can be browsed [online](https://godoc.org/github.com/ligato/cn-infra).
-
-The tool used for managing third-party dependencies is [Glide](https://github.com/Masterminds/glide). After adding or updating
-a dependency in `glide.yaml` run `make install-dep` to download specified dependencies into the vendor folder. 
-
 If you are interested in contributing, please see the [contribution guidelines](CONTRIBUTING.md).
 
 # Architecture
@@ -29,3 +24,23 @@ Brief description:
   *  probes (callable remotely from K8s)
   *  status (health check status) 
 * Core - lifecycle management of plugins (loading, initialization, unloading)
+
+# Quickstart
+Following code snippet illustrates how to start your own flavour of plugins.
+Whole code can be found [here](examples/simple-agent/agent.go).
+```
+func main() {
+	flavour := Flavour{}
+	agent := core.NewAgent(logroot.Logger(), 15*time.Second, flavour.Plugins()...)
+
+	err := core.EventLoopWithInterrupt(agent, nil)
+	if err != nil {
+		os.Exit(1)
+	}
+}
+```
+
+GoDoc can be browsed [online](https://godoc.org/github.com/ligato/cn-infra).
+
+The tool used for managing third-party dependencies is [Glide](https://github.com/Masterminds/glide). After adding or updating
+a dependency in `glide.yaml` run `make install-dep` to download specified dependencies into the vendor folder. 
