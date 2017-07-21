@@ -59,11 +59,11 @@ func (plugin *Skeleton) Init() (err error) {
 
 	prefixedBroker := plugin.conn.NewBroker(plugin.serviceLabel.GetAgentPrefix())
 	prefixedWatcher := plugin.conn.NewWatcher(plugin.serviceLabel.GetAgentPrefix())
-	datasync.RegisterTransport(dbsync.NewAdapter("local", prefixedBroker, prefixedWatcher))
-	datasync.RegisterTransportOfDifferentAgent(func(microcerviceLabel string) datasync.TransportAdapter {
-		dbOfDifferentAgent := plugin.conn.NewBroker(plugin.serviceLabel.GetDifferentAgentPrefix(microcerviceLabel))
-		dbWOfDifferentAgent := plugin.conn.NewWatcher(plugin.serviceLabel.GetDifferentAgentPrefix(microcerviceLabel))
-		return dbsync.NewAdapter(microcerviceLabel, dbOfDifferentAgent, dbWOfDifferentAgent)
+	datasync.RegisterTransport(dbsync.NewAdapter(plugin.name, prefixedBroker, prefixedWatcher))
+	datasync.RegisterTransportOfDifferentAgent(func(microserviceLabel string) datasync.TransportAdapter {
+		dbOfDifferentAgent := plugin.conn.NewBroker(plugin.serviceLabel.GetDifferentAgentPrefix(microserviceLabel))
+		dbWOfDifferentAgent := plugin.conn.NewWatcher(plugin.serviceLabel.GetDifferentAgentPrefix(microserviceLabel))
+		return dbsync.NewAdapter(microserviceLabel, dbOfDifferentAgent, dbWOfDifferentAgent)
 	})
 	return err
 
