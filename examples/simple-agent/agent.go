@@ -24,6 +24,7 @@ import (
 	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/messaging/kafka"
 	"github.com/ligato/cn-infra/servicelabel"
+	"github.com/ligato/cn-infra/statuscheck"
 	"os"
 	"time"
 )
@@ -40,6 +41,7 @@ type Flavour struct {
 	ServiceLabel servicelabel.Plugin
 	Etcd         etcdv3.Plugin
 	Kafka        kafka.Plugin
+	StatusCheck  statuscheck.Plugin
 }
 
 // Inject interconnects plugins - injects the dependencies. If it has been called
@@ -57,6 +59,7 @@ func (g *Flavour) Inject() error {
 	g.Etcd.ServiceLabel = &g.ServiceLabel
 	g.Kafka.LogFactory = &g.Logrus
 	g.Kafka.ServiceLabel = &g.ServiceLabel
+	g.StatusCheck.HTTP = &g.HTTP
 	return nil
 }
 
