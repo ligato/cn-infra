@@ -3,8 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Shopify/sarama"
-	"github.com/gogo/protobuf/proto"
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/examples/model"
 	"github.com/ligato/cn-infra/examples/simple-agent/generic"
@@ -69,9 +67,10 @@ const PluginID core.PluginName = "example-plugin"
 // ConsumerHandle is required to read messages from a topic, and PluginConnection is needed to start consuming on
 // the topic
 type ExamplePlugin struct {
-	Kafka        kafka.Mux
-	subscription chan (*client.ConsumerMessage)
-	kafkaConn    *mux.Connection
+	Kafka          kafka.Mux
+	subscription   chan (*client.ConsumerMessage)
+	kafkaByteConn  *mux.Connection
+	kafkaProtoConn *mux.ProtoConnection
 	// Successfully published kafka message is sent through the message channel, error channel otherwise
 	asyncMessageChannel chan (*client.ProducerMessage)
 	asyncErrorChannel   chan (*client.ProducerError)
@@ -82,12 +81,15 @@ type ExamplePlugin struct {
 func (plugin *ExamplePlugin) Init() (err error) {
 	// Create new kafka connection. The connection allows to consume topic/partition and to publish
 	// messages in plugin
-	plugin.kafkaConn = plugin.Kafka.NewConnection("example-plugin")
+	plugin.kafkaByteConn = plugin.Kafka.NewConnection("example-plugin")
+
+	// Create a new kafka connection that allows easily process proto-modelled messages.
+	plugin.kafkaProtoConn = plugin.Kafka.NewProtoConnection("example-plugin-proto")
 
 	// ConsumePartition is called to start consuming a topic/partition.
 	topic := "example-topic"
 	plugin.subscription = make(chan *client.ConsumerMessage)
-	err = plugin.kafkaConn.ConsumeTopic(plugin.subscription, topic)
+	err = plugin.kafkaByteConn.ConsumeTopic(plugin.subscription, topic)
 	if err != nil {
 		log.Error(err)
 	}
@@ -128,7 +130,7 @@ func (plugin *ExamplePlugin) producer() {
 	log.Info("Sending Kafka notification (string)")
 	// Synchronous message with string encoded-message. The SendSyncMessage() call
 	// returns when the message has been successfully sent to Kafka.
-	offset, err := plugin.kafkaConn.SendSyncString("example-topic", fmt.Sprintf("%s", "string-key"),
+	offset, err := plugin.kafkaByteConn.SendSyncString("example-topic", fmt.Sprintf("%s", "string-key"),
 		string(exampleFile))
 	if err != nil {
 		log.Errorf("Failed to sync-send a string message, error %v", err)
@@ -137,13 +139,13 @@ func (plugin *ExamplePlugin) producer() {
 	}
 
 	// Synchronous message with protobuf-encoded message
-	enc, _ := NewProtoEncoder(&etcd_example.EtcdExample{
+	enc := &etcd_example.EtcdExample{
 		StringVal: "value",
 		Uint32Val: uint32(0),
 		BoolVal:   true,
-	})
+	}
 	log.Info("Sending Kafka notification (protobuf)")
-	offset, err = plugin.kafkaConn.SendSyncMessage("example-topic", sarama.StringEncoder("proto-key"), enc)
+	offset, err = plugin.kafkaProtoConn.SendSyncMessage("example-topic", "proto-key", enc)
 	if err != nil {
 		log.Errorf("Failed to sync-send a proto message, error %v", err)
 	} else {
@@ -154,7 +156,7 @@ func (plugin *ExamplePlugin) producer() {
 	// on an event channel when the message has been successfully sent to Kafka. An error message is sent to
 	// the app asynchronously if the message could not be sent.
 	log.Info("Sending async Kafka notification (protobuf)")
-	plugin.kafkaConn.SendAsyncMessage("example-topic", sarama.StringEncoder("async-proto-key"), enc, "metadata",
+	plugin.kafkaProtoConn.SendAsyncMessage("example-topic", "async-proto-key", enc, "metadata",
 		plugin.asyncMessageChannel, plugin.asyncErrorChannel)
 }
 
@@ -184,31 +186,4 @@ func (plugin *ExamplePlugin) asyncEventHandler() {
 			log.Errorf("Failed to publish async message, %v", err)
 		}
 	}
-}
-
-/**********
- * Sarama *
- **********/
-
-// Encoder implementation for protobuf-encoded payloads
-type ProtoEncoder struct {
-	buf []byte
-	len int
-}
-
-func (msg *ProtoEncoder) Encode() ([]byte, error) {
-	return msg.buf, nil
-}
-
-func (msg *ProtoEncoder) Length() int {
-	return msg.len
-}
-
-// NewProtoEncoder encodes payload received from the REST API into an encoded/marshaled protobuf message.
-func NewProtoEncoder(pb proto.Message) (*ProtoEncoder, error) {
-	buf, err := proto.Marshal(pb)
-	if err != nil {
-		return nil, err
-	}
-	return &ProtoEncoder{buf, len(buf)}, nil
 }
