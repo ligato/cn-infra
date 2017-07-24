@@ -49,7 +49,7 @@ func main() {
 	// Resync plugin
 	resyncPlugin := &core.NamedPlugin{PluginName: resync.PluginID, Plugin: &resync.Plugin{}}
 	// Example plugin (ETCD)
-	examplePlugin := &core.NamedPlugin{PluginName: PluginID, Plugin: &ExamplePlugin{ServiceLabel:&flavour.ServiceLabel}}
+	examplePlugin := &core.NamedPlugin{PluginName: PluginID, Plugin: &ExamplePlugin{ServiceLabel: &flavour.ServiceLabel}}
 
 	// Create new agent
 	agent := core.NewAgent(log, 15*time.Second, append(flavour.Plugins(), resyncPlugin, examplePlugin)...)
@@ -125,7 +125,7 @@ func (plugin *ExamplePlugin) Close() error {
 
 // ExampleConfigurator usually initializes configuration-specific fields or other tasks (e.g. defines GOVPP channels
 // if they are used, checks VPP message compatibility etc.)
-type ExampleConfigurator struct{
+type ExampleConfigurator struct {
 	ServiceLabel *servicelabel.Plugin
 }
 
@@ -183,18 +183,18 @@ func (configurator *ExampleConfigurator) etcdPublisher() {
 
 	// PUT: examplePut demonstrates how to use the Data Broker Put() API to create (or update) a simple data
 	// structure into ETCD
-	dataBroker.Put(etcdKeyPrefixLabel(configurator.ServiceLabel.GetAgentLabel(),etcdIndex), exampleData)
+	dataBroker.Put(etcdKeyPrefixLabel(configurator.ServiceLabel.GetAgentLabel(), etcdIndex), exampleData)
 
 	// Prepare different set of data
 	exampleData = configurator.buildData("string2", 1, false)
 
 	// UPDATE: Put() performs both create operations (if index does not exist) and update operations
 	// (if the index exists)
-	dataBroker.Put(etcdKeyPrefixLabel(configurator.ServiceLabel.GetAgentLabel(),etcdIndex), exampleData)
+	dataBroker.Put(etcdKeyPrefixLabel(configurator.ServiceLabel.GetAgentLabel(), etcdIndex), exampleData)
 
 	// GET: exampleGet demonstrates how to use the Data Broker Get() API to read a simple data structure from ETCD
 	result := etcd_example.EtcdExample{}
-	found, _, err := dataBroker.GetValue(etcdKeyPrefixLabel(configurator.ServiceLabel.GetAgentLabel(),etcdIndex), &result)
+	found, _, err := dataBroker.GetValue(etcdKeyPrefixLabel(configurator.ServiceLabel.GetAgentLabel(), etcdIndex), &result)
 	if err != nil {
 		log.Error(err)
 	}
@@ -206,7 +206,7 @@ func (configurator *ExampleConfigurator) etcdPublisher() {
 	}
 
 	// DELETE: demonstrates how to use the Data Broker Delete() API to delete a simple data structure from ETCD
-	dataBroker.Delete(etcdKeyPrefixLabel(configurator.ServiceLabel.GetAgentLabel(),etcdIndex))
+	dataBroker.Delete(etcdKeyPrefixLabel(configurator.ServiceLabel.GetAgentLabel(), etcdIndex))
 }
 
 // Publisher creates a simple data, then demonstrates transaction operations with ETCD
@@ -240,7 +240,7 @@ func (configurator *ExampleConfigurator) etcdTxnPublisher() {
 		exampleData1 := configurator.buildData("string", uint32(i), true)
 		// putTxn.Put demonstrates how to use the Data Broker Txn Put() API. It is called from the HTTP handler
 		// when a user invokes the REST API to add a new Put() operation to the transaction
-		putTxn = putTxn.Put(etcdKeyPrefixLabel(configurator.ServiceLabel.GetAgentLabel(),etcdIndex+strconv.Itoa(i)), exampleData1)
+		putTxn = putTxn.Put(etcdKeyPrefixLabel(configurator.ServiceLabel.GetAgentLabel(), etcdIndex+strconv.Itoa(i)), exampleData1)
 	}
 	// putTxn.Commit() demonstrates how to use the Data Broker Txn Commit() API. It is called from the HTTP handler
 	// when a user invokes the REST API to commit a transaction.
@@ -255,7 +255,7 @@ func (configurator *ExampleConfigurator) etcdTxnPublisher() {
 		// deleteTxn.Delete demonstrates how to use the Data Broker Txn Delete() API. It is called from the
 		// HTTP handler when a user invokes the REST API to add a new Delete() operation to the transaction.
 		// Put and Delete operations can be combined in the same transaction chain
-		deleteTxn = deleteTxn.Delete(etcdKeyPrefixLabel(configurator.ServiceLabel.GetAgentLabel(),etcdIndex + strconv.Itoa(i)))
+		deleteTxn = deleteTxn.Delete(etcdKeyPrefixLabel(configurator.ServiceLabel.GetAgentLabel(), etcdIndex+strconv.Itoa(i)))
 	}
 
 	// Commit transactions to data store. Transaction executes multiple operations in a more efficient way in

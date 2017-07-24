@@ -2,10 +2,10 @@ package main
 
 import (
 	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/examples/simple-agent/generic"
 	log "github.com/ligato/cn-infra/logging/logrus"
 	"github.com/namsral/flag"
 	"time"
-	"github.com/ligato/cn-infra/examples/simple-agent/generic"
 )
 
 // *************************************************************************

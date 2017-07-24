@@ -18,10 +18,10 @@ import (
 	"github.com/ligato/cn-infra/datasync"
 
 	"github.com/gorilla/mux"
-	"github.com/unrolled/render"
 	"github.com/ligato/cn-infra/datasync/syncbase"
-	"net/http"
 	log "github.com/ligato/cn-infra/logging/logrus"
+	"github.com/unrolled/render"
+	"net/http"
 )
 
 // just a shortcut to make following code more readable
