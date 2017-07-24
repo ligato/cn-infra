@@ -12,5 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package logrus provides logger implementation based on Logrus library.
-package logrus
+// Package kvproto provides a wrapper that simplifies storing and retrieving
+// of proto-modelled data into/from a key-value datastore.
+package kvproto

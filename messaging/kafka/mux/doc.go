@@ -12,5 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package logrus provides logger implementation based on Logrus library.
-package logrus
+// Package mux implements a multiplexer that allows to share a single connection to kafka brokers among
+// multiple entities.
+package mux
