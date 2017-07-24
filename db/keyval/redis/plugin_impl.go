@@ -40,8 +40,8 @@ func init() {
 	flag.StringVar(&defaultConfigFileName, "redis-config", "", "Location of the Redis configuration file")
 }
 
-func (p *Plugin) retrieveConfig() (*ClusterConfig, error) {
-	cfg := &ClusterConfig{}
+func (p *Plugin) retrieveConfig() (interface{}, error) {
+	cfg := ClusterConfig{}
 	var configFile string
 	if p.ConfigFileName != "" {
 		configFile = p.ConfigFileName
@@ -50,7 +50,7 @@ func (p *Plugin) retrieveConfig() (*ClusterConfig, error) {
 	}
 
 	if configFile != "" {
-		err := config.ParseConfigFromYamlFile(configFile, cfg)
+		err := config.ParseConfigFromYamlFile(configFile, &cfg)
 		if err != nil {
 			return nil, err
 		}

@@ -38,9 +38,11 @@ var miniRedis *miniredis.Miniredis
 var mockConn *redigomock.Conn
 var mockPool *redigo.Pool
 var bytesConn *BytesConnectionRedis
+var bytesBrokerWatcher *BytesBrokerWatcherRedis
 var iKeys = []interface{}{}
 var iVals = []interface{}{}
 var iAll = []interface{}{}
+var ttl = time.Second
 var log logging.Logger
 
 var keyValues = map[string]string{
@@ -53,164 +55,209 @@ var useRedigo = false
 func TestMain(m *testing.M) {
 	log = logroot.Logger()
 
-	if os.Getenv("REGIDO") == "true" {
-		useRedigo = true
-		log.Info("Using redigo")
+	var code int
+	mockConnectionRedigo()
+	code = m.Run()
+
+	var err error
+	miniRedis, err = miniredis.Run()
+	if err != nil {
+		panic(err)
 	}
+	defer miniRedis.Close()
+	createConnectionMiniRedis()
+	code = m.Run()
 
-	if useRedigo {
-		mockConn = redigomock.NewConn()
-		for k, v := range keyValues {
-			mockConn.Command("SET", k, v).Expect("not used")
-			mockConn.Command("GET", k).Expect(v)
-			iKeys = append(iKeys, k)
-			iVals = append(iVals, v)
-			iAll = append(append(iAll, k), v)
-		}
-		mockConn.Command("GET", "key").Expect(nil)
-		mockConn.Command("GET", "bytes").Expect([]byte("bytes"))
-		mockConn.Command("GET", "nil").Expect(nil)
-
-		mockConn.Command("MGET", iKeys...).Expect(iVals)
-		mockConn.Command("DEL", iKeys...).Expect(len(keyValues))
-
-		mockConn.Command("MSET", []interface{}{"keyMap", keyValues["keyMap"]}...).Expect(nil)
-		mockConn.Command("DEL", []interface{}{"keyWest"}...).Expect(1).Expect(nil)
-		mockConn.Command("PSUBSCRIBE", []interface{}{keySpaceEventPrefix + "key*"}...).Expect(newSubscriptionResponse("psubscribe", keySpaceEventPrefix+"key*", 1))
-
-		// for negative tests
-		manufacturedError := errors.New("manufactured error")
-		mockConn.Command("SET", "error", "error").ExpectError(manufacturedError)
-		mockConn.Command("GET", "error").ExpectError(manufacturedError)
-		mockConn.Command("GET", "redisError").Expect(redigo.Error("Blah"))
-		mockConn.Command("GET", "unknown").Expect(struct{}{})
-		mockPool = &redigo.Pool{
-			Dial: func() (redigo.Conn, error) { return mockConn, nil },
-		}
-		bytesConn, _ = NewBytesConnectionRedigo(mockPool, logroot.Logger())
-	} else {
-		var err error
-		miniRedis, err = miniredis.Run()
-		if err != nil {
-			panic(err)
-		}
-		defer miniRedis.Close()
-
-		for k, v := range keyValues {
-			miniRedis.Set(k, v)
-			iKeys = append(iKeys, k)
-			iVals = append(iVals, v)
-			iAll = append(append(iAll, k), v)
-		}
-		miniRedis.Set("bytes", "bytes")
-
-		clientConfig := ClientConfig{
-			Password:     "",
-			DialTimeout:  0,
-			ReadTimeout:  0,
-			WriteTimeout: 0,
-			Pool: PoolConfig{
-				PoolSize:           0,
-				PoolTimeout:        0,
-				IdleTimeout:        0,
-				IdleCheckFrequency: 0,
-			},
-		}
-		nodeConfig := NodeConfig{
-			Endpoint: miniRedis.Addr(),
-			DB:       0,
-			AllowReadQueryToSlave: false,
-			TLS:          TLS{},
-			ClientConfig: clientConfig,
-		}
-		var client Client
-		client = goredis.NewClient(&goredis.Options{
-			Network: "tcp",
-			Addr:    nodeConfig.Endpoint,
-
-			// Database to be selected after connecting to the server
-			DB: nodeConfig.DB,
-
-			// Enables read only queries on slave nodes.
-			ReadOnly: nodeConfig.AllowReadQueryToSlave,
-
-			// TLS Config to use. When set TLS will be negotiated.
-			TLSConfig: nil,
-
-			// Optional password. Must match the password specified in the requirepass server configuration option.
-			Password: nodeConfig.Password,
-
-			// Dial timeout for establishing new connections. Default is 5 seconds.
-			DialTimeout: nodeConfig.DialTimeout * time.Second,
-			// Timeout for socket reads. If reached, commands will fail with a timeout instead of blocking. Default is 3 seconds.
-			ReadTimeout: nodeConfig.ReadTimeout * time.Second,
-			// Timeout for socket writes. If reached, commands will fail with a timeout instead of blocking. Default is ReadTimeout.
-			WriteTimeout: nodeConfig.WriteTimeout * time.Second,
-
-			// Maximum number of socket connections. Default is 10 connections per every CPU as reported by runtime.NumCPU.
-			PoolSize: nodeConfig.Pool.PoolSize,
-			// Amount of time client waits for connection if all connections are busy before returning an error. Default is ReadTimeout + 1 second.
-			PoolTimeout: nodeConfig.Pool.PoolTimeout * time.Second,
-			// Amount of time after which client closes idle connections. Should be less than server's timeout. Default is 5 minutes.
-			IdleTimeout: nodeConfig.Pool.IdleTimeout * time.Second,
-			// Frequency of idle checks. Default is 1 minute. When minus value is set, then idle check is disabled.
-			IdleCheckFrequency: nodeConfig.Pool.IdleCheckFrequency,
-
-			// Dialer creates new network connection and has priority over Network and Addr options.
-			// Dialer func() (net.Conn, error)
-			// Hook that is called when new connection is established
-			// OnConnect func(*Conn) error
-
-			// Maximum number of retries before giving up. Default is to not retry failed commands.
-			MaxRetries: 0,
-			// Minimum backoff between each retry. Default is 8 milliseconds; -1 disables backoff.
-			MinRetryBackoff: 0,
-			// Maximum backoff between each retry. Default is 512 milliseconds; -1 disables backoff.
-			MaxRetryBackoff: 0,
-		})
-		// client = &MockGoredisClient{}
-		bytesConn, _ = NewBytesConnection(client, logroot.Logger())
-	}
-
-	code := m.Run()
 	os.Exit(code)
+}
+
+func mockConnectionRedigo() {
+	useRedigo = true
+	mockConn = redigomock.NewConn()
+	for k, v := range keyValues {
+		mockConn.Command("SET", k, v).Expect("not used")
+		mockConn.Command("SET", k, v, "PX", ttl/time.Millisecond).Expect("not used")
+		mockConn.Command("GET", k).Expect(v)
+		iKeys = append(iKeys, k)
+		iVals = append(iVals, v)
+		iAll = append(append(iAll, k), v)
+	}
+	mockConn.Command("GET", "key").Expect(nil)
+	mockConn.Command("GET", "bytes").Expect([]byte("bytes"))
+	mockConn.Command("GET", "nil").Expect(nil)
+
+	mockConn.Command("MGET", iKeys...).Expect(iVals)
+	mockConn.Command("DEL", iKeys...).Expect(len(keyValues))
+
+	mockConn.Command("MSET", []interface{}{"keyMap", keyValues["keyMap"]}...).Expect(nil)
+	mockConn.Command("DEL", []interface{}{"keyWest"}...).Expect(1).Expect(nil)
+
+	// for negative tests
+	manufacturedError := errors.New("manufactured error")
+	mockConn.Command("SET", "error", "error").ExpectError(manufacturedError)
+	mockConn.Command("GET", "error").ExpectError(manufacturedError)
+	mockConn.Command("GET", "redisError").Expect(redigo.Error("Blah"))
+	mockConn.Command("GET", "unknown").Expect(struct{}{})
+	mockPool = &redigo.Pool{
+		Dial: func() (redigo.Conn, error) { return mockConn, nil },
+	}
+	bytesConn, _ = NewBytesConnectionRedigo(mockPool, logroot.Logger())
+	bytesBrokerWatcher = bytesConn.NewBrokerWatcher("")
+}
+
+func createConnectionMiniRedis() {
+	useRedigo = false
+	for k, v := range keyValues {
+		miniRedis.Set(k, v)
+		iKeys = append(iKeys, k)
+		iVals = append(iVals, v)
+		iAll = append(append(iAll, k), v)
+	}
+	miniRedis.Set("bytes", "bytes")
+
+	clientConfig := ClientConfig{
+		Password:     "",
+		DialTimeout:  0,
+		ReadTimeout:  0,
+		WriteTimeout: 0,
+		Pool: PoolConfig{
+			PoolSize:           0,
+			PoolTimeout:        0,
+			IdleTimeout:        0,
+			IdleCheckFrequency: 0,
+		},
+	}
+	nodeConfig := NodeConfig{
+		Endpoint: miniRedis.Addr(),
+		DB:       0,
+		AllowReadQueryToSlave: false,
+		TLS:          TLS{},
+		ClientConfig: clientConfig,
+	}
+	var client Client
+	client = goredis.NewClient(&goredis.Options{
+		Network: "tcp",
+		Addr:    nodeConfig.Endpoint,
+
+		// Database to be selected after connecting to the server
+		DB: nodeConfig.DB,
+
+		// Enables read only queries on slave nodes.
+		ReadOnly: nodeConfig.AllowReadQueryToSlave,
+
+		// TLS Config to use. When set TLS will be negotiated.
+		TLSConfig: nil,
+
+		// Optional password. Must match the password specified in the requirepass server configuration option.
+		Password: nodeConfig.Password,
+
+		// Dial timeout for establishing new connections. Default is 5 seconds.
+		DialTimeout: nodeConfig.DialTimeout * time.Second,
+		// Timeout for socket reads. If reached, commands will fail with a timeout instead of blocking. Default is 3 seconds.
+		ReadTimeout: nodeConfig.ReadTimeout * time.Second,
+		// Timeout for socket writes. If reached, commands will fail with a timeout instead of blocking. Default is ReadTimeout.
+		WriteTimeout: nodeConfig.WriteTimeout * time.Second,
+
+		// Maximum number of socket connections. Default is 10 connections per every CPU as reported by runtime.NumCPU.
+		PoolSize: nodeConfig.Pool.PoolSize,
+		// Amount of time client waits for connection if all connections are busy before returning an error. Default is ReadTimeout + 1 second.
+		PoolTimeout: nodeConfig.Pool.PoolTimeout * time.Second,
+		// Amount of time after which client closes idle connections. Should be less than server's timeout. Default is 5 minutes.
+		IdleTimeout: nodeConfig.Pool.IdleTimeout * time.Second,
+		// Frequency of idle checks. Default is 1 minute. When minus value is set, then idle check is disabled.
+		IdleCheckFrequency: nodeConfig.Pool.IdleCheckFrequency,
+
+		// Dialer creates new network connection and has priority over Network and Addr options.
+		// Dialer func() (net.Conn, error)
+		// Hook that is called when new connection is established
+		// OnConnect func(*Conn) error
+
+		// Maximum number of retries before giving up. Default is to not retry failed commands.
+		MaxRetries: 0,
+		// Minimum backoff between each retry. Default is 8 milliseconds; -1 disables backoff.
+		MinRetryBackoff: 0,
+		// Maximum backoff between each retry. Default is 512 milliseconds; -1 disables backoff.
+		MaxRetryBackoff: 0,
+	})
+	// client = &MockGoredisClient{}
+	bytesConn, _ = NewBytesConnection(client, logroot.Logger())
+	bytesBrokerWatcher = bytesConn.NewBrokerWatcher("")
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Redigo - https://github.com/garyburd/redigo/redis
 
+func TestConnection(t *testing.T) {
+	gomega.RegisterTestingT(t)
+
+	client, err := CreateClient(NodeConfig{})
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+	gomega.Expect(client).ShouldNot(gomega.BeNil())
+
+	client, err = CreateClient(ClusterConfig{})
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+	gomega.Expect(client).ShouldNot(gomega.BeNil())
+
+	client, err = CreateClient(SentinelConfig{})
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+	gomega.Expect(client).ShouldNot(gomega.BeNil())
+
+	var cfg *NodeConfig
+	client, err = CreateClient(cfg)
+	gomega.Expect(err).Should(gomega.HaveOccurred())
+	gomega.Expect(client).Should(gomega.BeNil())
+	client, err = CreateClient(nil)
+	gomega.Expect(err).Should(gomega.HaveOccurred())
+	gomega.Expect(client).Should(gomega.BeNil())
+}
+
+func TestBrokerWatcher(t *testing.T) {
+	gomega.RegisterTestingT(t)
+	prefix := bytesBrokerWatcher.GetPrefix()
+	gomega.Expect(prefix).ShouldNot(gomega.BeNil())
+
+	broker := bytesConn.NewBroker("")
+	gomega.Expect(broker).Should(gomega.BeAssignableToTypeOf(bytesBrokerWatcher))
+
+	watcher := bytesConn.NewWatcher("")
+	gomega.Expect(watcher).Should(gomega.BeAssignableToTypeOf(bytesBrokerWatcher))
+}
+
 func TestPut(t *testing.T) {
 	gomega.RegisterTestingT(t)
-	err := bytesConn.Put("keyWest", []byte(keyValues["keyWest"]))
+	err := bytesBrokerWatcher.Put("keyWest", []byte(keyValues["keyWest"]))
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	err = bytesBrokerWatcher.Put("keyWest", []byte(keyValues["keyWest"]), keyval.WithTTL(ttl))
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
 func TestGet(t *testing.T) {
 	gomega.RegisterTestingT(t)
-	val, found, _, err := bytesConn.GetValue("keyWest")
+	val, found, _, err := bytesBrokerWatcher.GetValue("keyWest")
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	gomega.Expect(found).Should(gomega.BeTrue())
 	gomega.Expect(val).Should(gomega.Equal([]byte(keyValues["keyWest"])))
 
-	val, found, _, err = bytesConn.GetValue("bytes")
+	val, found, _, err = bytesBrokerWatcher.GetValue("bytes")
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	gomega.Expect(found).Should(gomega.BeTrue())
 	gomega.Expect(val).ShouldNot(gomega.BeNil())
 
-	val, found, _, err = bytesConn.GetValue("nil")
+	val, found, _, err = bytesBrokerWatcher.GetValue("nil")
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	gomega.Expect(found).Should(gomega.BeFalse())
 	gomega.Expect(val).Should(gomega.BeNil())
 }
 
 func TestListValues(t *testing.T) {
+	gomega.RegisterTestingT(t)
+
 	if useRedigo {
 		// Implicitly call SCAN (or previous, "KEYS")
 		mockConn.Command("SCAN", "0", "MATCH", "key*").Expect([]interface{}{[]byte("0"), iKeys})
 		//mockConn.Command("KEYS", "key*").Expect(iKeys)
 	}
-
-	gomega.RegisterTestingT(t)
 	keyVals, err := bytesConn.ListValues("key")
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	for {
@@ -220,6 +267,24 @@ func TestListValues(t *testing.T) {
 		}
 		gomega.Expect(kv.GetKey()).Should(gomega.SatisfyAny(gomega.BeEquivalentTo("keyWest"), gomega.BeEquivalentTo("keyMap")))
 		gomega.Expect(kv.GetValue()).Should(gomega.SatisfyAny(gomega.BeEquivalentTo(keyValues["keyWest"]), gomega.BeEquivalentTo(keyValues["keyMap"])))
+		gomega.Expect(kv.GetRevision()).ShouldNot(gomega.BeNil())
+	}
+
+	if useRedigo {
+		// Implicitly call SCAN (or previous, "KEYS")
+		mockConn.Command("SCAN", "0", "MATCH", "key*").Expect([]interface{}{[]byte("0"), iKeys})
+		//mockConn.Command("KEYS", "key*").Expect(iKeys)
+	}
+	keyVals, err = bytesBrokerWatcher.ListValues("key")
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+	for {
+		kv, last := keyVals.GetNext()
+		if last {
+			break
+		}
+		gomega.Expect(kv.GetKey()).Should(gomega.SatisfyAny(gomega.BeEquivalentTo("keyWest"), gomega.BeEquivalentTo("keyMap")))
+		gomega.Expect(kv.GetValue()).Should(gomega.SatisfyAny(gomega.BeEquivalentTo(keyValues["keyWest"]), gomega.BeEquivalentTo(keyValues["keyMap"])))
+		gomega.Expect(kv.GetRevision()).ShouldNot(gomega.BeNil())
 	}
 }
 
@@ -231,7 +296,7 @@ func TestListKeys(t *testing.T) {
 	}
 
 	gomega.RegisterTestingT(t)
-	keys, err := bytesConn.ListKeys("key")
+	keys, err := bytesBrokerWatcher.ListKeys("key")
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	for {
 		k, _, last := keys.GetNext()
@@ -250,26 +315,26 @@ func TestDel(t *testing.T) {
 	}
 
 	gomega.RegisterTestingT(t)
-	found, err := bytesConn.Delete("key")
+	found, err := bytesBrokerWatcher.Delete("key")
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	gomega.Expect(found).Should(gomega.BeTrue())
 }
 
 func TestTxn(t *testing.T) {
 	gomega.RegisterTestingT(t)
-	txn := bytesConn.NewTxn()
+	txn := bytesBrokerWatcher.NewTxn()
 	txn.Put("keyWest", []byte(keyValues["keyWest"])).Put("keyMap", []byte(keyValues["keyMap"]))
 	txn.Delete("keyWest")
 	err := txn.Commit()
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	if !useRedigo {
-		val, found, _, err := bytesConn.GetValue("keyWest")
+		val, found, _, err := bytesBrokerWatcher.GetValue("keyWest")
 		gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 		gomega.Expect(found).Should(gomega.BeFalse())
 		gomega.Expect(val).Should(gomega.BeNil())
 
-		val, found, _, err = bytesConn.GetValue("keyMap")
+		val, found, _, err = bytesBrokerWatcher.GetValue("keyMap")
 		gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 		gomega.Expect(found).Should(gomega.BeTrue())
 		gomega.Expect(val).Should(gomega.Equal([]byte(keyValues["keyMap"])))
@@ -281,39 +346,56 @@ func TestWatchRedigo(t *testing.T) {
 		return
 	}
 
-	count := 0
-	mockConn.AddSubscriptionMessage(newPMessage(keySpaceEventPrefix+"key*", keySpaceEventPrefix+"keyWest", "set"))
-	count++
-	mockConn.AddSubscriptionMessage(newPMessage(keySpaceEventPrefix+"key*", keySpaceEventPrefix+"keyWest", "del"))
-	count++
-
 	gomega.RegisterTestingT(t)
-	doneChan := make(chan struct{})
-	respChan := make(chan keyval.BytesWatchResp)
-	bytesConn.Watch(respChan, "key")
-	go func() {
-		for {
-			r, ok := <-respChan
-			if ok {
-				switch r.GetChangeType() {
-				case db.Put:
-					log.Debugf("Watcher received %v: %s=%s", r.GetChangeType(), r.GetKey(), string(r.GetValue()))
-				case db.Delete:
-					log.Debugf("Watcher received %v: %s", r.GetChangeType(), r.GetKey())
-				}
-				count--
-				if count == 0 {
-					doneChan <- struct{}{}
-				}
-			} else {
-				log.Error("Something wrong with respChan... bail out")
-				return
-			}
-		}
-	}()
 
-	<-doneChan
-	log.Infof("TestWatch is done")
+	respChan := make(chan keyval.BytesWatchResp)
+	var count int
+
+	key := iKeys[0]
+	mockConn.Command("PSUBSCRIBE", []interface{}{keySpaceEventPrefix + "key*"}...).Expect(newSubscriptionResponse("psubscribe", keySpaceEventPrefix+"key*", 1))
+	mockConn.Command("GET", key).Expect(keyValues[key.(string)])
+	count = 0
+	mockConn.AddSubscriptionMessage(newPMessage(keySpaceEventPrefix+"key*", keySpaceEventPrefix+key.(string), "set"))
+	count++
+	mockConn.AddSubscriptionMessage(newPMessage(keySpaceEventPrefix+"key*", keySpaceEventPrefix+key.(string), "del"))
+	count++
+	bytesConn.Watch(respChan, "key")
+	consumeEvent(respChan, count)
+
+	key = iKeys[1]
+	mockConn.Command("PSUBSCRIBE", []interface{}{keySpaceEventPrefix + "key*"}...).Expect(newSubscriptionResponse("psubscribe", keySpaceEventPrefix+"key*", 1))
+	mockConn.Command("GET", key).Expect(keyValues[key.(string)])
+	count = 0
+	mockConn.AddSubscriptionMessage(newPMessage(keySpaceEventPrefix+"key*", keySpaceEventPrefix+key.(string), "set"))
+	count++
+	mockConn.AddSubscriptionMessage(newPMessage(keySpaceEventPrefix+"key*", keySpaceEventPrefix+key.(string), "del"))
+	count++
+	bytesBrokerWatcher.Watch(respChan, "key")
+	consumeEvent(respChan, count)
+}
+
+func consumeEvent(respChan chan keyval.BytesWatchResp, eventCount int) {
+	for {
+		r, ok := <-respChan
+		if ok {
+			switch r.GetChangeType() {
+			case db.Put:
+				log.Debugf("Watcher received %v: %s=%s (rev %d)",
+					r.GetChangeType(), r.GetKey(), string(r.GetValue()), r.GetRevision())
+			case db.Delete:
+				log.Debugf("Watcher received %v: %s (rev %d)",
+					r.GetChangeType(), r.GetKey(), r.GetRevision())
+				r.GetValue()
+			}
+		} else {
+			log.Error("Something wrong with Watch channel... bail out")
+			break
+		}
+		eventCount--
+		if eventCount == 0 {
+			return
+		}
+	}
 }
 
 func newSubscriptionResponse(kind string, chanName string, count int) []interface{} {
@@ -335,7 +417,7 @@ func newPMessage(pattern string, chanName string, data string) []interface{} {
 
 func TestGetShouldNotApplyWildcard(t *testing.T) {
 	gomega.RegisterTestingT(t)
-	val, found, _, err := bytesConn.GetValue("key")
+	val, found, _, err := bytesBrokerWatcher.GetValue("key")
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	gomega.Expect(found).Should(gomega.BeFalse())
 	gomega.Expect(val).Should(gomega.BeNil())
@@ -346,7 +428,7 @@ func TestPutError(t *testing.T) {
 		return
 	}
 	gomega.RegisterTestingT(t)
-	err := bytesConn.Put("error", []byte("error"))
+	err := bytesBrokerWatcher.Put("error", []byte("error"))
 	gomega.Expect(err).Should(gomega.HaveOccurred())
 }
 
@@ -355,17 +437,17 @@ func TestGetError(t *testing.T) {
 		return
 	}
 	gomega.RegisterTestingT(t)
-	val, found, _, err := bytesConn.GetValue("error")
+	val, found, _, err := bytesBrokerWatcher.GetValue("error")
 	gomega.Expect(err).Should(gomega.HaveOccurred())
 	gomega.Expect(found).Should(gomega.BeFalse())
 	gomega.Expect(val).Should(gomega.BeNil())
 
-	val, found, _, err = bytesConn.GetValue("redisError")
+	val, found, _, err = bytesBrokerWatcher.GetValue("redisError")
 	gomega.Expect(err).Should(gomega.HaveOccurred())
 	gomega.Expect(found).Should(gomega.BeFalse())
 	gomega.Expect(val).Should(gomega.BeNil())
 
-	val, found, _, err = bytesConn.GetValue("unknown")
+	val, found, _, err = bytesBrokerWatcher.GetValue("unknown")
 	gomega.Expect(err).Should(gomega.HaveOccurred())
 	gomega.Expect(found).Should(gomega.BeFalse())
 	gomega.Expect(val).Should(gomega.BeNil())
@@ -373,9 +455,16 @@ func TestGetError(t *testing.T) {
 
 func TestBrokerClosed(t *testing.T) {
 	gomega.RegisterTestingT(t)
-	bytesConn.Close()
 
-	err := bytesConn.Put("any", []byte("any"))
+	txn := bytesConn.NewTxn()
+	txn2 := bytesBrokerWatcher.NewTxn()
+	err := bytesConn.Close()
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	respChan := make(chan keyval.BytesWatchResp)
+
+	// byteConn
+	err = bytesConn.Put("any", []byte("any"))
 	gomega.Expect(err).Should(gomega.HaveOccurred())
 	_, _, _, err = bytesConn.GetValue("any")
 	gomega.Expect(err).Should(gomega.HaveOccurred())
@@ -385,6 +474,41 @@ func TestBrokerClosed(t *testing.T) {
 	gomega.Expect(err).Should(gomega.HaveOccurred())
 	_, err = bytesConn.Delete("any")
 	gomega.Expect(err).Should(gomega.HaveOccurred())
+
+	txn.Put("keyWest", []byte(keyValues["keyWest"])).Put("keyMap", []byte(keyValues["keyMap"]))
+	txn.Delete("keyWest")
+	err = txn.Commit()
+	gomega.Expect(err).Should(gomega.HaveOccurred())
+
+	txn = bytesConn.NewTxn()
+	gomega.Expect(txn).Should(gomega.BeNil())
+
+	bytesConn.Watch(respChan, "key")
+
+	// bytesBrokerWatcher
+	err = bytesBrokerWatcher.Put("any", []byte("any"))
+	gomega.Expect(err).Should(gomega.HaveOccurred())
+	_, _, _, err = bytesBrokerWatcher.GetValue("any")
+	gomega.Expect(err).Should(gomega.HaveOccurred())
+	_, err = bytesBrokerWatcher.ListValues("any")
+	gomega.Expect(err).Should(gomega.HaveOccurred())
+	_, err = bytesBrokerWatcher.ListKeys("any")
+	gomega.Expect(err).Should(gomega.HaveOccurred())
+	_, err = bytesBrokerWatcher.Delete("any")
+	gomega.Expect(err).Should(gomega.HaveOccurred())
+
+	txn2.Put("keyWest", []byte(keyValues["keyWest"])).Put("keyMap", []byte(keyValues["keyMap"]))
+	txn2.Delete("keyWest")
+	err = txn2.Commit()
+	gomega.Expect(err).Should(gomega.HaveOccurred())
+
+	txn2 = bytesBrokerWatcher.NewTxn()
+	gomega.Expect(txn2).Should(gomega.BeNil())
+
+	bytesBrokerWatcher.Watch(respChan, "key")
+
+	err = bytesConn.Close()
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -58,8 +58,7 @@ func (tx *Txn) Delete(key string) keyval.BytesTxn {
 // committed to the data store, or none of them.
 func (tx *Txn) Commit() (err error) {
 	if tx.db.closed {
-		tx.db.Error("Commit() called on a closed connection")
-		return nil
+		return fmt.Errorf("Commit() called on a closed connection")
 	}
 	tx.db.Debug("Commit()")
 

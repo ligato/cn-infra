@@ -192,15 +192,14 @@ func (db *BytesConnectionRedis) ListKeys(match string) (keyval.BytesKeyIterator,
 
 // ListValuesRange returns an iterator used to traverse values stored under the provided key.
 // TODO: Not in BytesBroker interface
+/*
 func (db *BytesConnectionRedis) ListValuesRange(fromPrefix string, toPrefix string) (keyval.BytesKeyValIterator, error) {
 	db.Panic("Not implemented")
 	return nil, nil
 }
+*/
 
 func listValues(db *BytesConnectionRedis, keys []string) (values [][]byte, err error) {
-	if db.closed {
-		return nil, fmt.Errorf("listValues(%v) called on a closed connection", keys)
-	}
 	db.Debugf("listValues(%v)", keys)
 
 	if len(keys) == 0 {
@@ -231,9 +230,6 @@ func listValues(db *BytesConnectionRedis, keys []string) (values [][]byte, err e
 }
 
 func scanKeys(db *BytesConnectionRedis, match string) (keys []string, err error) {
-	if db.closed {
-		return nil, fmt.Errorf("scanKeys(%s) called on a closed connection", match)
-	}
 	pattern := wildcard(match)
 	db.Debugf("scanKeys(%s): pattern %s", match, pattern)
 
@@ -475,18 +471,17 @@ func (pdb *BytesBrokerWatcherRedis) Delete(match string, opts ...keyval.DelOptio
 // ListValuesRange calls ListValuesRange function of BytesConnectionRedis.
 // Prefix will be prepended to key argument when searching.
 // TODO: Not in BytesBroker interface
+/*
 func (pdb *BytesBrokerWatcherRedis) ListValuesRange(fromPrefix string, toPrefix string) (keyval.BytesKeyValIterator, error) {
 	return pdb.delegate.ListValuesRange(pdb.addPrefix(fromPrefix), pdb.addPrefix(toPrefix))
 }
+*/
 
 ///////////////////////////////////////////////////////////////////////////////
 // redigo legacy
 //  - Legacy code that uses http://godoc.org/github.com/garyburd/redigo
 //  - Only node client is supported
 func redigoPut(db *BytesConnectionRedis, key string, data []byte, ttl time.Duration) error {
-	if db.closed {
-		return fmt.Errorf("redigoPut(%s) called on a closed connection", key)
-	}
 	db.Debugf("redigoPut(%s)", key)
 
 	conn := db.pool.Get()
@@ -495,7 +490,7 @@ func redigoPut(db *BytesConnectionRedis, key string, data []byte, ttl time.Durat
 	if ttl == 0 {
 		_, err = conn.Do("SET", key, string(data))
 	} else {
-		_, err = conn.Do("SET", key, string(data), "PX", int64(ttl/time.Millisecond))
+		_, err = conn.Do("SET", key, string(data), "PX", ttl/time.Millisecond)
 	}
 	if err != nil {
 		return fmt.Errorf("Do(SET) failed: %s", err)
@@ -503,9 +498,6 @@ func redigoPut(db *BytesConnectionRedis, key string, data []byte, ttl time.Durat
 	return nil
 }
 func redigoGetValue(db *BytesConnectionRedis, key string) (data []byte, found bool, revision int64, err error) {
-	if db.closed {
-		return nil, false, 0, fmt.Errorf("redigoGetValue(%s) called on a closed connection", key)
-	}
 	db.Debugf("redigoGetValue(%s)", key)
 
 	conn := db.pool.Get()
@@ -531,9 +523,6 @@ func redigoGetValue(db *BytesConnectionRedis, key string) (data []byte, found bo
 	}
 }
 func redigoListValues(db *BytesConnectionRedis, keys []string) (values [][]byte, err error) {
-	if db.closed {
-		return nil, fmt.Errorf("redigoListValues(%v) called on a closed connection", keys)
-	}
 	db.Debugf("redigoListValues(%v)", keys)
 
 	conn := db.pool.Get()
@@ -580,9 +569,6 @@ func redigoListValues(db *BytesConnectionRedis, keys []string) (values [][]byte,
 	return [][]byte{}, nil
 }
 func redigoScanKeys(db *BytesConnectionRedis, pattern string) (keys []string, err error) {
-	if db.closed {
-		return nil, fmt.Errorf("redigoScanKeys(%s) called on a closed connection", pattern)
-	}
 	db.Debugf("redigoScanKeys(%s)", pattern)
 
 	conn := db.pool.Get()
@@ -623,6 +609,37 @@ func redigoScanKeys(db *BytesConnectionRedis, pattern string) (keys []string, er
 		}
 	}
 }
+func redigoDelete(db *BytesConnectionRedis, keysToDelete []string) (found bool, err error) {
+	db.Debugf("redigoDelete(%v)", keysToDelete)
+
+	args := make([]interface{}, len(keysToDelete))
+	for i, s := range keysToDelete {
+		args[i] = s
+	}
+	conn := db.pool.Get()
+	defer conn.Close()
+	reply, err := conn.Do("DEL", args...)
+	if err != nil {
+		return false, fmt.Errorf("Do(DEL) failed: %s", err)
+	}
+	db.Debugf("DEL replied %v (type: %s)", reply, reflect.TypeOf(reply).String())
+
+	if err, ok := reply.(redigo.Error); ok {
+		return false, err
+	}
+	if deleted, ok := reply.(int64); ok {
+		if deleted == 0 {
+			return false, nil
+		}
+
+		if deleted < int64(len(keysToDelete)) {
+			db.Debugf("Deleted %d of %d", deleted, len(keysToDelete))
+		}
+	}
+	return true, nil
+}
+
+/* replace by redigoScanKeys
 func redigoListKeys(db *BytesConnectionRedis, match string) (keys []string, err error) {
 	if db.closed {
 		return nil, fmt.Errorf("redigoListKeys(%s) called on a closed connection", match)
@@ -668,35 +685,4 @@ func redigoListKeys(db *BytesConnectionRedis, match string) (keys []string, err 
 
 	return nil, err
 }
-func redigoDelete(db *BytesConnectionRedis, keysToDelete []string) (found bool, err error) {
-	if db.closed {
-		return false, fmt.Errorf("redigoDelete(%v) called on a closed connection", keysToDelete)
-	}
-	db.Debugf("redigoDelete(%v)", keysToDelete)
-
-	args := make([]interface{}, len(keysToDelete))
-	for i, s := range keysToDelete {
-		args[i] = s
-	}
-	conn := db.pool.Get()
-	defer conn.Close()
-	reply, err := conn.Do("DEL", args...)
-	if err != nil {
-		return false, fmt.Errorf("Do(DEL) failed: %s", err)
-	}
-	db.Debugf("DEL replied %v (type: %s)", reply, reflect.TypeOf(reply).String())
-
-	if err, ok := reply.(redigo.Error); ok {
-		return false, err
-	}
-	if deleted, ok := reply.(int64); ok {
-		if deleted == 0 {
-			return false, nil
-		}
-
-		if deleted < int64(len(keysToDelete)) {
-			db.Debugf("Deleted %d of %d", deleted, len(keysToDelete))
-		}
-	}
-	return true, nil
-}
+*/
