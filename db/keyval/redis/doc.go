@@ -29,23 +29,39 @@
 //   import "github.com/ligato/cn-infra/db/keyval/kvproto"
 //   import "github.com/ligato/cn-infra/db/keyval/redis"
 //
-//   config := redis.NodeClientConfig{
+//   // Create a connection backed by a node client that will connect
+//   // to a single Redis server node.
+//   //
+//   // You can also create connection based on cluster or sentinel
+//   // client that would connect to the respective type of Redis
+//   // installation, in a similar way.
+//   config := redis.NodeConfig{
 //       Endpoint: "localhost:6379",
-//       Pool: redis.ConnPoolConfig{
-//               MaxIdle:     10,
-//               MaxActive:   10,
-//               IdleTimeout: 60,
-//               Wait:        true,
-//      },
+//       DB:       0,
+//       AllowReadQueryToSlave: false,
+//       TLS:          redis.TLS{},
+//       ClientConfig: redis.ClientConfig{
+//           Password:     "",
+//           DialTimeout:  0,
+//           ReadTimeout:  0,
+//           WriteTimeout: 0,
+//           Pool: redis.PoolConfig{
+//               PoolSize:           0,
+//               PoolTimeout:        0,
+//               IdleTimeout:        0,
+//               IdleCheckFrequency: 0,
+//           },
+//       },
 //   }
-//   pool, err := redis.CreateNodeClientConnPool(config)
-//   db, err := redis.NewBytesConnectionRedis(pool)
+//   client, err := redis.CreateNodeClient(config)
+//   db, err := redis.NewBytesConnection(client, log)
 //
 //   // create broker/watcher that share the same connection pools.
 //   bytesBroker := db.NewBroker("some-prefix")
 //   bytesWatcher := db.NewWatcher("some-prefix")
 //
-//   // create broker/watcher that share the same connection pools, capable of processing protocol-buffer generated data.
+//   // create broker/watcher that share the same connection pools,
+//   // capable of processing protocol-buffer generated data.
 //   wrapper := kvproto.NewProtoWrapper(db)
 //   protoBroker := wrapper.NewBroker("some-prefix")
 //   protoWatcher := wrapper.NewWatcher("some-prefix")
@@ -56,7 +72,8 @@
 // CRUD
 //   // put
 //   err = db.Put("some-key", []byte("some-value"))
-//   err = db.Put("some-temp-key", []byte("valid for 20 seconds"), keyval.WithTTL(20*time.Second))
+//   err = db.Put("some-temp-key", []byte("valid for 20 seconds"),
+//                keyval.WithTTL(20*time.Second))
 //
 //   // get
 //   value, found, revision, err := db.GetValue("some-key")
@@ -103,7 +120,8 @@
 //       case r := <-watchChan:
 //           switch r.GetChangeType() {
 //           case db.Put:
-//               log.Infof("Watcher received %v: %s=%s", r.GetChangeType(), r.GetKey(), string(r.GetValue()))
+//               log.Infof("Watcher received %v: %s=%s", r.GetChangeType(),
+//                         r.GetKey(), string(r.GetValue()))
 //           case db.Delete:
 //               ...
 //           }

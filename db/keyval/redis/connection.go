@@ -21,39 +21,12 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+
 	"github.com/coreos/etcd/pkg/tlsutil"
-	"github.com/garyburd/redigo/redis"
+	redigo "github.com/garyburd/redigo/redis"
 	"github.com/ghodss/yaml"
+	goredis "github.com/go-redis/redis"
 )
-
-// ConnPool provides abstraction of connection pool.
-type ConnPool interface {
-	// Get returns a vlid connection. The application must close the returned connection.
-	Get() redis.Conn
-	// Close releases the resources used by the pool.
-	Close() error
-}
-
-// ConnPoolConfig configures connection pool
-type ConnPoolConfig struct {
-	// Properties mimic those in github.com/garyburd/redigo/redis/Pool
-
-	// Maximum number of idle connections in the pool.
-	MaxIdle int `json:"max-idle"`
-
-	// Maximum number of connections allocated by the pool at a given time.
-	// When zero, there is no limit on the number of connections in the pool.
-	MaxActive int `json:"max-active"`
-
-	// Close connections after remaining idle for this duration. If the value
-	// is zero, then idle connections are not closed. Applications should set
-	// the timeout to a value less than the server's timeout.
-	IdleTimeout time.Duration `json:"idle-timeout"`
-
-	// If Wait is true and the pool is at the MaxActive limit, then Get() waits
-	// for a connection to be returned to the pool before returning.
-	Wait bool `json:"wait-on-max-active"`
-}
 
 // TLS configures TLS properties
 type TLS struct {
@@ -62,40 +35,6 @@ type TLS struct {
 	Certfile   string `json:"cert-file"`   // client certificate
 	Keyfile    string `json:"key-file"`    // client private key
 	CAfile     string `json:"ca-file"`     // certificate authority
-}
-
-// NodeClientConfig configures a node client that will connect to a single Redis server
-type NodeClientConfig struct {
-	Endpoint     string         `json:"endpoint"`      // like "172.17.0.1:6379"
-	Db           int            `json:"db"`            // ID of the DB
-	Password     string         `json:"password"`      // password, if required
-	ReadTimeout  time.Duration  `json:"read-timeout"`  // timeout for read operations
-	WriteTimeout time.Duration  `json:"write-timeout"` // timeout for write operations
-	TLS          TLS            `json:"tls"`           // TLS configuration
-	Pool         ConnPoolConfig `json:"pool"`          // connection pool configuration
-}
-
-// CreateNodeClientConnPool creates a Redis connection pool
-func CreateNodeClientConnPool(config NodeClientConfig) (*redis.Pool, error) {
-	options := append([]redis.DialOption{}, redis.DialDatabase(config.Db))
-	options = append(options, redis.DialPassword(config.Password))
-	options = append(options, redis.DialReadTimeout(config.ReadTimeout))
-	options = append(options, redis.DialWriteTimeout(config.WriteTimeout))
-	if config.TLS.Enabled {
-		tlsConfig, err := createTLSConfig(config.TLS)
-		if err != nil {
-			return nil, err
-		}
-		options = append(options, redis.DialTLSConfig(tlsConfig))
-		options = append(options, redis.DialTLSSkipVerify(config.TLS.SkipVerify))
-	}
-	return &redis.Pool{
-		MaxIdle:     config.Pool.MaxIdle,
-		MaxActive:   config.Pool.MaxActive,
-		IdleTimeout: config.Pool.IdleTimeout,
-		Wait:        config.Pool.Wait,
-		Dial:        func() (redis.Conn, error) { return redis.Dial("tcp", config.Endpoint, options...) },
-	}, nil
 }
 
 func createTLSConfig(config TLS) (*tls.Config, error) {
@@ -141,4 +80,273 @@ func GenerateConfig(config interface{}, path string) error {
 		return fmt.Errorf("ioutil.WriteFile() failed: %s", err)
 	}
 	return nil
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// go-redis https://github.com/go-redis/redis
+
+// GoRedisNil go-redis return this error when Redis replies nil, .e.g. when key does not exist.
+const GoRedisNil = goredis.Nil
+
+// Client Common interface to adapt all types of Redis clients
+type Client interface {
+	// The easiest way to adapt Cmdable interface is to just embed it.  Like this:
+	// goredis.Cmdable
+	// But that means we'll have to mock each and every method in Cmdable for unit tests,
+	// making it a whole lot more complicated.  It's more manageable to only delcare
+	// (duplicate) the methods we need from Cmdable.  As follows:
+	//
+	Close() error
+	Del(keys ...string) *goredis.IntCmd
+	Get(key string) *goredis.StringCmd
+	MGet(keys ...string) *goredis.SliceCmd
+	Scan(cursor uint64, match string, count int64) *goredis.ScanCmd
+	Set(key string, value interface{}, expiration time.Duration) *goredis.StatusCmd
+
+	// Declare these additional methods to enable access to them through this interface
+	TxPipeline() goredis.Pipeliner
+	PSubscribe(channels ...string) *goredis.PubSub
+}
+
+// ClientConfig Configuration common to all types of Redis clients
+type ClientConfig struct {
+	Password     string        `json:"password"`      // password, if required
+	DialTimeout  time.Duration `json:"dial-timeout"`  // timeout for connection operations
+	ReadTimeout  time.Duration `json:"read-timeout"`  // timeout for read operations
+	WriteTimeout time.Duration `json:"write-timeout"` // timeout for write operations
+	Pool         PoolConfig    `json:"pool"`          // connection pool configuration
+}
+
+// NodeConfig Node client configuration
+type NodeConfig struct {
+	Endpoint              string `json:"endpoint"`              // host:port address of a Redis node
+	DB                    int    `json:"db"`                    // Database to be selected after connecting to the server.
+	AllowReadQueryToSlave bool   `json:"enable-query-to-slave"` // Enables read only queries on slave nodes.
+	TLS                   TLS    `json:"tls"`                   // TLS configuration -- only applies to node client.
+	ClientConfig
+}
+
+// ClusterConfig Cluster client configuration
+type ClusterConfig struct {
+	Endpoints             []string `json:"endpoints"`             // A seed list of host:port addresses of cluster nodes.
+	AllowReadQueryToSlave bool     `json:"enable-query-to-slave"` // Enables read only queries on slave nodes.
+
+	// The maximum number of redirects before giving up.
+	// Command is retried on network errors and MOVED/ASK redirects. Default is 16.
+	MaxRedirects int `json:"max-rediects"`
+	// Allows routing read-only commands to the closest master or slave node.
+	RouteByLatency bool `json:"route-by-latency"`
+
+	ClientConfig
+}
+
+// SentinelConfig Sentinel client configuration
+type SentinelConfig struct {
+	Endpoints  []string `json:"endpoints"`   // A seed list of host:port addresses sentinel nodes.
+	MasterName string   `json:"master-name"` // The sentinel master name.
+	DB         int      `json:"db"`          // Database to be selected after connecting to the server.
+
+	ClientConfig
+}
+
+// PoolConfig Configuration of go-redis connection pool
+type PoolConfig struct {
+	// Maximum number of socket connections.
+	// Default is 10 connections per every CPU as reported by runtime.NumCPU.
+	PoolSize int `json:"max-connections"`
+	// Amount of time client waits for connection if all connections
+	// are busy before returning an error.
+	// Default is ReadTimeout + 1 second.
+	PoolTimeout time.Duration `json:"busy-timeout"`
+	// Amount of time after which client closes idle connections.
+	// Should be less than server's timeout.
+	// Default is 5 minutes.
+	IdleTimeout time.Duration `json:"idle-timeout"`
+	// Frequency of idle checks.
+	// Default is 1 minute.
+	// When minus value is set, then idle check is disabled.
+	IdleCheckFrequency time.Duration `json:"idle-check-frequency"`
+}
+
+// CreateClient Creates an appropriate client according to the configuration parameter.
+func CreateClient(config interface{}) (Client, error) {
+	switch cfg := config.(type) {
+	case NodeConfig:
+		return CreateNodeClient(cfg)
+	case ClusterConfig:
+		return CreateClusterClient(cfg)
+	case SentinelConfig:
+		return CreateSentinelClient(cfg)
+	case nil:
+		return nil, fmt.Errorf("Configureation cannot be nil")
+	}
+	return nil, fmt.Errorf("Unknown configureation type %T", config)
+}
+
+// CreateNodeClient Creates a client that will connect to a redis node, like master and/or slave.
+func CreateNodeClient(config NodeConfig) (Client, error) {
+	var tlsConfig *tls.Config
+	if config.TLS.Enabled {
+		var err error
+		tlsConfig, err = createTLSConfig(config.TLS)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return goredis.NewClient(&goredis.Options{
+		Network: "tcp",
+		Addr:    config.Endpoint,
+
+		// Database to be selected after connecting to the server
+		DB: config.DB,
+
+		// Enables read only queries on slave nodes.
+		ReadOnly: config.AllowReadQueryToSlave,
+
+		// TLS Config to use. When set TLS will be negotiated.
+		TLSConfig: tlsConfig,
+
+		// Optional password. Must match the password specified in the requirepass server configuration option.
+		Password: config.Password,
+
+		// Dial timeout for establishing new connections. Default is 5 seconds.
+		DialTimeout: config.DialTimeout * time.Second,
+		// Timeout for socket reads. If reached, commands will fail with a timeout instead of blocking. Default is 3 seconds.
+		ReadTimeout: config.ReadTimeout * time.Second,
+		// Timeout for socket writes. If reached, commands will fail with a timeout instead of blocking. Default is ReadTimeout.
+		WriteTimeout: config.WriteTimeout * time.Second,
+
+		// Maximum number of socket connections. Default is 10 connections per every CPU as reported by runtime.NumCPU.
+		PoolSize: config.Pool.PoolSize,
+		// Amount of time client waits for connection if all connections are busy before returning an error. Default is ReadTimeout + 1 second.
+		PoolTimeout: config.Pool.PoolTimeout * time.Second,
+		// Amount of time after which client closes idle connections. Should be less than server's timeout. Default is 5 minutes.
+		IdleTimeout: config.Pool.IdleTimeout * time.Second,
+		// Frequency of idle checks. Default is 1 minute. When minus value is set, then idle check is disabled.
+		IdleCheckFrequency: config.Pool.IdleCheckFrequency,
+
+		// Dialer creates new network connection and has priority over Network and Addr options.
+		// Dialer func() (net.Conn, error)
+		// Hook that is called when new connection is established
+		// OnConnect func(*Conn) error
+
+		// Maximum number of retries before giving up. Default is to not retry failed commands.
+		MaxRetries: 0,
+		// Minimum backoff between each retry. Default is 8 milliseconds; -1 disables backoff.
+		MinRetryBackoff: 0,
+		// Maximum backoff between each retry. Default is 512 milliseconds; -1 disables backoff.
+		MaxRetryBackoff: 0,
+	}), nil
+}
+
+// CreateClusterClient Creates a client that will connect to a redis cluster.
+func CreateClusterClient(config ClusterConfig) (Client, error) {
+	return goredis.NewClusterClient(&goredis.ClusterOptions{
+		Addrs: config.Endpoints,
+
+		// Enables read only queries on slave nodes.
+		ReadOnly: config.AllowReadQueryToSlave,
+
+		MaxRedirects:   config.MaxRedirects,
+		RouteByLatency: config.RouteByLatency,
+
+		// Optional password. Must match the password specified in the requirepass server configuration option.
+		Password: config.Password,
+
+		// Dial timeout for establishing new connections. Default is 5 seconds.
+		DialTimeout: config.DialTimeout * time.Second,
+		// Timeout for socket reads. If reached, commands will fail with a timeout instead of blocking. Default is 3 seconds.
+		ReadTimeout: config.ReadTimeout * time.Second,
+		// Timeout for socket writes. If reached, commands will fail with a timeout instead of blocking. Default is ReadTimeout.
+		WriteTimeout: config.WriteTimeout * time.Second,
+
+		// Maximum number of socket connections. Default is 10 connections per every CPU as reported by runtime.NumCPU.
+		PoolSize: config.Pool.PoolSize,
+		// Amount of time client waits for connection if all connections are busy before returning an error. Default is ReadTimeout + 1 second.
+		PoolTimeout: config.Pool.PoolTimeout * time.Second,
+		// Amount of time after which client closes idle connections. Should be less than server's timeout. Default is 5 minutes.
+		IdleTimeout: config.Pool.IdleTimeout * time.Second,
+		// Frequency of idle checks. Default is 1 minute. When minus value is set, then idle check is disabled.
+		IdleCheckFrequency: config.Pool.IdleCheckFrequency,
+
+		// Maximum number of retries before giving up. Default is to not retry failed commands.
+		MaxRetries: 0,
+		// Minimum backoff between each retry. Default is 8 milliseconds; -1 disables backoff.
+		MinRetryBackoff: 0,
+		// Maximum backoff between each retry. Default is 512 milliseconds; -1 disables backoff.
+		MaxRetryBackoff: 0,
+
+		// Hook that is called when new connection is established
+		// OnConnect func(*Conn) error
+	}), nil
+}
+
+// CreateSentinelClient Creates a failover client that will connect to redis sentinels.
+func CreateSentinelClient(config SentinelConfig) (Client, error) {
+	return goredis.NewFailoverClient(&goredis.FailoverOptions{
+		SentinelAddrs: config.Endpoints,
+
+		DB: config.DB,
+
+		MasterName: config.MasterName,
+
+		// Optional password. Must match the password specified in the requirepass server configuration option.
+		Password: config.Password,
+
+		// Dial timeout for establishing new connections. Default is 5 seconds.
+		DialTimeout: config.DialTimeout * time.Second,
+		// Timeout for socket reads. If reached, commands will fail with a timeout instead of blocking. Default is 3 seconds.
+		ReadTimeout: config.ReadTimeout * time.Second,
+		// Timeout for socket writes. If reached, commands will fail with a timeout instead of blocking. Default is ReadTimeout.
+		WriteTimeout: config.WriteTimeout * time.Second,
+
+		// Maximum number of socket connections. Default is 10 connections per every CPU as reported by runtime.NumCPU.
+		PoolSize: config.Pool.PoolSize,
+		// Amount of time client waits for connection if all connections are busy before returning an error. Default is ReadTimeout + 1 second.
+		PoolTimeout: config.Pool.PoolTimeout * time.Second,
+		// Amount of time after which client closes idle connections. Should be less than server's timeout. Default is 5 minutes.
+		IdleTimeout: config.Pool.IdleTimeout * time.Second,
+		// Frequency of idle checks. Default is 1 minute. When minus value is set, then idle check is disabled.
+		IdleCheckFrequency: config.Pool.IdleCheckFrequency,
+
+		// Maximum number of retries before giving up. Default is to not retry failed commands.
+		MaxRetries: 0,
+
+		// Hook that is called when new connection is established
+		// OnConnect func(*Conn) error
+	}), nil
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Redigo - https://github.com/garyburd/redigo/redis
+
+// ConnPool provides abstraction of connection pool.
+type ConnPool interface {
+	// Get returns a vlid connection. The application must close the returned connection.
+	Get() redigo.Conn
+	// Close releases the resources used by the pool.
+	Close() error
+}
+
+// CreateNodeClientConnPool creates a Redis connection pool
+func CreateNodeClientConnPool(config NodeConfig) (*redigo.Pool, error) {
+	options := append([]redigo.DialOption{}, redigo.DialDatabase(config.DB))
+	options = append(options, redigo.DialPassword(config.Password))
+	options = append(options, redigo.DialReadTimeout(config.ReadTimeout))
+	options = append(options, redigo.DialWriteTimeout(config.WriteTimeout))
+	if config.TLS.Enabled {
+		tlsConfig, err := createTLSConfig(config.TLS)
+		if err != nil {
+			return nil, err
+		}
+		options = append(options, redigo.DialTLSConfig(tlsConfig))
+		options = append(options, redigo.DialTLSSkipVerify(config.TLS.SkipVerify))
+	}
+	return &redigo.Pool{
+		MaxIdle:     config.Pool.PoolSize,
+		MaxActive:   config.Pool.PoolSize,
+		IdleTimeout: config.Pool.IdleTimeout,
+		Wait:        true,
+		Dial:        func() (redigo.Conn, error) { return redigo.Dial("tcp", config.Endpoint, options...) },
+	}, nil
 }

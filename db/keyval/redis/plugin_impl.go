@@ -30,7 +30,7 @@ func NewRedisPlugin(pool ConnPool, log logging.Logger) *ProtoPluginRedis {
 
 	skeleton := plugin.NewSkeleton(
 		func(log logging.Logger) (plugin.Connection, error) {
-			return NewBytesConnectionRedis(pool, log)
+			return NewBytesConnectionRedigo(pool, log)
 		},
 	)
 	return &ProtoPluginRedis{Skeleton: skeleton}

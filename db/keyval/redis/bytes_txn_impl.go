@@ -27,7 +27,7 @@ type op struct {
 // Txn allows to group operations into the transaction. Transaction executes multiple operations
 // in a more efficient way in contrast to executing them one by one.
 type Txn struct {
-	pool   ConnPool
+	db     *BytesConnectionRedis
 	ops    map[string] /*key*/ *op
 	prefix string
 }
@@ -56,9 +56,44 @@ func (tx *Txn) Delete(key string) keyval.BytesTxn {
 // Commit commits all operations in a transaction to the data store.
 // Commit is atomic - either all operations in the transaction are
 // committed to the data store, or none of them.
-// TODO: use Redis MULTI transactional command instead?
 func (tx *Txn) Commit() (err error) {
-	toBeDeleted := []interface{}{}
+	if tx.db.closed {
+		tx.db.Error("Commit() called on a closed connection")
+		return nil
+	}
+	tx.db.Debug("Commit()")
+
+	if tx.db.pool != nil {
+		toBeDeleted := []interface{}{}
+		msetArgs := []interface{}{}
+		for key, op := range tx.ops {
+			if op.del {
+				toBeDeleted = append(toBeDeleted, key)
+			} else {
+				msetArgs = append(msetArgs, key)
+				msetArgs = append(msetArgs, string(op.value))
+			}
+		}
+
+		conn := tx.db.pool.Get()
+		defer conn.Close()
+
+		if len(toBeDeleted) > 0 {
+			_, err = conn.Do("DEL", toBeDeleted...)
+			if err != nil {
+				return fmt.Errorf("Do(DEL) failed: %s", err)
+			}
+		}
+		if len(msetArgs) > 0 {
+			_, err = conn.Do("MSET", msetArgs...)
+			if err != nil {
+				return fmt.Errorf("Do(MSET) failed: %s", err)
+			}
+		}
+		return nil
+	}
+
+	toBeDeleted := []string{}
 	msetArgs := []interface{}{}
 	for key, op := range tx.ops {
 		if op.del {
@@ -68,20 +103,17 @@ func (tx *Txn) Commit() (err error) {
 			msetArgs = append(msetArgs, string(op.value))
 		}
 	}
-
-	conn := tx.pool.Get()
-	defer conn.Close()
-
-	if len(toBeDeleted) > 0 {
-		_, err = conn.Do("DEL", toBeDeleted...)
-		if err != nil {
-			return fmt.Errorf("Do(DEL) failed: %s", err)
+	if len(toBeDeleted) > 0 || len(msetArgs) > 0 {
+		pipeline := tx.db.client.TxPipeline()
+		if len(toBeDeleted) > 0 {
+			pipeline.Del(toBeDeleted...)
 		}
-	}
-	if len(msetArgs) > 0 {
-		_, err = conn.Do("MSET", msetArgs...)
+		if len(msetArgs) > 0 {
+			pipeline.MSet(msetArgs...)
+		}
+		_, err := pipeline.Exec()
 		if err != nil {
-			return fmt.Errorf("Do(MSET) failed: %s", err)
+			return fmt.Errorf("%T.Exec() failed: %s", pipeline, err)
 		}
 	}
 	return nil

@@ -1,0 +1,17 @@
+dial-timeout: 0
+enable-query-to-slave: false
+endpoints:
+- localhost:7000
+- localhost:7001
+- localhost:7002
+- localhost:7003
+max-rediects: 0
+password: ""
+pool:
+  busy-timeout: 0
+  idle-check-frequency: 0
+  idle-timeout: 0
+  max-connections: 0
+read-timeout: 0
+route-by-latency: true
+write-timeout: 0

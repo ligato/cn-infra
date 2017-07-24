@@ -13,6 +13,9 @@ import (
 	"sort"
 	"strconv"
 
+	"math"
+	"sync/atomic"
+
 	"github.com/ligato/cn-infra/db"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
@@ -20,8 +23,6 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/redis/examples/airport/model"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/utils/config"
-	"math"
-	"sync/atomic"
 )
 
 var diagram = `
@@ -48,6 +49,13 @@ var diagram = `
 
 `
 
+var usage = `usage: %s -n|-c|-s <client.yaml>
+	where
+	-n		Specifies the use of a node client
+	-c		Specifies the use of a cluster client
+	-s		Specifies the use of a sentinel client
+`
+
 var log = logroot.Logger()
 
 const (
@@ -59,7 +67,7 @@ const (
 	runwayInterval     = 0.02
 	runwayClearance    = 0.4
 	runwaySpeedBump    = 4.0 / 9.0
-	hangarThreshold    = 2.0 / 5.0
+	hangarThreshold    = 1.0 / 2.0
 	hangarSlotCount    = 3
 	hangarDurationLow  = 2
 	hangarDurationHigh = 6
@@ -69,7 +77,7 @@ const (
 	flightIDFormat     = "%s%02d"
 	hangarKeyFormat    = "%2s%2d:%d"
 	columnSep          = "      "
-	redisPause         = 0.05
+	redisPause         = 0.01
 )
 
 var motions = []string{" ->", "<- "}
@@ -99,7 +107,11 @@ var departureWatcher keyval.ProtoWatcher
 var hangarBroker keyval.ProtoBroker
 var hangarWatcher keyval.ProtoWatcher
 
+var useRedigo = false
+
 func main() {
+	//log.SetLevel(logging.DebugLevel)
+
 	setup()
 	startSimulation()
 }
@@ -107,11 +119,20 @@ func main() {
 func setup() {
 	rand.Seed(time.Now().UnixNano())
 
+	cfg := loadConfig()
+	if cfg == nil {
+		return
+	}
+
+	if useRedigo {
+		redisConn = createConnectionRedigo(cfg)
+	} else {
+		redisConn = createConnection(cfg)
+	}
+
 	printHeaders()
 
 	setupFlightStatusFormat()
-
-	redisConn = createConnection(os.Args[1])
 
 	var arrivalProto, departureProto, hangarProto *kvproto.ProtoWrapper
 	arrivalProto = kvproto.NewProtoWrapper(redisConn)
@@ -134,24 +155,69 @@ func setup() {
 	hangarWatcher.Watch(hangarChan, "")
 }
 
-func createConnection(yamlFile string) *redis.BytesConnectionRedis {
-	var err error
-	var nodeClient redis.NodeClientConfig
-	err = config.ParseConfigFromYamlFile(yamlFile, &nodeClient)
-	if err != nil {
-		log.Panicf("ParseConfigFromYamlFile() failed: %s", err)
+func loadConfig() interface{} {
+	numArgs := len(os.Args)
+	defer func() {
+		if numArgs > 3 && os.Args[len(os.Args)-1] == "redigo" {
+			useRedigo = true
+			fmt.Println("Using redigo")
+		}
+	}()
+
+	if numArgs < 3 {
+		fmt.Printf(usage, os.Args[0])
+		return nil
 	}
-	pool, err := redis.CreateNodeClientConnPool(nodeClient)
+	var err error
+	t := os.Args[1]
+	f := os.Args[2]
+	defer func() {
+		if err != nil {
+			log.Panicf("ParseConfigFromYamlFile(%s) failed: %s", f, err)
+		}
+	}()
+
+	switch t {
+	case "-n":
+		var cfg redis.NodeConfig
+		err = config.ParseConfigFromYamlFile(f, &cfg)
+		return cfg
+	case "-c":
+		var cfg redis.ClusterConfig
+		err = config.ParseConfigFromYamlFile(f, &cfg)
+		return cfg
+	case "-s":
+		var cfg redis.SentinelConfig
+		err = config.ParseConfigFromYamlFile(f, &cfg)
+		return cfg
+	}
+	return nil
+}
+
+func createConnection(cfg interface{}) *redis.BytesConnectionRedis {
+	client, err := redis.CreateClient(cfg)
+	if err != nil {
+		log.Panicf("CreateNodeClient() failed: %s", err)
+	}
+	conn, err := redis.NewBytesConnection(client, log)
+	if err != nil {
+		client.Close()
+		log.Panicf("NewBytesConnection() failed: %s", err)
+	}
+	return conn
+}
+
+func createConnectionRedigo(cfg interface{}) *redis.BytesConnectionRedis {
+	pool, err := redis.CreateNodeClientConnPool(cfg.(redis.NodeConfig))
 	if err != nil {
 		log.Panicf("CreateNodeClientConnPool() failed: %s", err)
 	}
-	var redisConn *redis.BytesConnectionRedis
-	redisConn, err = redis.NewBytesConnectionRedis(pool, log)
+	conn, err := redis.NewBytesConnectionRedigo(pool, log)
 	if err != nil {
 		pool.Close()
-		log.Panicf("NewBytesConnectionRedis() failed: %s", err)
+		log.Panicf("NewBytesConnectionRedigo() failed: %s", err)
 	}
-	return redisConn
+	return conn
 }
 
 func cleanup(report bool) {
@@ -235,7 +301,6 @@ func runArrivals() {
 			newArrival()
 		}
 		pause := 2*(runwayClearance+runwayInterval*float64(runwayLength-flightIDLength)) +
-			(hangarDurationLow+hangarDurationHigh)*hangarThreshold/2 +
 			9*redisPause
 		low := pause - 0.3*pause
 		high := pause + 0.3*pause
