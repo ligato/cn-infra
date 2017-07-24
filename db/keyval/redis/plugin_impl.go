@@ -15,23 +15,65 @@
 package redis
 
 import (
+	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/servicelabel"
+	"github.com/ligato/cn-infra/utils/config"
+	"github.com/namsral/flag"
 )
 
-// ProtoPluginRedis implements Plugin interface therefore can be loaded with other plugins
-type ProtoPluginRedis struct {
+// PluginID used in the Agent Core flavors
+const PluginID core.PluginName = "RedisClient"
+
+// Plugin implements Plugin interface therefore can be loaded with other plugins
+type Plugin struct {
+	LogFactory     logging.LogFactory
+	ServiceLabel   *servicelabel.Plugin
+	ConfigFileName string
 	*plugin.Skeleton
-	//TODO `inject:""`	-- Copied from etcdv3/plugin_impl.go.  What should be done here?
 }
 
-// NewRedisPlugin creates a new instance of ProtoPluginRedis.
-func NewRedisPlugin(pool ConnPool, log logging.Logger) *ProtoPluginRedis {
+var defaultConfigFileName string
 
-	skeleton := plugin.NewSkeleton(
+func init() {
+	flag.StringVar(&defaultConfigFileName, "redis-config", "", "Location of the Redis configuration file")
+}
+
+func (p *Plugin) retrieveConfig() (*ClusterConfig, error) {
+	cfg := &ClusterConfig{}
+	var configFile string
+	if p.ConfigFileName != "" {
+		configFile = p.ConfigFileName
+	} else if defaultConfigFileName != "" {
+		configFile = defaultConfigFileName
+	}
+
+	if configFile != "" {
+		err := config.ParseConfigFromYamlFile(configFile, cfg)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return cfg, nil
+}
+
+// Init is called on plugin startup. It establishes the connection to redis.
+func (p *Plugin) Init() error {
+	cfg, err := p.retrieveConfig()
+	if err != nil {
+		return err
+	}
+	client, err := CreateClient(cfg)
+	if err != nil {
+		return err
+	}
+
+	skeleton := plugin.NewSkeleton(string(PluginID), p.LogFactory, p.ServiceLabel,
 		func(log logging.Logger) (plugin.Connection, error) {
-			return NewBytesConnectionRedigo(pool, log)
+			return NewBytesConnection(client, log)
 		},
 	)
-	return &ProtoPluginRedis{Skeleton: skeleton}
+	p.Skeleton = skeleton
+	return p.Skeleton.Init()
 }

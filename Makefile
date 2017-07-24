@@ -3,6 +3,7 @@ include Makeroutines.mk
 VERSION=$(shell git rev-parse HEAD)
 DATE=$(shell date +'%Y-%m-%dT%H:%M%:z')
 COVER_DIR=/tmp/
+LDFLAGS=-ldflags '-X github.com/ligato/cn-infra/core.BuildVersion=$(VERSION) -X github.com/ligato/cn-infra/core.BuildDate=$(DATE)'
 
 # run all tests
 define test_only
@@ -61,6 +62,14 @@ define lint_only
     @echo "# done"
 endef
 
+# build simple-agent only
+define build_simple_agent_only
+    @echo "# building simple-agent"
+    @cd examples/simple-agent && go build -v ${LDFLAGS}
+    @echo "# done"
+endef
+
+
 # build examples only
 define build_examples_only
     @echo "# building examples"
@@ -77,14 +86,23 @@ define clean_examples_only
     @echo "# cleaning examples"
     @cd db/keyval/etcdv3/examples && make clean
     @cd db/keyval/redis/examples && make clean
+    @cd db/sql/cassandra/examples/simple && rm -f simple
     @cd logging/logrus/examples && make clean
     @cd messaging/kafka/examples && make clean
+    @echo "# done"
+endef
+
+# clean simple-agent only
+define clean_simple_agent_only
+    @echo "# cleaning simple agent"
+    @rm -f examples/simple-agent/simple-agent
     @echo "# done"
 endef
 
 # build all binaries
 build:
 	$(call build_examples_only)
+	$(call build_simple_agent_only)
 
 # install dependencies
 install-dep:
@@ -119,7 +137,7 @@ lint:
 clean:
 	@echo "# cleanup completed"
 	$(call clean_examples_only)
-
+	$(call clean_simple_agent_only)
 # run all targets
 all:
 	$(call lint_only)
