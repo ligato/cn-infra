@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package logrus provides logger implementation based on Logrus library.
-package logrus
+// Package logmanager provides a plugin that allows to manage log levels of loggers using HTTP.
+package logmanager

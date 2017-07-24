@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package logrus provides logger implementation based on Logrus library.
-package logrus
+// Package idxmap provides mapping structure that allows to index data using multiple indexes.
+package idxmap
