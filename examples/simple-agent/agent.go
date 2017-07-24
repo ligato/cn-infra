@@ -19,6 +19,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/http"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logmanager"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/messaging/kafka"
@@ -35,6 +36,7 @@ type Flavour struct {
 
 	Logrus       logrus.Plugin
 	HTTP         http.Plugin
+	LogManager   logmanager.Plugin
 	ServiceLabel servicelabel.Plugin
 	Etcd         etcdv3.Plugin
 	Kafka        kafka.Plugin
@@ -49,6 +51,8 @@ func (g *Flavour) Inject() error {
 	g.injected = true
 
 	g.HTTP.LogFactory = &g.Logrus
+	g.LogManager.ManagedLoggers = &g.Logrus
+	g.LogManager.HTTP = &g.HTTP
 	g.Etcd.LogFactory = &g.Logrus
 	g.Etcd.ServiceLabel = &g.ServiceLabel
 	g.Kafka.LogFactory = &g.Logrus
