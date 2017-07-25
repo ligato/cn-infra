@@ -60,9 +60,9 @@ type bytesKeyVal struct {
 	value []byte
 }
 
-// NewBytesConnectionRedigo creates a new instance of BytesConnectionRedis using the provided
+// NewBytesConnectionRedis creates a new instance of BytesConnectionRedis using the provided
 // ConnPool
-func NewBytesConnectionRedigo(pool ConnPool, log logging.Logger) (*BytesConnectionRedis, error) {
+func NewBytesConnectionRedis(pool ConnPool, log logging.Logger) (*BytesConnectionRedis, error) {
 	return &BytesConnectionRedis{log, pool, nil, make(chan struct{}), false}, nil
 }
 

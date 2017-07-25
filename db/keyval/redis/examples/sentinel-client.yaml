@@ -1,7 +1,7 @@
 db: 0
 dial-timeout: 0
 endpoints:
-- localhost:26379
+- localhost:6379
 master-name: mymaster
 password: ""
 pool:

@@ -107,7 +107,7 @@ func createConnectionRedigo(cfg interface{}) *redis.BytesConnectionRedis {
 	if err != nil {
 		log.Panicf("CreateNodeClientConnPool() failed: %s", err)
 	}
-	conn, err := redis.NewBytesConnectionRedigo(pool, log)
+	conn, err := redis.NewBytesConnectionRedis(pool, log)
 	if err != nil {
 		pool.Close()
 		log.Panicf("NewBytesConnectionRedigo() failed: %s", err)

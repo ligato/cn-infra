@@ -101,7 +101,7 @@ func mockConnectionRedigo() {
 	mockPool = &redigo.Pool{
 		Dial: func() (redigo.Conn, error) { return mockConn, nil },
 	}
-	bytesConn, _ = NewBytesConnectionRedigo(mockPool, logroot.Logger())
+	bytesConn, _ = NewBytesConnectionRedis(mockPool, logroot.Logger())
 	bytesBrokerWatcher = bytesConn.NewBrokerWatcher("")
 }
 
