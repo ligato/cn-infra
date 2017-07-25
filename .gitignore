@@ -1,6 +1,10 @@
 .idea/
 glide.lock
-cmd/generic-agent/generic-agent
+examples/etcd/etcd
+examples/flags/flags
+examples/kafka/kafka
+examples/logs/logs
+examples/simple-agent/simple-agent
 db/keyval/etcdv3/examples/phonebook/editor/editor
 db/keyval/etcdv3/examples/phonebook/view/view
 db/keyval/etcdv3/examples/phonebook/watcher/watcher
