@@ -39,3 +39,6 @@ $ etcdctl get /vnf-agent/<agent-label>/check/status/v1/plugin/GOVPP
 /vnf-agent/<agent-label>/check/status/v1/plugin/GOVPP
 {"state":2,"last_change":1496322205,"last_update":1496322361,"error":"VPP disconnected"}
 ```
+
+**Dependencies**
+- [HTTPmux](../httpmux)

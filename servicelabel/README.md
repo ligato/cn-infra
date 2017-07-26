@@ -7,8 +7,7 @@ of different VNFs do not get mixed up.
 
 **API**
 
-The API cannot be simpler. Plugin can obtain the microservice label using the function `GetAgentLabel()`,
-which really just returns a string value already obtained during the `servicelabel` initialization phase.
+described in [doc.go](doc.go)
 
 **Configuration**
 

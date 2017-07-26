@@ -3,10 +3,11 @@
 Logrus provides a logging plugin based on Logrus library. 
 
 **API**
-- `logging.LogFactory`
-- `logging.LogManagement`
+
+Provides API described in the [skeleton](../plugin) 
 
 **Configuration**
+
 - (TODO) initial log level
 
 **Dependencies**

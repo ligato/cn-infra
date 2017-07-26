@@ -4,11 +4,16 @@ Logging plugin defines a skeleton that allows to create loggers and exposes the 
 A particular logging implementation uses this skeleton.
 
 **API**
-- `logging.LogFactory`
-- `logging.LogManagement`
+
+Logging skeleton implements the following interfaces:
+- [`LogFactory`](../plugin.go)
+- [`LogManagement`](../plugin.go)
+
 
 **Configuration**
+
 \-
 
 **Dependencies**
+
 \-
