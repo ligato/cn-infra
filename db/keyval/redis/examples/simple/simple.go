@@ -11,6 +11,7 @@ import (
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/utils/config"
+	"strconv"
 )
 
 var usage = `usage: %s -n|-c|-s <client.yaml>
@@ -118,8 +119,12 @@ func createConnectionRedigo(cfg interface{}) *redis.BytesConnectionRedis {
 func runSimpleExmple() {
 	var err error
 
-	var key1, key2, key3 = "key1", "key2", "key3"
-	keyPrefix := key1[:3]
+	keyPrefix := "key"
+	keys3 := []string{
+		keyPrefix + "1",
+		keyPrefix + "2",
+		keyPrefix + "3",
+	}
 
 	respChan := make(chan keyval.BytesWatchResp, 10)
 	err = watcher.Watch(respChan, keyPrefix)
@@ -147,15 +152,15 @@ func runSimpleExmple() {
 		}
 	}()
 	time.Sleep(2 * time.Second)
-	put(key1, "val 1")
-	put(key2, "val 2")
-	put(key3, "val 3", keyval.WithTTL(time.Second))
+	put(keys3[0], "val 1")
+	put(keys3[1], "val 2")
+	put(keys3[2], "val 3", keyval.WithTTL(time.Second))
 
 	time.Sleep(2 * time.Second)
-	get(key1)
-	get(key2)
-	fmt.Printf("==> NOTE: %s should have expired\n", key3)
-	get(key3) // key3 should've expired
+	get(keys3[0])
+	get(keys3[1])
+	fmt.Printf("==> NOTE: %s should have expired\n", keys3[2])
+	get(keys3[2]) // key3 should've expired
 	fmt.Printf("==> NOTE: get(%s) should return nil\n", keyPrefix)
 	get(keyPrefix) // keyPrefix shouldn't find anything
 	listKeys(keyPrefix)
@@ -164,14 +169,13 @@ func runSimpleExmple() {
 	del(keyPrefix)
 
 	fmt.Println("==> NOTE: All keys should have been deleted")
-	get(key1)
-	get(key2)
+	get(keys3[0])
+	get(keys3[1])
 	listKeys(keyPrefix)
 	listVal(keyPrefix)
 
-	txn()
-
-	listVal(keyPrefix)
+	txn(keyPrefix)
+	txnSameHash(keyPrefix)
 
 	log.Info("Sleep for 5 seconds")
 	time.Sleep(5 * time.Second)
@@ -266,18 +270,50 @@ func del(keyPrefix string) {
 	log.Infof("Delete(%s): found = %t", keyPrefix, found)
 }
 
-func txn() {
-	var key101, key102, key103, key104 = "key101", "key102", "key103", "key104"
+func txn(keyPrefix string) {
+	keys := []string{
+		keyPrefix + "101",
+		keyPrefix + "102",
+		keyPrefix + "103",
+		keyPrefix + "104",
+	}
 	var txn keyval.BytesTxn
 
+	log.Infof("txn(): keys = %v", keys)
 	txn = broker.NewTxn()
-	txn.Put(key101, []byte("val 101")).Put(key102, []byte("val 102"))
-	txn.Put(key103, []byte("val 103")).Put(key104, []byte("val 104"))
-	txn.Delete(key101)
+	for i, k := range keys {
+		txn.Put(k, []byte(strconv.Itoa(i+1)))
+	}
+	txn.Delete(keys[0])
 	err := txn.Commit()
 	if err != nil {
-		log.Errorf("txn: %s", err)
+		log.Errorf("txn(): %s", err)
 	}
+	listVal(keyPrefix)
+}
+
+func txnSameHash(keyPrefix string) {
+	var hashTag = "{SameHash}"
+	keys := []string{
+		hashTag + keyPrefix + "221",
+		hashTag + keyPrefix + "222",
+		hashTag + keyPrefix + "223",
+		hashTag + keyPrefix + "224",
+	}
+	var txn keyval.BytesTxn
+
+	log.Infof("txnSameHash(): keys = %v", keys)
+	txn = broker.NewTxn()
+	for i, k := range keys {
+		txn.Put(k, []byte(strconv.Itoa(i+331)))
+	}
+	txn.Delete(keys[0])
+	err := txn.Commit()
+	if err != nil {
+		log.Errorf("txnSameHash(): %s", err)
+	}
+	listVal(keyPrefix)
+	listVal(hashTag + keyPrefix)
 }
 
 func generateSampleConfigs() {

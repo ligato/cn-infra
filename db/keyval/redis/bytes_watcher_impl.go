@@ -111,7 +111,7 @@ func watch(db *BytesConnectionRedis, respChan chan<- keyval.BytesWatchResp,
 		patterns[i] = keySpaceEventPrefix + wildcard(k)
 	}
 	pubSub := db.client.PSubscribe(patterns...)
-	startEventHandler(db, pubSub, respChan, trimPrefix, patterns...)
+	startWatch(db, pubSub, respChan, trimPrefix, patterns...)
 	go func() {
 		_, active := <-closeChan
 		if !active {
@@ -128,10 +128,11 @@ func watch(db *BytesConnectionRedis, respChan chan<- keyval.BytesWatchResp,
 	return nil
 }
 
-func startEventHandler(db *BytesConnectionRedis, pubSub *goredis.PubSub,
+func startWatch(db *BytesConnectionRedis, pubSub *goredis.PubSub,
 	respChan chan<- keyval.BytesWatchResp, trimPrefix func(key string) string, patterns ...string) {
 	go func() {
 		defer func() { db.Debugf("Watch(%v) exited", patterns) }()
+		db.Debugf("start Watch(%v)", patterns)
 		for {
 			val, err := pubSub.Receive()
 			if err != nil && !db.closed {
@@ -155,7 +156,7 @@ func startEventHandler(db *BytesConnectionRedis, pubSub *goredis.PubSub,
 						db.Errorf("GetValue(%s) failed with error %s", key, err)
 					}
 					if val == nil {
-						db.Errorf("GetValue(%s) returned nil", key)
+						db.Debugf("GetValue(%s) returned nil", key)
 					}
 					if trimPrefix != nil {
 						key = trimPrefix(key)

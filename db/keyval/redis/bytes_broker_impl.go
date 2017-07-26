@@ -104,7 +104,7 @@ func (db *BytesConnectionRedis) NewTxn() keyval.BytesTxn {
 	}
 	db.Debug("NewTxn()")
 
-	return &Txn{db: db, ops: make(map[string]*op)}
+	return &Txn{db: db, ops: []op{}}
 }
 
 // Put sets the key/value in Redis data store. Replaces value if the key already exists.
@@ -394,7 +394,7 @@ func (pdb *BytesBrokerWatcherRedis) NewTxn() keyval.BytesTxn {
 	}
 	pdb.Debug("NewTxn()")
 
-	return &Txn{db: pdb.delegate, ops: make(map[string]*op), prefix: pdb.prefix}
+	return &Txn{db: pdb.delegate, ops: []op{}, prefix: pdb.prefix}
 }
 
 // GetValue call GetValue function of BytesConnectionRedis.

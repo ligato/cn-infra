@@ -41,7 +41,7 @@ func init() {
 }
 
 func (p *Plugin) retrieveConfig() (interface{}, error) {
-	cfg := ClusterConfig{}
+	cfg := SentinelConfig{}
 	var configFile string
 	if p.ConfigFileName != "" {
 		configFile = p.ConfigFileName

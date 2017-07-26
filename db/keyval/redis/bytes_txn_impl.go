@@ -16,19 +16,32 @@ package redis
 
 import (
 	"fmt"
+	"strings"
+
+	goredis "github.com/go-redis/redis"
+	"github.com/howeyc/crc16"
 	"github.com/ligato/cn-infra/db/keyval"
 )
 
 type op struct {
+	key   string
 	value []byte
 	del   bool
 }
 
 // Txn allows to group operations into the transaction. Transaction executes multiple operations
 // in a more efficient way in contrast to executing them one by one.
+//
+// Transaction is implemented using Redis multi-key command.  If you are using Redis Cluster, read this:
+//
+// "Redis Cluster supports multiple key operations as long as all the keys involved into a single
+// command execution (or whole transaction, or Lua script execution) all belong to the same hash
+// slot. The user can force multiple keys to be part of the same hash slot by using a concept
+// called hash tags." (https://redis.io/topics/cluster-tutorial).
+// In short, you must make sure all the keys involved in a transaction belong to the same hash slot.
 type Txn struct {
 	db     *BytesConnectionRedis
-	ops    map[string] /*key*/ *op
+	ops    []op
 	prefix string
 }
 
@@ -42,14 +55,14 @@ func (tx *Txn) addPrefix(key string) string {
 // the existing value will be overwritten with the value from this
 // operation.
 func (tx *Txn) Put(key string, value []byte) keyval.BytesTxn {
-	tx.ops[tx.addPrefix(key)] = &op{value, false}
+	tx.ops = append(tx.ops, op{tx.addPrefix(key), value, false})
 	return tx
 }
 
 // Delete adds a new 'delete' operation to a previously created
 // transaction.
 func (tx *Txn) Delete(key string) keyval.BytesTxn {
-	tx.ops[tx.addPrefix(key)] = &op{nil, true}
+	tx.ops = append(tx.ops, op{tx.addPrefix(key), nil, true})
 	return tx
 }
 
@@ -62,14 +75,19 @@ func (tx *Txn) Commit() (err error) {
 	}
 	tx.db.Debug("Commit()")
 
+	if len(tx.ops) == 0 {
+		return nil
+	}
+
+	// redigo
 	if tx.db.pool != nil {
 		toBeDeleted := []interface{}{}
 		msetArgs := []interface{}{}
-		for key, op := range tx.ops {
+		for _, op := range tx.ops {
 			if op.del {
-				toBeDeleted = append(toBeDeleted, key)
+				toBeDeleted = append(toBeDeleted, op.key)
 			} else {
-				msetArgs = append(msetArgs, key)
+				msetArgs = append(msetArgs, op.key)
 				msetArgs = append(msetArgs, string(op.value))
 			}
 		}
@@ -92,28 +110,58 @@ func (tx *Txn) Commit() (err error) {
 		return nil
 	}
 
-	toBeDeleted := []string{}
-	msetArgs := []interface{}{}
-	for key, op := range tx.ops {
+	// go-redis
+	if _, yes := tx.db.client.(*goredis.ClusterClient); yes {
+		// Warning: Redis cluster won't let you run multi-key commands in case of cross slot.
+		checkCrossSlot(tx)
+	}
+	pipeline := tx.db.client.TxPipeline()
+	for _, op := range tx.ops {
 		if op.del {
-			toBeDeleted = append(toBeDeleted, key)
+			pipeline.Del(op.key)
 		} else {
-			msetArgs = append(msetArgs, key)
-			msetArgs = append(msetArgs, string(op.value))
+			pipeline.Set(op.key, op.value, 0)
 		}
 	}
-	if len(toBeDeleted) > 0 || len(msetArgs) > 0 {
-		pipeline := tx.db.client.TxPipeline()
-		if len(toBeDeleted) > 0 {
-			pipeline.Del(toBeDeleted...)
-		}
-		if len(msetArgs) > 0 {
-			pipeline.MSet(msetArgs...)
-		}
-		_, err := pipeline.Exec()
-		if err != nil {
-			return fmt.Errorf("%T.Exec() failed: %s", pipeline, err)
-		}
+	_, err = pipeline.Exec()
+	if err != nil {
+		return fmt.Errorf("%T.Exec() failed: %s", pipeline, err)
 	}
 	return nil
+}
+
+// CROSSSLOT Keys in request don't hash to the same slot
+// https://stackoverflow.com/questions/38042629/redis-cross-slot-error
+// https://redis.io/topics/cluster-spec#keys-hash-tags
+// https://redis.io/topics/cluster-tutorial
+func checkCrossSlot(tx *Txn) bool {
+	var hashSlot uint16
+	var key string
+
+	for _, op := range tx.ops {
+		if hashSlot == 0 {
+			hashSlot = getHashSlot(op.key)
+			key = op.key
+		} else {
+			slot := getHashSlot(op.key)
+			if slot != hashSlot {
+				tx.db.Warnf("%T: Found CROSS SLOT keys (%s, %d) and (%s, %d)",
+					*tx, key, hashSlot, op.key, slot)
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func getHashSlot(key string) uint16 {
+	start := strings.Index(key, "{")
+	if start != -1 {
+		start++
+		end := strings.Index(key[start:], "}")
+		if end != -1 {
+			key = key[start:end]
+		}
+	}
+	return crc16.ChecksumCCITT([]byte(key)) % 16384
 }

@@ -89,7 +89,7 @@ func mockConnectionRedigo() {
 	mockConn.Command("MGET", iKeys...).Expect(iVals)
 	mockConn.Command("DEL", iKeys...).Expect(len(keyValues))
 
-	mockConn.Command("MSET", []interface{}{"keyMap", keyValues["keyMap"]}...).Expect(nil)
+	mockConn.Command("MSET", []interface{}{"keyWest", keyValues["keyWest"], "keyMap", keyValues["keyMap"]}...).Expect(nil)
 	mockConn.Command("DEL", []interface{}{"keyWest"}...).Expect(1).Expect(nil)
 
 	// for negative tests
@@ -339,6 +339,9 @@ func TestTxn(t *testing.T) {
 		gomega.Expect(found).Should(gomega.BeTrue())
 		gomega.Expect(val).Should(gomega.Equal([]byte(keyValues["keyMap"])))
 	}
+	txn = bytesBrokerWatcher.NewTxn()
+	txn.Put("{hashTag}key", []byte{}).Delete("keyWest")
+	checkCrossSlot(txn.(*Txn))
 }
 
 func TestWatchRedigo(t *testing.T) {

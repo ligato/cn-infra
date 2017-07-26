@@ -375,12 +375,12 @@ func randomFlight() flight.Info {
 	airlines := []string{"AA", "DL", "SW", "UA"}
 	numAirlines := len(airlines)
 
-	atomic.AddUint32(&priority, 1)
+	p := atomic.AddUint32(&priority, 1)
 	for {
 		f := flight.Info{
 			Airline:  airlines[rand.Int()%numAirlines],
 			Number:   rand.Uint32()%99 + 1,
-			Priority: priority,
+			Priority: p,
 		}
 		var exists bool
 		id := flightID(f)

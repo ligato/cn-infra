@@ -90,20 +90,22 @@ const GoRedisNil = goredis.Nil
 
 // Client Common interface to adapt all types of Redis clients
 type Client interface {
-	// The easiest way to adapt Cmdable interface is to just embed it.  Like this:
-	// goredis.Cmdable
-	// But that means we'll have to mock each and every method in Cmdable for unit tests,
-	// making it a whole lot more complicated.  It's more manageable to only delcare
-	// (duplicate) the methods we need from Cmdable.  As follows:
-	//
-	Close() error
-	Del(keys ...string) *goredis.IntCmd
-	Get(key string) *goredis.StringCmd
-	MGet(keys ...string) *goredis.SliceCmd
-	Scan(cursor uint64, match string, count int64) *goredis.ScanCmd
-	Set(key string, value interface{}, expiration time.Duration) *goredis.StatusCmd
+	// The easiest way to adapt Cmdable interface is to just embed it.
+	goredis.Cmdable
+	/*
+		But that means we'll have to mock each and every method in Cmdable for unit tests,
+		making it a whole lot more complicated.  When the time comes, it may be more manageable
+		to only delcare (duplicate) the methods we need from Cmdable.  As follows:
+			Del(keys ...string) *goredis.IntCmd
+			Get(key string) *goredis.StringCmd
+			MGet(keys ...string) *goredis.SliceCmd
+			MSet(pairs ...interface{}) *goredis.StatusCmd
+			Scan(cursor uint64, match string, count int64) *goredis.ScanCmd
+			Set(key string, value interface{}, expiration time.Duration) *goredis.StatusCmd
+	*/
 
 	// Declare these additional methods to enable access to them through this interface
+	Close() error
 	TxPipeline() goredis.Pipeliner
 	PSubscribe(channels ...string) *goredis.PubSub
 }

@@ -129,4 +129,8 @@
 //       }
 //   }
 //
+// NOTE: You must configure Redis for it to publish key space events.  For example,
+//   config SET notify-keyspace-events KA
+// See EVENT NOTIFICATION in https://raw.githubusercontent.com/antirez/redis/3.2/redis.conf
+//
 package redis
