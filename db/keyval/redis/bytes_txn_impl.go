@@ -29,6 +29,8 @@ type op struct {
 	del   bool
 }
 
+// Txn allows to group operations into the transaction. Transaction executes multiple operations
+// in a more efficient way in contrast to executing them one by one.
 type Txn struct {
 	db     *BytesConnectionRedis
 	ops    []op
