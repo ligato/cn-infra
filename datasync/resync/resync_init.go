@@ -15,9 +15,9 @@
 package resync
 
 import (
-	log "github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/datasync/resync/resyncevent"
 	"github.com/ligato/cn-infra/datasync/resync/resyncevent/resynceventimpl"
+	log "github.com/ligato/cn-infra/logging/logrus"
 	"sync"
 	"time"
 )
