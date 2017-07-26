@@ -17,13 +17,14 @@ sudo docker run -p 2181:2181 -p 9092:9092 --name kafka --rm \
 
 Kafka plugin provides access to kafka brokers.
 
+**API**
+
+The plugin's API is documented at the end of [doc.go](doc.go).
+
+
 **Configuration**
 - Location of the Kafka configuration file can be defined either by command line flag `kafka-config` or 
 set via `KAFKA_CONFIG` env variable.
-
-**API**
-
-See the end of [doc.go](doc.go)
 
 **Dependencies**
 - [Logging](../../logging/plugin)

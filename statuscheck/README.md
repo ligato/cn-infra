@@ -3,6 +3,7 @@
 The `statuscheck` plugin monitors the status of the agent and its plugins and exposes it via ETCD and HTTP.
 
 **API**
+
 Please see [doc.go](doc.go) for API documentation.
 
 **Overall Agent Status**
@@ -31,6 +32,7 @@ $ vpp-agent -http-port 9090
 ```
 
 **Plugins Status**
+
 To retrieve the current status of a plugin from ETCD, get the 
 `/vnf-agent/<agent-label>/check/status/v1/plugin/<PLUGIN_NAME>` key, e.g. for GoVPP:
 
@@ -41,4 +43,5 @@ $ etcdctl get /vnf-agent/<agent-label>/check/status/v1/plugin/GOVPP
 ```
 
 **Dependencies**
+
 - [HTTPmux](../httpmux)

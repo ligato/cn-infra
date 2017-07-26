@@ -8,8 +8,8 @@ Provides API described in the [skeleton](../plugin).
 
 **Configuration**
 
-- (TODO) initial log level
+\-
 
 **Dependencies**
 
-(no dependencies)
+\-
