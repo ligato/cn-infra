@@ -41,7 +41,7 @@ type Plugin struct {
 	access        sync.Mutex
 }
 
-// Init just initializes variables
+// Init initializes variables
 func (plugin *Plugin) Init() (err error) {
 	plugin.registrations = make(map[string]*resynceventimpl.Registration)
 
