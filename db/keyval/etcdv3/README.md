@@ -9,7 +9,7 @@ set via `ETCDV3_CONFIG` environment variable.
 
 **API**
 
-The api is described at the bottom of [doc.go](doc.go).
+Provides API described in the [skeleton](../plugin), the plugin is documented at the bottom of [doc.go](doc.go).
 
 **Dependencies**
 - [Logging](../../../logging/plugin)

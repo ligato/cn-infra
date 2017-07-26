@@ -28,6 +28,8 @@ is managed by the core. This package defines API between Agent Core and Agent Pl
                                        +-----------------------+
 ```
 
+**Plugins**
+
 The repository contains following plugins:
 
 - [Logging](../logging/plugin) - generic skeleton that allows to create logger instance
