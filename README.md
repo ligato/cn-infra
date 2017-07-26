@@ -17,13 +17,13 @@ If you are interested in contributing, please see the [contribution guidelines](
 
 Brief description:
 * RPC - allows to easily expose API via REST & GRPC
-* DB - provides a common API and connectivity to the data store (etcd, Redis, Casssandra)
-* Messaging - provides a common API and connectivity to message busses (Kafka, ...)
-* Logs - Integrated Logrus for logging plugin plus RPC to change log level at runtime.
-* Health - Self health check mechanism among plugins plus RPCs:
+* DB - provides a common API and connectivity to the data store ([etcd](db/keyval/etcdv3), [Redis](db/keyval/redis), [Casssandra](db/sql/cassandra))
+* Messaging - provides a common API and connectivity to message busses ([Kafka](messaging/kafka), ...)
+* Logging - Integrated [Logrus](logging/logrus) for logging and a [plugin](logging/logmanager) supporting a modification of log level at runtime.
+* [Health](statuscheck) - Self health check mechanism among plugins plus RPCs:
   *  probes (callable remotely from K8s)
   *  status (health check status) 
-* Core - lifecycle management of plugins (loading, initialization, unloading)
+* [Core](core) - lifecycle management of plugins (loading, initialization, unloading)
 
 # Quickstart
 Following code snippet illustrates how to start your own flavour of plugins.
