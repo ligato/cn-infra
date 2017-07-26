@@ -10,6 +10,14 @@ of different VNFs do not get mixed up.
 The API cannot be simpler. Plugin can obtain the microservice label using the function `GetAgentLabel()`,
 which really just returns a string value already obtained during the `servicelabel` initialization phase.
 
+**Configuration**
+
+- the serviceLabel can be set either by commandline flag `microservice-label` or environment variable `MICROSERVICE_LABEL`
+
+**Dependencies**
+
+\-
+
 **Example**
 
 Example of retrieving and using the microservice label:
@@ -17,3 +25,5 @@ Example of retrieving and using the microservice label:
 plugin.Label = servicelabel.GetAgentLabel()
 dbw.Watch(dataChan, cfg.SomeConfigKeyPrefix(plugin.Label))
 ```
+
+
