@@ -29,16 +29,6 @@ type op struct {
 	del   bool
 }
 
-// Txn allows to group operations into the transaction. Transaction executes multiple operations
-// in a more efficient way in contrast to executing them one by one.
-//
-// Transaction is implemented using Redis multi-key command.  If you are using Redis Cluster, read this:
-//
-// "Redis Cluster supports multiple key operations as long as all the keys involved into a single
-// command execution (or whole transaction, or Lua script execution) all belong to the same hash
-// slot. The user can force multiple keys to be part of the same hash slot by using a concept
-// called hash tags." (https://redis.io/topics/cluster-tutorial).
-// In short, you must make sure all the keys involved in a transaction belong to the same hash slot.
 type Txn struct {
 	db     *BytesConnectionRedis
 	ops    []op
@@ -111,10 +101,7 @@ func (tx *Txn) Commit() (err error) {
 	}
 
 	// go-redis
-	if _, yes := tx.db.client.(*goredis.ClusterClient); yes {
-		// Warning: Redis cluster won't let you run multi-key commands in case of cross slot.
-		checkCrossSlot(tx)
-	}
+
 	pipeline := tx.db.client.TxPipeline()
 	for _, op := range tx.ops {
 		if op.del {
@@ -125,6 +112,11 @@ func (tx *Txn) Commit() (err error) {
 	}
 	_, err = pipeline.Exec()
 	if err != nil {
+		// Redis cluster won't let you run multi-key commands in case of cross slot.
+		// - Cross slot check may be useful indicator in case of failure.
+		if _, yes := tx.db.client.(*goredis.ClusterClient); yes {
+			checkCrossSlot(tx)
+		}
 		return fmt.Errorf("%T.Exec() failed: %s", pipeline, err)
 	}
 	return nil
@@ -134,6 +126,10 @@ func (tx *Txn) Commit() (err error) {
 // https://stackoverflow.com/questions/38042629/redis-cross-slot-error
 // https://redis.io/topics/cluster-spec#keys-hash-tags
 // https://redis.io/topics/cluster-tutorial
+// "Redis Cluster supports multiple key operations as long as all the keys involved into a single
+// command execution (or whole transaction, or Lua script execution) all belong to the same hash
+// slot. The user can force multiple keys to be part of the same hash slot by using a concept
+// called hash tags."
 func checkCrossSlot(tx *Txn) bool {
 	var hashSlot uint16
 	var key string
@@ -163,5 +159,6 @@ func getHashSlot(key string) uint16 {
 			key = key[start:end]
 		}
 	}
-	return crc16.ChecksumCCITT([]byte(key)) % 16384
+	const redisHashSlotCount = 16384
+	return crc16.ChecksumCCITT([]byte(key)) % redisHashSlotCount
 }
