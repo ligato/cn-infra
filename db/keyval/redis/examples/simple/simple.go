@@ -38,6 +38,7 @@ func main() {
 	if cfg == nil {
 		return
 	}
+	fmt.Printf("%T:\n%v\n", cfg, cfg)
 
 	if useRedigo {
 		redisConn = createConnectionRedigo(cfg)

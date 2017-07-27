@@ -53,7 +53,7 @@
 //           },
 //       },
 //   }
-//   client, err := redis.CreateNodeClient(config)
+//   client, err := redis.CreateClient(config)
 //   db, err := redis.NewBytesConnection(client, log)
 //
 //   // create broker/watcher that share the same connection pools.
