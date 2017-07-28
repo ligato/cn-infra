@@ -21,8 +21,11 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/db/keyval/redis"
 	"github.com/ligato/cn-infra/db/keyval/redis/examples/airport/model"
+	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/utils/config"
+	"regexp"
+	"strings"
 )
 
 var diagram = `
@@ -107,11 +110,11 @@ var departureWatcher keyval.ProtoWatcher
 var hangarBroker keyval.ProtoBroker
 var hangarWatcher keyval.ProtoWatcher
 
+var prefix string
+var useKeys string
 var useRedigo = false
 
 func main() {
-	//log.SetLevel(logging.DebugLevel)
-
 	setup()
 	startSimulation()
 }
@@ -128,6 +131,9 @@ func setup() {
 		redisConn = createConnectionRedigo(cfg)
 	} else {
 		redisConn = createConnection(cfg)
+		if useKeys != "" {
+			redisConn.UseKeysCmdForCluster, _ = strconv.ParseBool(useKeys)
+		}
 	}
 
 	printHeaders()
@@ -139,14 +145,14 @@ func setup() {
 	departureProto = kvproto.NewProtoWrapper(redisConn)
 	hangarProto = kvproto.NewProtoWrapper(redisConn)
 
-	arrivalBroker = arrivalProto.NewBroker(arrival)
-	arrivalWatcher = arrivalProto.NewWatcher(arrival)
+	arrivalBroker = arrivalProto.NewBroker(prefix + arrival)
+	arrivalWatcher = arrivalProto.NewWatcher(prefix + arrival)
 
-	departureBroker = departureProto.NewBroker(departure)
-	departureWatcher = departureProto.NewWatcher(departure)
+	departureBroker = departureProto.NewBroker(prefix + departure)
+	departureWatcher = departureProto.NewWatcher(prefix + departure)
 
-	hangarBroker = hangarProto.NewBroker(hangar)
-	hangarWatcher = hangarProto.NewWatcher(hangar)
+	hangarBroker = hangarProto.NewBroker(prefix + hangar)
+	hangarWatcher = hangarProto.NewWatcher(prefix + hangar)
 
 	cleanup(false)
 
@@ -158,9 +164,26 @@ func setup() {
 func loadConfig() interface{} {
 	numArgs := len(os.Args)
 	defer func() {
-		if numArgs > 3 && os.Args[len(os.Args)-1] == "redigo" {
-			useRedigo = true
-			fmt.Println("Using redigo")
+		// Variety to run the example
+		if numArgs > 3 {
+			rePrefix := regexp.MustCompile("prefix:.*")
+			reKeys := regexp.MustCompile("keys:.*")
+			for _, a := range os.Args[3:] {
+				switch a {
+				case "redigo":
+					useRedigo = true
+					fmt.Println("Using redigo")
+					continue
+				case "debug":
+					log.SetLevel(logging.DebugLevel)
+					continue
+				}
+				if rePrefix.MatchString(a) {
+					prefix = strings.TrimPrefix(a, "prefix:")
+				} else if reKeys.MatchString(a) {
+					useKeys = strings.TrimPrefix(a, "keys:")
+				}
+			}
 		}
 	}()
 

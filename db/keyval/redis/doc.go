@@ -16,46 +16,33 @@
 //
 // The entity BytesConnectionRedis provides access to CRUD as well as event subscription API's.
 //
-//   +-----+    --> (BytesBroker)  +------------------------+   -->  CRUD      +-------+
-//   | app |                       |  BytesConnectionRedis  |                  | Redis |
-//   +-----+    <-- (BytesWatcher) +------------------------+   <--  events    +-------+
+//   +-----+    --> (Broker)   +------------------------+  -->  CRUD      +-------+
+//   | app |                   |  BytesConnectionRedis  |                 | Redis |
+//   +-----+    <-- (Watcher)  +------------------------+  <--  events    +-------+
 //
-// The code snippets below provide examples on using BytesConnectionRedis.  For simplicity, error handling is omitted.
-// Deailed examples are available in
-//   ligato/cn-infra/db/keyval/redis/examples/simple
-//   ligato/cn-infra/db/keyval/redis/examples/airport
+// The code snippets below provide examples to help you get started.  For simplicity, error handling is omitted.
 //
-// Connection
+// Imports
 //   import "github.com/ligato/cn-infra/db/keyval/kvproto"
 //   import "github.com/ligato/cn-infra/db/keyval/redis"
+//   import "github.com/ligato/cn-infra/utils/config"
+//   import "github.com/ligato/cn-infra/logging/logroot"
 //
-//   // Create a connection backed by a node client that will connect
-//   // to a single Redis server node.
-//   //
-//   // You can also create connection based on cluster or sentinel
-//   // client that would connect to the respective type of Redis
-//   // installation, in a similar way.
-//   config := redis.NodeConfig{
-//       Endpoint: "localhost:6379",
-//       DB:       0,
-//       AllowReadQueryToSlave: false,
-//       TLS:          redis.TLS{},
-//       ClientConfig: redis.ClientConfig{
-//           Password:     "",
-//           DialTimeout:  0,
-//           ReadTimeout:  0,
-//           WriteTimeout: 0,
-//           Pool: redis.PoolConfig{
-//               PoolSize:           0,
-//               PoolTimeout:        0,
-//               IdleTimeout:        0,
-//               IdleCheckFrequency: 0,
-//           },
-//       },
-//   }
-//   client, err := redis.CreateClient(config)
-//   db, err := redis.NewBytesConnection(client, log)
+// Define client configuration based on your Redis installation.
 //
+// - Single Node
+//   var cfg redis.NodeConfig
+// - Sentinel Enabled Cluster
+//   var cfg redis.SentinelConfig
+// - Redis Cluster
+//   var cfg redis.ClusterConfig
+// See sample YAML configurations in ligato/cn-infra/db/keyval/redis/examples/*.yaml
+//
+// Create connection from configuration
+//   err = config.ParseConfigFromYamlFile(f, &cfg)
+//   client, err := redis.CreateClient(cfg)
+//   db, err := redis.NewBytesConnection(client, logroot.Logger())
+// Create Brokers / Watchers from connection
 //   // create broker/watcher that share the same connection pools.
 //   bytesBroker := db.NewBroker("some-prefix")
 //   bytesWatcher := db.NewWatcher("some-prefix")
@@ -65,9 +52,6 @@
 //   wrapper := kvproto.NewProtoWrapper(db)
 //   protoBroker := wrapper.NewBroker("some-prefix")
 //   protoWatcher := wrapper.NewWatcher("some-prefix")
-//
-// You can also define server configuration in a yaml file, and load it into memory using ParseConfigFromYamlFile(yamlFile, &config) from the package github.com/ligato/cn-infra/utils/config.
-// See github.com/ligato/cn-infra/db/keyval/redis/examples/node-client.yaml for an example of server configuration.
 //
 // CRUD
 //   // put
@@ -132,5 +116,9 @@
 // NOTE: You must configure Redis for it to publish key space events.  For example,
 //   config SET notify-keyspace-events KA
 // See EVENT NOTIFICATION in https://raw.githubusercontent.com/antirez/redis/3.2/redis.conf
+//
+// You can find detailed examples in
+//   ligato/cn-infra/db/keyval/redis/examples/simple/
+//   ligato/cn-infra/db/keyval/redis/examples/airport/
 //
 package redis

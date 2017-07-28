@@ -1,6 +1,6 @@
 db: 0
 dial-timeout: 0
-enable-query-to-slave: false
+enable-query-on-slave: false
 endpoint: localhost:7006
 password: ""
 pool:

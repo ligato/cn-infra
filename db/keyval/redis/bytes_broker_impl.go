@@ -26,6 +26,7 @@ import (
 
 	"fmt"
 	redigo "github.com/garyburd/redigo/redis"
+	goredis "github.com/go-redis/redis"
 )
 
 // BytesConnectionRedis allows to store, read and watch values from Redis.
@@ -40,6 +41,10 @@ type BytesConnectionRedis struct {
 
 	// Flag to indicate whether this connection is closed
 	closed bool
+
+	// goredis.ClusterClient.Scan() doesn't return all keys when working with Redis Cluster (bug?)
+	// Add this flag for now to switch to Keys() command for debug purpose (default is true).
+	UseKeysCmdForCluster bool
 }
 
 // bytesKeyValIterator is an iterator returned by ListValues call
@@ -63,13 +68,15 @@ type bytesKeyVal struct {
 // NewBytesConnectionRedis creates a new instance of BytesConnectionRedis using the provided
 // ConnPool
 func NewBytesConnectionRedis(pool ConnPool, log logging.Logger) (*BytesConnectionRedis, error) {
-	return &BytesConnectionRedis{log, pool, nil, make(chan struct{}), false}, nil
+	return &BytesConnectionRedis{log, pool, nil, make(chan struct{}), false,
+		true}, nil
 }
 
 // NewBytesConnection creates a new instance of BytesConnectionRedis using the provided
 // Client (be it node, cluster, or sentinel client)
 func NewBytesConnection(client Client, log logging.Logger) (*BytesConnectionRedis, error) {
-	return &BytesConnectionRedis{log, nil, client, make(chan struct{}), false}, nil
+	return &BytesConnectionRedis{log, nil, client, make(chan struct{}), false,
+		true}, nil
 }
 
 // Close closes the connection to redis.
@@ -236,9 +243,17 @@ func scanKeys(db *BytesConnectionRedis, match string) (keys []string, err error)
 	if db.pool != nil {
 		return redigoScanKeys(db, pattern)
 	}
+	if _, yes := db.client.(*goredis.ClusterClient); yes && db.UseKeysCmdForCluster {
+		db.Debugf("scanKeys(%s): use Keys() instead", match)
+		stringSliceCmd := db.client.Keys(pattern)
+		if stringSliceCmd.Err() != nil {
+			return nil, fmt.Errorf("Keys(%s) failed: %s", pattern, stringSliceCmd.Err())
+		}
+		return stringSliceCmd.Val(), nil
+	}
 	scanCmd := db.client.Scan(0, pattern, 0)
 	if scanCmd.Err() != nil {
-		return nil, fmt.Errorf("Scan(%s) failed: %s", match, scanCmd.Err())
+		return nil, fmt.Errorf("Scan(%s) failed: %s", pattern, scanCmd.Err())
 	}
 	keys = []string{}
 	iterator := scanCmd.Iterator()
@@ -490,7 +505,7 @@ func redigoPut(db *BytesConnectionRedis, key string, data []byte, ttl time.Durat
 	if ttl == 0 {
 		_, err = conn.Do("SET", key, string(data))
 	} else {
-		_, err = conn.Do("SET", key, string(data), "PX", ttl/time.Millisecond)
+		_, err = conn.Do("SET", key, string(data), "PX", int64(ttl/time.Millisecond))
 	}
 	if err != nil {
 		return fmt.Errorf("Do(SET) failed: %s", err)

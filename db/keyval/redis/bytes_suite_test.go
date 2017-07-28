@@ -128,11 +128,11 @@ func createConnectionMiniRedis() {
 		},
 	}
 	nodeConfig := NodeConfig{
-		Endpoint: miniRedis.Addr(),
-		DB:       0,
-		AllowReadQueryToSlave: false,
-		TLS:          TLS{},
-		ClientConfig: clientConfig,
+		Endpoint:               miniRedis.Addr(),
+		DB:                     0,
+		EnableReadQueryOnSlave: false,
+		TLS:                    TLS{},
+		ClientConfig:           clientConfig,
 	}
 	var client Client
 	client = goredis.NewClient(&goredis.Options{
@@ -143,7 +143,7 @@ func createConnectionMiniRedis() {
 		DB: nodeConfig.DB,
 
 		// Enables read only queries on slave nodes.
-		ReadOnly: nodeConfig.AllowReadQueryToSlave,
+		ReadOnly: nodeConfig.EnableReadQueryOnSlave,
 
 		// TLS Config to use. When set TLS will be negotiated.
 		TLSConfig: nil,

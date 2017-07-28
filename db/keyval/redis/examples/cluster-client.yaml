@@ -1,5 +1,5 @@
 dial-timeout: 0
-enable-query-to-slave: false
+enable-query-on-slave: true
 endpoints:
 - localhost:7000
 - localhost:7001

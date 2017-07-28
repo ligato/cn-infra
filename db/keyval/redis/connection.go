@@ -121,17 +121,17 @@ type ClientConfig struct {
 
 // NodeConfig Node client configuration
 type NodeConfig struct {
-	Endpoint              string `json:"endpoint"`              // host:port address of a Redis node
-	DB                    int    `json:"db"`                    // Database to be selected after connecting to the server.
-	AllowReadQueryToSlave bool   `json:"enable-query-to-slave"` // Enables read only queries on slave nodes.
-	TLS                   TLS    `json:"tls"`                   // TLS configuration -- only applies to node client.
+	Endpoint               string `json:"endpoint"`              // host:port address of a Redis node
+	DB                     int    `json:"db"`                    // Database to be selected after connecting to the server.
+	EnableReadQueryOnSlave bool   `json:"enable-query-on-slave"` // Enables read only queries on slave nodes.
+	TLS                    TLS    `json:"tls"`                   // TLS configuration -- only applies to node client.
 	ClientConfig
 }
 
 // ClusterConfig Cluster client configuration
 type ClusterConfig struct {
-	Endpoints             []string `json:"endpoints"`             // A seed list of host:port addresses of cluster nodes.
-	AllowReadQueryToSlave bool     `json:"enable-query-to-slave"` // Enables read only queries on slave nodes.
+	Endpoints              []string `json:"endpoints"`             // A seed list of host:port addresses of cluster nodes.
+	EnableReadQueryOnSlave bool     `json:"enable-query-on-slave"` // Enables read only queries on slave nodes.
 
 	// The maximum number of redirects before giving up.
 	// Command is retried on network errors and MOVED/ASK redirects. Default is 16.
@@ -203,7 +203,7 @@ func CreateNodeClient(config NodeConfig) (Client, error) {
 		DB: config.DB,
 
 		// Enables read only queries on slave nodes.
-		ReadOnly: config.AllowReadQueryToSlave,
+		ReadOnly: config.EnableReadQueryOnSlave,
 
 		// TLS Config to use. When set TLS will be negotiated.
 		TLSConfig: tlsConfig,
@@ -247,7 +247,7 @@ func CreateClusterClient(config ClusterConfig) (Client, error) {
 		Addrs: config.Endpoints,
 
 		// Enables read only queries on slave nodes.
-		ReadOnly: config.AllowReadQueryToSlave,
+		ReadOnly: config.EnableReadQueryOnSlave,
 
 		MaxRedirects:   config.MaxRedirects,
 		RouteByLatency: config.RouteByLatency,

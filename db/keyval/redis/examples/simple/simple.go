@@ -11,7 +11,9 @@ import (
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/utils/config"
+	"regexp"
 	"strconv"
+	"strings"
 )
 
 var usage = `usage: %s -n|-c|-s <client.yaml>
@@ -27,27 +29,33 @@ var redisConn *redis.BytesConnectionRedis
 var broker keyval.BytesBroker
 var watcher keyval.BytesWatcher
 
+var prefix string
+var useKeys string
 var useRedigo = false
 
 func main() {
-	log.SetLevel(logging.DebugLevel)
-
 	//generateSampleConfigs()
 
 	cfg := loadConfig()
 	if cfg == nil {
 		return
 	}
-	fmt.Printf("%T:\n%v\n", cfg, cfg)
+	fmt.Printf("config: %T:\n%v\n", cfg, cfg)
+	fmt.Printf("prefix: %s\n", prefix)
+	fmt.Printf("useKeys: %s\n", useKeys)
+	fmt.Printf("useRedigo: %t\n", useRedigo)
 
 	if useRedigo {
 		redisConn = createConnectionRedigo(cfg)
 	} else {
 		redisConn = createConnection(cfg)
+		if useKeys != "" {
+			redisConn.UseKeysCmdForCluster, _ = strconv.ParseBool(useKeys)
+		}
 	}
 
-	broker = redisConn.NewBroker("")
-	watcher = redisConn.NewWatcher("")
+	broker = redisConn.NewBroker(prefix)
+	watcher = redisConn.NewWatcher(prefix)
 
 	runSimpleExmple()
 }
@@ -55,9 +63,26 @@ func main() {
 func loadConfig() interface{} {
 	numArgs := len(os.Args)
 	defer func() {
-		if numArgs > 3 && os.Args[len(os.Args)-1] == "redigo" {
-			useRedigo = true
-			fmt.Println("Using redigo")
+		// Variety to run the example
+		if numArgs > 3 {
+			rePrefix := regexp.MustCompile("prefix:.*")
+			reKeys := regexp.MustCompile("keys:.*")
+			for _, a := range os.Args[3:] {
+				switch a {
+				case "redigo":
+					useRedigo = true
+					fmt.Println("Using redigo")
+					continue
+				case "debug":
+					log.SetLevel(logging.DebugLevel)
+					continue
+				}
+				if rePrefix.MatchString(a) {
+					prefix = strings.TrimPrefix(a, "prefix:")
+				} else if reKeys.MatchString(a) {
+					useKeys = strings.TrimPrefix(a, "keys:")
+				}
+			}
 		}
 	}()
 
@@ -162,7 +187,7 @@ func runSimpleExmple() {
 	get(keys3[1])
 	fmt.Printf("==> NOTE: %s should have expired\n", keys3[2])
 	get(keys3[2]) // key3 should've expired
-	fmt.Printf("==> NOTE: get(%s) should return nil\n", keyPrefix)
+	fmt.Printf("==> NOTE: get(%s) should return false\n", keyPrefix)
 	get(keyPrefix) // keyPrefix shouldn't find anything
 	listKeys(keyPrefix)
 	listVal(keyPrefix)
@@ -176,7 +201,6 @@ func runSimpleExmple() {
 	listVal(keyPrefix)
 
 	txn(keyPrefix)
-	txnSameHash(keyPrefix)
 
 	log.Info("Sleep for 5 seconds")
 	time.Sleep(5 * time.Second)
@@ -293,30 +317,6 @@ func txn(keyPrefix string) {
 	listVal(keyPrefix)
 }
 
-func txnSameHash(keyPrefix string) {
-	var hashTag = "{SameHash}"
-	keys := []string{
-		hashTag + keyPrefix + "221",
-		hashTag + keyPrefix + "222",
-		hashTag + keyPrefix + "223",
-		hashTag + keyPrefix + "224",
-	}
-	var txn keyval.BytesTxn
-
-	log.Infof("txnSameHash(): keys = %v", keys)
-	txn = broker.NewTxn()
-	for i, k := range keys {
-		txn.Put(k, []byte(strconv.Itoa(i+331)))
-	}
-	txn.Delete(keys[0])
-	err := txn.Commit()
-	if err != nil {
-		log.Errorf("txnSameHash(): %s", err)
-	}
-	listVal(keyPrefix)
-	listVal(hashTag + keyPrefix)
-}
-
 func generateSampleConfigs() {
 	clientConfig := redis.ClientConfig{
 		Password:     "",
@@ -334,17 +334,17 @@ func generateSampleConfigs() {
 		&redis.NodeConfig{
 			Endpoint: "localhost:6379",
 			DB:       0,
-			AllowReadQueryToSlave: false,
+			EnableReadQueryOnSlave: false,
 			TLS:          redis.TLS{},
 			ClientConfig: clientConfig,
 		}, "./node-client.yaml")
 	redis.GenerateConfig(
 		&redis.ClusterConfig{
-			Endpoints:             []string{"localhost:7000", "localhost:7001", "localhost:7002", "localhost:7003"},
-			AllowReadQueryToSlave: true,
-			MaxRedirects:          0,
-			RouteByLatency:        true,
-			ClientConfig:          clientConfig,
+			Endpoints:              []string{"localhost:7000", "localhost:7001", "localhost:7002", "localhost:7003"},
+			EnableReadQueryOnSlave: true,
+			MaxRedirects:           0,
+			RouteByLatency:         true,
+			ClientConfig:           clientConfig,
 		}, "./cluster-client.yaml")
 	redis.GenerateConfig(
 		&redis.SentinelConfig{
