@@ -134,47 +134,43 @@ func startWatch(db *BytesConnectionRedis, pubSub *goredis.PubSub,
 		defer func() { db.Debugf("Watch(%v) exited", patterns) }()
 		db.Debugf("start Watch(%v)", patterns)
 		for {
-			val, err := pubSub.Receive()
-			if err != nil && !db.closed {
-				db.Errorf("Watch(%v) encountered error: %s", patterns, err)
-			}
-			switch m := val.(type) {
-			case *goredis.Subscription:
-				db.Debugf("Receive %T: %s %s %d", m, m.Kind, m.Channel, m.Count)
-				if m.Count == 0 {
-					return
-				}
-			case *goredis.Message:
-				db.Debugf("Receive %T: %s %s %s", m, m.Pattern, m.Channel, m.Payload)
-				key := m.Channel[strings.Index(m.Channel, ":")+1:]
-				db.Debugf("key = %s", key)
-				switch m.Payload {
-				case "set":
-					// keyspace event does not carry value.  Need to retrieve it.
-					val, _, rev, err := db.GetValue(key)
-					if err != nil {
-						db.Errorf("GetValue(%s) failed with error %s", key, err)
-					}
-					if val == nil {
-						db.Debugf("GetValue(%s) returned nil", key)
-					}
-					if trimPrefix != nil {
-						key = trimPrefix(key)
-					}
-					respChan <- NewBytesWatchPutResp(key, val, rev)
-				case "del", "expired":
-					if trimPrefix != nil {
-						key = trimPrefix(key)
-					}
-					respChan <- NewBytesWatchDelResp(key, 0)
-				default:
-					db.Debugf("%s %s %s -- not handled", m, m.Pattern, m.Channel, m.Payload)
-				}
-			case nil:
-				db.Debug("Receive nil")
+			msg, err := pubSub.ReceiveMessage()
+			if db.closed {
 				return
+			}
+			if err != nil {
+				db.Errorf("Watch(%v) encountered error: %s", patterns, err)
+				continue
+			}
+			if msg == nil {
+				// channel closed?
+				db.Debugf("%T.ReceiveMessage() returned nil", pubSub)
+				continue
+			}
+			db.Debugf("Receive %T: %s %s %s", msg, msg.Pattern, msg.Channel, msg.Payload)
+			key := msg.Channel[strings.Index(msg.Channel, ":")+1:]
+			db.Debugf("key = %s", key)
+			switch msg.Payload {
+			case "set":
+				// keyspace event does not carry value.  Need to retrieve it.
+				val, _, rev, err := db.GetValue(key)
+				if err != nil {
+					db.Errorf("GetValue(%s) failed with error %s", key, err)
+				}
+				if val == nil {
+					db.Debugf("GetValue(%s) returned nil", key)
+				}
+				if trimPrefix != nil {
+					key = trimPrefix(key)
+				}
+				respChan <- NewBytesWatchPutResp(key, val, rev)
+			case "del", "expired":
+				if trimPrefix != nil {
+					key = trimPrefix(key)
+				}
+				respChan <- NewBytesWatchDelResp(key, 0)
 			default:
-				db.Debugf("Receive %T -- not handled", m)
+				db.Debugf("%T: %s %s %s -- not handled", msg, msg.Pattern, msg.Channel, msg.Payload)
 			}
 		}
 	}()
