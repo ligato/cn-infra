@@ -76,7 +76,7 @@ func mockConnectionRedigo() {
 	mockConn = redigomock.NewConn()
 	for k, v := range keyValues {
 		mockConn.Command("SET", k, v).Expect("not used")
-		mockConn.Command("SET", k, v, "PX", ttl/time.Millisecond).Expect("not used")
+		mockConn.Command("SET", k, v, "PX", int64(ttl/time.Millisecond)).Expect("not used")
 		mockConn.Command("GET", k).Expect(v)
 		iKeys = append(iKeys, k)
 		iVals = append(iVals, v)
@@ -128,11 +128,11 @@ func createConnectionMiniRedis() {
 		},
 	}
 	nodeConfig := NodeConfig{
-		Endpoint:               miniRedis.Addr(),
-		DB:                     0,
+		Endpoint: miniRedis.Addr(),
+		DB:       0,
 		EnableReadQueryOnSlave: false,
-		TLS:                    TLS{},
-		ClientConfig:           clientConfig,
+		TLS:          TLS{},
+		ClientConfig: clientConfig,
 	}
 	var client Client
 	client = goredis.NewClient(&goredis.Options{
