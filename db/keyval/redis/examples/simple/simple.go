@@ -30,7 +30,6 @@ var broker keyval.BytesBroker
 var watcher keyval.BytesWatcher
 
 var prefix string
-var useKeys string
 var useRedigo = false
 
 func main() {
@@ -42,16 +41,12 @@ func main() {
 	}
 	fmt.Printf("config: %T:\n%v\n", cfg, cfg)
 	fmt.Printf("prefix: %s\n", prefix)
-	fmt.Printf("useKeys: %s\n", useKeys)
 	fmt.Printf("useRedigo: %t\n", useRedigo)
 
 	if useRedigo {
 		redisConn = createConnectionRedigo(cfg)
 	} else {
 		redisConn = createConnection(cfg)
-		if useKeys != "" {
-			redisConn.UseKeysCmdForCluster, _ = strconv.ParseBool(useKeys)
-		}
 	}
 
 	broker = redisConn.NewBroker(prefix)
@@ -65,22 +60,19 @@ func loadConfig() interface{} {
 	defer func() {
 		// Variety to run the example
 		if numArgs > 3 {
-			rePrefix := regexp.MustCompile("prefix:.*")
-			reKeys := regexp.MustCompile("keys:.*")
+			rePrefix := regexp.MustCompile("--prefix:.*")
 			for _, a := range os.Args[3:] {
 				switch a {
-				case "redigo":
+				case "--redigo":
 					useRedigo = true
 					fmt.Println("Using redigo")
 					continue
-				case "debug":
+				case "--debug":
 					log.SetLevel(logging.DebugLevel)
 					continue
 				}
 				if rePrefix.MatchString(a) {
-					prefix = strings.TrimPrefix(a, "prefix:")
-				} else if reKeys.MatchString(a) {
-					useKeys = strings.TrimPrefix(a, "keys:")
+					prefix = strings.TrimPrefix(a, "--prefix:")
 				}
 			}
 		}
