@@ -19,19 +19,28 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
+	"github.com/ligato/cn-infra/statuscheck"
 	"github.com/ligato/cn-infra/utils/config"
 	"github.com/namsral/flag"
+	"sync"
 )
 
-// PluginID used in the Agent Core flavors
-const PluginID core.PluginName = "EtcdClient"
+const (
+	// PluginID used in the Agent Core flavors
+	PluginID core.PluginName = "EtcdClient"
+	// healthCheckProbeKey is a key used to probe Etcd state
+	healthCheckProbeKey string = "/probe-etcd-connection"
+)
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
 	LogFactory     logging.LogFactory
 	ServiceLabel   *servicelabel.Plugin
+	StatusCheck    *statuscheck.Plugin
 	ConfigFileName string
 	*plugin.Skeleton
+
+	wg sync.WaitGroup
 }
 
 var defaultConfigFileName string
@@ -77,5 +86,19 @@ func (p *Plugin) Init() error {
 		},
 	)
 	p.Skeleton = skeleton
-	return p.Skeleton.Init()
+	err = p.Skeleton.Init()
+	if err != nil {
+		return err
+	}
+
+	// register for providing status reports (polling mode)
+	p.StatusCheck.Register(PluginID, func() (statuscheck.PluginState, error) {
+		_, _, err := p.NewBroker("/").GetValue(healthCheckProbeKey, nil)
+		if err == nil {
+			return statuscheck.OK, nil
+		}
+		return statuscheck.Error, err
+	})
+
+	return nil
 }
