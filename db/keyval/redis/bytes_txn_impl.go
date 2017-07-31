@@ -73,33 +73,7 @@ func (tx *Txn) Commit() (err error) {
 
 	// redigo
 	if tx.db.pool != nil {
-		toBeDeleted := []interface{}{}
-		msetArgs := []interface{}{}
-		for _, op := range tx.ops {
-			if op.del {
-				toBeDeleted = append(toBeDeleted, op.key)
-			} else {
-				msetArgs = append(msetArgs, op.key)
-				msetArgs = append(msetArgs, string(op.value))
-			}
-		}
-
-		conn := tx.db.pool.Get()
-		defer conn.Close()
-
-		if len(toBeDeleted) > 0 {
-			_, err = conn.Do("DEL", toBeDeleted...)
-			if err != nil {
-				return fmt.Errorf("Do(DEL) failed: %s", err)
-			}
-		}
-		if len(msetArgs) > 0 {
-			_, err = conn.Do("MSET", msetArgs...)
-			if err != nil {
-				return fmt.Errorf("Do(MSET) failed: %s", err)
-			}
-		}
-		return nil
+		return redigoPseudoTxn(tx)
 	}
 
 	// go-redis
@@ -120,6 +94,36 @@ func (tx *Txn) Commit() (err error) {
 			checkCrossSlot(tx)
 		}
 		return fmt.Errorf("%T.Exec() failed: %s", pipeline, err)
+	}
+	return nil
+}
+
+func redigoPseudoTxn(tx *Txn) error {
+	toBeDeleted := []interface{}{}
+	msetArgs := []interface{}{}
+	for _, op := range tx.ops {
+		if op.del {
+			toBeDeleted = append(toBeDeleted, op.key)
+		} else {
+			msetArgs = append(msetArgs, op.key)
+			msetArgs = append(msetArgs, string(op.value))
+		}
+	}
+
+	conn := tx.db.pool.Get()
+	defer conn.Close()
+
+	if len(toBeDeleted) > 0 {
+		_, err := conn.Do("DEL", toBeDeleted...)
+		if err != nil {
+			return fmt.Errorf("Do(DEL) failed: %s", err)
+		}
+	}
+	if len(msetArgs) > 0 {
+		_, err := conn.Do("MSET", msetArgs...)
+		if err != nil {
+			return fmt.Errorf("Do(MSET) failed: %s", err)
+		}
 	}
 	return nil
 }
