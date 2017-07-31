@@ -62,6 +62,8 @@ type bytesKeyVal struct {
 
 // NewBytesConnectionRedis creates a new instance of BytesConnectionRedis using the provided
 // ConnPool
+//
+// Deprecated: Use NewBytesConnection() instead.
 func NewBytesConnectionRedis(pool ConnPool, log logging.Logger) (*BytesConnectionRedis, error) {
 	return &BytesConnectionRedis{log, pool, nil, make(chan struct{}), false}, nil
 }

@@ -113,9 +113,9 @@ type Client interface {
 // ClientConfig Configuration common to all types of Redis clients
 type ClientConfig struct {
 	Password     string        `json:"password"`      // password, if required
-	DialTimeout  time.Duration `json:"dial-timeout"`  // timeout for connection operations
-	ReadTimeout  time.Duration `json:"read-timeout"`  // timeout for read operations
-	WriteTimeout time.Duration `json:"write-timeout"` // timeout for write operations
+	DialTimeout  time.Duration `json:"dial-timeout"`  // timeout for connection operations, in seconds
+	ReadTimeout  time.Duration `json:"read-timeout"`  // timeout for read operations, in seconds
+	WriteTimeout time.Duration `json:"write-timeout"` // timeout for write operations, in seconds
 	Pool         PoolConfig    `json:"pool"`          // connection pool configuration
 }
 
@@ -156,11 +156,11 @@ type PoolConfig struct {
 	// Maximum number of socket connections.
 	// Default is 10 connections per every CPU as reported by runtime.NumCPU.
 	PoolSize int `json:"max-connections"`
-	// Amount of time client waits for connection if all connections
+	// Amount of time, in seconds, client waits for connection if all connections
 	// are busy before returning an error.
 	// Default is ReadTimeout + 1 second.
 	PoolTimeout time.Duration `json:"busy-timeout"`
-	// Amount of time after which client closes idle connections.
+	// Amount of time, in seconds, after which client closes idle connections.
 	// Should be less than server's timeout.
 	// Default is 5 minutes.
 	IdleTimeout time.Duration `json:"idle-timeout"`
@@ -323,6 +323,8 @@ func CreateSentinelClient(config SentinelConfig) (Client, error) {
 // Redigo - https://github.com/garyburd/redigo/redis
 
 // ConnPool provides abstraction of connection pool.
+//
+// Deprecated: See the documentation of CreateNodeClientConnPool().
 type ConnPool interface {
 	// Get returns a vlid connection. The application must close the returned connection.
 	Get() redigo.Conn
@@ -331,11 +333,13 @@ type ConnPool interface {
 }
 
 // CreateNodeClientConnPool creates a Redis connection pool
-func CreateNodeClientConnPool(config NodeConfig) (*redigo.Pool, error) {
+//
+// Deprecated: Use CreateNodeClient() or CreateClient() instead for single node connection.
+func CreateNodeClientConnPool(config NodeConfig) (ConnPool, error) {
 	options := append([]redigo.DialOption{}, redigo.DialDatabase(config.DB))
 	options = append(options, redigo.DialPassword(config.Password))
-	options = append(options, redigo.DialReadTimeout(config.ReadTimeout))
-	options = append(options, redigo.DialWriteTimeout(config.WriteTimeout))
+	options = append(options, redigo.DialReadTimeout(config.ReadTimeout*time.Second))
+	options = append(options, redigo.DialWriteTimeout(config.WriteTimeout*time.Second))
 	if config.TLS.Enabled {
 		tlsConfig, err := createTLSConfig(config.TLS)
 		if err != nil {
