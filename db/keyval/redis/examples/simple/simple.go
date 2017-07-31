@@ -184,7 +184,7 @@ func runSimpleExmple() {
 	listKeys(keyPrefix)
 	listVal(keyPrefix)
 
-	del(keyPrefix)
+	del(keyPrefix, keyval.WithPrefix())
 
 	fmt.Println("==> NOTE: All keys should have been deleted")
 	get(keys3[0])
@@ -275,11 +275,11 @@ func listVal(keyPrefix string) {
 	}
 }
 
-func del(keyPrefix string) {
+func del(keyPrefix string, opt ...keyval.DelOption) {
 	var found bool
 	var err error
 
-	found, err = broker.Delete(keyPrefix)
+	found, err = broker.Delete(keyPrefix, opt)
 	if err != nil {
 		log.Errorf(err.Error())
 		return

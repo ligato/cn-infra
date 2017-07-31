@@ -241,9 +241,9 @@ func cleanup(report bool) {
 		fmt.Println("clean up")
 		printFlightCounts()
 	}
-	arrivalBroker.Delete("")
-	departureBroker.Delete("")
-	hangarBroker.Delete("")
+	arrivalBroker.Delete("", keyval.WithPrefix())
+	departureBroker.Delete("", keyval.WithPrefix())
+	hangarBroker.Delete("", keyval.WithPrefix())
 	if report {
 		printFlightCounts()
 	}

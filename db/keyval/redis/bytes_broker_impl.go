@@ -236,7 +236,7 @@ func scanKeys(db *BytesConnectionRedis, match string) (keys []string, err error)
 	if db.pool != nil {
 		return redigoScanKeys(db, pattern)
 	}
-	// TODO: goredis.ClusterClient.Scan() doesn't return any key (bug?)
+	// TODO: goredis.ClusterClient.Scan() doesn't always return keys (bug?)
 	keys = []string{}
 	var cursor uint64
 	for {
@@ -270,23 +270,33 @@ func wildcard(match string) string {
 }
 
 // Delete deletes all the keys that start with the given match string.
-func (db *BytesConnectionRedis) Delete(match string, opts ...keyval.DelOption) (found bool, err error) {
-	//TODO: process delete opts
+func (db *BytesConnectionRedis) Delete(key string, opts ...keyval.DelOption) (found bool, err error) {
 	if db.closed {
-		return false, fmt.Errorf("Delete(%s) called on a closed connection", match)
+		return false, fmt.Errorf("Delete(%s) called on a closed connection", key)
 	}
-	db.Debugf("Delete(%s)", match)
+	db.Debugf("Delete(%s)", key)
 
-	keysToDelete, err := scanKeys(db, match)
-	if err != nil {
-		return false, err
+	keysToDelete := []string{}
+
+	var keyIsPrefix bool
+	for _, o := range opts {
+		if _, ok := o.(*keyval.WithPrefixOpt); ok {
+			keyIsPrefix = true
+		}
 	}
-
-	if len(keysToDelete) == 0 {
-		return false, nil
+	if keyIsPrefix {
+		key = wildcard(key)
+		keysToDelete, err = scanKeys(db, key)
+		if err != nil {
+			return false, err
+		}
+		if len(keysToDelete) == 0 {
+			return false, nil
+		}
+		db.Debugf("Delete(%s): deleting %v", key, keysToDelete)
+	} else {
+		keysToDelete = append(keysToDelete, key)
 	}
-
-	db.Debugf("Delete(%s): deleting %v", match, keysToDelete)
 
 	if db.pool != nil {
 		return redigoDelete(db, keysToDelete)
@@ -294,7 +304,7 @@ func (db *BytesConnectionRedis) Delete(match string, opts ...keyval.DelOption) (
 
 	intCmd := db.client.Del(keysToDelete...)
 	if intCmd.Err() != nil {
-		return false, fmt.Errorf("Delete(%s) failed: %s", match, intCmd.Err())
+		return false, fmt.Errorf("Delete(%s) failed: %s", key, intCmd.Err())
 	}
 	return (intCmd.Val() != 0), nil
 }
@@ -475,8 +485,7 @@ func (pdb *BytesBrokerWatcherRedis) Delete(match string, opts ...keyval.DelOptio
 	}
 	pdb.Debugf("Delete(%s)", match)
 
-	//TODO: process delete opts
-	return pdb.delegate.Delete(pdb.addPrefix(match))
+	return pdb.delegate.Delete(pdb.addPrefix(match), opts...)
 }
 
 // ListValuesRange calls ListValuesRange function of BytesConnectionRedis.
