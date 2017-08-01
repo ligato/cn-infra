@@ -25,7 +25,6 @@ import (
 	"github.com/ligato/cn-infra/statuscheck"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
-	"github.com/prometheus/common/log"
 )
 
 // PluginID used in the Agent Core flavors
@@ -85,11 +84,11 @@ func (p *Plugin) Init() error {
 			if err == nil {
 				return statuscheck.OK, nil
 			}
-			log.Errorf("Kafka server unavailable")
+			logger.Errorf("Kafka server unavailable")
 			return statuscheck.Error, err
 		})
 	} else {
-		log.Warnf("Unable to start status check for kafka")
+		logger.Warnf("Unable to start status check for kafka")
 	}
 
 	p.mx, err = mux.InitMultiplexer(configFile, p.ServiceLabel.GetAgentLabel(), logger)

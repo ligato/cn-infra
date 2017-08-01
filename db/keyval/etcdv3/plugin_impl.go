@@ -22,7 +22,6 @@ import (
 	"github.com/ligato/cn-infra/statuscheck"
 	"github.com/ligato/cn-infra/utils/config"
 	"github.com/namsral/flag"
-	"github.com/prometheus/common/log"
 )
 
 const (
@@ -99,7 +98,7 @@ func (p *Plugin) Init() error {
 			return statuscheck.Error, err
 		})
 	} else {
-		log.Warnf("Unable to start status check for etcd")
+		p.Skeleton.Logger.Warnf("Unable to start status check for etcd")
 	}
 
 	return nil
