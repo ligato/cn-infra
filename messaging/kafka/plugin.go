@@ -15,16 +15,16 @@
 package kafka
 
 import (
+	"github.com/Shopify/sarama"
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/messaging/kafka/mux"
 	"github.com/ligato/cn-infra/servicelabel"
+	"github.com/ligato/cn-infra/statuscheck"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
-	"github.com/ligato/cn-infra/statuscheck"
-	"github.com/ligato/cn-infra/messaging/kafka/client"
-	"github.com/Shopify/sarama"
 	"github.com/prometheus/common/log"
 )
 
@@ -48,9 +48,9 @@ type Plugin struct {
 	LogFactory   logging.LogFactory
 	ServiceLabel *servicelabel.Plugin
 	StatusCheck  *statuscheck.Plugin
-	subscription   chan (*client.ConsumerMessage)
+	subscription chan (*client.ConsumerMessage)
 	mx           *mux.Multiplexer
-	consumer *client.Consumer
+	consumer     *client.Consumer
 }
 
 // Init is called at plugin initialization.
@@ -114,7 +114,7 @@ func (p *Plugin) NewProtoConnection(name string) *mux.ProtoConnection {
 }
 
 // Receive client config according to kafka config data
-func (p *Plugin) getClientConfig(config *mux.Config, logger logging.Logger, topic string) *client.Config{
+func (p *Plugin) getClientConfig(config *mux.Config, logger logging.Logger, topic string) *client.Config {
 	clientConf := client.NewConfig(logger)
 	clientConf.SetBrokers(config.Addrs...)
 	clientConf.SetGroup(p.ServiceLabel.GetAgentLabel())
