@@ -22,6 +22,10 @@ import (
 	"github.com/ligato/cn-infra/servicelabel"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
+	"github.com/ligato/cn-infra/statuscheck"
+	"github.com/ligato/cn-infra/messaging/kafka/client"
+	"github.com/Shopify/sarama"
+	"github.com/prometheus/common/log"
 )
 
 // PluginID used in the Agent Core flavors
@@ -43,7 +47,10 @@ type Mux interface {
 type Plugin struct {
 	LogFactory   logging.LogFactory
 	ServiceLabel *servicelabel.Plugin
+	StatusCheck  *statuscheck.Plugin
+	subscription   chan (*client.ConsumerMessage)
 	mx           *mux.Multiplexer
+	consumer *client.Consumer
 }
 
 // Init is called at plugin initialization.
@@ -52,8 +59,32 @@ func (p *Plugin) Init() error {
 	if err != nil {
 		return err
 	}
+	// Prepare topic and  subscription for status check client
+	topic := "status-check"
+	p.subscription = make(chan *client.ConsumerMessage)
+
+	// Get config data
+	config := &mux.Config{Addrs: []string{"127.0.0.1:9092"}}
+	config, err = mux.ConfigFromFile(kafkaConfigFile)
+	clientConfig := p.getClientConfig(config, logger, topic)
+
+	// Init consumer
+	p.consumer, err = client.NewConsumer(clientConfig, nil)
+
+	// Register for providing status reports (polling mode)
+	p.StatusCheck.Register(PluginID, func() (statuscheck.PluginState, error) {
+		// Method 'RefreshMetadata()' returns error if kafka server is unavailable
+		err := p.consumer.Client.RefreshMetadata(topic)
+
+		if err == nil {
+			return statuscheck.OK, nil
+		}
+		log.Errorf("Kafka server unavailable")
+		return statuscheck.Error, err
+	})
 
 	p.mx, err = mux.InitMultiplexer(kafkaConfigFile, p.ServiceLabel.GetAgentLabel(), logger)
+
 	return err
 }
 
@@ -77,4 +108,14 @@ func (p *Plugin) NewConnection(name string) *mux.Connection {
 // uses proto-modelled messages.
 func (p *Plugin) NewProtoConnection(name string) *mux.ProtoConnection {
 	return p.mx.NewProtoConnection(name, &keyval.SerializerJSON{})
+}
+
+func (p *Plugin) getClientConfig(config *mux.Config, logger logging.Logger, topic string) *client.Config{
+	clientConf := client.NewConfig(logger)
+	clientConf.SetBrokers(config.Addrs...)
+	clientConf.SetGroup(p.ServiceLabel.GetAgentLabel())
+	clientConf.SetRecvMessageChan(p.subscription)
+	clientConf.SetInitialOffset(sarama.OffsetNewest)
+	clientConf.SetTopics(topic)
+	return clientConf
 }
