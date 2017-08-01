@@ -64,12 +64,18 @@ func (p *Plugin) Init() error {
 	p.subscription = make(chan *client.ConsumerMessage)
 
 	// Get config data
-	config := &mux.Config{Addrs: []string{"127.0.0.1:9092"}}
+	config := &mux.Config{}
 	config, err = mux.ConfigFromFile(configFile)
+	if err != nil {
+		return err
+	}
 	clientConfig := p.getClientConfig(config, logger, topic)
 
 	// Init consumer
 	p.consumer, err = client.NewConsumer(clientConfig, nil)
+	if err != nil {
+		return err
+	}
 
 	// Register for providing status reports (polling mode)
 	if p.StatusCheck != nil {
@@ -99,7 +105,8 @@ func (p *Plugin) AfterInit() error {
 
 // Close is called at plugin cleanup phase.
 func (p *Plugin) Close() error {
-	return safeclose.Close(p.mx)
+	_, err := safeclose.CloseAll(p.consumer.Close(), p.mx)
+	return err
 }
 
 // NewConnection returns a new instance of connection to access the kafka brokers.
@@ -116,6 +123,11 @@ func (p *Plugin) NewProtoConnection(name string) *mux.ProtoConnection {
 // Receive client config according to kafka config data
 func (p *Plugin) getClientConfig(config *mux.Config, logger logging.Logger, topic string) *client.Config {
 	clientConf := client.NewConfig(logger)
+	if len(config.Addrs) > 0 {
+		clientConf.SetBrokers(config.Addrs...)
+	} else {
+		clientConf.SetBrokers(mux.DefAddress)
+	}
 	clientConf.SetBrokers(config.Addrs...)
 	clientConf.SetGroup(p.ServiceLabel.GetAgentLabel())
 	clientConf.SetRecvMessageChan(p.subscription)
