@@ -31,10 +31,10 @@ import (
 // PluginID used in the Agent Core flavors
 const PluginID core.PluginName = "KafkaClient"
 
-var kafkaConfigFile string
+var configFile string
 
 func init() {
-	flag.StringVar(&kafkaConfigFile, "kafka-config", "", "Location of the Kafka configuration file; also set via 'KAFKA_CONFIG' env variable.")
+	flag.StringVar(&configFile, "kafka-config", "", "Location of the Kafka configuration file; also set via 'KAFKA_CONFIG' env variable.")
 }
 
 // Mux defines API for the plugins that use access to kafka brokers.
@@ -65,7 +65,7 @@ func (p *Plugin) Init() error {
 
 	// Get config data
 	config := &mux.Config{Addrs: []string{"127.0.0.1:9092"}}
-	config, err = mux.ConfigFromFile(kafkaConfigFile)
+	config, err = mux.ConfigFromFile(configFile)
 	clientConfig := p.getClientConfig(config, logger, topic)
 
 	// Init consumer
@@ -75,7 +75,6 @@ func (p *Plugin) Init() error {
 	p.StatusCheck.Register(PluginID, func() (statuscheck.PluginState, error) {
 		// Method 'RefreshMetadata()' returns error if kafka server is unavailable
 		err := p.consumer.Client.RefreshMetadata(topic)
-
 		if err == nil {
 			return statuscheck.OK, nil
 		}
@@ -83,7 +82,7 @@ func (p *Plugin) Init() error {
 		return statuscheck.Error, err
 	})
 
-	p.mx, err = mux.InitMultiplexer(kafkaConfigFile, p.ServiceLabel.GetAgentLabel(), logger)
+	p.mx, err = mux.InitMultiplexer(configFile, p.ServiceLabel.GetAgentLabel(), logger)
 
 	return err
 }
@@ -110,6 +109,7 @@ func (p *Plugin) NewProtoConnection(name string) *mux.ProtoConnection {
 	return p.mx.NewProtoConnection(name, &keyval.SerializerJSON{})
 }
 
+// Receive client config according to kafka config data
 func (p *Plugin) getClientConfig(config *mux.Config, logger logging.Logger, topic string) *client.Config{
 	clientConf := client.NewConfig(logger)
 	clientConf.SetBrokers(config.Addrs...)
