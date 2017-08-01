@@ -22,7 +22,7 @@ import (
 	"github.com/ligato/cn-infra/statuscheck"
 	"github.com/ligato/cn-infra/utils/config"
 	"github.com/namsral/flag"
-	"sync"
+	"github.com/prometheus/common/log"
 )
 
 const (
@@ -39,8 +39,6 @@ type Plugin struct {
 	StatusCheck    *statuscheck.Plugin
 	ConfigFileName string
 	*plugin.Skeleton
-
-	wg sync.WaitGroup
 }
 
 var defaultConfigFileName string
@@ -92,13 +90,17 @@ func (p *Plugin) Init() error {
 	}
 
 	// register for providing status reports (polling mode)
-	p.StatusCheck.Register(PluginID, func() (statuscheck.PluginState, error) {
-		_, _, err := p.NewBroker("/").GetValue(healthCheckProbeKey, nil)
-		if err == nil {
-			return statuscheck.OK, nil
-		}
-		return statuscheck.Error, err
-	})
+	if p.StatusCheck != nil {
+		p.StatusCheck.Register(PluginID, func() (statuscheck.PluginState, error) {
+			_, _, err := p.NewBroker("/").GetValue(healthCheckProbeKey, nil)
+			if err == nil {
+				return statuscheck.OK, nil
+			}
+			return statuscheck.Error, err
+		})
+	} else {
+		log.Warnf("Unable to start status check for etcd")
+	}
 
 	return nil
 }

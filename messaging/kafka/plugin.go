@@ -72,15 +72,19 @@ func (p *Plugin) Init() error {
 	p.consumer, err = client.NewConsumer(clientConfig, nil)
 
 	// Register for providing status reports (polling mode)
-	p.StatusCheck.Register(PluginID, func() (statuscheck.PluginState, error) {
-		// Method 'RefreshMetadata()' returns error if kafka server is unavailable
-		err := p.consumer.Client.RefreshMetadata(topic)
-		if err == nil {
-			return statuscheck.OK, nil
-		}
-		log.Errorf("Kafka server unavailable")
-		return statuscheck.Error, err
-	})
+	if p.StatusCheck != nil {
+		p.StatusCheck.Register(PluginID, func() (statuscheck.PluginState, error) {
+			// Method 'RefreshMetadata()' returns error if kafka server is unavailable
+			err := p.consumer.Client.RefreshMetadata(topic)
+			if err == nil {
+				return statuscheck.OK, nil
+			}
+			log.Errorf("Kafka server unavailable")
+			return statuscheck.Error, err
+		})
+	} else {
+		log.Warnf("Unable to start status check for kafka")
+	}
 
 	p.mx, err = mux.InitMultiplexer(configFile, p.ServiceLabel.GetAgentLabel(), logger)
 
