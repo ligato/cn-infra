@@ -21,10 +21,13 @@ Kafka plugin provides access to kafka brokers.
 
 The plugin's API is documented at the end of [doc.go](doc.go).
 
-
 **Configuration**
 - Location of the Kafka configuration file can be defined either by command line flag `kafka-config` or 
 set via `KAFKA_CONFIG` env variable.
+
+**Status Check**
+
+- Kafka plugin has a mechanism to periodically check a connection status of the Kafka server.  
 
 **Dependencies**
 - [Logging](../../logging/plugin)
