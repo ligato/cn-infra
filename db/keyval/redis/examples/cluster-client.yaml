@@ -1,3 +1,5 @@
+# See https://godoc.org/github.com/ligato/cn-infra/db/keyval/redis#ClusterConfig
+# for the definition of these configuration parameters.
 dial-timeout: 0
 enable-query-on-slave: true
 endpoints:
