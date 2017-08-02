@@ -52,7 +52,7 @@ to specify the name of the configuration file.
     }  
 ```
 
-2. Each plugin can have it's own configuration (injected in [flavour](PLUGIN_FLAVORS.md))
+2. Each plugin can have it's own configuration (injected in [flavour](PLUGIN_FLAVOURS.md))
    See following [Simple flag example](#Simple flag example) and [Clomplex configuration example](#Clomplex configuration example) 
 
 ### Simple flag example
