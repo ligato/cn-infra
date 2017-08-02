@@ -26,8 +26,6 @@ and/or environment variables.
 More complicated configuration is supposed to be defined in configuration files. Flags can be used 
 to specify the name of the configuration file.
 
-## Configuration binding
-
 ## Plugins
 
 1. Plugin:
