@@ -35,7 +35,7 @@ var prefix string
 var useRedigo = false
 
 func main() {
-	generateSampleConfigs()
+	//generateSampleConfigs()
 
 	cfg := loadConfig()
 	if cfg == nil {
@@ -356,5 +356,5 @@ func generateSampleConfigs() {
 func makeTypeHeader(i interface{}) string {
 	t := reflect.TypeOf(i)
 	tn := t.String()
-	return fmt.Sprintf("# %s#%s\n", t.PkgPath(), tn[strings.Index(tn, ".")+1:])
+	return fmt.Sprintf("# %s#%s", t.PkgPath(), tn[strings.Index(tn, ".")+1:])
 }

@@ -44,7 +44,7 @@ func SaveConfigToYamlFile(cfg interface{}, path string, perm os.FileMode, commen
 	}
 
 	if comment != "" {
-		bytes = append([]byte(comment), bytes...)
+		bytes = append([]byte(comment+"\n"), bytes...)
 	}
 
 	err = ioutil.WriteFile(path, bytes, perm)
