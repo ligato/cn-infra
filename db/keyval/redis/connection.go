@@ -15,7 +15,6 @@
 package redis
 
 import (
-	"io/ioutil"
 	"time"
 
 	"crypto/tls"
@@ -24,7 +23,6 @@ import (
 
 	"github.com/coreos/etcd/pkg/tlsutil"
 	redigo "github.com/garyburd/redigo/redis"
-	"github.com/ghodss/yaml"
 	goredis "github.com/go-redis/redis"
 )
 
@@ -67,19 +65,6 @@ func createTLSConfig(config TLS) (*tls.Config, error) {
 	}
 
 	return tlsConfig, nil
-}
-
-// GenerateConfig Generates a yaml file using the given configuration object
-func GenerateConfig(config interface{}, path string) error {
-	bytes, err := yaml.Marshal(&config)
-	if err != nil {
-		return fmt.Errorf("yaml.Marshal() failed: %s", err)
-	}
-	err = ioutil.WriteFile(path, bytes, 0644)
-	if err != nil {
-		return fmt.Errorf("ioutil.WriteFile() failed: %s", err)
-	}
-	return nil
 }
 
 ///////////////////////////////////////////////////////////////////////////////

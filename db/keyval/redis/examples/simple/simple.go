@@ -2,18 +2,20 @@ package main
 
 import (
 	"os"
+	"reflect"
 	"time"
 
 	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
+
 	"github.com/ligato/cn-infra/db"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/redis"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/utils/config"
-	"regexp"
-	"strconv"
-	"strings"
 )
 
 var usage = `usage: %s -n|-c|-s <client.yaml>
@@ -33,7 +35,7 @@ var prefix string
 var useRedigo = false
 
 func main() {
-	//generateSampleConfigs()
+	generateSampleConfigs()
 
 	cfg := loadConfig()
 	if cfg == nil {
@@ -322,27 +324,37 @@ func generateSampleConfigs() {
 			IdleCheckFrequency: 0,
 		},
 	}
-	redis.GenerateConfig(
-		&redis.NodeConfig{
-			Endpoint: "localhost:6379",
-			DB:       0,
-			EnableReadQueryOnSlave: false,
-			TLS:          redis.TLS{},
-			ClientConfig: clientConfig,
-		}, "./node-client.yaml")
-	redis.GenerateConfig(
-		&redis.ClusterConfig{
-			Endpoints:              []string{"localhost:7000", "localhost:7001", "localhost:7002", "localhost:7003"},
-			EnableReadQueryOnSlave: true,
-			MaxRedirects:           0,
-			RouteByLatency:         true,
-			ClientConfig:           clientConfig,
-		}, "./cluster-client.yaml")
-	redis.GenerateConfig(
-		&redis.SentinelConfig{
-			Endpoints:    []string{"localhost:26379"},
-			MasterName:   "mymaster",
-			DB:           0,
-			ClientConfig: clientConfig,
-		}, "./sentinel-client.yaml")
+	var cfg interface{}
+
+	cfg = redis.NodeConfig{
+		Endpoint: "localhost:6379",
+		DB:       0,
+		EnableReadQueryOnSlave: false,
+		TLS:          redis.TLS{},
+		ClientConfig: clientConfig,
+	}
+	config.SaveConfigToYamlFile(cfg, "./node-client.yaml", 0644, makeTypeHeader(cfg))
+
+	cfg = redis.SentinelConfig{
+		Endpoints:    []string{"172.17.0.7:26379", "172.17.0.8:26379", "172.17.0.9:26379"},
+		MasterName:   "mymaster",
+		DB:           0,
+		ClientConfig: clientConfig,
+	}
+	config.SaveConfigToYamlFile(cfg, "./sentinel-client.yaml", 0644, makeTypeHeader(cfg))
+
+	cfg = redis.ClusterConfig{
+		Endpoints:              []string{"172.17.0.1:6379", "172.17.0.2:6379", "172.17.0.3:6379"},
+		EnableReadQueryOnSlave: true,
+		MaxRedirects:           0,
+		RouteByLatency:         true,
+		ClientConfig:           clientConfig,
+	}
+	config.SaveConfigToYamlFile(cfg, "./cluster-client.yaml", 0644, makeTypeHeader(cfg))
+}
+
+func makeTypeHeader(i interface{}) string {
+	t := reflect.TypeOf(i)
+	tn := t.String()
+	return fmt.Sprintf("# %s#%s\n", t.PkgPath(), tn[strings.Index(tn, ".")+1:])
 }

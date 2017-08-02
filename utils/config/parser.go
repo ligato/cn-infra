@@ -17,6 +17,7 @@ package config
 import (
 	"github.com/ghodss/yaml"
 	"io/ioutil"
+	"os"
 )
 
 // ParseConfigFromYamlFile parses a configuration from a file
@@ -28,6 +29,25 @@ func ParseConfigFromYamlFile(path string, cfg interface{}) error {
 	}
 
 	err = yaml.Unmarshal(b, cfg)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// SaveConfigToYamlFile Saves the given configuration to a yaml file.
+// If not empty, each line in the 'comment' parameter must be proceeded by '#'.
+func SaveConfigToYamlFile(cfg interface{}, path string, perm os.FileMode, comment string) error {
+	bytes, err := yaml.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+
+	if comment != "" {
+		bytes = append([]byte(comment), bytes...)
+	}
+
+	err = ioutil.WriteFile(path, bytes, perm)
 	if err != nil {
 		return err
 	}

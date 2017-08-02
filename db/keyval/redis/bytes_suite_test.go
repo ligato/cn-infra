@@ -191,8 +191,6 @@ func TestConnection(t *testing.T) {
 			},
 		},
 	}
-	GenerateConfig(nodeConfig, "./node-config.yaml")
-	os.Remove("./node-config.yaml")
 
 	client, err := CreateClient(nodeConfig)
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
