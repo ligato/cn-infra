@@ -28,16 +28,10 @@ When the Agent looses connectivity (to ETCD, Kafka, VPP etc.), it needs to recov
    layer. The Agent is supposed to just publish the event.
 
 To report a fault/error occurred and notify the datasync plugin there is defined following API call.
-```
-TODO example how to process the data from channel
-```
 
 ### Optimized mode
 In optimized mode we do not need to reprocess whole (configuration) data but rather process just the delta
 (only the changed object in current value of go channel event).
-```
-TODO example how to process the data from channel
-```
  
 ## Responsibility of plugins
 Each plugin is responsible for its own part of (configuration) data received from northbound clients. Each plugin needs 
@@ -49,6 +43,74 @@ The data of one plugin can have references to data of another plugin. Therefore,
 to have proper time/order of data resynchronization between plugins. The datasync plugin
 initiates full data resync in the same order as the other plugins have been registered in Init().
 
+
+## Example
+```go
+package example
+import (
+    "errors"
+    "context"
+    "io"
+    "github.com/ligato/cn-infra/datasync"
+    "github.com/ligato/cn-infra/logging"
+    "github.com/ligato/cn-infra/utils/safeclose"
+)
+
+type PluginXY struct {
+    Watcher     datasync.Watcher //Injected
+    Logger      logging.Logger
+    ParentCtx   context.Context
+    
+    dataChange  chan datasync.ChangeEvent
+    dataResync  chan datasync.ResyncEvent
+    cancel      context.CancelFunc
+}
+
+func (plugin * PluginXY) Init() (err error) {    
+    // initialize channels & start go routins
+    plugin.dataChange = make(chan datasync.ChangeEvent, 100)
+    plugin.dataResync = make(chan datasync.ResyncEvent, 100)
+    
+    // initiate context & cancel function (to stop go routine)
+    var ctx context.Context
+    if plugin.ParentCtx == nil {
+        ctx, plugin.cancel = context.WithCancel(context.Background())    
+    } else {
+        ctx, plugin.cancel = context.WithCancel(plugin.ParentCtx)
+    }   
+    
+    go func() {
+        for {
+            select {
+            case dataChangeEvent := <-plugin.dataChange:
+                plugin.Logger.Debug(dataChangeEvent)
+            case dataResyncEvent := <-plugin.dataResync:
+                plugin.Logger.Debug(dataResyncEvent)
+            case <-ctx.Done():
+                // stop watching for notifications
+                return
+            }
+        }
+    }()
+    
+    return nil
+}
+
+func (plugin * PluginXY) AfterInit() error {
+    // subscribe plugin.channel for watching data (to really receive the data)
+    plugin.Watcher.WatchData("watchingXY", plugin.dataChange, plugin.dataResync, "keysXY")
+
+    return nil
+}
+
+func (plugin * PluginXY) Close() error {
+    // cancel watching the channels
+    plugin.cancel()
+    
+    // close all resources / channels
+    _, err := safeclose.CloseAll(plugin.dataChange, plugin.dataResync)
+    return err 
+}
 ```
-TODO registration in Init() example
-```
+
+
