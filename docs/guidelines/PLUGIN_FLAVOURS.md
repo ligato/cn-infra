@@ -1,7 +1,7 @@
 # Plugin Flavours 
 
 Plugin Flavours:
-1. Reusable combination of multiple plugins is called GenericFlavour. See the following code snipped. The structure GenericFlavour 
+1. Reusable combination of multiple plugins is called ReusedFlavour. See the following code snipped. The structure ReusedFlavour 
 is basicly combination of Logrus, HTTP, LogManager, ServiceLabel, StatusCheck, ETCD & Kafka plugins. All of these
 plugins are instantiated implicit. The intentionally not contain pointers:
    1. to minimize number of lines in flavour
@@ -9,7 +9,7 @@ plugins are instantiated implicit. The intentionally not contain pointers:
    3. garbage collector ignores those field objects (since they are not pointer - small optimization) 
 2. Method Inject() contains hand written code (that is normally checked by compiler rather than automatically by using reflection).
 3. Method Plugin() returns sorted list (slice) of plugins for agent startup.
-4. Reuse  CompositeFlavour demonstrates how to reuse GenericFlavour in CompositeFlavour.
+4. Reuse  CompositeFlavour demonstrates how to reuse ReusedFlavour in CompositeFlavour.
 
 ```go
 package flavourexample
@@ -25,7 +25,33 @@ import (
 	"github.com/ligato/cn-infra/statuscheck"
 )
 
-type GenericFlavour struct {
+type CompositeFlavour struct {
+	Basic    ReusedFlavour
+	PluginXY PluginXY
+	injected bool
+}
+
+func (flavour *CompositeFlavour) Inject() error {
+	if flavour.injected {
+		return nil
+	}
+	flavour.injected = true
+	if err := flavour.Basic.Inject(); err != nil {
+	    return err
+	}
+
+    flavour.PluginXY.HTTP = &flavour.Basic.HTTP
+	// inject all other dependencies...
+	
+	return nil
+}
+
+func (flavour *CompositeFlavour) Plugins() []*core.NamedPlugin {
+	flavour.Inject()
+	return core.ListPluginsInFlavor(flavour)
+}
+
+type ReusedFlavour struct {
 	Logrus       logrus.Plugin
 	HTTP         httpmux.Plugin
 	LogManager   logmanager.Plugin
@@ -37,7 +63,7 @@ type GenericFlavour struct {
 	injected bool
 }
 
-func (flavour *GenericFlavour) Inject() error {
+func (flavour *ReusedFlavour) Inject() error {
 	if flavour.injected {
 		return nil
 	}
@@ -55,41 +81,13 @@ func (flavour *GenericFlavour) Inject() error {
 	return nil
 }
 
-func (flavour *GenericFlavour) Plugins() []*core.NamedPlugin {
-	flavour.Inject()
-	return core.ListPluginsInFlavor(flavour)
-}
-
-
-
-type CompositeFlavour struct {
-	Generic      GenericFlavour
-	PluginXY     PluginXY
-
-	injected bool
-}
-
-func (flavour *GenericFlavour) Inject() error {
-	if flavour.injected {
-		return nil
-	}
-	flavour.injected = true
-	if err := flavour.Generic.Inject(); err != nil {
-	    return err
-	}
-
-	// inject all other dependencies...
-	
-	return nil
-}
-
-func (flavour *GenericFlavour) Plugins() []*core.NamedPlugin {
+func (flavour *ReusedFlavour) Plugins() []*core.NamedPlugin {
 	flavour.Inject()
 	return core.ListPluginsInFlavor(flavour)
 }
 
 type PluginXY struct {
-
+    HTTP httpmux.HttpHandlers
 }
 
 func (plugin* PluginXY) Init() error {
