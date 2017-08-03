@@ -23,6 +23,7 @@ import (
 	goredis "github.com/go-redis/redis"
 	"github.com/ligato/cn-infra/db"
 	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
 const keySpaceEventPrefix = "__keyspace@*__:"
@@ -121,7 +122,7 @@ func watch(db *BytesConnectionRedis, respChan chan<- keyval.BytesWatchResp,
 				if err != nil {
 					db.Errorf("PUnsubscribe %v failed: %s", patterns, err)
 				}
-				pubSub.Close()
+				safeclose.Close(pubSub)
 			}
 		}
 	}()
@@ -189,7 +190,7 @@ func redigoWatch(db *BytesConnectionRedis, respChan chan<- keyval.BytesWatchResp
 	pubSub := redigo.PubSubConn{Conn: conn}
 	err := pubSub.PSubscribe(patterns...)
 	if err != nil {
-		pubSub.Close()
+		safeclose.Close(pubSub)
 		db.Errorf("PSubscribe %v failed: %s", patterns, err)
 		return err
 	}
@@ -214,7 +215,7 @@ func redigoWatch(db *BytesConnectionRedis, respChan chan<- keyval.BytesWatchResp
 			if err != nil {
 				db.Errorf("PUnsubscribe %v failed: %s", patterns, err)
 			}
-			pubSub.Close()
+			safeclose.Close(pubSub)
 		}
 	}()
 	return nil

@@ -19,12 +19,14 @@ import (
 
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/utils/safeclose"
 
 	"errors"
 	"reflect"
 	"strings"
 
 	"fmt"
+
 	redigo "github.com/garyburd/redigo/redis"
 )
 
@@ -82,15 +84,15 @@ func (db *BytesConnectionRedis) Close() error {
 	}
 	db.Debug("Close()")
 	db.closed = true
-	close(db.closeCh)
+	safeclose.Close(db.closeCh)
 	if db.pool != nil {
-		err := db.pool.Close()
+		err := safeclose.Close(db.pool)
 		if err != nil {
 			return fmt.Errorf("Close() encountered error: %s", err)
 		}
 	}
 	if db.client != nil {
-		err := db.client.Close()
+		err := safeclose.Close(db.client)
 		if err != nil {
 			return fmt.Errorf("Close() encountered error: %s", err)
 		}
@@ -507,7 +509,7 @@ func redigoPut(db *BytesConnectionRedis, key string, data []byte, ttl time.Durat
 	db.Debugf("redigoPut(%s)", key)
 
 	conn := db.pool.Get()
-	defer conn.Close()
+	defer safeclose.Close(conn)
 	var err error
 	if ttl == 0 {
 		_, err = conn.Do("SET", key, string(data))
@@ -523,7 +525,7 @@ func redigoGetValue(db *BytesConnectionRedis, key string) (data []byte, found bo
 	db.Debugf("redigoGetValue(%s)", key)
 
 	conn := db.pool.Get()
-	defer conn.Close()
+	defer safeclose.Close(conn)
 	reply, err := conn.Do("GET", key)
 	if err != nil {
 		return nil, false, 0, fmt.Errorf("Do(GET) failed: %s", err)
@@ -548,7 +550,7 @@ func redigoListValues(db *BytesConnectionRedis, keys []string) (values [][]byte,
 	db.Debugf("redigoListValues(%v)", keys)
 
 	conn := db.pool.Get()
-	defer conn.Close()
+	defer safeclose.Close(conn)
 	keysIntf := make([]interface{}, len(keys))
 	for i, k := range keys {
 		keysIntf[i] = k
@@ -594,7 +596,7 @@ func redigoScanKeys(db *BytesConnectionRedis, pattern string) (keys []string, er
 	db.Debugf("redigoScanKeys(%s)", pattern)
 
 	conn := db.pool.Get()
-	defer conn.Close()
+	defer safeclose.Close(conn)
 	cursor := "0"
 	keys = []string{}
 	for {
@@ -639,7 +641,7 @@ func redigoDelete(db *BytesConnectionRedis, keysToDelete []string) (found bool, 
 		args[i] = s
 	}
 	conn := db.pool.Get()
-	defer conn.Close()
+	defer safeclose.Close(conn)
 	reply, err := conn.Do("DEL", args...)
 	if err != nil {
 		return false, fmt.Errorf("Do(DEL) failed: %s", err)
@@ -670,7 +672,7 @@ func redigoListKeys(db *BytesConnectionRedis, match string) (keys []string, err 
 	db.Debugf("redigoListKeys(%s): pattern %s", match, pattern)
 
 	conn := db.pool.Get()
-	defer conn.Close()
+	defer safeclose.Close(conn)
 	reply, err := conn.Do("KEYS", pattern)
 	if err != nil {
 		return nil, fmt.Errorf("Do(KEYS) failed: %s", err)

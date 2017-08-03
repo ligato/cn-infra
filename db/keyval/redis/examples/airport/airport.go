@@ -16,6 +16,9 @@ import (
 	"math"
 	"sync/atomic"
 
+	"regexp"
+	"strings"
+
 	"github.com/ligato/cn-infra/db"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
@@ -24,8 +27,7 @@ import (
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/utils/config"
-	"regexp"
-	"strings"
+	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
 var diagram = `
@@ -217,7 +219,7 @@ func createConnection(cfg interface{}) *redis.BytesConnectionRedis {
 	}
 	conn, err := redis.NewBytesConnection(client, log)
 	if err != nil {
-		client.Close()
+		safeclose.Close(client)
 		log.Panicf("NewBytesConnection() failed: %s", err)
 	}
 	return conn
@@ -230,7 +232,7 @@ func createConnectionRedigo(cfg interface{}) *redis.BytesConnectionRedis {
 	}
 	conn, err := redis.NewBytesConnectionRedis(pool, log)
 	if err != nil {
-		pool.Close()
+		safeclose.Close(pool)
 		log.Panicf("NewBytesConnectionRedigo() failed: %s", err)
 	}
 	return conn
@@ -261,7 +263,7 @@ func startSimulation() {
 		case <-sigChan:
 			fmt.Printf("\nReceived %v.\n", os.Interrupt)
 			cleanup(true)
-			redisConn.Close()
+			safeclose.Close(redisConn)
 			os.Exit(1)
 		case f, ok := <-runwayChan:
 			if ok {

@@ -16,6 +16,7 @@ import (
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/utils/config"
+	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
 var usage = `usage: %s -n|-c|-s <client.yaml>
@@ -117,7 +118,7 @@ func createConnection(cfg interface{}) *redis.BytesConnectionRedis {
 	}
 	conn, err := redis.NewBytesConnection(client, log)
 	if err != nil {
-		client.Close()
+		safeclose.Close(client)
 		log.Panicf("NewBytesConnection() failed: %s", err)
 	}
 	return conn
@@ -130,7 +131,7 @@ func createConnectionRedigo(cfg interface{}) *redis.BytesConnectionRedis {
 	}
 	conn, err := redis.NewBytesConnectionRedis(pool, log)
 	if err != nil {
-		pool.Close()
+		safeclose.Close(pool)
 		log.Panicf("NewBytesConnectionRedigo() failed: %s", err)
 	}
 	return conn
@@ -202,7 +203,7 @@ func runSimpleExmple() {
 	// Done watching.  Close the channel.
 	log.Infof("Closing connection")
 	//close(respChan)
-	redisConn.Close()
+	safeclose.Close(redisConn)
 
 	fmt.Println("==> NOTE: Call on a closed connection should fail.")
 	del(keyPrefix)

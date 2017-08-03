@@ -30,6 +30,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
+	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/onsi/gomega"
 	"github.com/rafaeljusto/redigomock"
 )
@@ -529,7 +530,7 @@ func TestBrokerClosed(t *testing.T) {
 
 	txn := bytesConn.NewTxn()
 	txn2 := bytesBrokerWatcher.NewTxn()
-	err := bytesConn.Close()
+	err := safeclose.Close(bytesConn)
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	respChan := make(chan keyval.BytesWatchResp)
@@ -578,7 +579,7 @@ func TestBrokerClosed(t *testing.T) {
 
 	bytesBrokerWatcher.Watch(respChan, "key")
 
-	err = bytesConn.Close()
+	err = safeclose.Close(bytesConn)
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 

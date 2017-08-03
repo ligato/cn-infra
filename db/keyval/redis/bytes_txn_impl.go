@@ -21,6 +21,7 @@ import (
 	goredis "github.com/go-redis/redis"
 	"github.com/howeyc/crc16"
 	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
 type op struct {
@@ -111,7 +112,7 @@ func redigoPseudoTxn(tx *Txn) error {
 	}
 
 	conn := tx.db.pool.Get()
-	defer conn.Close()
+	defer safeclose.Close(conn)
 
 	if len(toBeDeleted) > 0 {
 		_, err := conn.Do("DEL", toBeDeleted...)
