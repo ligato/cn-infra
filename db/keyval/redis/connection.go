@@ -197,18 +197,18 @@ func CreateNodeClient(config NodeConfig) (Client, error) {
 		Password: config.Password,
 
 		// Dial timeout for establishing new connections. Default is 5 seconds.
-		DialTimeout: config.DialTimeout * time.Second,
+		DialTimeout: config.DialTimeout,
 		// Timeout for socket reads. If reached, commands will fail with a timeout instead of blocking. Default is 3 seconds.
-		ReadTimeout: config.ReadTimeout * time.Second,
+		ReadTimeout: config.ReadTimeout,
 		// Timeout for socket writes. If reached, commands will fail with a timeout instead of blocking. Default is ReadTimeout.
-		WriteTimeout: config.WriteTimeout * time.Second,
+		WriteTimeout: config.WriteTimeout,
 
 		// Maximum number of socket connections. Default is 10 connections per every CPU as reported by runtime.NumCPU.
 		PoolSize: config.Pool.PoolSize,
 		// Amount of time client waits for connection if all connections are busy before returning an error. Default is ReadTimeout + 1 second.
-		PoolTimeout: config.Pool.PoolTimeout * time.Second,
+		PoolTimeout: config.Pool.PoolTimeout,
 		// Amount of time after which client closes idle connections. Should be less than server's timeout. Default is 5 minutes.
-		IdleTimeout: config.Pool.IdleTimeout * time.Second,
+		IdleTimeout: config.Pool.IdleTimeout,
 		// Frequency of idle checks. Default is 1 minute. When minus value is set, then idle check is disabled.
 		IdleCheckFrequency: config.Pool.IdleCheckFrequency,
 
@@ -241,18 +241,18 @@ func CreateClusterClient(config ClusterConfig) (Client, error) {
 		Password: config.Password,
 
 		// Dial timeout for establishing new connections. Default is 5 seconds.
-		DialTimeout: config.DialTimeout * time.Second,
+		DialTimeout: config.DialTimeout,
 		// Timeout for socket reads. If reached, commands will fail with a timeout instead of blocking. Default is 3 seconds.
-		ReadTimeout: config.ReadTimeout * time.Second,
+		ReadTimeout: config.ReadTimeout,
 		// Timeout for socket writes. If reached, commands will fail with a timeout instead of blocking. Default is ReadTimeout.
-		WriteTimeout: config.WriteTimeout * time.Second,
+		WriteTimeout: config.WriteTimeout,
 
 		// Maximum number of socket connections. Default is 10 connections per every CPU as reported by runtime.NumCPU.
 		PoolSize: config.Pool.PoolSize,
 		// Amount of time client waits for connection if all connections are busy before returning an error. Default is ReadTimeout + 1 second.
-		PoolTimeout: config.Pool.PoolTimeout * time.Second,
+		PoolTimeout: config.Pool.PoolTimeout,
 		// Amount of time after which client closes idle connections. Should be less than server's timeout. Default is 5 minutes.
-		IdleTimeout: config.Pool.IdleTimeout * time.Second,
+		IdleTimeout: config.Pool.IdleTimeout,
 		// Frequency of idle checks. Default is 1 minute. When minus value is set, then idle check is disabled.
 		IdleCheckFrequency: config.Pool.IdleCheckFrequency,
 
@@ -281,18 +281,18 @@ func CreateSentinelClient(config SentinelConfig) (Client, error) {
 		Password: config.Password,
 
 		// Dial timeout for establishing new connections. Default is 5 seconds.
-		DialTimeout: config.DialTimeout * time.Second,
+		DialTimeout: config.DialTimeout,
 		// Timeout for socket reads. If reached, commands will fail with a timeout instead of blocking. Default is 3 seconds.
-		ReadTimeout: config.ReadTimeout * time.Second,
+		ReadTimeout: config.ReadTimeout,
 		// Timeout for socket writes. If reached, commands will fail with a timeout instead of blocking. Default is ReadTimeout.
-		WriteTimeout: config.WriteTimeout * time.Second,
+		WriteTimeout: config.WriteTimeout,
 
 		// Maximum number of socket connections. Default is 10 connections per every CPU as reported by runtime.NumCPU.
 		PoolSize: config.Pool.PoolSize,
 		// Amount of time client waits for connection if all connections are busy before returning an error. Default is ReadTimeout + 1 second.
-		PoolTimeout: config.Pool.PoolTimeout * time.Second,
+		PoolTimeout: config.Pool.PoolTimeout,
 		// Amount of time after which client closes idle connections. Should be less than server's timeout. Default is 5 minutes.
-		IdleTimeout: config.Pool.IdleTimeout * time.Second,
+		IdleTimeout: config.Pool.IdleTimeout,
 		// Frequency of idle checks. Default is 1 minute. When minus value is set, then idle check is disabled.
 		IdleCheckFrequency: config.Pool.IdleCheckFrequency,
 
@@ -323,8 +323,8 @@ type ConnPool interface {
 func CreateNodeClientConnPool(config NodeConfig) (ConnPool, error) {
 	options := append([]redigo.DialOption{}, redigo.DialDatabase(config.DB))
 	options = append(options, redigo.DialPassword(config.Password))
-	options = append(options, redigo.DialReadTimeout(config.ReadTimeout*time.Second))
-	options = append(options, redigo.DialWriteTimeout(config.WriteTimeout*time.Second))
+	options = append(options, redigo.DialReadTimeout(config.ReadTimeout))
+	options = append(options, redigo.DialWriteTimeout(config.WriteTimeout))
 	if config.TLS.Enabled {
 		tlsConfig, err := createTLSConfig(config.TLS)
 		if err != nil {
