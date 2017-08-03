@@ -25,7 +25,7 @@ There are following rules for implementing the methods:
 ```go
 package example
 import (
-    "erros"
+    "errors"
     "context"
     "io"
     "github.com/ligato/cn-infra/datasync"
