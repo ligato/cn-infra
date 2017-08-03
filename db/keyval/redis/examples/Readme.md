@@ -1,9 +1,9 @@
 # Examples for cn-infra/db/keyval/redis
 
-* [Get Started](##get-started)
-* [Simple Example](##simple-example)
-* [Airport Example](##airport-example)
-* [Known Issues](##known-issues)
+* [Get Started](#get-started)
+* [Simple Example](#simple-example)
+* [Airport Example](#airport-example)
+* [Known Issues](#known-issues)
 
 ## Get Started
 
