@@ -24,8 +24,8 @@ TODO link to code/doc of db or messaging
 ```
 
 # AfterInit() failed to connect
-Plugin needs to propagate errors if is not able to connect during timeout. The Agent will not start. 
-TODO Assuming that thre is default deployment staretgy for container base cloud (like with K8s) that 
+Plugin needs to propagate errors if it is not able to connect during timeout. The Agent will not start. 
+TODO Assuming that there is default deployment strategy for container base cloud (like with K8s) that 
 will try to heal the container and basically recreates the container.
 
 ```

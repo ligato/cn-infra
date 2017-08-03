@@ -6,9 +6,9 @@ import (
 	"net/http"
 )
 
-// HttpHandlers is an interface that is useful for other plugins that need to register HTTP Handlers.
+// HTTPHandlers is an interface that is useful for other plugins that need to register HTTP Handlers.
 // Use this interface as type for the field in terms of dependency injection.
-type HttpHandlers interface {
+type HTTPHandlers interface {
 	// RegisterHTTPHandler propagates to Gorilla mux
 	RegisterHTTPHandler(path string,
 		handler func(formatter *render.Render) http.HandlerFunc,

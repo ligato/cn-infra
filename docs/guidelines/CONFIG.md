@@ -80,7 +80,7 @@ to specify the name of the configuration file.
     } 
 ```
 
-### Clomplex configuration example
+### Complex configuration example
 ```go
     package xy
 
