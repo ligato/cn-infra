@@ -91,4 +91,4 @@ The repository contains following plugins:
 
 ## Contributing
 
-If you are interested in contributing, please see the [contribution guidelines](docs/guidelines/CONTRIBUTING.md).
+If you are interested in contributing, please see the [contribution guidelines](CONTRIBUTING.md).
