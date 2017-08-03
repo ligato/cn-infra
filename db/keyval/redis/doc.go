@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package redis implements client API to Redis key-value data store.  The API confirms to the speciication defined in the package cn-infra/db/keyval.
+// Package redis implements client API to Redis key-value data store.  The API confirms to the
+// specification defined in the package cn-infra/db/keyval.
 //
 // The entity BytesConnectionRedis provides access to CRUD as well as event subscription API's.
 //
@@ -20,7 +21,8 @@
 //   | app |                   |  BytesConnectionRedis  |                 | Redis |
 //   +-----+    <-- (Watcher)  +------------------------+  <--  events    +-------+
 //
-// The code snippets below provide examples to help you get started.  For simplicity, error handling is omitted.
+// The code snippets below provide examples to help you get started.  For simplicity, error
+// handling is omitted.
 //
 // Imports
 //   import "github.com/ligato/cn-infra/db/keyval/kvproto"
@@ -120,5 +122,23 @@
 // You can find detailed examples in
 //   ligato/cn-infra/db/keyval/redis/examples/simple/
 //   ligato/cn-infra/db/keyval/redis/examples/airport/
+//
+// Resiliency
+//
+// Connection/read/write time-outs, failover, reconnection and recovery are validated by running
+// the airport example against a Redis Sentinel Cluster.  Redis nodes are paused selectively to
+// simulate server down:
+//
+//   $ docker-compose ps
+//
+//   Name                             Command                          State           Ports
+//   ----------------------------------------------------------------------------------------------
+//   dockerredissentinel_master_1     docker-entrypoint.sh redis ...   Paused   6379/tcp
+//   dockerredissentinel_slave_1      docker-entrypoint.sh redis ...   Up       6379/tcp
+//   dockerredissentinel_slave_2      docker-entrypoint.sh redis ...   Up       6379/tcp
+//   dockerredissentinel_sentinel_1   sentinel-entrypoint.sh           Up       26379/tcp, 6379/tcp
+//   dockerredissentinel_sentinel_2   sentinel-entrypoint.sh           Up       26379/tcp, 6379/tcp
+//   dockerredissentinel_sentinel_3   sentinel-entrypoint.sh           Up       26379/tcp, 6379/tcp
+//
 //
 package redis
