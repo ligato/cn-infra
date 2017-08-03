@@ -11,4 +11,4 @@ Implementation is not good enough without:
 * [Comments, READMEs, doc.go](DOCUMENTING.md)
 * [Examples](EXAMPLES.md)
 * Testing
-* Proper [coding style](../../CODINGSTYLE.md)
+* Proper [coding style](CODINGSTYLE.md)
