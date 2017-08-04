@@ -11,7 +11,7 @@
 
 # Func signature
 ## Arguments
-Use always name for primitive type if there is more than one return argument (in structure and also in interface).
+If there is more than one return argument (in structure and also in interface), always use a name for primitive type.
 
 Correct:
 ```
