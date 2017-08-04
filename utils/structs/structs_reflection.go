@@ -79,7 +79,7 @@ func ListExportedFieldsWithVals(val interface{}, predicates ...ExportedPredicate
 	return fields, values
 }
 
-// ExportedPredicate
+// ExportedPredicate defines a callback (used in func FieldExported)
 type ExportedPredicate func(field *reflect.StructField) bool
 
 // FieldExported returns true if field name starts with uppercase
