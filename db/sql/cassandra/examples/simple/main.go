@@ -1,17 +1,3 @@
-// Copyright (c) 2017 Cisco and/or its affiliates.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at:
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package main
 
 import (
@@ -19,9 +5,11 @@ import (
 	"github.com/gocql/gocql"
 	"github.com/ligato/cn-infra/db/sql"
 	"github.com/ligato/cn-infra/db/sql/cassandra"
+	"github.com/ligato/cn-infra/utils/config"
 	"github.com/willfaught/gockle"
 	"net"
 	"os"
+	"errors"
 )
 
 // UserTable global variable reused when building queries/statements
@@ -44,28 +32,50 @@ func (entity *User) SchemaName() string {
 }
 
 func main() {
-	err := exampleKeyspace()
+	cfg, err := loadConfig()
+	if err != nil {
+		fmt.Println("failed - configuration ", err)
+		os.Exit(1)
+	}
+
+	session, err := cassandra.CreateSessionFromClientConfigAndKeyspace(cfg, false)
+	defer session.Close()
+	if err != nil {
+		fmt.Println("failed - session1 ", err)
+		os.Exit(1)
+	}
+
+	err = exampleKeyspace(session)
 	if err != nil {
 		fmt.Println("failed - keyspace ", err)
 		os.Exit(1)
 	}
 
-	err = example()
+	sessionWithKeyspace, err := cassandra.CreateSessionFromClientConfigAndKeyspace(cfg, true)
+	defer sessionWithKeyspace.Close()
+	if err != nil {
+		fmt.Println("failed - session2 ", err)
+		os.Exit(1)
+	}
+	err = example(sessionWithKeyspace)
 	if err != nil {
 		fmt.Println("failed - example ", err)
 		os.Exit(1)
 	}
 }
 
-func exampleKeyspace() (err error) {
-	// connect to the cluster
-	cluster := gocql.NewCluster("172.17.0.1")
-	session, err := cluster.CreateSession()
-	if err != nil {
-		return err
+func loadConfig() (cassandra.ClientConfig, error) {
+	var cfg cassandra.ClientConfig
+	if len(os.Args) < 2 {
+		return cfg, errors.New("Configuration filename argument not specified")
 	}
-	defer session.Close()
 
+	configFileName := os.Args[1]
+	err := config.ParseConfigFromYamlFile(configFileName, &cfg)
+	return cfg, err
+}
+
+func exampleKeyspace(session *gocql.Session) (err error) {
 	if err := session.Query("CREATE KEYSPACE IF NOT EXISTS demo WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 1};").
 		Exec(); err != nil {
 		return err
@@ -74,15 +84,7 @@ func exampleKeyspace() (err error) {
 	return nil
 }
 
-func example() (err error) {
-	// connect to the cluster
-	cluster := gocql.NewCluster("172.17.0.1")
-	session, err := cluster.CreateSession()
-	if err != nil {
-		return err
-	}
-	defer session.Close()
-
+func example(session *gocql.Session) (err error) {
 	err = exampleDDL(session)
 	if err != nil {
 		return err
@@ -100,22 +102,18 @@ func exampleDDL(session *gocql.Session) (err error) {
 		Exec(); err != nil {
 		return err
 	}
-	if err := session.Query(`CREATE TYPE IF NOT EXISTS demo.udt03 (
+	if err := session.Query(`CREATE TYPE IF NOT EXISTS udt03 (
 		tx text,
 		tx2 text)`).Exec(); err != nil {
 		return err
 	}
-	if err := session.Query(`CREATE TYPE IF NOT EXISTS demo.udt04 (
+	if err := session.Query(`CREATE TYPE IF NOT EXISTS udt04 (
 		ahoj text,
 		caf frozen<udt03>)`).Exec(); err != nil {
 		return err
 	}
 
-	if err := session.Query(`DROP TABLE IF EXISTS demo.user;`).
-		Exec(); err != nil {
-		return err
-	}
-	if err := session.Query(`CREATE TABLE IF NOT EXISTS demo.user (
+	if err := session.Query(`CREATE TABLE IF NOT EXISTS user (
 			userid text PRIMARY KEY,
 				first_name text,
 				last_name text,
@@ -132,7 +130,7 @@ func exampleDDL(session *gocql.Session) (err error) {
 		return err
 	}
 
-	if err := session.Query("CREATE INDEX IF NOT EXISTS demo_users_last_name ON demo.user (last_name);").
+	if err := session.Query("CREATE INDEX IF NOT EXISTS demo_users_last_name ON user (last_name);").
 		Exec(); err != nil {
 		return err
 	}
