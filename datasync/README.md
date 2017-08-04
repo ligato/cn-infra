@@ -1,8 +1,7 @@
 # Concept
-It is usual that logic of a microservice relies on data synchronization. In this context 
-the data synchronization is about two or more data sets that needs to be synchronized when 
-event was published. Event can be published by database (when particular data was changes),   
-by message bus (like Kafka).
+It is usual that the logic of a microservice relies on data synchronization. In this context, 
+the data synchronization is about two or more data sets that need to be synchronized when the event was published. The event can be published by database (when particular data was changed),   
+by message bus (such as Kafka).
 
 The datasync plugin helps other plugins/APP to (see next diagram):
  1. Watch data - subscribe for particular data changes to receive events 
