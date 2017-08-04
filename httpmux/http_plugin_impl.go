@@ -19,8 +19,8 @@ import (
 const PluginID core.PluginName = "HTTP"
 
 const (
-	// DefaultHtppPort is used during HTTP server startup unless different port was configured
-	DefaultHtppPort = "9191"
+	// DefaultHTTPPort is used during HTTP server startup unless different port was configured
+	DefaultHTTPPort = "9191"
 )
 
 var (
@@ -29,16 +29,16 @@ var (
 
 // init is here only for parsing program arguments
 func init() {
-	flag.StringVar(&httpPort, "http-port", DefaultHtppPort,
+	flag.StringVar(&httpPort, "http-port", DefaultHTTPPort,
 		"Listen port for the Agent's HTTP server.")
 }
 
 // Plugin implements the Plugin interface.
 type Plugin struct {
 	LogFactory logging.LogFactory
+	HTTPport   string
 
 	logging.Logger
-	HTTPport   string
 	server     *http.Server
 	mx         *mux.Router
 	formatter  *render.Render
@@ -107,6 +107,6 @@ func (plugin *Plugin) AfterInit() error {
 
 // Close cleans up the resources
 func (plugin *Plugin) Close() error {
-	safeclose.Close(plugin.grpcServer)
-	return safeclose.Close(plugin.server)
+	_, err := safeclose.CloseAll(plugin.grpcServer, plugin.server)
+	return err
 }
