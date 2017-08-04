@@ -1,13 +1,13 @@
 # Plugin Flavours 
 
 Plugin Flavours:
-1. Reusable combination of multiple plugins is called ReusedFlavour. See the following code snipped. The structure ReusedFlavour 
-is basicly combination of Logrus, HTTP, LogManager, ServiceLabel, StatusCheck, ETCD & Kafka plugins. All of these
-plugins are instantiated implicit. The intentionally not contain pointers:
-   1. to minimize number of lines in flavour
-   2. those plugins are not optional (if some of the would be it would be a pointer)
-   3. garbage collector ignores those field objects (since they are not pointer - small optimization) 
-2. Method Inject() contains hand written code (that is normally checked by compiler rather than automatically by using reflection).
+1. Reusable combination of multiple plugins is called ReusedFlavour. See the following code snippet. The structure ReusedFlavour 
+is basically combination of Logrus, HTTP, LogManager, ServiceLabel, StatusCheck, ETCD & Kafka plugins. All of these
+plugins are implicitly instantiated. They do intentionally not contain pointers:
+   1. to minimize the number of lines in Flavour
+   2. those plugins are not optional (if some of them would be, it would be a pointer)
+   3. garbage collector ignores those field objects (since they are not pointers - small optimization) 
+2. Method Inject() contains hand written code (that is normally checked by a compiler rather than automatically by using reflection).
 3. Method Plugin() returns sorted list (slice) of plugins for agent startup.
 4. Reuse  CompositeFlavour demonstrates how to reuse ReusedFlavour in CompositeFlavour.
 
