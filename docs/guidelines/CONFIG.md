@@ -2,7 +2,7 @@
 
 ## Flags & Environment variables
 
-1. Ligato source code uses [flag package]("github.com/namsral/flag") to define & parse command line flags 
+1. Ligato source code uses [flag package](https://github.com/namsral/flag) to define & parse command line flags 
 and/or environment variables. 
 
 2. Package level init() function defines one or multiple flags. If the package is imported then the flag is defined.
