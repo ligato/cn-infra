@@ -32,24 +32,18 @@ type ClientConfig struct {
 	// highest supported protocol for the cluster. In clusters with nodes of different
 	// versions the protocol selected is not defined (ie, it can be any of the supported in the cluster)
 	ProtoVersion int `json:"proto_version"`
-
-	//Initial Keyspace
-	Keyspace string `json:"keyspace"`
 }
 
 // CreateSessionFromClientConfigAndKeyspace Creates session from given configuration and keyspace
-func CreateSessionFromClientConfigAndKeyspace(config ClientConfig, setKeyspace bool) (*gocql.Session, error) {
+func CreateSessionFromClientConfigAndKeyspace(config ClientConfig, keyspace string) (*gocql.Session, error) {
 
 	gocqlClusterConfig := gocql.NewCluster(HostsAsString(config.Hosts))
 	gocqlClusterConfig.Port = config.Port
-	gocqlClusterConfig.ConnectTimeout = config.InitialConnectTimeout * time.Millisecond
-	gocqlClusterConfig.Timeout = config.QueryTimeout * time.Millisecond
-	gocqlClusterConfig.ReconnectInterval = config.NodeDownReconnectInterval * time.Second
+	gocqlClusterConfig.ConnectTimeout = config.InitialConnectTimeout
+	gocqlClusterConfig.Timeout = config.QueryTimeout
+	gocqlClusterConfig.ReconnectInterval = config.NodeDownReconnectInterval
 	gocqlClusterConfig.ProtoVersion = config.ProtoVersion
-
-	if setKeyspace {
-		gocqlClusterConfig.Keyspace = config.Keyspace
-	}
+	gocqlClusterConfig.Keyspace = keyspace
 
 	session, err := gocqlClusterConfig.CreateSession()
 

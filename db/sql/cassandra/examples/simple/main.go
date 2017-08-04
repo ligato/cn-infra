@@ -38,7 +38,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	session, err := cassandra.CreateSessionFromClientConfigAndKeyspace(cfg, false)
+	session, err := cassandra.CreateSessionFromClientConfigAndKeyspace(cfg, "")
 	defer session.Close()
 	if err != nil {
 		fmt.Println("failed - session1 ", err)
@@ -51,7 +51,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	sessionWithKeyspace, err := cassandra.CreateSessionFromClientConfigAndKeyspace(cfg, true)
+	sessionWithKeyspace, err := cassandra.CreateSessionFromClientConfigAndKeyspace(cfg, "demo")
 	defer sessionWithKeyspace.Close()
 	if err != nil {
 		fmt.Println("failed - session2 ", err)
