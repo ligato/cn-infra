@@ -7,7 +7,7 @@ import (
 	"github.com/gocql/gocql"
 )
 
-// ClientConfig Configuration for Cassandra clients loaded from a configuration file
+// Config Configuration for Cassandra clients loaded from a configuration file
 type Config struct {
 
 	// A list of host addresses of cluster nodes.
