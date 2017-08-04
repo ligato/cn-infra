@@ -106,18 +106,7 @@ func ListExportedFieldsPtrs(val interface{}, predicates ...ExportedPredicate) []
 	for i := 0; i < rVal.NumField(); i++ {
 		field := rVal.Field(i)
 		structField := rVal.Type().Field(i)
-		if !FieldExported(&structField) {
-			continue
-		}
-
-		expPredic := true
-		for _, predicate := range predicates {
-			if !predicate(&structField) {
-				expPredic = false
-				break
-			}
-		}
-		if !expPredic {
+		if !FieldExported(&structField, predicates...) {
 			continue
 		}
 

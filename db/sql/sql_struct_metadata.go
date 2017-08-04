@@ -28,7 +28,8 @@ type SchemaName interface {
 	SchemaName()  string
 }
 
-// EntityTableName
+// EntityTableName tries to cast to SchemaName & TableName interfaces.
+// If not possible it uses just name of struct as table name.
 func EntityTableName(entity interface{}) string {
 	var tableName, schemaName string
 	if nameProvider, ok := entity.(TableName); ok {
