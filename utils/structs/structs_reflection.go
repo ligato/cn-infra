@@ -111,7 +111,7 @@ func ListExportedFieldsPtrs(val interface{}, predicates ...ExportedPredicate) []
 		}
 
 		switch field.Kind() {
-		case reflect.Chan, reflect.Func /*TODO func*/ , reflect.Map, reflect.Ptr, reflect.Interface, reflect.Slice:
+		case reflect.Ptr, reflect.Interface:
 			if field.IsNil() {
 				p := reflect.New(field.Type().Elem())
 				field.Set(p)
@@ -119,7 +119,14 @@ func ListExportedFieldsPtrs(val interface{}, predicates ...ExportedPredicate) []
 			} else {
 				ptrs = append(ptrs, field.Interface())
 			}
-			//case reflect.Ptr, reflect.Interface, reflect.Array, reflect.Map, reflect.SliceIt, reflect.UnsafePointer, reflect.Chan /*TODO slice, map...*/ :
+		case reflect.Slice, reflect.Chan, reflect.Map:
+			if field.IsNil() {
+				p := reflect.New(field.Type())
+				field.Set(p.Elem())
+				ptrs = append(ptrs, field.Addr().Interface())
+			} else {
+				ptrs = append(ptrs, field.Interface())
+			}
 		default:
 			if field.CanAddr() {
 				ptrs = append(ptrs, field.Addr().Interface())
