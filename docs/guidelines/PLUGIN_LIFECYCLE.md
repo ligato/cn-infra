@@ -1,13 +1,13 @@
-# Plugin Lifecytle
+# Plugin Lifecycle
 
 Each plugin implements Init() and Close() method (see the [plugin_api.go](../../core/pluginapi.go)) 
-and optionally AfterInit(). Those methods are called sequncialy by (see the [agent_core.go](../../core/agent_core.go)).
+and optionally AfterInit(). Those methods are called sequentially by (see the [agent_core.go](../../core/agent_core.go)).
 
 There are following rules for implementing the methods:
 ## Init()
 * Initialize maps & channels here to avoid nil pointers later.
 * Process configs here (see the [Config Guidelins](CONFIG.md))
-* Propagate errors. If an error occurs, agent stops since it is not properly initialized and calls Close() methods.
+* Propagate errors. If an error occurs, the Agent stops since it is not properly initialized and calls Close() methods.
 * Start watching the GO channels here (but not subscribed yet) in a go routine.
 * Initialize GO lang Context & Cancel Function to stop go routines gracefully.
 
@@ -18,7 +18,7 @@ There are following rules for implementing the methods:
 
 ## Close()
 * Cancel the go routines by calling GO lang (Context) Cancel function.
-* Disconnect clients & stop servers here, release resources. For that try to use package [safeclose](../../utils/safeclose)
+* Disconnect clients & stop servers here, release resources. Try achieving that using the [safeclose](../../utils/safeclose) package.
 * Propagate errors. Agent will log those errors.
 
 ## Example
