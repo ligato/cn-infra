@@ -19,8 +19,8 @@ import (
 const PluginID core.PluginName = "HTTP"
 
 const (
-	// DefaultHttpPort is used during HTTP server startup unless different port was configured
-	DefaultHttpPort = "9191"
+	// DefaultHTTPPort is used during HTTP server startup unless different port was configured
+	DefaultHTTPPort = "9191"
 )
 
 var (
@@ -29,7 +29,7 @@ var (
 
 // init is here only for parsing program arguments
 func init() {
-	flag.StringVar(&httpPort, "http-port", DefaultHttpPort,
+	flag.StringVar(&httpPort, "http-port", DefaultHTTPPort,
 		"Listen port for the Agent's HTTP server.")
 }
 
