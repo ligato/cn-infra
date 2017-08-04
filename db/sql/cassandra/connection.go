@@ -1,13 +1,14 @@
 package cassandra
 
 import (
-	"github.com/gocql/gocql"
 	"strings"
 	"time"
+
+	"github.com/gocql/gocql"
 )
 
-// ClientConfig Configuration for Cassandra clients
-type ClientConfig struct {
+// ClientConfig Configuration for Cassandra clients loaded from a configuration file
+type Config struct {
 
 	// A list of host addresses of cluster nodes.
 	Hosts []string `json:"hosts"`
@@ -16,13 +17,13 @@ type ClientConfig struct {
 	Port int `json:"port"`
 
 	// connection timeout (default: 600ms)
-	QueryTimeout time.Duration `json:"query_timeout"`
+	Timeout time.Duration `json:"timeout"`
 
 	// initial connection timeout, used during initial dial to server (default: 600ms)
-	InitialConnectTimeout time.Duration `json:"initial_connect_timeout"`
+	ConnectTimeout time.Duration `json:"connect_timeout"`
 
 	// If not zero, gocql attempt to reconnect known DOWN nodes in every ReconnectSleep.
-	NodeDownReconnectInterval time.Duration `json:"node_down_reconnect_interval"`
+	ReconnectInterval time.Duration `json:"reconnect_interval"`
 
 	// ProtoVersion sets the version of the native protocol to use, this will
 	// enable features in the driver for specific protocol versions, generally this
@@ -34,14 +35,61 @@ type ClientConfig struct {
 	ProtoVersion int `json:"proto_version"`
 }
 
+// ClientConfig wrapping gocql ClusterConfig
+type ClientConfig struct {
+	*gocql.ClusterConfig
+}
+
+const defaultTimeout = 600 * time.Millisecond
+const defaultConnectTimeout = 600 * time.Millisecond
+const defaultReocnnectInterval = 60 * time.Second
+const defaultProtoVersion = 4
+
+// ConfigToClientConfig transforms the yaml configuration into ClientConfig.
+func ConfigToClientConfig(ymlConfig *Config) (*ClientConfig, error) {
+
+	timeout := defaultTimeout
+	if ymlConfig.Timeout > 0 {
+		timeout = ymlConfig.Timeout
+	}
+
+	connectTimeout := defaultConnectTimeout
+	if ymlConfig.ConnectTimeout > 0 {
+		connectTimeout = ymlConfig.ConnectTimeout
+	}
+
+	reconnectInterval := defaultReocnnectInterval
+	if ymlConfig.ReconnectInterval > 0 {
+		reconnectInterval = ymlConfig.ReconnectInterval
+	}
+
+	protoVersion := defaultProtoVersion
+	if ymlConfig.ProtoVersion > 0 {
+		protoVersion = ymlConfig.ProtoVersion
+	}
+
+	clientConfig := &gocql.ClusterConfig{
+		Hosts:             ymlConfig.Hosts,
+		Port:              ymlConfig.Port,
+		Timeout:           timeout,
+		ConnectTimeout:    connectTimeout,
+		ReconnectInterval: reconnectInterval,
+		ProtoVersion:      protoVersion,
+	}
+
+	cfg := &ClientConfig{ClusterConfig: clientConfig}
+
+	return cfg, nil
+}
+
 // CreateSessionFromClientConfigAndKeyspace Creates session from given configuration and keyspace
-func CreateSessionFromClientConfigAndKeyspace(config ClientConfig, keyspace string) (*gocql.Session, error) {
+func CreateSessionFromClientConfigAndKeyspace(config Config, keyspace string) (*gocql.Session, error) {
 
 	gocqlClusterConfig := gocql.NewCluster(HostsAsString(config.Hosts))
 	gocqlClusterConfig.Port = config.Port
-	gocqlClusterConfig.ConnectTimeout = config.InitialConnectTimeout
-	gocqlClusterConfig.Timeout = config.QueryTimeout
-	gocqlClusterConfig.ReconnectInterval = config.NodeDownReconnectInterval
+	gocqlClusterConfig.ConnectTimeout = config.ConnectTimeout
+	gocqlClusterConfig.Timeout = config.Timeout
+	gocqlClusterConfig.ReconnectInterval = config.ReconnectInterval
 	gocqlClusterConfig.ProtoVersion = config.ProtoVersion
 	gocqlClusterConfig.Keyspace = keyspace
 

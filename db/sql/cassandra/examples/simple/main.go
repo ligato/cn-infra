@@ -64,8 +64,8 @@ func main() {
 	}
 }
 
-func loadConfig() (cassandra.ClientConfig, error) {
-	var cfg cassandra.ClientConfig
+func loadConfig() (cassandra.Config, error) {
+	var cfg cassandra.Config
 	if len(os.Args) < 2 {
 		return cfg, errors.New("Configuration filename argument not specified")
 	}
