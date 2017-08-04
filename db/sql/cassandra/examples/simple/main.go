@@ -15,10 +15,12 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/gocql/gocql"
 	"github.com/ligato/cn-infra/db/sql"
 	"github.com/ligato/cn-infra/db/sql/cassandra"
+	"github.com/ligato/cn-infra/utils/config"
 	"github.com/willfaught/gockle"
 	"net"
 	"os"
@@ -38,28 +40,50 @@ type User struct {
 }
 
 func main() {
-	err := exampleKeyspace()
+	cfg, err := loadConfig()
+	if err != nil {
+		fmt.Println("failed - configuration ", err)
+		os.Exit(1)
+	}
+
+	session, err := cassandra.CreateSessionFromClientConfigAndKeyspace(cfg, false)
+	defer session.Close()
+	if err != nil {
+		fmt.Println("failed - session1 ", err)
+		os.Exit(1)
+	}
+
+	err = exampleKeyspace(session)
 	if err != nil {
 		fmt.Println("failed - keyspace ", err)
 		os.Exit(1)
 	}
 
-	err = example()
+	sessionWithKeyspace, err := cassandra.CreateSessionFromClientConfigAndKeyspace(cfg, true)
+	defer sessionWithKeyspace.Close()
+	if err != nil {
+		fmt.Println("failed - session2 ", err)
+		os.Exit(1)
+	}
+	err = example(sessionWithKeyspace)
 	if err != nil {
 		fmt.Println("failed - example ", err)
 		os.Exit(1)
 	}
 }
 
-func exampleKeyspace() (err error) {
-	// connect to the cluster
-	cluster := gocql.NewCluster("172.17.0.1")
-	session, err := cluster.CreateSession()
-	if err != nil {
-		return err
+func loadConfig() (cassandra.ClientConfig, error) {
+	var cfg cassandra.ClientConfig
+	if len(os.Args) < 2 {
+		return cfg, errors.New("Configuration filename argument not specified")
 	}
-	defer session.Close()
 
+	configFileName := os.Args[1]
+	err := config.ParseConfigFromYamlFile(configFileName, &cfg)
+	return cfg, err
+}
+
+func exampleKeyspace(session *gocql.Session) (err error) {
 	if err := session.Query("CREATE KEYSPACE IF NOT EXISTS demo WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 1};").
 		Exec(); err != nil {
 		return err
@@ -68,16 +92,7 @@ func exampleKeyspace() (err error) {
 	return nil
 }
 
-func example() (err error) {
-	// connect to the cluster
-	cluster := gocql.NewCluster("172.17.0.1")
-	cluster.Keyspace = "demo"
-	session, err := cluster.CreateSession()
-	if err != nil {
-		return err
-	}
-	defer session.Close()
-
+func example(session *gocql.Session) (err error) {
 	err = exampleDDL(session)
 	if err != nil {
 		return err

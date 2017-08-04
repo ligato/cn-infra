@@ -1,0 +1,8 @@
+hosts:
+- 127.0.0.1
+port: 9042
+query_timeout: 600
+initial_connect_timeout: 600
+node_down_reconnect_interval: 60
+proto_version: 4
+keyspace: demo
