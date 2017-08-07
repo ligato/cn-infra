@@ -483,7 +483,7 @@ func (pdb *BytesBrokerWatcherRedis) ListKeys(match string) (keyval.BytesKeyItera
 
 // Delete calls Delete function of BytesConnectionRedis.
 // Prefix will be prepended to key argument when searching.
-func (pdb *BytesBrokerWatcherRedis) Delete(match string, opts ...keyval.DelOption) (bool, error) {
+func (pdb *BytesBrokerWatcherRedis) Delete(match string, opts ...keyval.DelOption) (found bool, err error) {
 	if pdb.delegate.closed {
 		return false, fmt.Errorf("Delete(%s) called on a closed connection", match)
 	}

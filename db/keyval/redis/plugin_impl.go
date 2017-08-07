@@ -40,8 +40,8 @@ func init() {
 	flag.StringVar(&defaultConfigFileName, "redis-config", "", "Location of the Redis configuration file")
 }
 
-func (p *Plugin) retrieveConfig() (interface{}, error) {
-	cfg := SentinelConfig{}
+func (p *Plugin) retrieveConfig() (cfg interface{}, err error) {
+	cfg = SentinelConfig{}
 	var configFile string
 	if p.ConfigFileName != "" {
 		configFile = p.ConfigFileName
