@@ -28,13 +28,13 @@ A *cloud-native VNF* is a VNF designed for the emerging cloud environment -
 it runs in a container rather than a VM, its lifecycle is orchestrated 
 by a container orchestration system, such as Kubernetes, and it's using
 cloud-native orchestration paradigms. In other words, its control/management
-plance looks just like any other container based [12-factor app][1]. to 
+plane looks just like any other container based [12-factor app][1]. to 
 orchestrator or external clients it exposes REST or gRPC APIs, data stored
 in centralized KV data stores, communicate over message bus, cloud-friendly
-logging and config, cloud friendly build & deployment process, etc. Yet,
-it still provides a high-performance data plane.
+logging and config, cloud friendly build & deployment process, etc.,
+Depending on the desired functionality, scale and performance, a cloud-
+native VNF may provide a high-performance data plane, such as the [VPP][2].
 
-Model-driven approach - CNF APIs modeled using protobufs.
 
 ## The CN-Infra Platform Architecture
 
@@ -46,25 +46,44 @@ implementors. In other words, the CN-Infra platform itself is implemented
 as a set of plugins that together provide the platform's functionality, 
 such as logging, health checks, messaging (e.g. Kafka), a common front-end
 API and back-end connectivity to various KV data stores (Etcd, Cassandra, 
-Redis, ...), and REST and gRPC APIs. App writers can pick and choose only
-those platform plugins that are required by their app; for example, if an
-app does not need a KV store, the CN-Infra platform KV data store plugins
-would not be included in the app. 
+Redis, ...), and REST and gRPC APIs. 
+
+The architecture of the CN-Infra platform is shown in the following figure.
 
 ![arch](docs/imgs/high_level_arch_cninfra.png "High Level Architecture of cn-infra")
 
-The CN-Infra platform comprises a **[Core](core)** that provides plugin
+The CN-Infra platform consists of a **[Core](core)** that provides plugin
 lifecycle management (initialization and graceful shutdown of plugins) 
-and a set of platform plugins. The platform can be easily extended with
-plugins. 
+and a set of platform plugins. Note that the figure shows not only 
+CN-Infra plugins that are a part of the CN-Infra platform, but also 
+app plugins that use the platform. CN-Infra platform plugins provide 
+APIs that are consumed by app plugins. App plugins themselves may 
+provide their own APIs consumed by external clients.
 
-An example of a VNF control/management plane built on top of the CN-Infra
-platform is the [VPP Agent](https://github.com/ligato/vpp-agent).
+The platform is modular and extensible. Plugins supporting new functionality
+(e.g. another KV store or another message bus) can be easily added to the
+existing set of CN-Infra platform plugins. Moreover, CN-Infra based apps
+can be built in layers: a set of app plugins together with CN-Infra plugins
+can form a new platform providing APIs/services to higher layer apps. 
+This approach was used in the [VPP Agent][3] - a management/control agent
+for [VPP][2] based software data planes.,
+
+Extending the code base does not mean that all plugins end up in all 
+apps - app writers can pick and choose only those platform plugins that 
+are required by their app; for example, if an app does not need a KV 
+store, the CN-Infra platform KV data store plugins would not be included
+in the app. All plugins used in an app are statically linked into the 
+app.
 
 ## CN-Infra Plugins
-### Currently Available Plugins
-Platform plugins in the current CN-Infra release provide the following 
-functionality:
+A CN-Infra plugin is typically implemented as a library providing the 
+plugin's functionality/APIs wrapped in a plugin wrapper. A CN-Infra 
+library can also be used standalone in 3ed party apps that do not use
+the CN-Infra platform. The plugin wrapper provides lifecycle management 
+for the plugin component.
+
+Platform plugins in the current CN-Infra release provide functionality
+in one of the following functional areas:
 
 * **RPC** - allows to expose application's API via REST or gRPC:
     * [HTTPmux](httpmux) -  HTTP requests and allows app plugins to define
@@ -97,7 +116,7 @@ functionality:
       and exposes it via HTTP
     - Probes (callable remotely from K8s)
   
-* **Miscallaneous** - value-add plugins supporting the operation of a 
+* **Miscellaneous** - value-add plugins supporting the operation of a 
     CN-Infra based application: 
   - [Datasync](datasync/resync) - provides data resynchronization after HA 
     events (restart or connectivity restoration after an outage) for data
@@ -108,15 +127,10 @@ functionality:
     of the same app or from other apps (e.g. to have its own space in a kv 
     data store).
    
-### CN-Infra Plugin Structure
-Library providing the API functionality wrapped in a plugin wrapper. The 
-library can be used standalone. The plugin wrapper provides Lc management 
-for the library.
-
 ## Quickstart
 The following code shows the initialization/start of a simple agent 
-application built on the CN-Infra platform. The entire code can be found 
-[here](examples/simple-agent/agent.go).
+application built on the CN-Infra platform. The code for this example
+can be found [here](examples/simple-agent/agent.go).
 ```
 func main() {
 	flavour := Flavour{}
@@ -138,3 +152,5 @@ GoDoc can be browsed [online](https://godoc.org/github.com/ligato/cn-infra).
 If you are interested in contributing, please see the [contribution guidelines](CONTRIBUTING.md).
 
 [1]: https://12factor.net/
+[2]: https//fd.io
+[3]: https://github.com/ligato/vpp-agent
