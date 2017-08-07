@@ -78,7 +78,7 @@ app.
 ## CN-Infra Plugins
 A CN-Infra plugin is typically implemented as a library providing the 
 plugin's functionality/APIs wrapped in a plugin wrapper. A CN-Infra 
-library can also be used standalone in 3ed party apps that do not use
+library can also be used standalone in 3rd party apps that do not use
 the CN-Infra platform. The plugin wrapper provides lifecycle management 
 for the plugin component.
 
