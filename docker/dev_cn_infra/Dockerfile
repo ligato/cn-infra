@@ -8,7 +8,6 @@ RUN apt-get update && apt-get install -y \
 
 RUN mkdir /opt/agent
 RUN mkdir /opt/agent/dev
-RUN mkdir /opt/agent/plugin
 
 WORKDIR /opt/agent/dev
 

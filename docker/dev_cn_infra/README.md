@@ -42,7 +42,7 @@ You should see something like this:
 
 ```
 REPOSITORY                       TAG                 IMAGE ID            CREATED             SIZE
-dev_cn_infra                    latest              0692f574f21a        11 minutes ago      3.58 GB
+dev_cn_infra                    latest              0692f574f21a        11 minutes ago      1.5 GB
 ...
 ```
 Get the details of the newly built image:
