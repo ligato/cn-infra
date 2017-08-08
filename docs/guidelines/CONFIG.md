@@ -53,7 +53,7 @@ files. Flags can be used to specify the name of the configuration file.
     }  
 ```
 
-2. Each plugin can have its own configuration (injected in [flavor](PLUGIN_FLAVOURS.md))
+2. Each plugin can have its own configuration (injected in [flavor](PLUGIN_FLAVORS.md))
    See following [Simple flag example](#Simple flag example) and [Complex configuration example](#Complex configuration example) 
 
 ### Simple flag example
