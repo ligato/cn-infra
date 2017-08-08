@@ -16,9 +16,6 @@ import (
 	"math"
 	"sync/atomic"
 
-	"regexp"
-	"strings"
-
 	"github.com/ligato/cn-infra/db"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
@@ -26,8 +23,8 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/redis/examples/airport/model"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
-	"github.com/ligato/cn-infra/utils/config"
 	"github.com/ligato/cn-infra/utils/safeclose"
+	"github.com/namsral/flag"
 )
 
 var diagram = `
@@ -52,13 +49,6 @@ var diagram = `
                                    | take off |                 +-----------+
                                    +----------+
 
-`
-
-var usage = `usage: %s -n|-c|-s <client.yaml>
-	where
-	-n		Specifies the use of a node client
-	-c		Specifies the use of a cluster client
-	-s		Specifies the use of a sentinel client
 `
 
 var log = logroot.Logger()
@@ -113,22 +103,28 @@ var hangarBroker keyval.ProtoBroker
 var hangarWatcher keyval.ProtoWatcher
 
 var prefix string
-var useRedigo = false
+var debug bool
+var redigo bool
 
 func main() {
-	setup()
-	startSimulation()
+	if setup() {
+		startSimulation()
+	}
 }
 
-func setup() {
+func setup() bool {
 	rand.Seed(time.Now().UnixNano())
 
 	cfg := loadConfig()
 	if cfg == nil {
-		return
+		return false
 	}
 
-	if useRedigo {
+	if redigo {
+		if _, yes := cfg.(redis.NodeConfig); !yes {
+			fmt.Printf("Redigo only works on redis.NodeConfig, not %T\n", cfg)
+			return false
+		}
 		redisConn = createConnectionRedigo(cfg)
 	} else {
 		redisConn = createConnection(cfg)
@@ -157,59 +153,54 @@ func setup() {
 	arrivalWatcher.Watch(arrivalChan, "")
 	departureWatcher.Watch(departureChan, "")
 	hangarWatcher.Watch(hangarChan, "")
+
+	return true
 }
 
 func loadConfig() interface{} {
-	numArgs := len(os.Args)
-	defer func() {
-		// Variety to run the example
-		if numArgs > 3 {
-			rePrefix := regexp.MustCompile("--prefix:.*")
-			for _, a := range os.Args[3:] {
-				switch a {
-				case "--redigo":
-					useRedigo = true
-					fmt.Println("Using redigo")
-					continue
-				case "--debug":
-					log.SetLevel(logging.DebugLevel)
-					continue
-				}
-				if rePrefix.MatchString(a) {
-					prefix = strings.TrimPrefix(a, "--prefix:")
-				}
-			}
-		}
-	}()
+	flag.StringVar(&prefix, "prefix", "",
+		"Specifies key prefix")
+	flag.BoolVar(&debug, "debug", false,
+		"Specifies whether to enable debugging; default to false")
+	flag.BoolVar(&redigo, "redigo", false,
+		"Specifies whether to use redigo API instead; default to false")
+	flag.Parse()
 
-	if numArgs < 3 {
-		fmt.Printf(usage, os.Args[0])
+	flag.Usage = func() {
+		flag.VisitAll(func(f *flag.Flag) {
+			var format string
+			if f.Name == "redis-config" || f.Name == "prefix" {
+				// put quotes around string
+				format = "  -%s=%q: %s\n"
+			} else {
+				if f.Name != "debug" && f.Name != "redigo" {
+					return
+				}
+				format = "  -%s=%s: %s\n"
+			}
+			fmt.Fprintf(os.Stderr, format, f.Name, f.DefValue, f.Usage)
+		})
+
+	}
+
+	if debug {
+		log.SetLevel(logging.DebugLevel)
+	}
+	cfgFlag := flag.Lookup("redis-config")
+	if cfgFlag == nil {
+		flag.Usage()
 		return nil
 	}
-	var err error
-	t := os.Args[1]
-	f := os.Args[2]
-	defer func() {
-		if err != nil {
-			log.Panicf("ParseConfigFromYamlFile(%s) failed: %s", f, err)
-		}
-	}()
-
-	switch t {
-	case "-n":
-		var cfg redis.NodeConfig
-		err = config.ParseConfigFromYamlFile(f, &cfg)
-		return cfg
-	case "-c":
-		var cfg redis.ClusterConfig
-		err = config.ParseConfigFromYamlFile(f, &cfg)
-		return cfg
-	case "-s":
-		var cfg redis.SentinelConfig
-		err = config.ParseConfigFromYamlFile(f, &cfg)
-		return cfg
+	cfgFile := cfgFlag.Value.String()
+	if cfgFile == "" {
+		flag.Usage()
+		return nil
 	}
-	return nil
+	cfg, err := redis.LoadConfig(cfgFile)
+	if err != nil {
+		log.Panicf("LoadConfig(%s) failed: %s", cfgFile, err)
+	}
+	return cfg
 }
 
 func createConnection(cfg interface{}) *redis.BytesConnectionRedis {

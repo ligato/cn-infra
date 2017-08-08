@@ -38,12 +38,21 @@
 //   var cfg redis.SentinelConfig
 // - Redis Cluster
 //   var cfg redis.ClusterConfig
-// See sample YAML configurations in ligato/cn-infra/db/keyval/redis/examples/*.yaml
+// See sample YAML configurations in
+//   ligato/cn-infra/db/keyval/redis/examples/*.yaml
+//
+// You can initialize any of the above configuration instances in memory, or load
+// the settings from file using
+//   err = config.ParseConfigFromYamlFile(configFile, &cfg)
+//
+// You can also load any of the three configuration files using
+//   var cfg interface{}
+//   cfg, err := redis.LoadConfig(configFile)
 //
 // Create connection from configuration
-//   err = config.ParseConfigFromYamlFile(f, &cfg)
 //   client, err := redis.CreateClient(cfg)
 //   db, err := redis.NewBytesConnection(client, logroot.Logger())
+//
 // Create Brokers / Watchers from connection
 //   // create broker/watcher that share the same connection pools.
 //   bytesBroker := db.NewBroker("some-prefix")

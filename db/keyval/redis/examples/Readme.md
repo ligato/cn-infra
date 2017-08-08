@@ -23,16 +23,9 @@ Modify API configuration to match your environment. See sample configurations to
   * Also, look at the function generateSampleConfigs() which shows how to generate and save each
     type of client configurations.
 
-To start the example, 'cd' to cn-infra/db/keyval/redis/examples directory.
-Then execute one of the following, depending on your Redis configuration:
+To start the example, 'cd' to cn-infra/db/keyval/redis/examples directory.  Run
 ```
-go run simple/simple.go -n node-client.yaml
-```
-```
-go run simple/simple.go -s sentinel-client.yaml
-```
-```
-go run simple/simple.go -c cluster-client.yaml
+go run simple/simple.go -redis-config=<redis client config yaml>
 ```
 
 ## Airport Example
@@ -43,16 +36,9 @@ go run simple/simple.go -c cluster-client.yaml
   ![diagram.png](diagram.png "Airport Example Data Flow Diagram")
   ___
 
-To start the example, 'cd' to cn-infra/db/keyval/redis/examples directory.
-Then execute one of the following, depending on your Redis configuration:
+To start the example, 'cd' to cn-infra/db/keyval/redis/examples directory.  Run
 ```
-go run airport/airport.go -n node-client.yaml
-```
-```
-go run airport/airport.go -s sentinel-client.yaml
-```
-```
-go run airport/airport.go -c cluster-client.yaml
+go run airport/airport.go -redis-config=<redis client config yaml>
 ```
 
 ## Known Issues

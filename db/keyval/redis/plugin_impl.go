@@ -19,7 +19,6 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
-	"github.com/ligato/cn-infra/utils/config"
 	"github.com/namsral/flag"
 )
 
@@ -37,11 +36,11 @@ type Plugin struct {
 var defaultConfigFileName string
 
 func init() {
-	flag.StringVar(&defaultConfigFileName, "redis-config", "", "Location of the Redis configuration file")
+	flag.StringVar(&defaultConfigFileName, "redis-config", "",
+		"Location of Redis configuration file; Can also be set via environment variable REDIS_CONFIG")
 }
 
 func (p *Plugin) retrieveConfig() (cfg interface{}, err error) {
-	cfg = SentinelConfig{}
 	var configFile string
 	if p.ConfigFileName != "" {
 		configFile = p.ConfigFileName
@@ -50,7 +49,7 @@ func (p *Plugin) retrieveConfig() (cfg interface{}, err error) {
 	}
 
 	if configFile != "" {
-		err := config.ParseConfigFromYamlFile(configFile, &cfg)
+		cfg, err = LoadConfig(configFile)
 		if err != nil {
 			return nil, err
 		}

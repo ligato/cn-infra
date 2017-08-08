@@ -15,6 +15,7 @@
 package redis
 
 import (
+	"io/ioutil"
 	"time"
 
 	"crypto/tls"
@@ -23,6 +24,7 @@ import (
 
 	"github.com/coreos/etcd/pkg/tlsutil"
 	redigo "github.com/garyburd/redigo/redis"
+	"github.com/ghodss/yaml"
 	goredis "github.com/go-redis/redis"
 )
 
@@ -302,6 +304,39 @@ func CreateSentinelClient(config SentinelConfig) (Client, error) {
 		// Hook that is called when new connection is established
 		// OnConnect func(*Conn) error
 	}), nil
+}
+
+// LoadConfig Loads the given configFile and returns appropriate config instance.
+func LoadConfig(configFile string) (cfg interface{}, err error) {
+	b, err := ioutil.ReadFile(configFile)
+	if err != nil {
+		return nil, err
+	}
+
+	var s SentinelConfig
+	err = yaml.Unmarshal(b, &s)
+	if err != nil {
+		return nil, err
+	}
+	if s.MasterName != "" {
+		return s, nil
+	}
+
+	n := NodeConfig{}
+	err = yaml.Unmarshal(b, &n)
+	if err != nil {
+		return nil, err
+	}
+	if n.Endpoint != "" {
+		return n, nil
+	}
+
+	c := ClusterConfig{}
+	err = yaml.Unmarshal(b, &c)
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
 }
 
 ///////////////////////////////////////////////////////////////////////////////
