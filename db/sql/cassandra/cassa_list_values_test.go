@@ -34,7 +34,7 @@ func TestListValues1_convenient(t *testing.T) {
 
 	query := sql.FROM(UserTable, sql.WHERE(sql.Field(&UserTable.LastName, sql.EQ("Bond"))))
 
-	sqlStr, _ /*binding*/ , err := cassandra.SelectExpToString(query)
+	sqlStr, _ /*binding*/, err := cassandra.SelectExpToString(query)
 	gomega.Expect(sqlStr).Should(gomega.BeEquivalentTo(
 		"SELECT id, first_name, last_name FROM User WHERE last_name = ?"))
 
@@ -161,7 +161,7 @@ func TestListValues5_customTableSchema(t *testing.T) {
 	query := sql.FROM(entity, sql.WHERE(sql.Field(&entity.LastName, sql.EQ("Bond"))))
 	mockQuery(session, query, cells(entity))
 
-	sqlStr, _ /*binding*/ , err := cassandra.SelectExpToString(query)
+	sqlStr, _ /*binding*/, err := cassandra.SelectExpToString(query)
 	gomega.Expect(sqlStr).Should(gomega.BeEquivalentTo(
 		"SELECT id, last_name FROM my_custom_schema.my_custom_name WHERE last_name = ?"))
 
