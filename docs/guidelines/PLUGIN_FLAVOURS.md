@@ -1,18 +1,25 @@
-# Plugin Flavours 
+# Plugin Flavors 
 
-Plugin Flavours:
-1. Reusable combination of multiple plugins is called ReusedFlavour. See the following code snippet. The structure ReusedFlavour 
-is basically combination of Logrus, HTTP, LogManager, ServiceLabel, StatusCheck, ETCD & Kafka plugins. All of these
-plugins are implicitly instantiated. They do intentionally not contain pointers:
-   1. to minimize the number of lines in Flavour
-   2. those plugins are not optional (if some of them would be, it would be a pointer)
-   3. garbage collector ignores those field objects (since they are not pointers - small optimization) 
-2. Method Inject() contains hand written code (that is normally checked by a compiler rather than automatically by using reflection).
-3. Method Plugin() returns sorted list (slice) of plugins for agent startup.
-4. Reuse  CompositeFlavour demonstrates how to reuse ReusedFlavour in CompositeFlavour.
+Plugin Flavors:
+1. A reusable combination of multiple plugins is called a 'ReusedFlavor'. 
+   Consider the following code snippet. The ReusedFlavor structure is 
+   basically a combination of Logrus, HTTP, LogManager, ServiceLabel, 
+   StatusCheck, ETCD and Kafka plugins. All these plugins are implicitly
+   instantiated. They do intentionally not contain pointers:
+    1. to minimize the number of lines in the Flavor
+    2. those plugins are not optional (if some of them would be, it would
+       be a pointer)
+    3. garbage collector ignores those field objects (since they are not 
+       pointers - small optimization) 
+2. The Inject() method contains hand written code (that is normally checked
+   by the compiler rather than instantiated automatically by using reflection.
+3. The Plugin() method returns a sorted list (slice) of plugins for agent 
+   startup.
+4. The CompositeFlavor example below demonstrates how to reuse ReusedFlavor
+   in CompositeFlavor.
 
 ```go
-package flavourexample
+package flavorexample
 
 import (
 	"github.com/ligato/cn-infra/core"
@@ -25,33 +32,33 @@ import (
 	"github.com/ligato/cn-infra/statuscheck"
 )
 
-type CompositeFlavour struct {
-	Basic    ReusedFlavour
+type CompositeFlavor struct {
+	Basic    ReusedFlavor
 	PluginXY PluginXY
 	injected bool
 }
 
-func (flavour *CompositeFlavour) Inject() error {
-	if flavour.injected {
+func (Flavor *CompositeFlavor) Inject() error {
+	if Flavor.injected {
 		return nil
 	}
-	flavour.injected = true
-	if err := flavour.Basic.Inject(); err != nil {
+	Flavor.injected = true
+	if err := Flavor.Basic.Inject(); err != nil {
 	    return err
 	}
 
-    flavour.PluginXY.HTTP = &flavour.Basic.HTTP
+    Flavor.PluginXY.HTTP = &Flavor.Basic.HTTP
 	// inject all other dependencies...
 	
 	return nil
 }
 
-func (flavour *CompositeFlavour) Plugins() []*core.NamedPlugin {
-	flavour.Inject()
-	return core.ListPluginsInFlavor(flavour)
+func (Flavor *CompositeFlavor) Plugins() []*core.NamedPlugin {
+	Flavor.Inject()
+	return core.ListPluginsInFlavor(Flavor)
 }
 
-type ReusedFlavour struct {
+type ReusedFlavor struct {
 	Logrus       logrus.Plugin
 	HTTP         httpmux.Plugin
 	LogManager   logmanager.Plugin
@@ -63,27 +70,27 @@ type ReusedFlavour struct {
 	injected bool
 }
 
-func (flavour *ReusedFlavour) Inject() error {
-	if flavour.injected {
+func (Flavor *ReusedFlavor) Inject() error {
+	if Flavor.injected {
 		return nil
 	}
-	flavour.injected = true
+	Flavor.injected = true
 
-	flavour.HTTP.LogFactory = &flavour.Logrus
-	flavour.LogManager.ManagedLoggers = &flavour.Logrus
-	flavour.LogManager.HTTP = &flavour.HTTP
-	flavour.Etcd.LogFactory = &flavour.Logrus
-	flavour.Etcd.ServiceLabel = &flavour.ServiceLabel
-	flavour.Etcd.StatusCheck = &flavour.StatusCheck
-	flavour.Kafka.LogFactory = &flavour.Logrus
-	flavour.Kafka.ServiceLabel = &flavour.ServiceLabel
-	flavour.Kafka.StatusCheck = &flavour.StatusCheck
+	Flavor.HTTP.LogFactory = &Flavor.Logrus
+	Flavor.LogManager.ManagedLoggers = &Flavor.Logrus
+	Flavor.LogManager.HTTP = &Flavor.HTTP
+	Flavor.Etcd.LogFactory = &Flavor.Logrus
+	Flavor.Etcd.ServiceLabel = &Flavor.ServiceLabel
+	Flavor.Etcd.StatusCheck = &Flavor.StatusCheck
+	Flavor.Kafka.LogFactory = &Flavor.Logrus
+	Flavor.Kafka.ServiceLabel = &Flavor.ServiceLabel
+	Flavor.Kafka.StatusCheck = &Flavor.StatusCheck
 	return nil
 }
 
-func (flavour *ReusedFlavour) Plugins() []*core.NamedPlugin {
-	flavour.Inject()
-	return core.ListPluginsInFlavor(flavour)
+func (Flavor *ReusedFlavor) Plugins() []*core.NamedPlugin {
+	Flavor.Inject()
+	return core.ListPluginsInFlavor(Flavor)
 }
 
 type PluginXY struct {
