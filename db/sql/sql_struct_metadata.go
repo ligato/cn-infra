@@ -25,7 +25,7 @@ type TableName interface {
 // SchemaName interface is used to specify custom schema name for SQL statements
 type SchemaName interface {
 	// SchemaName returns sql schema name where the table resides
-	SchemaName()  string
+	SchemaName() string
 }
 
 // EntityTableName tries to cast to SchemaName & TableName interfaces.
@@ -48,5 +48,5 @@ func EntityTableName(entity interface{}) string {
 		return tableName
 	}
 
-	return  schemaName + "." + tableName
+	return schemaName + "." + tableName
 }

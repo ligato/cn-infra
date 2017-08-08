@@ -109,8 +109,8 @@ application built on the CN-Infra platform. The code for this example
 can be found [here](examples/simple-agent/agent.go).
 ```
 func main() {
-	flavour := Flavour{}
-	agent := core.NewAgent(logroot.Logger(), 15*time.Second, flavour.Plugins()...)
+	flavor := Flavor{}
+	agent := core.NewAgent(logroot.Logger(), 15*time.Second, flavor.Plugins()...)
 
 	err := core.EventLoopWithInterrupt(agent, nil)
 	if err != nil {

@@ -22,4 +22,4 @@
 3. You can prefer [hand written code](../../examples/simple-agent/generic/generic.go) 
    that injects all dependencies between plugins or [automatic injection](https://godoc.org/github.com/facebookgo/inject)
    
-4. Reusable combination of multiple plugins is called a [Flavor](PLUGIN_FLAVOURS.md).
+4. Reusable combination of multiple plugins is called a [Flavor](PLUGIN_FLAVORS.md).
