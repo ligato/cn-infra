@@ -130,4 +130,4 @@ If you are interested in contributing, please see the [contribution guidelines](
 [1]: https://12factor.net/
 [2]: https://fd.io
 [3]: https://github.com/ligato/vpp-agent
-[4]: (docs/readmes/cn_virtual_function.md)
+[4]: docs/readmes/cn_virtual_function.md
