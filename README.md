@@ -128,6 +128,6 @@ GoDoc can be browsed [online](https://godoc.org/github.com/ligato/cn-infra).
 If you are interested in contributing, please see the [contribution guidelines](CONTRIBUTING.md).
 
 [1]: https://12factor.net/
-[2]: https//fd.io
+[2]: https://fd.io
 [3]: https://github.com/ligato/vpp-agent
-[4]: doc/readmes/cn_virtual_function.md
+[4]: https://github.com/ligato/cn-infra/docs/readmes/cn_virtual_function.md
