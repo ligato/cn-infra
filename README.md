@@ -75,7 +75,7 @@ in one of the following functional areas:
   - [Casssandra](db/sql/cassandra) -
     
 * **Messaging** - provides a common API and connectivity to message buses:
-    - Kafka](messaging/kafka) - provides access to Kafka brokers
+    - [Kafka](messaging/kafka) - provides access to a Kafka broker (Sarama)
     
 * **Logging**:
     * [Logrus wrapper](logging/logrus) - implements logging skeleton 

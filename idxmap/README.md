@@ -1,20 +1,26 @@
 # IDX Map
 
-The idxmap package provides enhanced mapping structure. In addition to basic built-in map structure,
-it allows to create secondary indexes that can also be leveraged for lookup. One can also subscribe 
-for changes and receive notification once an item is added or removed.
+The idxmap package provides an enhanced mapping structure. In addition
+to a basic built-in map structure, it allows to create secondary indices
+that can also be leveraged for lookup. One can also subscribe for 
+changes and receive notification once an item is added or removed.
 
-Function `RegisterName` adds value(item) into the mapping. In the function call the primary index(name) for
-the item is specified. The values of the primary index are unique, if the name already exists, then the item
- is overwritten. To retrieve an item identified by the primary index, use `Lookup` function.
-An item can be removed from the mapping by `UnregisterName` function. The names that are currently registered
-can be retrieved by `ListNames`.
+Function `RegisterName` adds a value (item) into the mapping. In the 
+function call the primary index(name) for the item is specified. The 
+values of the primary index are unique, if the name already exists, 
+then the item is overwritten. To retrieve an item identified by the 
+primary index, use the `Lookup` function. An item can be removed from
+the mapping by calling the `UnregisterName` function. The names that 
+are currently registered can be retrieved by calling the `ListNames`
+function.
  
-The constructor allows to define `createIndexes` function that extracts secondary indexes from stored
-items. The function returns a map indexed by names of secondary indexes and values are extracted values
-for the particular item. The values of secondary indexes, are not necessarily unique. To retrieve items 
-based on secondary indexes use `LookupByMetadata`. In contrast to lookup by primary index, the function
-may return multiple names.
+The constructor allows to define a `createIndexes` function that extracts
+secondary indices from stored items. The function returns a map indexed 
+by names of secondary indexes, and the values are the extracted values
+for the particular item. The values of secondary indexes are not necessarily
+unique. To retrieve items based on secondary indicess use the 
+`LookupByMetadata` function. In contrast to the lookup by primary index, 
+the function may return multiple names.
 
 ```
  Primary Index                Item                                Secondary indexes
@@ -29,5 +35,6 @@ may return multiple names.
                      +---------------------+
 ```
 
-`Watch` allows to define a callback that is called when a change in the mapping occurs. There is 
-a helper function `ToChan` available, which allows to deliver notifications through a channel.
+`Watch` allows to define a callback that is called when a change in the 
+mapping occurs. There is a helper function `ToChan` available, which allows
+to deliver notifications through a channel.
