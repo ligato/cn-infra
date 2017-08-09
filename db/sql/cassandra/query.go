@@ -33,7 +33,7 @@ func PutExpToString(whereCondition sql.Expression, entity interface{}) (sqlStr s
 	whereCondition.Accept(whereCondtionStr)
 
 	statement, _, err := updateSetExpToString(sql.EntityTableName(entity), /*TODO extract method / make customizable*/
-		entity                                                             /*, TODO TTL*/)
+		entity /*, TODO TTL*/)
 	if err != nil {
 		return "", nil, err
 	}
