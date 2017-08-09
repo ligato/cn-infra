@@ -6,26 +6,4 @@ and shutdown of an CN-Infra based management/control plane app. The
 implemented by each plugin. The SPI is used by the Core to init, start
 and shut down each plugin. 
 
-```
-                                       +-----------------------+
-+------------------+                   |                       |
-|                  |                   |      Agent Plugin     |
-|                  |                   |                       |
-|    Agent Core    |                   +-----------------------+
-|     (setup)      |        +--------->| Plugin global var     |
-|                  |        |          |   + Init() error      |
-|                  |        |          |   + AfterInit() error |
-|                  |        |          |   + Close() error     |
-|                  |        |          +-----------------------+
-+------------------+        |
-|                  +--------+          +-----------------------+
-|    Init Plugin   |                   |                       |
-|                  +--------+          |      Agent Plugin     |
-+------------------+        |          |                       |
-                            |          +-----------------------+
-                            +--------->| Plugin global var     |
-                                       |   + Init() error      |
-                                       |   + AfterInit() error |
-                                       |   + Close() error     |
-                                       +-----------------------+
-``` 
+TODO: describe the plugin lifecycle 
