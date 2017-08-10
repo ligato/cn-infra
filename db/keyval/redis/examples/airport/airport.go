@@ -13,15 +13,18 @@ import (
 	"sort"
 	"strconv"
 
+	"math"
+	"sync/atomic"
+
 	"github.com/ligato/cn-infra/db"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/db/keyval/redis"
 	"github.com/ligato/cn-infra/db/keyval/redis/examples/airport/model"
+	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
-	"github.com/ligato/cn-infra/utils/config"
-	"math"
-	"sync/atomic"
+	"github.com/ligato/cn-infra/utils/safeclose"
+	"github.com/namsral/flag"
 )
 
 var diagram = `
@@ -59,7 +62,7 @@ const (
 	runwayInterval     = 0.02
 	runwayClearance    = 0.4
 	runwaySpeedBump    = 4.0 / 9.0
-	hangarThreshold    = 2.0 / 5.0
+	hangarThreshold    = 1.0 / 2.0
 	hangarSlotCount    = 3
 	hangarDurationLow  = 2
 	hangarDurationHigh = 6
@@ -69,7 +72,7 @@ const (
 	flightIDFormat     = "%s%02d"
 	hangarKeyFormat    = "%2s%2d:%d"
 	columnSep          = "      "
-	redisPause         = 0.05
+	redisPause         = 0.01
 )
 
 var motions = []string{" ->", "<- "}
@@ -99,59 +102,131 @@ var departureWatcher keyval.ProtoWatcher
 var hangarBroker keyval.ProtoBroker
 var hangarWatcher keyval.ProtoWatcher
 
+var prefix string
+var debug bool
+var redigo bool
+
 func main() {
-	setup()
-	startSimulation()
+	if setup() {
+		startSimulation()
+	}
 }
 
-func setup() {
+func setup() bool {
 	rand.Seed(time.Now().UnixNano())
+
+	cfg := loadConfig()
+	if cfg == nil {
+		return false
+	}
+
+	if redigo {
+		if _, yes := cfg.(redis.NodeConfig); !yes {
+			fmt.Printf("Redigo only works on redis.NodeConfig, not %T\n", cfg)
+			return false
+		}
+		redisConn = createConnectionRedigo(cfg)
+	} else {
+		redisConn = createConnection(cfg)
+	}
 
 	printHeaders()
 
 	setupFlightStatusFormat()
-
-	redisConn = createConnection(os.Args[1])
 
 	var arrivalProto, departureProto, hangarProto *kvproto.ProtoWrapper
 	arrivalProto = kvproto.NewProtoWrapper(redisConn)
 	departureProto = kvproto.NewProtoWrapper(redisConn)
 	hangarProto = kvproto.NewProtoWrapper(redisConn)
 
-	arrivalBroker = arrivalProto.NewBroker(arrival)
-	arrivalWatcher = arrivalProto.NewWatcher(arrival)
+	arrivalBroker = arrivalProto.NewBroker(prefix + arrival)
+	arrivalWatcher = arrivalProto.NewWatcher(prefix + arrival)
 
-	departureBroker = departureProto.NewBroker(departure)
-	departureWatcher = departureProto.NewWatcher(departure)
+	departureBroker = departureProto.NewBroker(prefix + departure)
+	departureWatcher = departureProto.NewWatcher(prefix + departure)
 
-	hangarBroker = hangarProto.NewBroker(hangar)
-	hangarWatcher = hangarProto.NewWatcher(hangar)
+	hangarBroker = hangarProto.NewBroker(prefix + hangar)
+	hangarWatcher = hangarProto.NewWatcher(prefix + hangar)
 
 	cleanup(false)
 
 	arrivalWatcher.Watch(arrivalChan, "")
 	departureWatcher.Watch(departureChan, "")
 	hangarWatcher.Watch(hangarChan, "")
+
+	return true
 }
 
-func createConnection(yamlFile string) *redis.BytesConnectionRedis {
-	var err error
-	var nodeClient redis.NodeClientConfig
-	err = config.ParseConfigFromYamlFile(yamlFile, &nodeClient)
-	if err != nil {
-		log.Panicf("ParseConfigFromYamlFile() failed: %s", err)
+func loadConfig() interface{} {
+	flag.StringVar(&prefix, "prefix", "",
+		"Specifies key prefix")
+	flag.BoolVar(&debug, "debug", false,
+		"Specifies whether to enable debugging; default to false")
+	flag.BoolVar(&redigo, "redigo", false,
+		"Specifies whether to use redigo API instead; default to false")
+	flag.Parse()
+
+	flag.Usage = func() {
+		flag.VisitAll(func(f *flag.Flag) {
+			var format string
+			if f.Name == "redis-config" || f.Name == "prefix" {
+				// put quotes around string
+				format = "  -%s=%q: %s\n"
+			} else {
+				if f.Name != "debug" && f.Name != "redigo" {
+					return
+				}
+				format = "  -%s=%s: %s\n"
+			}
+			fmt.Fprintf(os.Stderr, format, f.Name, f.DefValue, f.Usage)
+		})
+
 	}
-	pool, err := redis.CreateNodeClientConnPool(nodeClient)
+
+	if debug {
+		log.SetLevel(logging.DebugLevel)
+	}
+	cfgFlag := flag.Lookup("redis-config")
+	if cfgFlag == nil {
+		flag.Usage()
+		return nil
+	}
+	cfgFile := cfgFlag.Value.String()
+	if cfgFile == "" {
+		flag.Usage()
+		return nil
+	}
+	cfg, err := redis.LoadConfig(cfgFile)
+	if err != nil {
+		log.Panicf("LoadConfig(%s) failed: %s", cfgFile, err)
+	}
+	return cfg
+}
+
+func createConnection(cfg interface{}) *redis.BytesConnectionRedis {
+	client, err := redis.CreateClient(cfg)
+	if err != nil {
+		log.Panicf("CreateNodeClient() failed: %s", err)
+	}
+	conn, err := redis.NewBytesConnection(client, log)
+	if err != nil {
+		safeclose.Close(client)
+		log.Panicf("NewBytesConnection() failed: %s", err)
+	}
+	return conn
+}
+
+func createConnectionRedigo(cfg interface{}) *redis.BytesConnectionRedis {
+	pool, err := redis.CreateNodeClientConnPool(cfg.(redis.NodeConfig))
 	if err != nil {
 		log.Panicf("CreateNodeClientConnPool() failed: %s", err)
 	}
-	var redisConn *redis.BytesConnectionRedis
-	redisConn, err = redis.NewBytesConnectionRedis(pool, log)
+	conn, err := redis.NewBytesConnectionRedis(pool, log)
 	if err != nil {
-		pool.Close()
-		log.Panicf("NewBytesConnectionRedis() failed: %s", err)
+		safeclose.Close(pool)
+		log.Panicf("NewBytesConnectionRedigo() failed: %s", err)
 	}
-	return redisConn
+	return conn
 }
 
 func cleanup(report bool) {
@@ -159,9 +234,9 @@ func cleanup(report bool) {
 		fmt.Println("clean up")
 		printFlightCounts()
 	}
-	arrivalBroker.Delete("")
-	departureBroker.Delete("")
-	hangarBroker.Delete("")
+	arrivalBroker.Delete("", keyval.WithPrefix())
+	departureBroker.Delete("", keyval.WithPrefix())
+	hangarBroker.Delete("", keyval.WithPrefix())
 	if report {
 		printFlightCounts()
 	}
@@ -179,7 +254,7 @@ func startSimulation() {
 		case <-sigChan:
 			fmt.Printf("\nReceived %v.\n", os.Interrupt)
 			cleanup(true)
-			redisConn.Close()
+			safeclose.Close(redisConn)
 			os.Exit(1)
 		case f, ok := <-runwayChan:
 			if ok {
@@ -235,7 +310,6 @@ func runArrivals() {
 			newArrival()
 		}
 		pause := 2*(runwayClearance+runwayInterval*float64(runwayLength-flightIDLength)) +
-			(hangarDurationLow+hangarDurationHigh)*hangarThreshold/2 +
 			9*redisPause
 		low := pause - 0.3*pause
 		high := pause + 0.3*pause
@@ -310,12 +384,12 @@ func randomFlight() flight.Info {
 	airlines := []string{"AA", "DL", "SW", "UA"}
 	numAirlines := len(airlines)
 
-	atomic.AddUint32(&priority, 1)
+	p := atomic.AddUint32(&priority, 1)
 	for {
 		f := flight.Info{
 			Airline:  airlines[rand.Int()%numAirlines],
 			Number:   rand.Uint32()%99 + 1,
-			Priority: priority,
+			Priority: p,
 		}
 		var exists bool
 		id := flightID(f)

@@ -13,8 +13,15 @@ generate:
 
 clean:
 	rm -f simple/simple
+	rm -f simple/simple-linux
 	rm -f airport/airport
+	rm -f airport/airport-linux
 
 build:
 	cd simple && go build
 	cd airport && go build
+
+linux: ## build for linux
+	@echo "building template (linux)"
+	cd simple && env GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o simple-linux
+	cd airport && env GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o airport-linux
