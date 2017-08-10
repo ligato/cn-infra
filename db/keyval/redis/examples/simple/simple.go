@@ -1,8 +1,14 @@
 package main
 
 import (
-	"os"
+	"reflect"
 	"time"
+
+	"fmt"
+	"strconv"
+	"strings"
+
+	"os"
 
 	"github.com/ligato/cn-infra/db"
 	"github.com/ligato/cn-infra/db/keyval"
@@ -10,54 +16,132 @@ import (
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/utils/config"
+	"github.com/ligato/cn-infra/utils/safeclose"
+	"github.com/namsral/flag"
 )
 
 var log = logroot.Logger()
 
+var redisConn *redis.BytesConnectionRedis
 var broker keyval.BytesBroker
 var watcher keyval.BytesWatcher
 
+var prefix string
+var debug bool
+var redigo bool
+
 func main() {
-	log.SetLevel(logging.DebugLevel)
+	//generateSampleConfigs()
 
-	redisConn := createConnection(os.Args[1])
-	broker = redisConn.NewBroker("")
-	watcher = redisConn.NewWatcher("")
+	cfg := loadConfig()
+	if cfg == nil {
+		return
+	}
+	fmt.Printf("config: %T:\n%v\n", cfg, cfg)
+	fmt.Printf("prefix: %s\n", prefix)
+	fmt.Printf("redigo: %t\n", redigo)
 
-	runSimpleExmple(redisConn)
+	if redigo {
+		if _, yes := cfg.(redis.NodeConfig); !yes {
+			fmt.Printf("Redigo only works on redis.NodeConfig, not %T\n", cfg)
+			return
+		}
+		redisConn = createConnectionRedigo(cfg)
+	} else {
+		redisConn = createConnection(cfg)
+	}
+	broker = redisConn.NewBroker(prefix)
+	watcher = redisConn.NewWatcher(prefix)
+
+	runSimpleExmple()
 }
 
-func createConnection(yamlFile string) *redis.BytesConnectionRedis {
-	var err error
-	//generateServerConfig(yamlFile)
-	var nodeClient redis.NodeClientConfig
-	err = config.ParseConfigFromYamlFile(yamlFile, &nodeClient)
-	if err != nil {
-		log.Panicf("ParseConfigFromYamlFile() failed: %s", err)
+func loadConfig() interface{} {
+	flag.StringVar(&prefix, "prefix", "",
+		"Specifies key prefix")
+	flag.BoolVar(&debug, "debug", false,
+		"Specifies whether to enable debugging; default to false")
+	flag.BoolVar(&redigo, "redigo", false,
+		"Specifies whether to use redigo API instead; default to false")
+	flag.Parse()
+
+	flag.Usage = func() {
+		flag.VisitAll(func(f *flag.Flag) {
+			var format string
+			if f.Name == "redis-config" || f.Name == "prefix" {
+				// put quotes around string
+				format = "  -%s=%q: %s\n"
+			} else {
+				if f.Name != "debug" && f.Name != "redigo" {
+					return
+				}
+				format = "  -%s=%s: %s\n"
+			}
+			fmt.Fprintf(os.Stderr, format, f.Name, f.DefValue, f.Usage)
+		})
+
 	}
-	pool, err := redis.CreateNodeClientConnPool(nodeClient)
+
+	if debug {
+		log.SetLevel(logging.DebugLevel)
+	}
+	cfgFlag := flag.Lookup("redis-config")
+	if cfgFlag == nil {
+		flag.Usage()
+		return nil
+	}
+	cfgFile := cfgFlag.Value.String()
+	if cfgFile == "" {
+		flag.Usage()
+		return nil
+	}
+	cfg, err := redis.LoadConfig(cfgFile)
+	if err != nil {
+		log.Panicf("LoadConfig(%s) failed: %s", cfgFile, err)
+	}
+	return cfg
+}
+
+func createConnection(cfg interface{}) *redis.BytesConnectionRedis {
+	client, err := redis.CreateClient(cfg)
+	if err != nil {
+		log.Panicf("CreateNodeClient() failed: %s", err)
+	}
+	conn, err := redis.NewBytesConnection(client, log)
+	if err != nil {
+		safeclose.Close(client)
+		log.Panicf("NewBytesConnection() failed: %s", err)
+	}
+	return conn
+}
+
+func createConnectionRedigo(cfg interface{}) *redis.BytesConnectionRedis {
+	pool, err := redis.CreateNodeClientConnPool(cfg.(redis.NodeConfig))
 	if err != nil {
 		log.Panicf("CreateNodeClientConnPool() failed: %s", err)
 	}
-	var redisConn *redis.BytesConnectionRedis
-	redisConn, err = redis.NewBytesConnectionRedis(pool, log)
+	conn, err := redis.NewBytesConnectionRedis(pool, log)
 	if err != nil {
-		pool.Close()
-		log.Panicf("NewBytesConnectionRedis() failed: %s", err)
+		safeclose.Close(pool)
+		log.Panicf("NewBytesConnectionRedigo() failed: %s", err)
 	}
-	return redisConn
+	return conn
 }
 
-func runSimpleExmple(redisConn *redis.BytesConnectionRedis) {
+func runSimpleExmple() {
 	var err error
 
-	var key1, key2, key3 = "key1", "key2", "key3"
-	keyPrefix := key1[:3]
+	keyPrefix := "key"
+	keys3 := []string{
+		keyPrefix + "1",
+		keyPrefix + "2",
+		keyPrefix + "3",
+	}
 
 	respChan := make(chan keyval.BytesWatchResp, 10)
 	err = watcher.Watch(respChan, keyPrefix)
 	if err != nil {
-		log.Errorf("Watch(%s): %s", keyPrefix, err)
+		log.Errorf(err.Error())
 	}
 	go func() {
 		for {
@@ -80,120 +164,189 @@ func runSimpleExmple(redisConn *redis.BytesConnectionRedis) {
 		}
 	}()
 	time.Sleep(2 * time.Second)
-	put(key1, "val 1")
-	put(key2, "val 2")
-	put(key3, "val 3", keyval.WithTTL(time.Second))
+	put(keys3[0], "val 1")
+	put(keys3[1], "val 2")
+	put(keys3[2], "val 3", keyval.WithTTL(time.Second))
 
 	time.Sleep(2 * time.Second)
-	get(key1)
-	get(key2)
-	get(key3)      // key3 should've expired
+	get(keys3[0])
+	get(keys3[1])
+	fmt.Printf("==> NOTE: %s should have expired\n", keys3[2])
+	get(keys3[2]) // key3 should've expired
+	fmt.Printf("==> NOTE: get(%s) should return false\n", keyPrefix)
 	get(keyPrefix) // keyPrefix shouldn't find anything
 	listKeys(keyPrefix)
 	listVal(keyPrefix)
 
-	del(keyPrefix)
+	del(keyPrefix, keyval.WithPrefix())
 
-	get(key1)
-	get(key2)
-
-	txn()
-
+	fmt.Println("==> NOTE: All keys should have been deleted")
+	get(keys3[0])
+	get(keys3[1])
+	listKeys(keyPrefix)
 	listVal(keyPrefix)
+
+	txn(keyPrefix)
 
 	log.Info("Sleep for 5 seconds")
 	time.Sleep(5 * time.Second)
 
 	// Done watching.  Close the channel.
-	log.Infof("Closing broker/watcher")
+	log.Infof("Closing connection")
 	//close(respChan)
-	redisConn.Close()
+	safeclose.Close(redisConn)
 
+	fmt.Println("==> NOTE: Call on a closed connection should fail.")
 	del(keyPrefix)
 
-	log.Info("Sleep for 30 seconds")
+	log.Info("Sleep for 10 seconds")
 	time.Sleep(30 * time.Second)
 }
 
 func put(key, value string, opts ...keyval.PutOption) {
 	err := broker.Put(key, []byte(value), opts...)
 	if err != nil {
-		log.Panicf("Put(%s): %s", key, err)
+		//log.Panicf(err.Error())
+		log.Errorf(err.Error())
 	}
 }
 
 func get(key string) {
-	val, found, revision, err := broker.GetValue(key)
+	var val []byte
+	var found bool
+	var revision int64
+	var err error
+
+	val, found, revision, err = broker.GetValue(key)
 	if err != nil {
-		log.Errorf("GetValue(%s): %s", key, err)
+		log.Errorf(err.Error())
+	} else if found {
+		log.Infof("GetValue(%s) = %t ; val = %s ; revision = %d", key, found, val, revision)
 	} else {
-		if found {
-			log.Infof("GetValue(%s) = %t ; val = %s ; revision = %d", key, found, val, revision)
-		} else {
-			log.Infof("GetValue(%s) = %t", key, found)
-		}
+		log.Infof("GetValue(%s) = %t", key, found)
 	}
 }
 
 func listKeys(keyPrefix string) {
-	k, err := broker.ListKeys(keyPrefix)
+	var keys keyval.BytesKeyIterator
+	var err error
+
+	keys, err = broker.ListKeys(keyPrefix)
 	if err != nil {
-		log.Errorf("ListKeys(%s): %s", keyPrefix, err)
+		log.Errorf(err.Error())
 	} else {
+		var count int32
 		for {
-			key, rev, done := k.GetNext()
+			key, rev, done := keys.GetNext()
 			if done {
 				break
 			}
 			log.Infof("ListKeys(%s):  %s (rev %d)", keyPrefix, key, rev)
+			count++
 		}
+		log.Infof("ListKeys(%s): count = %d", keyPrefix, count)
 	}
 }
 
 func listVal(keyPrefix string) {
-	kv, err := broker.ListValues(keyPrefix)
+	var keyVals keyval.BytesKeyValIterator
+	var err error
+
+	keyVals, err = broker.ListValues(keyPrefix)
 	if err != nil {
-		log.Errorf("ListValues(%s): %s", keyPrefix, err)
+		log.Errorf(err.Error())
 	} else {
+		var count int32
 		for {
-			kv, done := kv.GetNext()
+			kv, done := keyVals.GetNext()
 			if done {
 				break
 			}
 			log.Infof("ListValues(%s):  %s = %s (rev %d)", keyPrefix, kv.GetKey(), kv.GetValue(), kv.GetRevision())
+			count++
 		}
+		log.Infof("ListValues(%s): count = %d", keyPrefix, count)
 	}
 }
 
-func del(keyPrefix string) {
-	found, err := broker.Delete(keyPrefix)
+func del(keyPrefix string, opt ...keyval.DelOption) {
+	var found bool
+	var err error
+
+	found, err = broker.Delete(keyPrefix, opt)
 	if err != nil {
-		log.Errorf("Delete(%s): %s", keyPrefix, err)
+		log.Errorf(err.Error())
+		return
 	}
 	log.Infof("Delete(%s): found = %t", keyPrefix, found)
 }
 
-func txn() {
-	var key101, key102, key103, key104 = "key101", "key102", "key103", "key104"
-	txn := broker.NewTxn()
-	txn.Put(key101, []byte("val 101")).Put(key102, []byte("val 102"))
-	txn.Put(key103, []byte("val 103")).Put(key104, []byte("val 104"))
-	txn.Delete(key101)
+func txn(keyPrefix string) {
+	keys := []string{
+		keyPrefix + "101",
+		keyPrefix + "102",
+		keyPrefix + "103",
+		keyPrefix + "104",
+	}
+	var txn keyval.BytesTxn
+
+	log.Infof("txn(): keys = %v", keys)
+	txn = broker.NewTxn()
+	for i, k := range keys {
+		txn.Put(k, []byte(strconv.Itoa(i+1)))
+	}
+	txn.Delete(keys[0])
 	err := txn.Commit()
 	if err != nil {
-		log.Errorf("txn: %s", err)
+		log.Errorf("txn(): %s", err)
 	}
+	listVal(keyPrefix)
 }
 
-func generateServerConfig(path string) {
-	config := redis.NodeClientConfig{
-		Endpoint: "localhost:6379",
-		Pool: redis.ConnPoolConfig{
-			MaxIdle:     10,
-			MaxActive:   10,
-			IdleTimeout: 60,
-			Wait:        true,
+func generateSampleConfigs() {
+	clientConfig := redis.ClientConfig{
+		Password:     "",
+		DialTimeout:  0,
+		ReadTimeout:  0,
+		WriteTimeout: 0,
+		Pool: redis.PoolConfig{
+			PoolSize:           0,
+			PoolTimeout:        0,
+			IdleTimeout:        0,
+			IdleCheckFrequency: 0,
 		},
 	}
-	redis.GenerateConfig(config, path)
+	var cfg interface{}
+
+	cfg = redis.NodeConfig{
+		Endpoint: "localhost:6379",
+		DB:       0,
+		EnableReadQueryOnSlave: false,
+		TLS:          redis.TLS{},
+		ClientConfig: clientConfig,
+	}
+	config.SaveConfigToYamlFile(cfg, "./node-client.yaml", 0644, makeTypeHeader(cfg))
+
+	cfg = redis.SentinelConfig{
+		Endpoints:    []string{"172.17.0.7:26379", "172.17.0.8:26379", "172.17.0.9:26379"},
+		MasterName:   "mymaster",
+		DB:           0,
+		ClientConfig: clientConfig,
+	}
+	config.SaveConfigToYamlFile(cfg, "./sentinel-client.yaml", 0644, makeTypeHeader(cfg))
+
+	cfg = redis.ClusterConfig{
+		Endpoints:              []string{"172.17.0.1:6379", "172.17.0.2:6379", "172.17.0.3:6379"},
+		EnableReadQueryOnSlave: true,
+		MaxRedirects:           0,
+		RouteByLatency:         true,
+		ClientConfig:           clientConfig,
+	}
+	config.SaveConfigToYamlFile(cfg, "./cluster-client.yaml", 0644, makeTypeHeader(cfg))
+}
+
+func makeTypeHeader(i interface{}) string {
+	t := reflect.TypeOf(i)
+	tn := t.String()
+	return fmt.Sprintf("# %s#%s", t.PkgPath(), tn[strings.Index(tn, ".")+1:])
 }

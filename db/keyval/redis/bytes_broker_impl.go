@@ -19,21 +19,22 @@ import (
 
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/utils/safeclose"
 
 	"errors"
 	"reflect"
 	"strings"
 
-	"bytes"
-
 	"fmt"
-	"github.com/garyburd/redigo/redis"
+
+	redigo "github.com/garyburd/redigo/redis"
 )
 
 // BytesConnectionRedis allows to store, read and watch values from Redis.
 type BytesConnectionRedis struct {
 	logging.Logger
-	pool ConnPool
+	pool   ConnPool
+	client Client
 
 	// closeCh will be closed when this connection is closed -- i.e., by the Close() method.
 	// It is used to give go routines a signal to stop.
@@ -63,30 +64,38 @@ type bytesKeyVal struct {
 
 // NewBytesConnectionRedis creates a new instance of BytesConnectionRedis using the provided
 // ConnPool
+//
+// Deprecated: Use NewBytesConnection() instead.
 func NewBytesConnectionRedis(pool ConnPool, log logging.Logger) (*BytesConnectionRedis, error) {
-	return &BytesConnectionRedis{log, pool, make(chan struct{}), false}, nil
+	return &BytesConnectionRedis{log, pool, nil, make(chan struct{}), false}, nil
+}
+
+// NewBytesConnection creates a new instance of BytesConnectionRedis using the provided
+// Client (be it node, cluster, or sentinel client)
+func NewBytesConnection(client Client, log logging.Logger) (*BytesConnectionRedis, error) {
+	return &BytesConnectionRedis{log, nil, client, make(chan struct{}), false}, nil
 }
 
 // Close closes the connection to redis.
 func (db *BytesConnectionRedis) Close() error {
 	if db.closed {
+		db.Debug("Close() called on a closed connection")
 		return nil
 	}
 	db.Debug("Close()")
 	db.closed = true
-	close(db.closeCh)
-	var buf bytes.Buffer
+	safeclose.Close(db.closeCh)
 	if db.pool != nil {
-		err := db.pool.Close()
+		err := safeclose.Close(db.pool)
 		if err != nil {
-			if buf.Len() > 0 {
-				buf.WriteString("\n")
-			}
-			buf.WriteString(err.Error())
+			return fmt.Errorf("Close() encountered error: %s", err)
 		}
 	}
-	if buf.Len() > 0 {
-		return errors.New(buf.String())
+	if db.client != nil {
+		err := safeclose.Close(db.client)
+		if err != nil {
+			return fmt.Errorf("Close() encountered error: %s", err)
+		}
 	}
 	return nil
 }
@@ -94,38 +103,33 @@ func (db *BytesConnectionRedis) Close() error {
 // NewTxn creates new transaction.
 func (db *BytesConnectionRedis) NewTxn() keyval.BytesTxn {
 	if db.closed {
-		db.Error("NewTxn() called on a closed broker")
+		db.Error("NewTxn() called on a closed connection")
 		return nil
 	}
 	db.Debug("NewTxn()")
 
-	return &Txn{pool: db.pool, ops: make(map[string]*op)}
+	return &Txn{db: db, ops: []op{}}
 }
 
 // Put sets the key/value in Redis data store. Replaces value if the key already exists.
 func (db *BytesConnectionRedis) Put(key string, data []byte, opts ...keyval.PutOption) error {
 	if db.closed {
-		return fmt.Errorf("Put(%s) called on a closed broker", key)
+		return fmt.Errorf("Put(%s) called on a closed connection", key)
 	}
 	db.Debugf("Put(%s)", key)
 
-	var ttl int64
+	var ttl time.Duration
 	for _, o := range opts {
 		if withTTL, ok := o.(*keyval.WithTTLOpt); ok && withTTL.TTL > 0 {
-			ttl = int64(withTTL.TTL / time.Second)
+			ttl = withTTL.TTL
 		}
 	}
-
-	conn := db.pool.Get()
-	defer conn.Close()
-	var err error
-	if ttl == 0 {
-		_, err = conn.Do("SET", key, string(data))
-	} else {
-		_, err = conn.Do("SET", key, string(data), "EX", ttl)
+	if db.pool != nil {
+		return redigoPut(db, key, data, ttl)
 	}
+	err := db.client.Set(key, data, ttl).Err()
 	if err != nil {
-		return fmt.Errorf("Do(SET) failed: %s", err)
+		return fmt.Errorf("Set(%s) failed: %s", key, err)
 	}
 	return nil
 }
@@ -133,48 +137,37 @@ func (db *BytesConnectionRedis) Put(key string, data []byte, opts ...keyval.PutO
 // GetValue retrieves the value of the key from Redis.
 func (db *BytesConnectionRedis) GetValue(key string) (data []byte, found bool, revision int64, err error) {
 	if db.closed {
-		return nil, false, 0, fmt.Errorf("GetValue(%s) called on a closed broker", key)
+		return nil, false, 0, fmt.Errorf("GetValue(%s) called on a closed connection", key)
 	}
 	db.Debugf("GetValue(%s)", key)
 
-	conn := db.pool.Get()
-	defer conn.Close()
-	reply, err := conn.Do("GET", key)
+	if db.pool != nil {
+		return redigoGetValue(db, key)
+	}
+	statusCmd := db.client.Get(key)
+	data, err = statusCmd.Bytes()
 	if err != nil {
-		return nil, false, 0, fmt.Errorf("Do(GET) failed: %s", err)
+		if err == GoRedisNil {
+			return data, false, 0, nil
+		}
+		return nil, false, 0, fmt.Errorf("Get(%s) failed: %s", key, err)
 	}
-	db.Debug("GET reply ", reply)
-
-	switch reply := reply.(type) {
-	case []byte:
-		return reply, true, 0, nil
-	case string:
-		return []byte(reply), true, 0, nil
-	case redis.Error:
-		return nil, false, 0, reply
-	case nil:
-		return nil, false, 0, nil
-	default:
-		return nil, false, 0,
-			fmt.Errorf("Unknown type %s for %s", reflect.TypeOf(reply).String(), key)
-	}
+	return data, true, 0, nil
 }
 
 // ListValues lists values for all the keys that start with the given match string.
 func (db *BytesConnectionRedis) ListValues(match string) (keyval.BytesKeyValIterator, error) {
 	if db.closed {
-		return nil, fmt.Errorf("ListValues(%s) called on a closed broker", match)
+		return nil, fmt.Errorf("ListValues(%s) called on a closed connection", match)
 	}
 	db.Debugf("ListValues(%s)", match)
 
-	conn := db.pool.Get()
-	defer conn.Close()
-	keys, err := db.scanKeys(conn, match)
+	keys, err := scanKeys(db, match)
 	if err != nil {
 		return nil, err
 	}
 
-	values, err := db.listValues(conn, keys)
+	values, err := listValues(db, keys)
 	if err != nil {
 		return nil, err
 	}
@@ -187,169 +180,87 @@ func (db *BytesConnectionRedis) ListValues(match string) (keyval.BytesKeyValIter
 	return &bytesKeyValIterator{values: kvs}, nil
 }
 
-func (db *BytesConnectionRedis) listValues(conn redis.Conn, keys []string) (values [][]byte, err error) {
-	if db.closed {
-		return nil, fmt.Errorf("listValues(%v) called on a closed broker", keys)
-	}
-	db.Debugf("listValues(%v)", keys)
-
-	if len(keys) == 0 {
-		return [][]byte{}, nil
-	}
-
-	keysIntf := make([]interface{}, len(keys))
-	for i, k := range keys {
-		keysIntf[i] = k
-	}
-	reply, err := conn.Do("MGET", keysIntf...)
-	if err != nil {
-		return nil, fmt.Errorf("Do(MGET) failed: %s", err)
-	}
-
-	switch reply := reply.(type) {
-	case []interface{}:
-		values := make([][]byte, len(keys))
-
-		l := 0
-		for i := range reply {
-			r := reply[i]
-
-			switch r := r.(type) {
-			case nil:
-				values[i] = nil
-			case []byte:
-				values[i] = r
-			case string:
-				values[i] = []byte(r)
-			}
-			l++
-		}
-
-		db.WithField("length", l).Debugf("listValues(%v)", keys)
-
-		if len(keys) != len(values) {
-			return nil, fmt.Errorf("Unexpeted %d != %d", len(keys), len(values))
-		}
-
-		return values, nil
-	case redis.Error:
-		return nil, reply
-	}
-
-	return [][]byte{}, nil
-}
-
-// ListValuesRange returns an iterator used to traverse values stored under the provided key.
-// TODO: Not in BytesBroker interface
-func (db *BytesConnectionRedis) ListValuesRange(fromPrefix string, toPrefix string) (keyval.BytesKeyValIterator, error) {
-	db.Panic("Not implemented")
-	return nil, nil
-}
-
 // ListKeys returns an iterator used to traverse keys that start with the given match string.
 func (db *BytesConnectionRedis) ListKeys(match string) (keyval.BytesKeyIterator, error) {
 	if db.closed {
-		return nil, fmt.Errorf("ListKeys(%s) called on a closed broker", match)
+		return nil, fmt.Errorf("ListKeys(%s) called on a closed connection", match)
 	}
 	db.Debugf("ListKeys(%s)", match)
 
-	conn := db.pool.Get()
-	defer conn.Close()
-	keys, err := db.scanKeys(conn, match)
+	keys, err := scanKeys(db, match)
 	if err != nil {
 		return nil, err
 	}
 	return &bytesKeyIterator{keys: keys}, nil
 }
 
-func (db *BytesConnectionRedis) listKeys(conn redis.Conn, match string) (keys []string, err error) {
-	if db.closed {
-		return nil, fmt.Errorf("listKeys(%s) called on a closed broker", match)
+// ListValuesRange returns an iterator used to traverse values stored under the provided key.
+// TODO: Not in BytesBroker interface
+/*
+func (db *BytesConnectionRedis) ListValuesRange(fromPrefix string, toPrefix string) (keyval.BytesKeyValIterator, error) {
+	db.Panic("Not implemented")
+	return nil, nil
+}
+*/
+
+func listValues(db *BytesConnectionRedis, keys []string) (values [][]byte, err error) {
+	db.Debugf("listValues(%v)", keys)
+
+	if len(keys) == 0 {
+		return [][]byte{}, nil
 	}
-	db.Debugf("listKeys(%s)", match)
-	pattern := wildcard(match)
-	db.Debugf("listKeys: pattern %s", pattern)
 
-	reply, err := conn.Do("KEYS", pattern)
-	if err != nil {
-		return nil, fmt.Errorf("Do(KEYS) failed: %s", err)
+	if db.pool != nil {
+		return redigoListValues(db, keys)
 	}
 
-	switch reply := reply.(type) {
-	case []interface{}:
-		keys := make([]string, len(reply))
-		length := 0
-		for i := range reply {
-			r := reply[i]
-			if r == nil {
-				continue
-			}
-
-			switch r := r.(type) {
-			case []byte:
-				keys[length] = string(r)
-			case string:
-				keys[length] = r
-			}
-			length++
+	sliceCmd := db.client.MGet(keys...)
+	if sliceCmd.Err() != nil {
+		return nil, fmt.Errorf("MGet(%v) failed: %s", keys, sliceCmd.Err())
+	}
+	vals := sliceCmd.Val()
+	values = make([][]byte, len(vals))
+	for i, v := range vals {
+		switch o := v.(type) {
+		case string:
+			values[i] = []byte(o)
+		case []byte:
+			values[i] = o
+		case nil:
+			values[i] = nil
 		}
-
-		db.WithFields(map[string]interface{}{"length": length, "match": match, "keys": keys}).Debugf("listKeys: pattern %s", pattern)
-
-		if length == 0 {
-			return []string{}, err
-		}
-		return keys[0:length], nil
-	case redis.Error:
-		return nil, reply
 	}
-
-	return nil, err
+	return values, nil
 }
 
-func (db *BytesConnectionRedis) scanKeys(conn redis.Conn, match string) (keys []string, err error) {
-	if db.closed {
-		return nil, fmt.Errorf("scanKeys(%s) called on a closed broker", match)
-	}
-	db.Debugf("scanKeys(%s)", match)
+func scanKeys(db *BytesConnectionRedis, match string) (keys []string, err error) {
 	pattern := wildcard(match)
-	db.Debugf("scanKeys: pattern %s", pattern)
+	db.Debugf("scanKeys(%s): pattern %s", match, pattern)
 
-	cursor := "0"
-	keys = make([]string, 0)
-	for {
-		reply, err := conn.Do("SCAN", cursor, "MATCH", pattern)
-		if err != nil {
-			return nil, fmt.Errorf("Do(SCAN) failed: %s", err)
-		}
-		db.Debugf("SCAN returned %v", reply)
-		switch r := reply.(type) {
-		case []interface{}:
-			cursor = string(r[0].([]byte))
-			db.Debugf("cursor = %s", cursor)
-			for _, k := range r[1].([]interface{}) {
-				if k == nil {
-					continue
-				}
-				switch k := k.(type) {
-				case []byte:
-					keys = append(keys, string(k))
-				case string:
-					keys = append(keys, k)
-				}
-			}
-			if cursor == "0" {
-				return keys, nil
-			}
-		case redis.Error:
-			return nil, r
-		default:
-			if reply == nil {
-				return nil, errors.New("Do(SCAN) returned nil")
-			}
-			return nil, fmt.Errorf("Do(SCAN) returned unexpected type %T", reply)
-		}
+	if db.pool != nil {
+		return redigoScanKeys(db, pattern)
 	}
+	// TODO: goredis.ClusterClient.Scan() doesn't always return keys (bug?)
+	keys = []string{}
+	var cursor uint64
+	for {
+		page, next, err := db.client.Scan(cursor, pattern, 10).Result()
+		if err != nil {
+			return nil, fmt.Errorf("Scan(%s) failed: %s", pattern, err)
+		}
+		if db.GetLevel() == logging.DebugLevel {
+			db.Debugf("Scan(%s): got %d keys @ cursor %d (next cursor %d)", pattern, len(page), cursor, next)
+		}
+		keys = append(keys, page...)
+		if next == 0 {
+			if db.GetLevel() == logging.DebugLevel {
+				db.Debugf("Scan(%s): got total %d keys", pattern, len(keys))
+			}
+			break
+		}
+		cursor = next
+	}
+	return keys, nil
 }
 
 const redisWildcardChars = "*?[]"
@@ -363,49 +274,43 @@ func wildcard(match string) string {
 }
 
 // Delete deletes all the keys that start with the given match string.
-func (db *BytesConnectionRedis) Delete(match string, opts ...keyval.DelOption) (found bool, err error) {
-	//TODO: process delete opts
+func (db *BytesConnectionRedis) Delete(key string, opts ...keyval.DelOption) (found bool, err error) {
 	if db.closed {
-		return false, fmt.Errorf("Delete(%s) called on a closed broker", match)
+		return false, fmt.Errorf("Delete(%s) called on a closed connection", key)
 	}
-	db.Debugf("Delete(%s)", match)
+	db.Debugf("Delete(%s)", key)
 
-	conn := db.pool.Get()
-	defer conn.Close()
-	deleting, err := db.scanKeys(conn, match)
-	if err != nil {
-		return false, err
-	}
+	keysToDelete := []string{}
 
-	if len(deleting) == 0 {
-		return false, nil
+	var keyIsPrefix bool
+	for _, o := range opts {
+		if _, ok := o.(*keyval.WithPrefixOpt); ok {
+			keyIsPrefix = true
+		}
 	}
-
-	db.Debugf("Delete(%s): deleting %v", match, deleting)
-	args := make([]interface{}, len(deleting))
-	for i, s := range deleting {
-		args[i] = s
-	}
-	reply, err := conn.Do("DEL", args...)
-	if err != nil {
-		return false, fmt.Errorf("Do(DEL) failed: %s", err)
-	}
-	db.Debugf("DEL replied %v (type: %s)", reply, reflect.TypeOf(reply).String())
-
-	if err, ok := reply.(redis.Error); ok {
-		return false, err
-	}
-	if deleted, ok := reply.(int64); ok {
-		if deleted == 0 {
+	if keyIsPrefix {
+		key = wildcard(key)
+		keysToDelete, err = scanKeys(db, key)
+		if err != nil {
+			return false, err
+		}
+		if len(keysToDelete) == 0 {
 			return false, nil
 		}
-
-		if deleted < int64(len(deleting)) {
-			db.Debugf("Deleted %d of %d", deleted, len(deleting))
-		}
+		db.Debugf("Delete(%s): deleting %v", key, keysToDelete)
+	} else {
+		keysToDelete = append(keysToDelete, key)
 	}
 
-	return true, err
+	if db.pool != nil {
+		return redigoDelete(db, keysToDelete)
+	}
+
+	intCmd := db.client.Del(keysToDelete...)
+	if intCmd.Err() != nil {
+		return false, fmt.Errorf("Delete(%s) failed: %s", key, intCmd.Err())
+	}
+	return (intCmd.Val() != 0), nil
 }
 
 // GetNext returns the next item from the iterator.
@@ -498,7 +403,10 @@ func (pdb *BytesBrokerWatcherRedis) GetPrefix() string {
 
 // Put calls Put function of BytesConnectionRedis. Prefix will be prepended to key argument.
 func (pdb *BytesBrokerWatcherRedis) Put(key string, data []byte, opts ...keyval.PutOption) error {
-	pdb.Debugf("BytesBrokerWatcherRedis.Put(%s)", key)
+	if pdb.delegate.closed {
+		return fmt.Errorf("Put(%s) called on a closed connection", key)
+	}
+	pdb.Debugf("Put(%s)", key)
 
 	return pdb.delegate.Put(pdb.addPrefix(key), data, opts...)
 }
@@ -506,18 +414,21 @@ func (pdb *BytesBrokerWatcherRedis) Put(key string, data []byte, opts ...keyval.
 // NewTxn creates new transaction. Prefix will be prepended to key argument.
 func (pdb *BytesBrokerWatcherRedis) NewTxn() keyval.BytesTxn {
 	if pdb.delegate.closed {
-		pdb.Warnf("BytesBrokerWatcherRedis.NewTxn() called on a closed broker")
+		pdb.Error("NewTxn() called on a closed connection")
 		return nil
 	}
-	pdb.Debug("BytesBrokerWatcherRedis.NewTxn()")
+	pdb.Debug("NewTxn()")
 
-	return &Txn{pool: pdb.delegate.pool, ops: make(map[string]*op), prefix: pdb.prefix}
+	return &Txn{db: pdb.delegate, ops: []op{}, prefix: pdb.prefix}
 }
 
 // GetValue call GetValue function of BytesConnectionRedis.
 // Prefix will be prepended to key argument when searching.
 func (pdb *BytesBrokerWatcherRedis) GetValue(key string) (data []byte, found bool, revision int64, err error) {
-	pdb.Debugf("BytesBrokerWatcherRedis.GetValue(%s)", key)
+	if pdb.delegate.closed {
+		return nil, false, 0, fmt.Errorf("GetValue(%s) called on a closed connection", key)
+	}
+	pdb.Debugf("GetValue(%s)", key)
 
 	return pdb.delegate.GetValue(pdb.addPrefix(key))
 }
@@ -526,17 +437,17 @@ func (pdb *BytesBrokerWatcherRedis) GetValue(key string) (data []byte, found boo
 // Prefix will be prepended to key argument when searching.
 // The returned keys, however, will have the prefix trimmed.
 func (pdb *BytesBrokerWatcherRedis) ListValues(match string) (keyval.BytesKeyValIterator, error) {
-	pdb.Debugf("BytesBrokerWatcherRedis.ListValues(%s)", match)
+	if pdb.delegate.closed {
+		return nil, fmt.Errorf("ListValues(%s) called on a closed connection", match)
+	}
+	pdb.Debugf("ListValues(%s)", match)
 
-	conn := pdb.delegate.pool.Get()
-	defer conn.Close()
-
-	keys, err := pdb.delegate.scanKeys(conn, pdb.addPrefix(match))
+	keys, err := scanKeys(pdb.delegate, pdb.addPrefix(match))
 	if err != nil {
 		return nil, err
 	}
 
-	values, err := pdb.delegate.listValues(conn, keys)
+	values, err := listValues(pdb.delegate, keys)
 	if err != nil {
 		return nil, errors.New(err.Error() + " for " + match)
 	}
@@ -553,12 +464,12 @@ func (pdb *BytesBrokerWatcherRedis) ListValues(match string) (keyval.BytesKeyVal
 // Prefix will be prepended to key argument when searching.
 // The returned keys, however, will have the prefix trimmed.
 func (pdb *BytesBrokerWatcherRedis) ListKeys(match string) (keyval.BytesKeyIterator, error) {
-	pdb.Debugf("BytesBrokerWatcherRedis.ListKeys(%s)", match)
+	if pdb.delegate.closed {
+		return nil, fmt.Errorf("ListKeys(%s) called on a closed connection", match)
+	}
+	pdb.Debugf("ListKeys(%s)", match)
 
-	conn := pdb.delegate.pool.Get()
-	defer conn.Close()
-
-	keys, err := pdb.delegate.scanKeys(conn, pdb.addPrefix(match))
+	keys, err := scanKeys(pdb.delegate, pdb.addPrefix(match))
 	if err != nil {
 		return nil, err
 	}
@@ -572,16 +483,230 @@ func (pdb *BytesBrokerWatcherRedis) ListKeys(match string) (keyval.BytesKeyItera
 
 // Delete calls Delete function of BytesConnectionRedis.
 // Prefix will be prepended to key argument when searching.
-func (pdb *BytesBrokerWatcherRedis) Delete(match string, opts ...keyval.DelOption) (bool, error) {
-	//TODO: process delete opts
-	pdb.Debugf("BytesBrokerWatcherRedis.Delete(%s)", match)
+func (pdb *BytesBrokerWatcherRedis) Delete(match string, opts ...keyval.DelOption) (found bool, err error) {
+	if pdb.delegate.closed {
+		return false, fmt.Errorf("Delete(%s) called on a closed connection", match)
+	}
+	pdb.Debugf("Delete(%s)", match)
 
-	return pdb.delegate.Delete(pdb.addPrefix(match))
+	return pdb.delegate.Delete(pdb.addPrefix(match), opts...)
 }
 
 // ListValuesRange calls ListValuesRange function of BytesConnectionRedis.
 // Prefix will be prepended to key argument when searching.
 // TODO: Not in BytesBroker interface
+/*
 func (pdb *BytesBrokerWatcherRedis) ListValuesRange(fromPrefix string, toPrefix string) (keyval.BytesKeyValIterator, error) {
 	return pdb.delegate.ListValuesRange(pdb.addPrefix(fromPrefix), pdb.addPrefix(toPrefix))
 }
+*/
+
+///////////////////////////////////////////////////////////////////////////////
+// redigo legacy
+//  - Legacy code that uses http://godoc.org/github.com/garyburd/redigo
+//  - Only node client is supported
+func redigoPut(db *BytesConnectionRedis, key string, data []byte, ttl time.Duration) error {
+	db.Debugf("redigoPut(%s)", key)
+
+	conn := db.pool.Get()
+	defer safeclose.Close(conn)
+	var err error
+	if ttl == 0 {
+		_, err = conn.Do("SET", key, string(data))
+	} else {
+		_, err = conn.Do("SET", key, string(data), "PX", int64(ttl/time.Millisecond))
+	}
+	if err != nil {
+		return fmt.Errorf("Do(SET) failed: %s", err)
+	}
+	return nil
+}
+func redigoGetValue(db *BytesConnectionRedis, key string) (data []byte, found bool, revision int64, err error) {
+	db.Debugf("redigoGetValue(%s)", key)
+
+	conn := db.pool.Get()
+	defer safeclose.Close(conn)
+	reply, err := conn.Do("GET", key)
+	if err != nil {
+		return nil, false, 0, fmt.Errorf("Do(GET) failed: %s", err)
+	}
+	db.Debug("GET reply ", reply)
+
+	switch reply := reply.(type) {
+	case []byte:
+		return reply, true, 0, nil
+	case string:
+		return []byte(reply), true, 0, nil
+	case nil:
+		return nil, false, 0, nil
+	case redigo.Error:
+		return nil, false, 0, reply
+	default:
+		return nil, false, 0,
+			fmt.Errorf("Unknown type %s for %s", reflect.TypeOf(reply).String(), key)
+	}
+}
+func redigoListValues(db *BytesConnectionRedis, keys []string) (values [][]byte, err error) {
+	db.Debugf("redigoListValues(%v)", keys)
+
+	conn := db.pool.Get()
+	defer safeclose.Close(conn)
+	keysIntf := make([]interface{}, len(keys))
+	for i, k := range keys {
+		keysIntf[i] = k
+	}
+	reply, err := conn.Do("MGET", keysIntf...)
+	if err != nil {
+		return nil, fmt.Errorf("Do(MGET) failed: %s", err)
+	}
+
+	switch reply := reply.(type) {
+	case []interface{}:
+		values := make([][]byte, len(keys))
+
+		l := 0
+		for i := range reply {
+			r := reply[i]
+
+			switch r := r.(type) {
+			case nil:
+				values[i] = nil
+			case []byte:
+				values[i] = r
+			case string:
+				values[i] = []byte(r)
+			}
+			l++
+		}
+
+		db.WithField("length", l).Debugf("listValues(%v)", keys)
+
+		if len(keys) != len(values) {
+			return nil, fmt.Errorf("Unexpeted %d != %d", len(keys), len(values))
+		}
+
+		return values, nil
+	case redigo.Error:
+		return nil, reply
+	}
+
+	return [][]byte{}, nil
+}
+func redigoScanKeys(db *BytesConnectionRedis, pattern string) (keys []string, err error) {
+	db.Debugf("redigoScanKeys(%s)", pattern)
+
+	conn := db.pool.Get()
+	defer safeclose.Close(conn)
+	cursor := "0"
+	keys = []string{}
+	for {
+		reply, err := conn.Do("SCAN", cursor, "MATCH", pattern)
+		if err != nil {
+			return nil, fmt.Errorf("Do(SCAN) failed: %s", err)
+		}
+		db.Debugf("SCAN returned %v", reply)
+		switch r := reply.(type) {
+		case []interface{}:
+			cursor = string(r[0].([]byte))
+			db.Debugf("cursor = %s", cursor)
+			for _, k := range r[1].([]interface{}) {
+				if k == nil {
+					continue
+				}
+				switch k := k.(type) {
+				case []byte:
+					keys = append(keys, string(k))
+				case string:
+					keys = append(keys, k)
+				}
+			}
+			if cursor == "0" {
+				return keys, nil
+			}
+		case redigo.Error:
+			return nil, r
+		default:
+			if reply == nil {
+				return nil, errors.New("Do(SCAN) returned nil")
+			}
+			return nil, fmt.Errorf("Do(SCAN) returned unexpected type %T", reply)
+		}
+	}
+}
+func redigoDelete(db *BytesConnectionRedis, keysToDelete []string) (found bool, err error) {
+	db.Debugf("redigoDelete(%v)", keysToDelete)
+
+	args := make([]interface{}, len(keysToDelete))
+	for i, s := range keysToDelete {
+		args[i] = s
+	}
+	conn := db.pool.Get()
+	defer safeclose.Close(conn)
+	reply, err := conn.Do("DEL", args...)
+	if err != nil {
+		return false, fmt.Errorf("Do(DEL) failed: %s", err)
+	}
+	db.Debugf("DEL replied %v (type: %s)", reply, reflect.TypeOf(reply).String())
+
+	if err, ok := reply.(redigo.Error); ok {
+		return false, err
+	}
+	if deleted, ok := reply.(int64); ok {
+		if deleted == 0 {
+			return false, nil
+		}
+
+		if deleted < int64(len(keysToDelete)) {
+			db.Debugf("Deleted %d of %d", deleted, len(keysToDelete))
+		}
+	}
+	return true, nil
+}
+
+/* replace by redigoScanKeys
+func redigoListKeys(db *BytesConnectionRedis, match string) (keys []string, err error) {
+	if db.closed {
+		return nil, fmt.Errorf("redigoListKeys(%s) called on a closed connection", match)
+	}
+	pattern := wildcard(match)
+	db.Debugf("redigoListKeys(%s): pattern %s", match, pattern)
+
+	conn := db.pool.Get()
+	defer safeclose.Close(conn)
+	reply, err := conn.Do("KEYS", pattern)
+	if err != nil {
+		return nil, fmt.Errorf("Do(KEYS) failed: %s", err)
+	}
+
+	switch reply := reply.(type) {
+	case []interface{}:
+		keys := make([]string, len(reply))
+		length := 0
+		for i := range reply {
+			r := reply[i]
+			if r == nil {
+				continue
+			}
+
+			switch r := r.(type) {
+			case []byte:
+				keys[length] = string(r)
+			case string:
+				keys[length] = r
+			}
+			length++
+		}
+
+		db.WithFields(map[string]interface{}{"length": length, "match": match, "keys": keys}).Debugf("listKeys: pattern %s", pattern)
+
+		if length == 0 {
+			return []string{}, err
+		}
+		return keys[0:length], nil
+	case redigo.Error:
+		return nil, reply
+	}
+
+	return nil, err
+}
+*/
