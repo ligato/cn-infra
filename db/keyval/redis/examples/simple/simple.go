@@ -28,7 +28,6 @@ var watcher keyval.BytesWatcher
 
 var prefix string
 var debug bool
-var redigo bool
 
 func main() {
 	//generateSampleConfigs()
@@ -39,17 +38,8 @@ func main() {
 	}
 	fmt.Printf("config: %T:\n%v\n", cfg, cfg)
 	fmt.Printf("prefix: %s\n", prefix)
-	fmt.Printf("redigo: %t\n", redigo)
 
-	if redigo {
-		if _, yes := cfg.(redis.NodeConfig); !yes {
-			fmt.Printf("Redigo only works on redis.NodeConfig, not %T\n", cfg)
-			return
-		}
-		redisConn = createConnectionRedigo(cfg)
-	} else {
-		redisConn = createConnection(cfg)
-	}
+	redisConn = createConnection(cfg)
 	broker = redisConn.NewBroker(prefix)
 	watcher = redisConn.NewWatcher(prefix)
 
@@ -61,8 +51,6 @@ func loadConfig() interface{} {
 		"Specifies key prefix")
 	flag.BoolVar(&debug, "debug", false,
 		"Specifies whether to enable debugging; default to false")
-	flag.BoolVar(&redigo, "redigo", false,
-		"Specifies whether to use redigo API instead; default to false")
 	flag.Parse()
 
 	flag.Usage = func() {
@@ -72,7 +60,7 @@ func loadConfig() interface{} {
 				// put quotes around string
 				format = "  -%s=%q: %s\n"
 			} else {
-				if f.Name != "debug" && f.Name != "redigo" {
+				if f.Name != "debug" {
 					return
 				}
 				format = "  -%s=%s: %s\n"
@@ -111,19 +99,6 @@ func createConnection(cfg interface{}) *redis.BytesConnectionRedis {
 	if err != nil {
 		safeclose.Close(client)
 		log.Panicf("NewBytesConnection() failed: %s", err)
-	}
-	return conn
-}
-
-func createConnectionRedigo(cfg interface{}) *redis.BytesConnectionRedis {
-	pool, err := redis.CreateNodeClientConnPool(cfg.(redis.NodeConfig))
-	if err != nil {
-		log.Panicf("CreateNodeClientConnPool() failed: %s", err)
-	}
-	conn, err := redis.NewBytesConnectionRedis(pool, log)
-	if err != nil {
-		safeclose.Close(pool)
-		log.Panicf("NewBytesConnectionRedigo() failed: %s", err)
 	}
 	return conn
 }

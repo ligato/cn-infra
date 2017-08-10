@@ -21,7 +21,6 @@ import (
 	goredis "github.com/go-redis/redis"
 	"github.com/howeyc/crc16"
 	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
 type op struct {
@@ -72,11 +71,6 @@ func (tx *Txn) Commit() (err error) {
 		return nil
 	}
 
-	// redigo
-	if tx.db.pool != nil {
-		return redigoPseudoTxn(tx)
-	}
-
 	// go-redis
 
 	pipeline := tx.db.client.TxPipeline()
@@ -95,36 +89,6 @@ func (tx *Txn) Commit() (err error) {
 			checkCrossSlot(tx)
 		}
 		return fmt.Errorf("%T.Exec() failed: %s", pipeline, err)
-	}
-	return nil
-}
-
-func redigoPseudoTxn(tx *Txn) error {
-	toBeDeleted := []interface{}{}
-	msetArgs := []interface{}{}
-	for _, op := range tx.ops {
-		if op.del {
-			toBeDeleted = append(toBeDeleted, op.key)
-		} else {
-			msetArgs = append(msetArgs, op.key)
-			msetArgs = append(msetArgs, string(op.value))
-		}
-	}
-
-	conn := tx.db.pool.Get()
-	defer safeclose.Close(conn)
-
-	if len(toBeDeleted) > 0 {
-		_, err := conn.Do("DEL", toBeDeleted...)
-		if err != nil {
-			return fmt.Errorf("Do(DEL) failed: %s", err)
-		}
-	}
-	if len(msetArgs) > 0 {
-		_, err := conn.Do("MSET", msetArgs...)
-		if err != nil {
-			return fmt.Errorf("Do(MSET) failed: %s", err)
-		}
 	}
 	return nil
 }

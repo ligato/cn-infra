@@ -22,18 +22,14 @@ import (
 	"github.com/ligato/cn-infra/utils/safeclose"
 
 	"errors"
-	"reflect"
 	"strings"
 
 	"fmt"
-
-	redigo "github.com/garyburd/redigo/redis"
 )
 
 // BytesConnectionRedis allows to store, read and watch values from Redis.
 type BytesConnectionRedis struct {
 	logging.Logger
-	pool   ConnPool
 	client Client
 
 	// closeCh will be closed when this connection is closed -- i.e., by the Close() method.
@@ -62,18 +58,10 @@ type bytesKeyVal struct {
 	value []byte
 }
 
-// NewBytesConnectionRedis creates a new instance of BytesConnectionRedis using the provided
-// ConnPool
-//
-// Deprecated: Use NewBytesConnection() instead.
-func NewBytesConnectionRedis(pool ConnPool, log logging.Logger) (*BytesConnectionRedis, error) {
-	return &BytesConnectionRedis{log, pool, nil, make(chan struct{}), false}, nil
-}
-
 // NewBytesConnection creates a new instance of BytesConnectionRedis using the provided
 // Client (be it node, cluster, or sentinel client)
 func NewBytesConnection(client Client, log logging.Logger) (*BytesConnectionRedis, error) {
-	return &BytesConnectionRedis{log, nil, client, make(chan struct{}), false}, nil
+	return &BytesConnectionRedis{log, client, make(chan struct{}), false}, nil
 }
 
 // Close closes the connection to redis.
@@ -85,12 +73,6 @@ func (db *BytesConnectionRedis) Close() error {
 	db.Debug("Close()")
 	db.closed = true
 	safeclose.Close(db.closeCh)
-	if db.pool != nil {
-		err := safeclose.Close(db.pool)
-		if err != nil {
-			return fmt.Errorf("Close() encountered error: %s", err)
-		}
-	}
 	if db.client != nil {
 		err := safeclose.Close(db.client)
 		if err != nil {
@@ -124,9 +106,6 @@ func (db *BytesConnectionRedis) Put(key string, data []byte, opts ...keyval.PutO
 			ttl = withTTL.TTL
 		}
 	}
-	if db.pool != nil {
-		return redigoPut(db, key, data, ttl)
-	}
 	err := db.client.Set(key, data, ttl).Err()
 	if err != nil {
 		return fmt.Errorf("Set(%s) failed: %s", key, err)
@@ -141,9 +120,6 @@ func (db *BytesConnectionRedis) GetValue(key string) (data []byte, found bool, r
 	}
 	db.Debugf("GetValue(%s)", key)
 
-	if db.pool != nil {
-		return redigoGetValue(db, key)
-	}
 	statusCmd := db.client.Get(key)
 	data, err = statusCmd.Bytes()
 	if err != nil {
@@ -210,10 +186,6 @@ func listValues(db *BytesConnectionRedis, keys []string) (values [][]byte, err e
 		return [][]byte{}, nil
 	}
 
-	if db.pool != nil {
-		return redigoListValues(db, keys)
-	}
-
 	sliceCmd := db.client.MGet(keys...)
 	if sliceCmd.Err() != nil {
 		return nil, fmt.Errorf("MGet(%v) failed: %s", keys, sliceCmd.Err())
@@ -237,9 +209,6 @@ func scanKeys(db *BytesConnectionRedis, match string) (keys []string, err error)
 	pattern := wildcard(match)
 	db.Debugf("scanKeys(%s): pattern %s", match, pattern)
 
-	if db.pool != nil {
-		return redigoScanKeys(db, pattern)
-	}
 	// TODO: goredis.ClusterClient.Scan() doesn't always return keys (bug?)
 	keys = []string{}
 	var cursor uint64
@@ -300,10 +269,6 @@ func (db *BytesConnectionRedis) Delete(key string, opts ...keyval.DelOption) (fo
 		db.Debugf("Delete(%s): deleting %v", key, keysToDelete)
 	} else {
 		keysToDelete = append(keysToDelete, key)
-	}
-
-	if db.pool != nil {
-		return redigoDelete(db, keysToDelete)
 	}
 
 	intCmd := db.client.Del(keysToDelete...)
@@ -498,215 +463,5 @@ func (pdb *BytesBrokerWatcherRedis) Delete(match string, opts ...keyval.DelOptio
 /*
 func (pdb *BytesBrokerWatcherRedis) ListValuesRange(fromPrefix string, toPrefix string) (keyval.BytesKeyValIterator, error) {
 	return pdb.delegate.ListValuesRange(pdb.addPrefix(fromPrefix), pdb.addPrefix(toPrefix))
-}
-*/
-
-///////////////////////////////////////////////////////////////////////////////
-// redigo legacy
-//  - Legacy code that uses http://godoc.org/github.com/garyburd/redigo
-//  - Only node client is supported
-func redigoPut(db *BytesConnectionRedis, key string, data []byte, ttl time.Duration) error {
-	db.Debugf("redigoPut(%s)", key)
-
-	conn := db.pool.Get()
-	defer safeclose.Close(conn)
-	var err error
-	if ttl == 0 {
-		_, err = conn.Do("SET", key, string(data))
-	} else {
-		_, err = conn.Do("SET", key, string(data), "PX", int64(ttl/time.Millisecond))
-	}
-	if err != nil {
-		return fmt.Errorf("Do(SET) failed: %s", err)
-	}
-	return nil
-}
-func redigoGetValue(db *BytesConnectionRedis, key string) (data []byte, found bool, revision int64, err error) {
-	db.Debugf("redigoGetValue(%s)", key)
-
-	conn := db.pool.Get()
-	defer safeclose.Close(conn)
-	reply, err := conn.Do("GET", key)
-	if err != nil {
-		return nil, false, 0, fmt.Errorf("Do(GET) failed: %s", err)
-	}
-	db.Debug("GET reply ", reply)
-
-	switch reply := reply.(type) {
-	case []byte:
-		return reply, true, 0, nil
-	case string:
-		return []byte(reply), true, 0, nil
-	case nil:
-		return nil, false, 0, nil
-	case redigo.Error:
-		return nil, false, 0, reply
-	default:
-		return nil, false, 0,
-			fmt.Errorf("Unknown type %s for %s", reflect.TypeOf(reply).String(), key)
-	}
-}
-func redigoListValues(db *BytesConnectionRedis, keys []string) (values [][]byte, err error) {
-	db.Debugf("redigoListValues(%v)", keys)
-
-	conn := db.pool.Get()
-	defer safeclose.Close(conn)
-	keysIntf := make([]interface{}, len(keys))
-	for i, k := range keys {
-		keysIntf[i] = k
-	}
-	reply, err := conn.Do("MGET", keysIntf...)
-	if err != nil {
-		return nil, fmt.Errorf("Do(MGET) failed: %s", err)
-	}
-
-	switch reply := reply.(type) {
-	case []interface{}:
-		values := make([][]byte, len(keys))
-
-		l := 0
-		for i := range reply {
-			r := reply[i]
-
-			switch r := r.(type) {
-			case nil:
-				values[i] = nil
-			case []byte:
-				values[i] = r
-			case string:
-				values[i] = []byte(r)
-			}
-			l++
-		}
-
-		db.WithField("length", l).Debugf("listValues(%v)", keys)
-
-		if len(keys) != len(values) {
-			return nil, fmt.Errorf("Unexpeted %d != %d", len(keys), len(values))
-		}
-
-		return values, nil
-	case redigo.Error:
-		return nil, reply
-	}
-
-	return [][]byte{}, nil
-}
-func redigoScanKeys(db *BytesConnectionRedis, pattern string) (keys []string, err error) {
-	db.Debugf("redigoScanKeys(%s)", pattern)
-
-	conn := db.pool.Get()
-	defer safeclose.Close(conn)
-	cursor := "0"
-	keys = []string{}
-	for {
-		reply, err := conn.Do("SCAN", cursor, "MATCH", pattern)
-		if err != nil {
-			return nil, fmt.Errorf("Do(SCAN) failed: %s", err)
-		}
-		db.Debugf("SCAN returned %v", reply)
-		switch r := reply.(type) {
-		case []interface{}:
-			cursor = string(r[0].([]byte))
-			db.Debugf("cursor = %s", cursor)
-			for _, k := range r[1].([]interface{}) {
-				if k == nil {
-					continue
-				}
-				switch k := k.(type) {
-				case []byte:
-					keys = append(keys, string(k))
-				case string:
-					keys = append(keys, k)
-				}
-			}
-			if cursor == "0" {
-				return keys, nil
-			}
-		case redigo.Error:
-			return nil, r
-		default:
-			if reply == nil {
-				return nil, errors.New("Do(SCAN) returned nil")
-			}
-			return nil, fmt.Errorf("Do(SCAN) returned unexpected type %T", reply)
-		}
-	}
-}
-func redigoDelete(db *BytesConnectionRedis, keysToDelete []string) (found bool, err error) {
-	db.Debugf("redigoDelete(%v)", keysToDelete)
-
-	args := make([]interface{}, len(keysToDelete))
-	for i, s := range keysToDelete {
-		args[i] = s
-	}
-	conn := db.pool.Get()
-	defer safeclose.Close(conn)
-	reply, err := conn.Do("DEL", args...)
-	if err != nil {
-		return false, fmt.Errorf("Do(DEL) failed: %s", err)
-	}
-	db.Debugf("DEL replied %v (type: %s)", reply, reflect.TypeOf(reply).String())
-
-	if err, ok := reply.(redigo.Error); ok {
-		return false, err
-	}
-	if deleted, ok := reply.(int64); ok {
-		if deleted == 0 {
-			return false, nil
-		}
-
-		if deleted < int64(len(keysToDelete)) {
-			db.Debugf("Deleted %d of %d", deleted, len(keysToDelete))
-		}
-	}
-	return true, nil
-}
-
-/* replace by redigoScanKeys
-func redigoListKeys(db *BytesConnectionRedis, match string) (keys []string, err error) {
-	if db.closed {
-		return nil, fmt.Errorf("redigoListKeys(%s) called on a closed connection", match)
-	}
-	pattern := wildcard(match)
-	db.Debugf("redigoListKeys(%s): pattern %s", match, pattern)
-
-	conn := db.pool.Get()
-	defer safeclose.Close(conn)
-	reply, err := conn.Do("KEYS", pattern)
-	if err != nil {
-		return nil, fmt.Errorf("Do(KEYS) failed: %s", err)
-	}
-
-	switch reply := reply.(type) {
-	case []interface{}:
-		keys := make([]string, len(reply))
-		length := 0
-		for i := range reply {
-			r := reply[i]
-			if r == nil {
-				continue
-			}
-
-			switch r := r.(type) {
-			case []byte:
-				keys[length] = string(r)
-			case string:
-				keys[length] = r
-			}
-			length++
-		}
-
-		db.WithFields(map[string]interface{}{"length": length, "match": match, "keys": keys}).Debugf("listKeys: pattern %s", pattern)
-
-		if length == 0 {
-			return []string{}, err
-		}
-		return keys[0:length], nil
-	case redigo.Error:
-		return nil, reply
-	}
-
-	return nil, err
 }
 */
