@@ -15,15 +15,16 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"net"
+	"os"
+
 	"github.com/gocql/gocql"
 	"github.com/ligato/cn-infra/db/sql"
 	"github.com/ligato/cn-infra/db/sql/cassandra"
 	"github.com/ligato/cn-infra/utils/config"
 	"github.com/willfaught/gockle"
-	"net"
-	"os"
-	"errors"
 )
 
 // UserTable global variable reused when building queries/statements
@@ -52,7 +53,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	session, err := cassandra.CreateSessionFromClientConfigAndKeyspace(cfg, "")
+	session, err := cassandra.CreateSessionFromConfig(cfg)
 	defer session.Close()
 	if err != nil {
 		fmt.Println("failed - session1 ", err)
@@ -65,7 +66,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	sessionWithKeyspace, err := cassandra.CreateSessionFromClientConfigAndKeyspace(cfg, "demo")
+	sessionWithKeyspace, err := cassandra.CreateSessionFromConfig(cfg)
 	defer sessionWithKeyspace.Close()
 	if err != nil {
 		fmt.Println("failed - session2 ", err)
@@ -116,18 +117,18 @@ func exampleDDL(session *gocql.Session) (err error) {
 		Exec(); err != nil {
 		return err
 	}
-	if err := session.Query(`CREATE TYPE IF NOT EXISTS udt03 (
+	if err := session.Query(`CREATE TYPE IF NOT EXISTS demo.udt03 (
 		tx text,
 		tx2 text)`).Exec(); err != nil {
 		return err
 	}
-	if err := session.Query(`CREATE TYPE IF NOT EXISTS udt04 (
+	if err := session.Query(`CREATE TYPE IF NOT EXISTS demo.udt04 (
 		ahoj text,
 		caf frozen<udt03>)`).Exec(); err != nil {
 		return err
 	}
 
-	if err := session.Query(`CREATE TABLE IF NOT EXISTS user (
+	if err := session.Query(`CREATE TABLE IF NOT EXISTS demo.user (
 			userid text PRIMARY KEY,
 				first_name text,
 				last_name text,
@@ -144,7 +145,7 @@ func exampleDDL(session *gocql.Session) (err error) {
 		return err
 	}
 
-	if err := session.Query("CREATE INDEX IF NOT EXISTS demo_users_last_name ON user (last_name);").
+	if err := session.Query("CREATE INDEX IF NOT EXISTS demo_users_last_name ON demo.user (last_name);").
 		Exec(); err != nil {
 		return err
 	}

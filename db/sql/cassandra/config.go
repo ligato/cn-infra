@@ -25,19 +25,19 @@ import (
 type Config struct {
 
 	// A list of host addresses of cluster nodes.
-	Hosts []string `json:"hosts"`
+	Endpoints []string `json:"endpoints"`
 
 	// port for Cassandra (default: 9042)
 	Port int `json:"port"`
 
 	// connection timeout (default: 600ms)
-	Timeout time.Duration `json:"timeout"`
+	OpTimeout time.Duration `json:"op_timeout"`
 
 	// initial connection timeout, used during initial dial to server (default: 600ms)
-	ConnectTimeout time.Duration `json:"connect_timeout"`
+	DialTimeout time.Duration `json:"dial_timeout"`
 
 	// If not zero, gocql attempt to reconnect known DOWN nodes in every ReconnectSleep.
-	ReconnectInterval time.Duration `json:"reconnect_interval"`
+	RedialInterval time.Duration `json:"redial_interval"`
 
 	// ProtoVersion sets the version of the native protocol to use, this will
 	// enable features in the driver for specific protocol versions, generally this
@@ -46,7 +46,7 @@ type Config struct {
 	// If it is 0 or unset (the default) then the driver will attempt to discover the
 	// highest supported protocol for the cluster. In clusters with nodes of different
 	// versions the protocol selected is not defined (ie, it can be any of the supported in the cluster)
-	ProtoVersion int `json:"proto_version"`
+	ProtocolVersion int `json:"protocol_version"`
 }
 
 // ClientConfig wrapping gocql ClusterConfig
@@ -54,36 +54,36 @@ type ClientConfig struct {
 	*gocql.ClusterConfig
 }
 
-const defaultTimeout = 600 * time.Millisecond
-const defaultConnectTimeout = 600 * time.Millisecond
-const defaultReocnnectInterval = 60 * time.Second
-const defaultProtoVersion = 4
+const defaultOpTimeout = 600 * time.Millisecond
+const defaultDialTimeout = 600 * time.Millisecond
+const defaultRedialInterval = 60 * time.Second
+const defaultProtocolVersion = 4
 
 // ConfigToClientConfig transforms the yaml configuration into ClientConfig.
 func ConfigToClientConfig(ymlConfig *Config) (*ClientConfig, error) {
 
-	timeout := defaultTimeout
-	if ymlConfig.Timeout > 0 {
-		timeout = ymlConfig.Timeout
+	timeout := defaultOpTimeout
+	if ymlConfig.OpTimeout > 0 {
+		timeout = ymlConfig.OpTimeout
 	}
 
-	connectTimeout := defaultConnectTimeout
-	if ymlConfig.ConnectTimeout > 0 {
-		connectTimeout = ymlConfig.ConnectTimeout
+	connectTimeout := defaultDialTimeout
+	if ymlConfig.DialTimeout > 0 {
+		connectTimeout = ymlConfig.DialTimeout
 	}
 
-	reconnectInterval := defaultReocnnectInterval
-	if ymlConfig.ReconnectInterval > 0 {
-		reconnectInterval = ymlConfig.ReconnectInterval
+	reconnectInterval := defaultRedialInterval
+	if ymlConfig.RedialInterval > 0 {
+		reconnectInterval = ymlConfig.RedialInterval
 	}
 
-	protoVersion := defaultProtoVersion
-	if ymlConfig.ProtoVersion > 0 {
-		protoVersion = ymlConfig.ProtoVersion
+	protoVersion := defaultProtocolVersion
+	if ymlConfig.ProtocolVersion > 0 {
+		protoVersion = ymlConfig.ProtocolVersion
 	}
 
 	clientConfig := &gocql.ClusterConfig{
-		Hosts:             ymlConfig.Hosts,
+		Hosts:             ymlConfig.Endpoints,
 		Port:              ymlConfig.Port,
 		Timeout:           timeout,
 		ConnectTimeout:    connectTimeout,
@@ -96,16 +96,15 @@ func ConfigToClientConfig(ymlConfig *Config) (*ClientConfig, error) {
 	return cfg, nil
 }
 
-// CreateSessionFromClientConfigAndKeyspace Creates session from given configuration and keyspace
-func CreateSessionFromClientConfigAndKeyspace(config Config, keyspace string) (*gocql.Session, error) {
+// CreateSessionFromConfig Creates session from given configuration and keyspace
+func CreateSessionFromConfig(config Config) (*gocql.Session, error) {
 
-	gocqlClusterConfig := gocql.NewCluster(HostsAsString(config.Hosts))
+	gocqlClusterConfig := gocql.NewCluster(HostsAsString(config.Endpoints))
 	gocqlClusterConfig.Port = config.Port
-	gocqlClusterConfig.ConnectTimeout = config.ConnectTimeout
-	gocqlClusterConfig.Timeout = config.Timeout
-	gocqlClusterConfig.ReconnectInterval = config.ReconnectInterval
-	gocqlClusterConfig.ProtoVersion = config.ProtoVersion
-	gocqlClusterConfig.Keyspace = keyspace
+	gocqlClusterConfig.ConnectTimeout = config.DialTimeout
+	gocqlClusterConfig.Timeout = config.OpTimeout
+	gocqlClusterConfig.ReconnectInterval = config.RedialInterval
+	gocqlClusterConfig.ProtoVersion = config.ProtocolVersion
 
 	session, err := gocqlClusterConfig.CreateSession()
 

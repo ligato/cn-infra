@@ -13,15 +13,19 @@ The API was tested with Cassandra 3 and supports:
 
 The API will allow the client to configure either single node or multi-node cluster.
 Also, the client can configure following timeouts:
-- ConnectTimeout
+- DialTimeout
     - Initial connection timeout, used during initial dial to server
     - Default value is 600ms
-- Timeout (Query timeout)
+- OpTimeout
     - Connection timeout, used during executing query
     - Default value is 600ms
-- ReconnectInterval
+- RedialInterval
     - If not zero, gocql attempt to reconnect known DOWN nodes in every ReconnectSleep (ReconnectInterval)
     - Default value is 60s
+
+The timeout parameters are defined here [config.go](config.go)
+
+Supported by underlying gocql structure [ClusterConfig](../../../vendor/github.com/gocql/gocql/cluster.go)
 
 # Cassandra Data Consistency
 
@@ -29,7 +33,10 @@ The API will allow the client to configure consistency level for both
 - Session
 - Query (to be implemented)
 
-Factors to consider for achieving desired consistency level.
+Supported by underlying gocql structure [Session](../../../vendor/github.com/gocql/gocql/session.go)
+
+
+# Factors to be considered for achieving desired consistency level.
 - Replication strategy
     - A replication strategy determines the nodes where replicas are placed.
         - SimpleStrategy: Use for a single data center only.
@@ -44,3 +51,7 @@ Factors to consider for achieving desired consistency level.
     - Quorum = (sum_of_replication_factors / 2) + 1
     - (nodes_written + nodes_read) > replication_factor
 
+- References
+    - [Apache Cassandra](http://cassandra.apache.org/doc/latest/operating/index.html)
+    - [Cassandra Data Replication](http://docs.datastax.com/en/archived/cassandra/2.0/cassandra/architecture/architectureDataDistributeReplication_c.html)
+    - [Cassandra Consistency Levels](http://docs.datastax.com/en/cassandra/latest/cassandra/dml/dmlConfigConsistency.html)
