@@ -1,7 +1,7 @@
 # Plugin Lifecycle
 
 Each plugin must implement the Init() and Close() methods (see 
-[plugin_api.go][1]. A plugin may optionally implement the AfterInit() 
+[plugin_spi.go][1]. A plugin may optionally implement the AfterInit() 
 method. These methods are called sequentially startup by [agent_core.go][2]. 
 
 There are following rules for what to put in the methods:
@@ -111,7 +111,7 @@ func (plugin * PluginXY) Close() error {
     return err 
 }
 ```
-[1]: ../../core/pluginapi.go
+[1]: ../../core/plugin_spi.go
 [2]: ../../core/agent_core.go
 [3]: CONFIG.md
 [4]: SYSTEM_INTEGRATION.md
