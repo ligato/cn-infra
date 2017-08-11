@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package sql is an abstraction of data store that supports SQL like query language
-// and defines Broker & Watcher APIs used by user app plugins.
-package sql
+// Package flavors contains reusable cn-infra flavors (collection of plugins
+// with initialized dependencies):
+// - generic flavor is prepared for minimalistic cn-infra based applications;
+// - etcd + kafka flavor extends generic flavor and is meant for applications
+//   that read northbound configuration from ETCD and publish events to Kafka.
+package flavors

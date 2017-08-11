@@ -12,5 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package keyval is an abstraction of key-value data store.
+// Package keyval is an abstraction of key-value data store and defines
+// Broker & Watcher APIs used by user app plugins.
 package keyval
