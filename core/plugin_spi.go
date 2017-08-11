@@ -12,7 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package core contains CN-Infra code that implements the lifecycle
-// management (start, stop) for a CN-Infra based apps and defines
-// the Core lifecycle SPI that must be implemented by each plugin.
 package core
+
+// Plugin interface defines plugin's basic life-cycle methods.
+type Plugin interface {
+	// Init is called in the agent startup phase.
+	Init() error
+	// Close is called in the agent cleanup phase.
+	Close() error
+}
+
+// PostInit interface define optional method for plugins with complex initialization.
+type PostInit interface {
+	// AfterInit is called once Init() of all plugins have returned without error.
+	AfterInit() error
+}

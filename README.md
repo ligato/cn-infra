@@ -109,7 +109,7 @@ application built on the CN-Infra platform. The code for this example
 can be found [here](examples/simple-agent/agent.go).
 ```
 func main() {
-	flavor := Flavor{}
+	flavor := generic.Flavor{}
 	agent := core.NewAgent(logroot.Logger(), 15*time.Second, flavor.Plugins()...)
 
 	err := core.EventLoopWithInterrupt(agent, nil)
@@ -117,6 +117,20 @@ func main() {
 		os.Exit(1)
 	}
 }
+```
+
+You can run this example code by using pre-build Docker images:
+
+For quick start with the VPP Agent, you can use pre-build Docker images with the Agent and VPP
+on [Dockerhub](https://hub.docker.com/r/ligato/dev-cn-infra/).
+
+1. Run ETCD and Kafka on your host (e.g. in Docker 
+   [using this procedure](examples/simple-agent/README.md)).
+
+2. Run cn-infra example [simple-agent](examples/simple-agent/agent.go).
+```
+docker pull ligato/dev-cn-infra
+docker run -it --name dev-cn-infra --rm ligato/dev-cn-infra
 ```
 
 ## Documentation
