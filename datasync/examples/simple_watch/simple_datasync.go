@@ -19,7 +19,7 @@ func main() {
 	logroot.Logger().SetLevel(logging.DebugLevel)
 
 	f := etcdkafka.Flavor{}
-	//TODO inject PluginXY
+	//TODO inject ExamplePlugin
 	agent := core.NewAgent(logroot.Logger(), 15*time.Second, f.Plugins()...)
 
 	err := core.EventLoopWithInterrupt(agent, nil)
@@ -29,7 +29,7 @@ func main() {
 }
 
 // ExamplePlugin does watching
-type PluginXY struct {
+type ExamplePlugin struct {
 	Watcher   datasync.Watcher //Injected
 	Logger    logging.Logger
 	ParentCtx context.Context
@@ -40,7 +40,7 @@ type PluginXY struct {
 }
 
 // Init initializes channels & go routine
-func (plugin *PluginXY) Init() (err error) {
+func (plugin *ExamplePlugin) Init() (err error) {
 	// initialize channels & start go routins
 	plugin.dataChange = make(chan datasync.ChangeEvent, 100)
 	plugin.dataResync = make(chan datasync.ResyncEvent, 100)
@@ -71,7 +71,7 @@ func (plugin *PluginXY) Init() (err error) {
 }
 
 // AfterInit starts watching the data
-func (plugin *PluginXY) AfterInit() error {
+func (plugin *ExamplePlugin) AfterInit() error {
 	// subscribe plugin.channel for watching data (to really receive the data)
 	plugin.Watcher.WatchData("watchingXY", plugin.dataChange, plugin.dataResync, "keysXY")
 
@@ -79,7 +79,7 @@ func (plugin *PluginXY) AfterInit() error {
 }
 
 // Close cancels the go routine and close channels
-func (plugin *PluginXY) Close() error {
+func (plugin *ExamplePlugin) Close() error {
 	// cancel watching the channels
 	plugin.cancel()
 
