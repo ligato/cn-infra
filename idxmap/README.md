@@ -1,40 +1,38 @@
-# IDX Map
+# Concept
 
-The idxmap package provides an enhanced mapping structure. In addition
-to a basic built-in map structure, it allows to create secondary indices
-that can also be leveraged for lookup. One can also subscribe for 
-changes and receive notification once an item is added or removed.
+The idxmap package provides an enhanced mapping structure to help in following 
+use cases:
+* Caching of the data in key-vale store (such as ETCD)
+* Exposing plugin local information - idxmap used for exposing data of one plugin to another plugins 
 
-Function `RegisterName` adds a value (item) into the mapping. In the 
-function call the primary index(name) for the item is specified. The 
-values of the primary index are unique, if the name already exists, 
-then the item is overwritten. To retrieve an item identified by the 
-primary index, use the `Lookup` function. An item can be removed from
-the mapping by calling the `UnregisterName` function. The names that 
-are currently registered can be retrieved by calling the `ListNames`
-function.
- 
-The constructor allows to define a `createIndexes` function that extracts
-secondary indices from stored items. The function returns a map indexed 
-by names of secondary indexes, and the values are the extracted values
-for the particular item. The values of secondary indexes are not necessarily
-unique. To retrieve items based on secondary indicess use the 
-`LookupByMetadata` function. In contrast to the lookup by primary index, 
-the function may return multiple names.
+For more detailed description see the godoc.
 
-```
- Primary Index                Item                                Secondary indexes
-===================================================================================
-   
-   Eth1              +---------------------+                 { "IP" : ["192.168.2.1", "10.0.0.8"],
-                     |  Status: Enabled    |                   "Type" : ["ethernet"]
-                     |  IP: 192.168.2.1    |                 }
-                     |      10.0.0.8       |
-                     |  Type: ethernet     |
-                     |  Desc: something    |
-                     +---------------------+
-```
+## Caching Use Case
+Imagine that you need the data from key value store cached (see following diagram) 
+because you need to:
+- either minimize lookups of the key value store 
+- or you need to lookup by secondary indexes (fields of structured values stored in key value store) 
 
-`Watch` allows to define a callback that is called when a change in the 
-mapping occurs. There is a helper function `ToChan` available, which allows
-to deliver notifications through a channel.
+Therefore idxmap can watch key value store, see:
+- implementation of [cache helper.go](mem/cache_helper.go)
+- example of [caching IP addresses of different containers](https://github.com/ligato/vpp-agent/tree/master/examples/idx_iface_cache) 
+
+![idxmap cache](../docs/imgs/idxmap_cache.png)
+
+## Exposing plugin local information Use Case
+App plugin needs to expose some structured information to one or multiple app plugins 
+inside the agent (see following diagram).
+
+If this structured data are stored in idxmap than multiple plugins can read informations from that
+1. either by Lookup using primary keys or secondary indices;
+2. or watching data changes in the map (using channels or callbacks) 
+   (subscribe for changes and receive notification once an item is added or removed).
+
+![idxmap local](../docs/imgs/idxmap_local.png)
+
+Examples:
+* Real world example from [vpp-agent plugin API](https://github.com/ligato/vpp-agent/blob/master/plugins/defaultplugins/defaultplugins_api.go)
+* Isolated and simplified examples can be found here: 
+  * [lookup](https://github.com/ligato/vpp-agent/tree/master/examples/idx_mapping_lookup)
+  * [watch](https://github.com/ligato/vpp-agent/tree/master/examples/idx_mapping_watcher)
+
