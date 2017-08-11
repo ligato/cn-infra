@@ -31,7 +31,7 @@ If this structured data are stored in idxmap than multiple plugins can read info
 ![idxmap local](../docs/imgs/idxmap_local.png)
 
 Examples:
-* Real world example from ([vpp-agent plugin API](https://github.com/ligato/vpp-agent/blob/master/plugins/defaultplugins/defaultplugins_api.go)
+* Real world example from [vpp-agent plugin API](https://github.com/ligato/vpp-agent/blob/master/plugins/defaultplugins/defaultplugins_api.go)
 * Isolated and simplified examples can be found here: 
   * [lookup](https://github.com/ligato/vpp-agent/tree/master/examples/idx_mapping_lookup)
   * [watch](https://github.com/ligato/vpp-agent/tree/master/examples/idx_mapping_watcher)
