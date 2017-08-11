@@ -24,8 +24,8 @@ import (
 	"github.com/ligato/cn-infra/statuscheck"
 )
 
-// Flavor glues together multiple plugins that are useful for almost every micro-service
-type Flavor struct {
+// FlavorGeneric glues together multiple plugins that are useful for almost every micro-service
+type FlavorGeneric struct {
 	Logrus       logrus.Plugin
 	HTTP         httpmux.Plugin
 	LogManager   logmanager.Plugin
@@ -36,18 +36,14 @@ type Flavor struct {
 }
 
 // Inject sets object references
-func (f *Flavor) Inject() error {
+func (f *FlavorGeneric) Inject() error {
 	if f.injected {
 		return nil
 	}
 
-	//f.HTTP.LogFactory = &f.Logrus
-
-	f.HTTP.Logger = f.Logrus.LoggerWithPrefix(f.PluginName(&f.HTTP))
-	f.HTTP.Config = f.Config.ConfigWithPrefix(f.PluginName(&f.HTTP))
-
-
-
+	f.HTTP.LogFactory = &f.Logrus
+	//TODO f.HTTP.Logger = f.Logrus.LoggerWithPrefix(f.PluginName(&f.HTTP))
+	//TODO f.HTTP.Config = f.Config.ConfigWithPrefix(f.PluginName(&f.HTTP))
 	f.LogManager.ManagedLoggers = &f.Logrus
 	f.LogManager.HTTP = &f.HTTP
 	f.StatusCheck.HTTP = &f.HTTP
@@ -58,7 +54,7 @@ func (f *Flavor) Inject() error {
 }
 
 // Plugins combines all Plugins in flavor to the list
-func (f *Flavor) Plugins() []*core.NamedPlugin {
+func (f *FlavorGeneric) Plugins() []*core.NamedPlugin {
 	f.Inject()
 	return core.ListPluginsInFlavor(f)
 }
