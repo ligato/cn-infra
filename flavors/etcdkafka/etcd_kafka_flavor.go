@@ -21,16 +21,14 @@ import (
 	"github.com/ligato/cn-infra/messaging/kafka"
 )
 
-// Flavor glues together generic.Flavor plugins with:
+// FlavorGeneric glues together generic.FlavorGeneric plugins with:
 // - ETCD (useful for watching config.)
 // - Kafka plugins (useful for publishing events)
 type Flavor struct {
-	Generic generic.Flavor
-	Etcd    etcdv3.Plugin
+	Generic generic.FlavorGeneric
 
-	Redis   redis.Plugin
-
-	Kafka   kafka.Plugin
+	Etcd  etcdv3.Plugin
+	Kafka kafka.Plugin
 
 	injected bool
 }
@@ -49,9 +47,6 @@ func (f *Flavor) Inject() error {
 	f.Kafka.LogFactory = &f.Generic.Logrus
 	f.Kafka.ServiceLabel = &f.Generic.ServiceLabel
 	f.Kafka.StatusCheck = &f.Generic.StatusCheck
-
-
-	f.PluginXY.StatsPub = Agreguj(&f.Redis, &f.Etcd)
 
 	f.injected = true
 
