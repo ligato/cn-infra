@@ -11,7 +11,7 @@ For more detailed description see the godoc (especially [doc.go](doc.go)).
 
 **Overall Agent Status**
 
-Overall Agent Status is aggregated from all Plugins Status (logical AND foreach success/error status).
+Overall Agent Status is aggregated from all Plugins Status (logical AND foreach Plugin Status success/error).
 
 To retrieve the current overall status of the agent from ETCD, get the 
 `/vnf-agent/<agent-label>/check/status` key:
@@ -57,7 +57,5 @@ $ etcdctl get /vnf-agent/<agent-label>/check/status/v1/plugin/GOVPP
 {"state":2,"last_change":1496322205,"last_update":1496322361,"error":"VPP disconnected"}
 ```
 
-
-**Dependencies**
 
 [1]: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/
