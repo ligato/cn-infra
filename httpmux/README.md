@@ -1,10 +1,7 @@
 # HTTPmux
 
 The `HTTPmux` is a infrastructure Plugin which allows app plugins 
-to handle HTTP requests (see following diagram).
-
-![http](../docs/imgs/http.png)
-
+to handle HTTP requests (see following diagram) in this sequence:
 1. httpmux starts the HTTP server
 2. to serve an HTTP service, plugin must first implement a handler function
 and then register it at a given URL path using the `RegisterHTTPHandler`
@@ -13,6 +10,8 @@ and registers HTTP handlers by their URL path using an HTTP request
 multiplexer from the `gorilla/mux` package.
 3. HTPP server using `gorilla/mux` asks previously registered handler to 
    handle a particular HTTP request.
+
+![http](../docs/imgs/http.png)
 
 **Configuration**
 
