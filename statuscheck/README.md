@@ -9,7 +9,7 @@ and [HTTP](../httpmux) (see following diagram).
 
 For more detailed description see the godoc (especially [doc.go](doc.go)).
 
-**Overall Agent Status**
+## Overall Agent Status**
 
 Overall Agent Status is aggregated from all Plugins Status (logical AND foreach Plugin Status success/error).
 
@@ -36,7 +36,7 @@ option of the agent, e.g.:
 $ vpp-agent -http-port 9090
 ```
 
-**Plugins Status**
+## Plugins Status
 
 Plugin Status can be PUSHed by a multiple plugins but there  
 is posible PULL based approach when status check plugin
@@ -51,10 +51,10 @@ $ etcdctl get /vnf-agent/<agent-label>/check/status/v1/plugin/GOVPP
 {"state":2,"last_change":1496322205,"last_update":1496322361,"error":"VPP disconnected"}
 ```
 
-PUSH Plugin Status:
+### PUSH Plugin Status:
 ![status check pull](../docs/imgs/status_check_pull.png)
 
-PULL Plugins Status - PROBING:
+### PULL Plugins Status - PROBING:
 ![status check push](../docs/imgs/status_check_push.png)
 
 
