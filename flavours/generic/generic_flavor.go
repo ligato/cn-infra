@@ -41,7 +41,13 @@ func (f *Flavor) Inject() error {
 		return nil
 	}
 
-	f.HTTP.LogFactory = &f.Logrus
+	//f.HTTP.LogFactory = &f.Logrus
+
+	f.HTTP.Logger = f.Logrus.LoggerWithPrefix(f.PluginName(&f.HTTP))
+	f.HTTP.Config = f.Config.ConfigWithPrefix(f.PluginName(&f.HTTP))
+
+
+
 	f.LogManager.ManagedLoggers = &f.Logrus
 	f.LogManager.HTTP = &f.HTTP
 	f.StatusCheck.HTTP = &f.HTTP

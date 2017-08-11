@@ -17,7 +17,7 @@ package etcdkafka
 import (
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
-	"github.com/ligato/cn-infra/flavors/generic"
+	"github.com/ligato/cn-infra/flavours/generic"
 	"github.com/ligato/cn-infra/messaging/kafka"
 )
 
@@ -27,6 +27,9 @@ import (
 type Flavor struct {
 	Generic generic.Flavor
 	Etcd    etcdv3.Plugin
+
+	Redis   redis.Plugin
+
 	Kafka   kafka.Plugin
 
 	injected bool
@@ -46,6 +49,9 @@ func (f *Flavor) Inject() error {
 	f.Kafka.LogFactory = &f.Generic.Logrus
 	f.Kafka.ServiceLabel = &f.Generic.ServiceLabel
 	f.Kafka.StatusCheck = &f.Generic.StatusCheck
+
+
+	f.PluginXY.StatsPub = Agreguj(&f.Redis, &f.Etcd)
 
 	f.injected = true
 

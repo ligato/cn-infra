@@ -1,4 +1,4 @@
-package simple_watch
+package main
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/flavors/etcdkafka"
+	"github.com/ligato/cn-infra/flavours/etcdkafka"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/utils/safeclose"
@@ -39,6 +39,7 @@ type PluginXY struct {
 	cancel     context.CancelFunc
 }
 
+// Init initializes channels & go routine
 func (plugin *PluginXY) Init() (err error) {
 	// initialize channels & start go routins
 	plugin.dataChange = make(chan datasync.ChangeEvent, 100)
@@ -69,6 +70,7 @@ func (plugin *PluginXY) Init() (err error) {
 	return nil
 }
 
+// AfterInit starts watching the data
 func (plugin *PluginXY) AfterInit() error {
 	// subscribe plugin.channel for watching data (to really receive the data)
 	plugin.Watcher.WatchData("watchingXY", plugin.dataChange, plugin.dataResync, "keysXY")
@@ -76,6 +78,7 @@ func (plugin *PluginXY) AfterInit() error {
 	return nil
 }
 
+// Close cancels the go routine and close channels
 func (plugin *PluginXY) Close() error {
 	// cancel watching the channels
 	plugin.cancel()
