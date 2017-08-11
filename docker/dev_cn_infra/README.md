@@ -66,4 +66,4 @@ sudo docker exec -it simple_agent bash
 
 #### How to run examples
 There are examples as an simple illustration of the cn-infra functionality. 
-You can find more info about how to run examples in cn-infra/examples/README.md file. 
+You can find more info about how to run examples in [this README](../../examples/README.md) .
