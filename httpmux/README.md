@@ -10,6 +10,8 @@ method. Behind the scenes, `httpmux` runs an HTTP server inside a goroutine
 and registers HTTP handlers by their URL path using an HTTP request 
 multiplexer from the `gorilla/mux` package.
 
+![http](../docs/imgs/http.png)
+
 **Configuration**
 
 - the server's port can be defined using commandline flag `http-port` or 
@@ -46,4 +48,3 @@ $ curl -X GET http://localhost:9191/example
 **Dependencies**
 
 - [Logging](../logging/plugin)
-- [HTTPmux](../httpmux)

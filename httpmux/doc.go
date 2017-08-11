@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package httpmux provides a plugin that allows other plugins to handle
-// http requests.
+// Package httpmux provides a plugin that allows app plugins to
+// register and afterwords handle http requests (usually REST based).
 package httpmux
