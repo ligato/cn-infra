@@ -17,7 +17,7 @@ package etcdkafka
 import (
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
-	"github.com/ligato/cn-infra/flavours/generic"
+	"github.com/ligato/cn-infra/flavors/generic"
 	"github.com/ligato/cn-infra/messaging/kafka"
 )
 

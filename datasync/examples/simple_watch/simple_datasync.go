@@ -9,7 +9,7 @@ import (
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/flavours/etcdkafka"
+	"github.com/ligato/cn-infra/flavors/etcdkafka"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/utils/safeclose"
