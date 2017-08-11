@@ -19,7 +19,7 @@
     see []StartAgent in the example main() function the 
     [simple agent example](../../examples/simple-agent)
 
-3. Prefer [hand written code](../../examples/simple-agent/generic/generic.go) 
+3. Prefer [hand written code](../../flavours/generic/generic_flavour.go) 
    that injects all dependencies between plugins
    
 4. Reusable combination of multiple plugins is called a [Flavor](PLUGIN_FLAVORS.md).
