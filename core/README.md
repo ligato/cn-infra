@@ -3,8 +3,8 @@
 The `core` package contains the CN-Infra Core that manages the startup
 and shutdown of an CN-Infra based applications. Startup & shutdown lifecycle
 is is depicted on following sequence diagram. More details can be found in:
-* [agent_core.go](agent_core.go)
-* [event_loop.go](event_loop.go)
+* [Start(), Stop()](agent_core.go)
+* [EventLoopWithInterrupt()](event_loop.go)
  
 ![plugin lifecycle](docs/imgs/plugin_lifecycle.png)
 
