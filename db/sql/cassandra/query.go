@@ -255,8 +255,10 @@ func updateStatement(cfName string, fields []string /*, opts Options*/) (stateme
 		} else {
 			first = false
 		}
-		buf.WriteString(fieldName)
-		buf.WriteString(` = ?`)
+		if fieldName != "ID" {
+			buf.WriteString(fieldName)
+			buf.WriteString(` = ?`)
+		}
 	}
 
 	return buf.String()

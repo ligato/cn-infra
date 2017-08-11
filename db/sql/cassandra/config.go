@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/gocql/gocql"
+	"github.com/willfaught/gockle"
 )
 
 // Config Configuration for Cassandra clients loaded from a configuration file
@@ -118,4 +119,8 @@ func CreateSessionFromConfig(config Config) (*gocql.Session, error) {
 // HostsAsString converts an array of hosts addresses into a comma separated string
 func HostsAsString(hostArr []string) string {
 	return strings.Join(hostArr, ",")
+}
+
+func NewGockleSession(s *gocql.Session) (session gockle.Session) {
+	return gockle.NewSession(s)
 }
