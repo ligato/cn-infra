@@ -1,7 +1,7 @@
 # HTTPmux
 
-The `HTTPmux` is a Plugin which allows other plugins to handle HTTP requests
-(see following diagram).
+The `HTTPmux` is a infrastructure Plugin which allows app plugins 
+to handle HTTP requests (see following diagram).
 
 ![http](../docs/imgs/http.png)
 
