@@ -42,12 +42,6 @@ Plugin Status can be PUSHed by a multiple plugins but there
 is posible PULL based approach when status check plugin
 periodically probes previously registered plugins.
 
-PUSH Plugin Status:
-![status check pull](../docs/imgs/status_check_pull.png)
-
-PULL Plugins Status - PROBING:
-![status check push](../docs/imgs/status_check_push.png)
-
 To retrieve the current status of a plugin from ETCD, get the 
 `/vnf-agent/<agent-label>/check/status/v1/plugin/<PLUGIN_NAME>` key, e.g. for GoVPP:
 
@@ -56,6 +50,12 @@ $ etcdctl get /vnf-agent/<agent-label>/check/status/v1/plugin/GOVPP
 /vnf-agent/<agent-label>/check/status/v1/plugin/GOVPP
 {"state":2,"last_change":1496322205,"last_update":1496322361,"error":"VPP disconnected"}
 ```
+
+PUSH Plugin Status:
+![status check pull](../docs/imgs/status_check_pull.png)
+
+PULL Plugins Status - PROBING:
+![status check push](../docs/imgs/status_check_push.png)
 
 
 [1]: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/
