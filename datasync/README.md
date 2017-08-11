@@ -18,7 +18,7 @@ Therefore, proper time/order of data resynchronization between plugins. The data
 initiates full data resync in the same order as the other plugins have been registered in Init().
   
 ## Watch data API
-Watch data API is used by app plugin (see following diagram) to:
+Watch data API is used by app plugin (see following diagram and the [example](examples/simple_watch)) to:
 1. Subscribe channels for particular data changes `WatchData()` 
 while being abstracted from a particular message source (data store, message bus or RPC)
 2. Process Full data RESYC (startup, for certain fault recovery) event reprocess whole data set.
@@ -39,8 +39,6 @@ This APIs defines two types of events that a plugin must be able to process:
    resync has completed. Each data change event contains both the
    previous and the new/current values for the data. The Data synchronization 
    is switched to optimized mode after successful FULL data RESYNC. 
-
-See the [example](examples/simple_watch)
 
 ## Publish data API
 
