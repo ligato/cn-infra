@@ -121,6 +121,7 @@ func HostsAsString(hostArr []string) string {
 	return strings.Join(hostArr, ",")
 }
 
+// NewGockleSession returns a new gockle Session
 func NewGockleSession(s *gocql.Session) (session gockle.Session) {
 	return gockle.NewSession(s)
 }

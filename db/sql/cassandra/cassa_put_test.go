@@ -90,3 +90,45 @@ func TestPut3_customTableSchema(t *testing.T) {
 	err := db.Put(sql.FieldEQ(&entity.ID), entity)
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
+
+// TestPut4_convenient is most convenient way of putting one entity to cassandra
+func TestPut4_convenient(t *testing.T) {
+	gomega.RegisterTestingT(t)
+
+	session := mockSession()
+	defer session.Close()
+	db := cassandra.NewBrokerUsingSession(session)
+
+	sqlStr, _, _ := cassandra.PutExpToString(sql.FieldEQ(&MyTweet.ID), MyTweet)
+	gomega.Expect(sqlStr).Should(gomega.BeEquivalentTo(
+		"UPDATE Tweet SET Text = ? WHERE ID = ?"))
+
+	mockExec(session, sqlStr, []interface{}{
+		myID,          //set ID
+		"hello world", //set Text
+		myID,          //where
+	})
+	err := db.Put(sql.FieldEQ(&MyTweet.ID), MyTweet)
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+}
+
+// TestPut5_EQ is most convenient way of putting one entity to cassandra
+func TestPut5_EQ(t *testing.T) {
+	gomega.RegisterTestingT(t)
+
+	session := mockSession()
+	defer session.Close()
+	db := cassandra.NewBrokerUsingSession(session)
+
+	sqlStr, _, _ := cassandra.PutExpToString(sql.FieldEQ(&MyTweet.ID), MyTweet)
+	gomega.Expect(sqlStr).Should(gomega.BeEquivalentTo(
+		"UPDATE Tweet SET Text = ? WHERE ID = ?"))
+
+	mockExec(session, sqlStr, []interface{}{
+		myID,          //set ID
+		"hello world", //set Text
+		myID,          //where
+	})
+	err := db.Put(sql.Field(&MyTweet.ID, sql.EQ(MyTweet.ID)), MyTweet)
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+}

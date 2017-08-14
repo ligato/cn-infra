@@ -22,14 +22,20 @@ import (
 	"github.com/ligato/cn-infra/db/sql/cassandra"
 	"github.com/maraino/go-mock"
 	"github.com/willfaught/gockle"
+	"github.com/satori/go.uuid"
 )
 
 // test data
 var JamesBond = &User{ID: "James Bond", FirstName: "James", LastName: "Bond"}
 var PeterBond = &User{ID: "Peter Bond", FirstName: "Peter", LastName: "Bond"}
+var myID uuid.UUID = uuid.NewV1()
+var MyTweet = &Tweet{ID: myID, Text: "hello"}
 
 // instance that represents users table (used in queries to define columns)
 var UserTable = &User{}
+
+// instance that represents tweets table (used in queries to define columns)
+var TweetTable = &Tweet{}
 
 //var UsersTypeInfo = map[string /*FieldName*/ ]gocql.TypeInfo{
 //runtimeutils.GetFunctionName(UserTable.GetLastName): gocql.NewNativeType(0x03, gocql.TypeVarchar, ""),
@@ -43,6 +49,12 @@ type User struct {
 	LastName          string `cql:"last_name"`
 	ExportedButNotCql string `cql:"-"`
 	notExported       string
+}
+
+// Tweet structure using uuid for testing purposes
+type Tweet struct {
+	ID 		uuid.UUID
+	Text 	string
 }
 
 // CustomizedTablenameAndSchema implements sql.TableName, sql.SchemaName interfaces
