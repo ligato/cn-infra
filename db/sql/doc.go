@@ -12,5 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package sql is an abstraction of data store that supports SQL like query language.
+// Package sql is an abstraction of data store that supports SQL like query language
+// and defines Broker & Watcher APIs used by user app plugins.
 package sql

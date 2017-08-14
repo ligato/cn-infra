@@ -1,13 +1,17 @@
-# StatusCheck Plugin
+# Concept
 
-The `statuscheck` plugin monitors the status of the agent and its plugins
-and exposes it to external clients via ETCD and HTTP.
+The `statuscheck` infrastructure plugin monitors overall status of the agent 
+and form partial statuses of agents plugins.
+The status is exposed to external clients via [ETCD - datasync](../datasync) 
+and [HTTP](../httpmux) (see following diagram).
 
-**API**
+![status check](../docs/imgs/status_check.png)
 
-Please see [doc.go](doc.go) for API documentation.
+For more detailed description see the godoc (especially [doc.go](doc.go)).
 
-**Overall Agent Status**
+## Overall Agent Status**
+
+Overall Agent Status is aggregated from all Plugins Status (logical AND foreach Plugin Status success/error).
 
 To retrieve the current overall status of the agent from ETCD, get the 
 `/vnf-agent/<agent-label>/check/status` key:
@@ -32,7 +36,11 @@ option of the agent, e.g.:
 $ vpp-agent -http-port 9090
 ```
 
-**Plugins Status**
+## Plugins Status
+
+Plugin Status can be PUSHed by a multiple plugins but there  
+is posible PULL based approach when status check plugin
+periodically probes previously registered plugins.
 
 To retrieve the current status of a plugin from ETCD, get the 
 `/vnf-agent/<agent-label>/check/status/v1/plugin/<PLUGIN_NAME>` key, e.g. for GoVPP:
@@ -43,8 +51,11 @@ $ etcdctl get /vnf-agent/<agent-label>/check/status/v1/plugin/GOVPP
 {"state":2,"last_change":1496322205,"last_update":1496322361,"error":"VPP disconnected"}
 ```
 
-**Dependencies**
+### PUSH Plugin Status:
+![status check pull](../docs/imgs/status_check_pull.png)
 
-- [HTTPmux](../httpmux)
+### PULL Plugins Status - PROBING:
+![status check push](../docs/imgs/status_check_push.png)
+
 
 [1]: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/

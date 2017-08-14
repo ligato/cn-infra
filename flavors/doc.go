@@ -12,18 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cassandra
-
-import (
-	"github.com/ligato/cn-infra/db/sql"
-)
-
-// NewTxn creates a new Data Broker transaction. A transaction can
-// hold multiple operations that are all committed to the data
-// store together. After a transaction has been created, one or
-// more operations (put or delete) can be added to the transaction
-// before it is committed.
-func (pdb *BrokerCassa) NewTxn() sql.Txn {
-	// TODO Cassandra Batch/TXN
-	panic("not implemented")
-}
+// Package flavors contains reusable cn-infra flavors (collection of plugins
+// with initialized dependencies):
+// - generic flavor is prepared for minimalistic cn-infra based applications;
+// - etcd + kafka flavor extends generic flavor and is meant for applications
+//   that read northbound configuration from ETCD and publish events to Kafka.
+package flavors

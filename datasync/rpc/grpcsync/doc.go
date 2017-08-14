@@ -13,7 +13,9 @@
 // limitations under the License.
 
 // Package grpcsync is the implementation of datasync_api.go over GRPC optimized transport. See the definition
-// of the service in ../msg package). This implementation is special (comparing to dbsync or bussync)
+// of the service in ../../syncbase/msg package). This implementation is special (comparing to dbsync or msgsync)
 // because it does not use any intermediate persistence between the client & server. Therefore the client does remote
 // calls to each individual server/agent instance (and needs to know its IP address & port).
+//
+//
 package grpcsync

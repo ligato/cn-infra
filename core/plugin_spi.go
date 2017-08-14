@@ -12,18 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cassandra
+package core
 
-import (
-	"github.com/ligato/cn-infra/db/sql"
-)
+// Plugin interface defines plugin's basic life-cycle methods.
+type Plugin interface {
+	// Init is called in the agent startup phase.
+	Init() error
+	// Close is called in the agent cleanup phase.
+	Close() error
+}
 
-// NewTxn creates a new Data Broker transaction. A transaction can
-// hold multiple operations that are all committed to the data
-// store together. After a transaction has been created, one or
-// more operations (put or delete) can be added to the transaction
-// before it is committed.
-func (pdb *BrokerCassa) NewTxn() sql.Txn {
-	// TODO Cassandra Batch/TXN
-	panic("not implemented")
+// PostInit interface define optional method for plugins with complex initialization.
+type PostInit interface {
+	// AfterInit is called once Init() of all plugins have returned without error.
+	AfterInit() error
 }
