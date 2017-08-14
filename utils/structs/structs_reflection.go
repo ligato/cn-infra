@@ -15,9 +15,9 @@
 package structs
 
 import (
-	"github.com/satori/go.uuid"
 	"reflect"
 	"strings"
+	"github.com/gocql/gocql"
 )
 
 // FindField compares the pointers (pointerToAField with all fields in pointerToAStruct)
@@ -124,23 +124,23 @@ func ListExportedFieldsPtrs(val interface{}, predicates ...ExportedPredicate) []
 			if field.IsNil() {
 				p := reflect.New(field.Type())
 				field.Set(p.Elem())
-				if field.Type() != reflect.TypeOf(uuid.UUID{}) {
+				if field.Type() != reflect.TypeOf(gocql.UUID{}) {
 					ptrs = append(ptrs, field.Addr().Interface())
 				}
 			} else {
-				if field.Type() != reflect.TypeOf(uuid.UUID{}) {
+				if field.Type() != reflect.TypeOf(gocql.UUID{}) {
 					ptrs = append(ptrs, field.Interface())
 				}
 			}
 		default:
 			if field.CanAddr() {
-				if field.Type() != reflect.TypeOf(uuid.UUID{}) {
+				if field.Type() != reflect.TypeOf(gocql.UUID{}) {
 					ptrs = append(ptrs, field.Addr().Interface())
 				}
 			} else if field.IsValid() {
-				if field.Type() != reflect.TypeOf(uuid.UUID{}) {
+				if field.Type() != reflect.TypeOf(gocql.UUID{}) {
 					ptrs = append(ptrs, field.Interface())
-			}
+				}
 			} else {
 				panic("invalid field")
 			}
