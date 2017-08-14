@@ -134,9 +134,13 @@ func ListExportedFieldsPtrs(val interface{}, predicates ...ExportedPredicate) []
 			}
 		default:
 			if field.CanAddr() {
-				ptrs = append(ptrs, field.Addr().Interface())
+				if field.Type() != reflect.TypeOf(uuid.UUID{}) {
+					ptrs = append(ptrs, field.Addr().Interface())
+				}
 			} else if field.IsValid() {
-				ptrs = append(ptrs, field.Interface())
+				if field.Type() != reflect.TypeOf(uuid.UUID{}) {
+					ptrs = append(ptrs, field.Interface())
+			}
 			} else {
 				panic("invalid field")
 			}
