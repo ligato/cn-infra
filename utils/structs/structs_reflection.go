@@ -15,6 +15,7 @@
 package structs
 
 import (
+	"github.com/satori/go.uuid"
 	"reflect"
 	"strings"
 )
@@ -123,9 +124,13 @@ func ListExportedFieldsPtrs(val interface{}, predicates ...ExportedPredicate) []
 			if field.IsNil() {
 				p := reflect.New(field.Type())
 				field.Set(p.Elem())
-				ptrs = append(ptrs, field.Addr().Interface())
+				if field.Type() != reflect.TypeOf(uuid.UUID{}) {
+					ptrs = append(ptrs, field.Addr().Interface())
+				}
 			} else {
-				ptrs = append(ptrs, field.Interface())
+				if field.Type() != reflect.TypeOf(uuid.UUID{}) {
+					ptrs = append(ptrs, field.Interface())
+				}
 			}
 		default:
 			if field.CanAddr() {
