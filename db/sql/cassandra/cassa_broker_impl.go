@@ -15,10 +15,9 @@
 package cassandra
 
 import (
-	"github.com/mpundlik/cn-infra/db/sql"
-	"github.com/mpundlik/cn-infra/utils/structs"
+	"github.com/ligato/cn-infra/db/sql"
+	"github.com/ligato/cn-infra/utils/structs"
 	"github.com/willfaught/gockle"
-	"github.com/prometheus/common/log"
 )
 
 // NewBrokerUsingSession is a constructor. Use it like this:
@@ -56,8 +55,6 @@ func (pdb *BrokerCassa) Put(where sql.Expression, pointerToAStruct interface{} /
 	if err != nil {
 		return err
 	}
-	log.Infof("statement = %v", statement)
-	log.Infof("bindings = %v", bindings)
 	return pdb.session.Exec(statement, bindings...)
 }
 

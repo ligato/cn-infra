@@ -21,8 +21,8 @@ import (
 	r "reflect"
 	"strings"
 
-	"github.com/mpundlik/cn-infra/db/sql"
-	"github.com/mpundlik/cn-infra/utils/structs"
+	"github.com/ligato/cn-infra/db/sql"
+	"github.com/ligato/cn-infra/utils/structs"
 )
 
 // PutExpToString converts expression to string & slice of bindings
