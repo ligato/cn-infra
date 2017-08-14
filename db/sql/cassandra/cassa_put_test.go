@@ -20,6 +20,7 @@ import (
 	"github.com/ligato/cn-infra/db/sql"
 	"github.com/ligato/cn-infra/db/sql/cassandra"
 	"github.com/onsi/gomega"
+	"github.com/prometheus/common/log"
 )
 
 // TestPut1_convenient is most convenient way of putting one entity to cassandra
@@ -99,7 +100,12 @@ func TestPut4_convenient(t *testing.T) {
 	defer session.Close()
 	db := cassandra.NewBrokerUsingSession(session)
 
-	sqlStr, _, _ := cassandra.PutExpToString(sql.FieldEQ(&MyTweet.ID), MyTweet)
+	sqlStr, bindings, err1 := cassandra.PutExpToString(sql.FieldEQ(&MyTweet.ID), MyTweet)
+
+	log.Infof("sqlStr=%v", sqlStr)
+	log.Infof("bindings=%v", bindings)
+	log.Infof("err1=%v", err1)
+
 	gomega.Expect(sqlStr).Should(gomega.BeEquivalentTo(
 		"UPDATE Tweet SET Text = ? WHERE ID = ?"))
 
@@ -108,8 +114,8 @@ func TestPut4_convenient(t *testing.T) {
 		"hello world", //set Text
 		myID,          //where
 	})
-	err := db.Put(sql.FieldEQ(&MyTweet.ID), MyTweet)
-	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+	err2 := db.Put(sql.FieldEQ(&MyTweet.ID), MyTweet)
+	gomega.Expect(err2).ShouldNot(gomega.HaveOccurred())
 }
 
 // TestPut5_EQ is most convenient way of putting one entity to cassandra
