@@ -77,8 +77,6 @@ func ListExportedFieldsWithVals(val interface{}, predicates ...ExportedPredicate
 		}
 	}
 
-	//TODO: to be fixed for UUID
-	//values = ListExportedFieldsPtrs(val, false, predicates...)
 	return fields, values
 }
 
@@ -126,22 +124,26 @@ func ListExportedFieldsPtrs(val interface{}, filterPK bool, predicates ...Export
 			if field.IsNil() {
 				p := reflect.New(field.Type())
 				field.Set(p.Elem())
-				//if field.Type() != reflect.TypeOf(uuid.UUID{}) && filterPK {
 				ptrs = append(ptrs, field.Addr().Interface())
-				//}
 			} else {
-				//if field.Type() != reflect.TypeOf(uuid.UUID{}) && filterPK {
 				ptrs = append(ptrs, field.Interface())
-				//}
 			}
 		default:
 			if field.CanAddr() {
-				if field.Type() != reflect.TypeOf(uuid.UUID{}) && filterPK {
+				if field.Type() != reflect.TypeOf(uuid.UUID{}) {
 					ptrs = append(ptrs, field.Addr().Interface())
+				} else {
+					if !filterPK {
+						ptrs = append(ptrs, field.Addr().Interface())
+					}
 				}
 			} else if field.IsValid() {
-				if field.Type() != reflect.TypeOf(uuid.UUID{}) && filterPK {
+				if field.Type() != reflect.TypeOf(uuid.UUID{}) {
 					ptrs = append(ptrs, field.Interface())
+				} else {
+					if !filterPK {
+						ptrs = append(ptrs, field.Interface())
+					}
 				}
 			} else {
 				panic("invalid field")

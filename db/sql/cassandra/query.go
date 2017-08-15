@@ -250,7 +250,7 @@ func updateStatement(cfName string, fields []string /*, opts Options*/) (stateme
 	buf.WriteString("SET ")
 	first := true
 	for _, fieldName := range fields {
-		if fieldName != "ID" {
+		if fieldName != "id" {
 			if !first {
 				buf.WriteString(", ")
 			} else {

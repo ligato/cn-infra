@@ -29,9 +29,8 @@ import (
 var JamesBond = &User{ID: "James Bond", FirstName: "James", LastName: "Bond"}
 var PeterBond = &User{ID: "Peter Bond", FirstName: "Peter", LastName: "Bond"}
 
-//var myID gocql.UUID = gocql.TimeUUID()
 var myID uuid.UUID = uuid.NewV1()
-var MyTweet = &Tweet{ID: myID, Text: "hello"}
+var MyTweet = &Tweet{ID: myID.String(), Text: "hello"}
 
 // instance that represents users table (used in queries to define columns)
 var UserTable = &User{}
@@ -55,9 +54,8 @@ type User struct {
 
 // Tweet structure using uuid for testing purposes
 type Tweet struct {
-	ID uuid.UUID
-	//ID 		gocql.UUID
-	Text string
+	ID   string `cql:"id"`
+	Text string `cql:"text"`
 }
 
 // CustomizedTablenameAndSchema implements sql.TableName, sql.SchemaName interfaces

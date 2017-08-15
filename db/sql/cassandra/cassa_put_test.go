@@ -32,7 +32,7 @@ func TestPut1_convenient(t *testing.T) {
 
 	sqlStr, _, _ := cassandra.PutExpToString(sql.FieldEQ(&JamesBond.ID), JamesBond)
 	gomega.Expect(sqlStr).Should(gomega.BeEquivalentTo(
-		"UPDATE User SET id = ?, first_name = ?, last_name = ? WHERE id = ?"))
+		"UPDATE User SET first_name = ?, last_name = ? WHERE id = ?"))
 
 	mockExec(session, sqlStr, []interface{}{
 		"James Bond", //set ID
@@ -54,7 +54,7 @@ func TestPut2_EQ(t *testing.T) {
 
 	sqlStr, _, _ := cassandra.PutExpToString(sql.FieldEQ(&JamesBond.ID), JamesBond)
 	gomega.Expect(sqlStr).Should(gomega.BeEquivalentTo(
-		"UPDATE User SET id = ?, first_name = ?, last_name = ? WHERE id = ?"))
+		"UPDATE User SET first_name = ?, last_name = ? WHERE id = ?"))
 
 	mockExec(session, sqlStr, []interface{}{
 		"James Bond", //set ID
@@ -79,7 +79,7 @@ func TestPut3_customTableSchema(t *testing.T) {
 
 	sqlStr, _, _ := cassandra.PutExpToString(sql.FieldEQ(&entity.ID), entity)
 	gomega.Expect(sqlStr).Should(gomega.BeEquivalentTo(
-		"UPDATE my_custom_schema.my_custom_name SET id = ?, last_name = ? WHERE id = ?"))
+		"UPDATE my_custom_schema.my_custom_name SET last_name = ? WHERE id = ?"))
 
 	mockExec(session, sqlStr, []interface{}{
 		"James Bond", //set ID
@@ -102,7 +102,7 @@ func TestPut4_convenient(t *testing.T) {
 	sqlStr, _, _ := cassandra.PutExpToString(sql.FieldEQ(&MyTweet.ID), MyTweet)
 
 	gomega.Expect(sqlStr).Should(gomega.BeEquivalentTo(
-		"UPDATE Tweet SET Text = ? WHERE ID = ?"))
+		"UPDATE Tweet SET text = ? WHERE id = ?"))
 
 	mockExec(session, sqlStr, []interface{}{
 		myID,          //set ID
@@ -123,7 +123,7 @@ func TestPut5_EQ(t *testing.T) {
 
 	sqlStr, _, _ := cassandra.PutExpToString(sql.FieldEQ(&MyTweet.ID), MyTweet)
 	gomega.Expect(sqlStr).Should(gomega.BeEquivalentTo(
-		"UPDATE Tweet SET Text = ? WHERE ID = ?"))
+		"UPDATE Tweet SET text = ? WHERE id = ?"))
 
 	mockExec(session, sqlStr, []interface{}{
 		myID,          //set ID
