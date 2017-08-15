@@ -6,4 +6,4 @@ uses this skeleton.
 **API**
 
 Implements the interface:
-- [`KvPlugin`](../plugin.go)
+- [`KvPlugin`](../plugin_api.go)
