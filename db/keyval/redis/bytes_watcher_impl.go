@@ -96,14 +96,16 @@ func (db *BytesConnectionRedis) Watch(respChan chan keyval.BytesWatchResp, keys 
 	if db.closed {
 		return fmt.Errorf("Watch(%v) called on a closed connection", keys)
 	}
-	return watch(db, respChan, db.closeCh, nil, keys...)
+	return watch(db, respChan, db.closeCh, nil, nil, keys...)
 }
 
-func watch(db *BytesConnectionRedis, respChan chan<- keyval.BytesWatchResp,
-	closeChan <-chan struct{}, trimPrefix func(key string) string, keys ...string) error {
-
+func watch(db *BytesConnectionRedis, respChan chan<- keyval.BytesWatchResp, closeChan <-chan struct{},
+	addPrefix func(key string) string, trimPrefix func(key string) string, keys ...string) error {
 	patterns := make([]string, len(keys))
 	for i, k := range keys {
+		if addPrefix != nil {
+			k = addPrefix(k)
+		}
 		patterns[i] = keySpaceEventPrefix + wildcard(k)
 	}
 	pubSub := db.client.PSubscribe(patterns...)
@@ -177,9 +179,5 @@ func (pdb *BytesBrokerWatcherRedis) Watch(respChan chan keyval.BytesWatchResp, k
 	if pdb.delegate.closed {
 		return fmt.Errorf("Watch(%v) called on a closed connection", keys)
 	}
-	prefixedKeys := make([]string, len(keys))
-	for i, k := range keys {
-		prefixedKeys[i] = pdb.prefix + k
-	}
-	return watch(pdb.delegate, respChan, pdb.closeCh, pdb.trimPrefix, prefixedKeys...)
+	return watch(pdb.delegate, respChan, pdb.closeCh, pdb.addPrefix, pdb.trimPrefix, keys...)
 }

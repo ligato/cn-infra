@@ -64,11 +64,6 @@ func TestMain(m *testing.M) {
 }
 
 func createMiniRedisConnection() {
-	for k, v := range keyValues {
-		miniRedis.Set(k, v)
-	}
-	miniRedis.Set("bytes", "bytes")
-
 	clientConfig := ClientConfig{
 		Password:     "",
 		DialTimeout:  0,
@@ -135,7 +130,13 @@ func createMiniRedisConnection() {
 	})
 	// client = &MockGoredisClient{}
 	bytesConn, _ = NewBytesConnection(client, logroot.Logger())
-	bytesBrokerWatcher = bytesConn.NewBrokerWatcher("")
+	bytesBrokerWatcher = bytesConn.NewBrokerWatcher("unit_test-")
+
+	for k, v := range keyValues {
+		miniRedis.Set(k, v)
+		bytesBrokerWatcher.Put(k, []byte(v))
+	}
+	miniRedis.Set("bytes", "bytes")
 }
 
 func TestConfig(t *testing.T) {
@@ -244,30 +245,47 @@ func TestBrokerWatcher(t *testing.T) {
 func TestPut(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
-	err := bytesBrokerWatcher.Put("keyWest", []byte(keyValues["keyWest"]))
+	err := bytesBrokerWatcher.Put("abc", []byte("123"))
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	err = bytesBrokerWatcher.Put("keyWest", []byte(keyValues["keyWest"]), keyval.WithTTL(ttl))
+	err = bytesBrokerWatcher.Put("abcWithTTL", []byte("123"), keyval.WithTTL(ttl))
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
 func TestGet(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
-	val, found, _, err := bytesBrokerWatcher.GetValue("keyWest")
-	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-	gomega.Expect(found).Should(gomega.BeTrue())
-	gomega.Expect(val).Should(gomega.Equal([]byte(keyValues["keyWest"])))
-
-	val, found, _, err = bytesBrokerWatcher.GetValue("bytes")
+	val, found, _, err := bytesConn.GetValue("bytes")
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	gomega.Expect(found).Should(gomega.BeTrue())
 	gomega.Expect(val).ShouldNot(gomega.BeNil())
+
+	for k, v := range keyValues {
+		val, found, _, err = bytesBrokerWatcher.GetValue(k)
+		gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+		gomega.Expect(found).Should(gomega.BeTrue())
+		gomega.Expect(val).Should(gomega.Equal([]byte(v)))
+
+	}
 
 	val, found, _, err = bytesBrokerWatcher.GetValue("nil")
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	gomega.Expect(found).Should(gomega.BeFalse())
 	gomega.Expect(val).Should(gomega.BeNil())
+}
+
+func TestListKeys(t *testing.T) {
+	gomega.RegisterTestingT(t)
+
+	keys, err := bytesBrokerWatcher.ListKeys("key")
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+	for {
+		k, _, last := keys.GetNext()
+		if last {
+			break
+		}
+		gomega.Expect(k).Should(gomega.SatisfyAny(gomega.BeEquivalentTo("keyWest"), gomega.BeEquivalentTo("keyMap")))
+	}
 }
 
 func TestListValues(t *testing.T) {
@@ -298,17 +316,47 @@ func TestListValues(t *testing.T) {
 	}
 }
 
-func TestListKeys(t *testing.T) {
+func TestKeyIterator(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
-	keys, err := bytesBrokerWatcher.ListKeys("key")
+	prefix := "KeyIterator-"
+	max := 100
+	for i := 1; i <= max; i++ {
+		key := fmt.Sprintf("%s%d", prefix, i)
+		bytesConn.Put(key, []byte(key))
+	}
+	iterator, err := bytesConn.ListKeys(prefix)
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+	count := 0
 	for {
-		k, _, last := keys.GetNext()
+		_, _, last := iterator.GetNext()
 		if last {
+			gomega.Expect(count).Should(gomega.Equal(max))
 			break
 		}
-		gomega.Expect(k).Should(gomega.SatisfyAny(gomega.BeEquivalentTo("keyWest"), gomega.BeEquivalentTo("keyMap")))
+		count++
+	}
+}
+
+func TestKeyValIterator(t *testing.T) {
+	gomega.RegisterTestingT(t)
+
+	prefix := "KeyValIterator-"
+	max := 100
+	for i := 1; i <= max; i++ {
+		key := fmt.Sprintf("%s%d", prefix, i)
+		bytesConn.Put(key, []byte(key))
+	}
+	iterator, err := bytesConn.ListValues(prefix)
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+	count := 0
+	for {
+		_, last := iterator.GetNext()
+		if last {
+			gomega.Expect(count).Should(gomega.Equal(max))
+			break
+		}
+		count++
 	}
 }
 

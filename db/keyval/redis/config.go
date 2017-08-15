@@ -98,11 +98,11 @@ type Client interface {
 
 // ClientConfig Configuration common to all types of Redis clients
 type ClientConfig struct {
-	Password     string        `json:"password"`      // password, if required
-	DialTimeout  time.Duration `json:"dial-timeout"`  // timeout for connection operations, in seconds
-	ReadTimeout  time.Duration `json:"read-timeout"`  // timeout for read operations, in seconds
-	WriteTimeout time.Duration `json:"write-timeout"` // timeout for write operations, in seconds
-	Pool         PoolConfig    `json:"pool"`          // connection pool configuration
+	Password     string        `json:"password"`      // Password for authentication, if required
+	DialTimeout  time.Duration `json:"dial-timeout"`  // Dial timeout for establishing new connections. Default is 5 seconds.
+	ReadTimeout  time.Duration `json:"read-timeout"`  // Timeout for socket reads. If reached, commands will fail with a timeout instead of blocking. Default is 3 seconds.
+	WriteTimeout time.Duration `json:"write-timeout"` // Timeout for socket writes. If reached, commands will fail with a timeout instead of blocking. Default is ReadTimeout.
+	Pool         PoolConfig    `json:"pool"`          // Connection pool configuration
 }
 
 // NodeConfig Node client configuration

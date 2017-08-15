@@ -70,7 +70,7 @@ const (
 	flightSlotCount    = 5
 	flightStatusSize   = 2*flightSlotCount + hangarSlotCount + 1
 	flightIDFormat     = "%s%02d"
-	hangarKeyFormat    = "%2s%2d:%d"
+	hangarKeyFormat    = "%2s%02d:%d"
 	columnSep          = "      "
 	redisPause         = 0.1
 )

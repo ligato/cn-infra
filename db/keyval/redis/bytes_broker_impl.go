@@ -21,7 +21,6 @@ import (
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/utils/safeclose"
 
-	"errors"
 	"strings"
 
 	"fmt"
@@ -40,16 +39,20 @@ type BytesConnectionRedis struct {
 	closed bool
 }
 
-// bytesKeyValIterator is an iterator returned by ListValues call
-type bytesKeyValIterator struct {
-	index  int
-	values []*bytesKeyVal
-}
-
 // bytesKeyIterator is an iterator returned by ListKeys call
 type bytesKeyIterator struct {
-	index int
-	keys  []string
+	index      int
+	keys       []string
+	db         *BytesConnectionRedis
+	pattern    string
+	cursor     uint64
+	trimPrefix func(key string) string
+}
+
+// bytesKeyValIterator is an iterator returned by ListValues call
+type bytesKeyValIterator struct {
+	values [][]byte
+	bytesKeyIterator
 }
 
 // bytesKeyVal represents a single key-value pair
@@ -90,7 +93,7 @@ func (db *BytesConnectionRedis) NewTxn() keyval.BytesTxn {
 	}
 	db.Debug("NewTxn()")
 
-	return &Txn{db: db, ops: []op{}}
+	return &Txn{db: db, ops: []op{}, addPrefix: nil}
 }
 
 // Put sets the key/value in Redis data store. Replaces value if the key already exists.
@@ -131,56 +134,202 @@ func (db *BytesConnectionRedis) GetValue(key string) (data []byte, found bool, r
 	return data, true, 0, nil
 }
 
-// ListValues lists values for all the keys that start with the given match string.
-func (db *BytesConnectionRedis) ListValues(match string) (keyval.BytesKeyValIterator, error) {
-	if db.closed {
-		return nil, fmt.Errorf("ListValues(%s) called on a closed connection", match)
-	}
-	db.Debugf("ListValues(%s)", match)
-
-	keys, err := scanKeys(db, match)
-	if err != nil {
-		return nil, err
-	}
-
-	values, err := listValues(db, keys)
-	if err != nil {
-		return nil, err
-	}
-
-	kvs := make([]*bytesKeyVal, len(values))
-	for i, val := range values {
-		kvs[i] = &bytesKeyVal{keys[i], val}
-	}
-
-	return &bytesKeyValIterator{values: kvs}, nil
-}
-
 // ListKeys returns an iterator used to traverse keys that start with the given match string.
 func (db *BytesConnectionRedis) ListKeys(match string) (keyval.BytesKeyIterator, error) {
 	if db.closed {
 		return nil, fmt.Errorf("ListKeys(%s) called on a closed connection", match)
 	}
-	db.Debugf("ListKeys(%s)", match)
+	return listKeys(db, match, nil, nil)
+}
 
-	keys, err := scanKeys(db, match)
+// ListValues lists values for all the keys that start with the given match string.
+func (db *BytesConnectionRedis) ListValues(match string) (keyval.BytesKeyValIterator, error) {
+	if db.closed {
+		return nil, fmt.Errorf("ListValues(%s) called on a closed connection", match)
+	}
+	return listValues(db, match, nil, nil)
+}
+
+// Delete deletes all the keys that start with the given match string.
+func (db *BytesConnectionRedis) Delete(key string, opts ...keyval.DelOption) (found bool, err error) {
+	if db.closed {
+		return false, fmt.Errorf("Delete(%s) called on a closed connection", key)
+	}
+	db.Debugf("Delete(%s)", key)
+
+	keysToDelete := []string{}
+
+	var keyIsPrefix bool
+	for _, o := range opts {
+		if _, ok := o.(*keyval.WithPrefixOpt); ok {
+			keyIsPrefix = true
+		}
+	}
+	if keyIsPrefix {
+		iterator, err := db.ListKeys(key)
+		if err != nil {
+			return false, err
+		}
+		for {
+			k, _, last := iterator.GetNext()
+			if last {
+				break
+			}
+			keysToDelete = append(keysToDelete, k)
+		}
+		if len(keysToDelete) == 0 {
+			return false, nil
+		}
+		db.Debugf("Delete(%s): deleting %v", key, keysToDelete)
+	} else {
+		keysToDelete = append(keysToDelete, key)
+	}
+
+	intCmd := db.client.Del(keysToDelete...)
+	if intCmd.Err() != nil {
+		return false, fmt.Errorf("Delete(%s) failed: %s", key, intCmd.Err())
+	}
+	return (intCmd.Val() != 0), nil
+}
+
+// GetNext returns the next item from the iterator.
+// If the iterator has reached the last item previously, lastReceived is set to true.
+func (it *bytesKeyIterator) GetNext() (key string, rev int64, lastReceived bool) {
+	if it.index >= len(it.keys) {
+		if it.cursor == 0 {
+			return "", 0, true
+		}
+		var err error
+		it.keys, it.cursor, err = scanKeys(it.db, it.pattern, it.cursor)
+		if err != nil {
+			it.db.Errorf("GetNext() failed: %s (pattern %s)", err.Error(), it.pattern)
+			return "", 0, true
+		}
+		if len(it.keys) == 0 {
+			return "", 0, it.cursor == 0
+		}
+		it.index = 0
+	}
+
+	key = it.keys[it.index]
+	if it.trimPrefix != nil {
+		key = it.trimPrefix(key)
+	}
+	it.index++
+
+	return key, 0, false
+}
+
+// GetNext returns the next item from the iterator.
+// If the iterator has reached the last item previously, lastReceived set to true.
+func (it *bytesKeyValIterator) GetNext() (kv keyval.BytesKeyVal, lastReceived bool) {
+	if it.index >= len(it.values) {
+		if it.cursor == 0 {
+			return nil, true
+		}
+		var err error
+		it.keys, it.cursor, err = scanKeys(it.db, it.pattern, it.cursor)
+		if err != nil {
+			it.db.Errorf("GetNext() failed: %s (pattern %s)", err.Error(), it.pattern)
+			return nil, true
+		}
+		if len(it.keys) == 0 {
+			return nil, it.cursor == 0
+		}
+		it.values, err = getValues(it.db, it.keys)
+		if err != nil {
+			it.db.Errorf("GetNext() failed: %s (pattern %s)", err.Error(), it.pattern)
+			return nil, true
+		}
+		it.index = 0
+	}
+
+	key := it.keys[it.index]
+	if it.trimPrefix != nil {
+		key = it.trimPrefix(key)
+	}
+
+	kv = &bytesKeyVal{key, it.values[it.index]}
+	it.index++
+
+	return kv, false
+}
+
+// GetValue returns the value of the pair
+func (kv *bytesKeyVal) GetValue() []byte {
+	return kv.value
+}
+
+// GetKey returns the key of the pair
+func (kv *bytesKeyVal) GetKey() string {
+	return kv.key
+}
+
+// GetRevision returns the revision associated with the pair
+func (kv *bytesKeyVal) GetRevision() int64 {
+	return 0
+}
+
+func listKeys(db *BytesConnectionRedis, match string,
+	addPrefix func(key string) string, trimPrefix func(key string) string) (keyval.BytesKeyIterator, error) {
+	pattern := match
+	if addPrefix != nil {
+		pattern = addPrefix(pattern)
+	}
+	pattern = wildcard(pattern)
+	db.Debugf("listKeys(%s): pattern %s", match, pattern)
+
+	keys, cursor, err := scanKeys(db, pattern, 0)
 	if err != nil {
 		return nil, err
 	}
-	return &bytesKeyIterator{keys: keys}, nil
+	return &bytesKeyIterator{
+		index:      0,
+		keys:       keys,
+		db:         db,
+		pattern:    pattern,
+		cursor:     cursor,
+		trimPrefix: trimPrefix}, nil
 }
 
-// ListValuesRange returns an iterator used to traverse values stored under the provided key.
-// TODO: Not in BytesBroker interface
-/*
-func (db *BytesConnectionRedis) ListValuesRange(fromPrefix string, toPrefix string) (keyval.BytesKeyValIterator, error) {
-	db.Panic("Not implemented")
-	return nil, nil
+func listValues(db *BytesConnectionRedis, match string,
+	addPrefix func(key string) string, trimPrefix func(key string) string) (keyval.BytesKeyValIterator, error) {
+	keyIterator, err := listKeys(db, match, addPrefix, trimPrefix)
+	if err != nil {
+		return nil, err
+	}
+	bkIterator := keyIterator.(*bytesKeyIterator)
+	values, err := getValues(db, bkIterator.keys)
+	if err != nil {
+		return nil, err
+	}
+	return &bytesKeyValIterator{
+		values:           values,
+		bytesKeyIterator: *bkIterator}, nil
 }
-*/
 
-func listValues(db *BytesConnectionRedis, keys []string) (values [][]byte, err error) {
-	db.Debugf("listValues(%v)", keys)
+func scanKeys(db *BytesConnectionRedis, pattern string, cursor uint64) (keys []string, next uint64, err error) {
+	for {
+		// count == 0 defaults to Redis default. See https://redis.io/commands/scan.
+		keys, next, err = db.client.Scan(cursor, pattern, 0).Result()
+		if err != nil {
+			db.Errorf("Scan(%s) failed: %s", pattern, err)
+			return keys, next, err
+		}
+		if keys == nil {
+			keys = []string{}
+		}
+		count := len(keys)
+		if count > 0 || next == 0 {
+			db.Debugf("scanKeys(%s): got %d keys @ cursor %d (next cursor %d)", pattern, count, cursor, next)
+			return keys, next, nil
+		}
+		cursor = next
+	}
+}
+
+func getValues(db *BytesConnectionRedis, keys []string) (values [][]byte, err error) {
+	db.Debugf("getValues(%v)", keys)
 
 	if len(keys) == 0 {
 		return [][]byte{}, nil
@@ -205,118 +354,16 @@ func listValues(db *BytesConnectionRedis, keys []string) (values [][]byte, err e
 	return values, nil
 }
 
-func scanKeys(db *BytesConnectionRedis, match string) (keys []string, err error) {
-	pattern := wildcard(match)
-	db.Debugf("scanKeys(%s): pattern %s", match, pattern)
-
-	// TODO: goredis.ClusterClient.Scan() doesn't always return keys (bug?)
-	keys = []string{}
-	var cursor uint64
-	for {
-		page, next, err := db.client.Scan(cursor, pattern, 10).Result()
-		if err != nil {
-			return nil, fmt.Errorf("Scan(%s) failed: %s", pattern, err)
-		}
-		if db.GetLevel() == logging.DebugLevel {
-			db.Debugf("Scan(%s): got %d keys @ cursor %d (next cursor %d)", pattern, len(page), cursor, next)
-		}
-		keys = append(keys, page...)
-		if next == 0 {
-			if db.GetLevel() == logging.DebugLevel {
-				db.Debugf("Scan(%s): got total %d keys", pattern, len(keys))
-			}
-			break
-		}
-		cursor = next
-	}
-	return keys, nil
+// ListValuesRange returns an iterator used to traverse values stored under the provided key.
+// TODO: Not in BytesBroker interface
+/*
+func (db *BytesConnectionRedis) ListValuesRange(fromPrefix string, toPrefix string) (keyval.BytesKeyValIterator, error) {
+	db.Panic("Not implemented")
+	return nil, nil
 }
+*/
 
-const redisWildcardChars = "*?[]"
-
-func wildcard(match string) string {
-	containsWildcard := strings.ContainsAny(match, redisWildcardChars)
-	if !containsWildcard {
-		return match + "*" //prefix
-	}
-	return match
-}
-
-// Delete deletes all the keys that start with the given match string.
-func (db *BytesConnectionRedis) Delete(key string, opts ...keyval.DelOption) (found bool, err error) {
-	if db.closed {
-		return false, fmt.Errorf("Delete(%s) called on a closed connection", key)
-	}
-	db.Debugf("Delete(%s)", key)
-
-	keysToDelete := []string{}
-
-	var keyIsPrefix bool
-	for _, o := range opts {
-		if _, ok := o.(*keyval.WithPrefixOpt); ok {
-			keyIsPrefix = true
-		}
-	}
-	if keyIsPrefix {
-		key = wildcard(key)
-		keysToDelete, err = scanKeys(db, key)
-		if err != nil {
-			return false, err
-		}
-		if len(keysToDelete) == 0 {
-			return false, nil
-		}
-		db.Debugf("Delete(%s): deleting %v", key, keysToDelete)
-	} else {
-		keysToDelete = append(keysToDelete, key)
-	}
-
-	intCmd := db.client.Del(keysToDelete...)
-	if intCmd.Err() != nil {
-		return false, fmt.Errorf("Delete(%s) failed: %s", key, intCmd.Err())
-	}
-	return (intCmd.Val() != 0), nil
-}
-
-// GetNext returns the next item from the iterator.
-// If the iterator has reached the last item previously, lastReceived set to true.
-func (ctx *bytesKeyValIterator) GetNext() (kv keyval.BytesKeyVal, lastReceived bool) {
-	if ctx.index >= len(ctx.values) {
-		return nil, true
-	}
-
-	kv = ctx.values[ctx.index]
-	ctx.index++
-	return kv, false
-}
-
-// GetNext returns the next item from the iterator.
-// If the iterator has reached the last item previously, lastReceived is set to true.
-func (ctx *bytesKeyIterator) GetNext() (key string, rev int64, lastReceived bool) {
-
-	if ctx.index >= len(ctx.keys) {
-		return "", 0, true
-	}
-
-	key = ctx.keys[ctx.index]
-	ctx.index++
-	return key, 0, false
-}
-
-// GetValue returns the value of the pair
-func (kv *bytesKeyVal) GetValue() []byte {
-	return kv.value
-}
-
-// GetKey returns the key of the pair
-func (kv *bytesKeyVal) GetKey() string {
-	return kv.key
-}
-
-// GetRevision returns the revision associated with the pair
-func (kv *bytesKeyVal) GetRevision() int64 {
-	return 0
-}
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 // BytesBrokerWatcherRedis uses BytesConnectionRedis to access the datastore.
 // The connection can be shared among multiple BytesBrokerWatcherRedis.
@@ -366,16 +413,6 @@ func (pdb *BytesBrokerWatcherRedis) GetPrefix() string {
 	return pdb.prefix
 }
 
-// Put calls Put function of BytesConnectionRedis. Prefix will be prepended to key argument.
-func (pdb *BytesBrokerWatcherRedis) Put(key string, data []byte, opts ...keyval.PutOption) error {
-	if pdb.delegate.closed {
-		return fmt.Errorf("Put(%s) called on a closed connection", key)
-	}
-	pdb.Debugf("Put(%s)", key)
-
-	return pdb.delegate.Put(pdb.addPrefix(key), data, opts...)
-}
-
 // NewTxn creates new transaction. Prefix will be prepended to key argument.
 func (pdb *BytesBrokerWatcherRedis) NewTxn() keyval.BytesTxn {
 	if pdb.delegate.closed {
@@ -384,7 +421,17 @@ func (pdb *BytesBrokerWatcherRedis) NewTxn() keyval.BytesTxn {
 	}
 	pdb.Debug("NewTxn()")
 
-	return &Txn{db: pdb.delegate, ops: []op{}, prefix: pdb.prefix}
+	return &Txn{db: pdb.delegate, ops: []op{}, addPrefix: pdb.addPrefix}
+}
+
+// Put calls Put function of BytesConnectionRedis. Prefix will be prepended to key argument.
+func (pdb *BytesBrokerWatcherRedis) Put(key string, data []byte, opts ...keyval.PutOption) error {
+	if pdb.delegate.closed {
+		return fmt.Errorf("Put(%s) called on a closed connection", key)
+	}
+	pdb.Debugf("Put(%s)", key)
+
+	return pdb.delegate.Put(pdb.addPrefix(key), data, opts...)
 }
 
 // GetValue call GetValue function of BytesConnectionRedis.
@@ -398,33 +445,6 @@ func (pdb *BytesBrokerWatcherRedis) GetValue(key string) (data []byte, found boo
 	return pdb.delegate.GetValue(pdb.addPrefix(key))
 }
 
-// ListValues calls ListValues function of BytesConnectionRedis.
-// Prefix will be prepended to key argument when searching.
-// The returned keys, however, will have the prefix trimmed.
-func (pdb *BytesBrokerWatcherRedis) ListValues(match string) (keyval.BytesKeyValIterator, error) {
-	if pdb.delegate.closed {
-		return nil, fmt.Errorf("ListValues(%s) called on a closed connection", match)
-	}
-	pdb.Debugf("ListValues(%s)", match)
-
-	keys, err := scanKeys(pdb.delegate, pdb.addPrefix(match))
-	if err != nil {
-		return nil, err
-	}
-
-	values, err := listValues(pdb.delegate, keys)
-	if err != nil {
-		return nil, errors.New(err.Error() + " for " + match)
-	}
-
-	kvs := make([]*bytesKeyVal, len(values))
-	for i, val := range values {
-		kvs[i] = &bytesKeyVal{pdb.trimPrefix(keys[i]), val}
-	}
-
-	return &bytesKeyValIterator{values: kvs}, err
-}
-
 // ListKeys calls ListKeys function of BytesConnectionRedis.
 // Prefix will be prepended to key argument when searching.
 // The returned keys, however, will have the prefix trimmed.
@@ -432,18 +452,17 @@ func (pdb *BytesBrokerWatcherRedis) ListKeys(match string) (keyval.BytesKeyItera
 	if pdb.delegate.closed {
 		return nil, fmt.Errorf("ListKeys(%s) called on a closed connection", match)
 	}
-	pdb.Debugf("ListKeys(%s)", match)
+	return listKeys(pdb.delegate, match, pdb.addPrefix, pdb.trimPrefix)
+}
 
-	keys, err := scanKeys(pdb.delegate, pdb.addPrefix(match))
-	if err != nil {
-		return nil, err
+// ListValues calls ListValues function of BytesConnectionRedis.
+// Prefix will be prepended to key argument when searching.
+// The returned keys, however, will have the prefix trimmed.
+func (pdb *BytesBrokerWatcherRedis) ListValues(match string) (keyval.BytesKeyValIterator, error) {
+	if pdb.delegate.closed {
+		return nil, fmt.Errorf("ListValues(%s) called on a closed connection", match)
 	}
-
-	for i, key := range keys {
-		keys[i] = pdb.trimPrefix(key)
-	}
-
-	return &bytesKeyIterator{keys: keys}, err
+	return listValues(pdb.delegate, match, pdb.addPrefix, pdb.trimPrefix)
 }
 
 // Delete calls Delete function of BytesConnectionRedis.
@@ -465,3 +484,13 @@ func (pdb *BytesBrokerWatcherRedis) ListValuesRange(fromPrefix string, toPrefix 
 	return pdb.delegate.ListValuesRange(pdb.addPrefix(fromPrefix), pdb.addPrefix(toPrefix))
 }
 */
+
+const redisWildcardChars = "*?[]"
+
+func wildcard(match string) string {
+	containsWildcard := strings.ContainsAny(match, redisWildcardChars)
+	if !containsWildcard {
+		return match + "*" //prefix
+	}
+	return match
+}
