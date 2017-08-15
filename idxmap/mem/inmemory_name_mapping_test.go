@@ -37,17 +37,17 @@ func TestCrudOps(t *testing.T) {
 	gomega.RegisterTestingT(t)
 	mapping := NewNamedMapping(logroot.Logger(), "owner", "title", nil)
 
-	mapping.RegisterName("Name1", "value1")
+	mapping.Put("Name1", "value1")
 	meta, found := mapping.Lookup("Name1")
 	gomega.Expect(found).To(gomega.BeTrue())
 	gomega.Expect(meta).To(gomega.BeEquivalentTo("value1"))
 
-	mapping.RegisterName("Name2", "value2")
+	mapping.Put("Name2", "value2")
 	meta, found = mapping.Lookup("Name2")
 	gomega.Expect(found).To(gomega.BeTrue())
 	gomega.Expect(meta).To(gomega.BeEquivalentTo("value2"))
 
-	mapping.RegisterName("Name3", "value3")
+	mapping.Put("Name3", "value3")
 	meta, found = mapping.Lookup("Name3")
 	gomega.Expect(found).To(gomega.BeTrue())
 	gomega.Expect(meta).To(gomega.BeEquivalentTo("value3"))
@@ -57,7 +57,7 @@ func TestCrudOps(t *testing.T) {
 	gomega.Expect(names).To(gomega.ContainElement("Name2"))
 	gomega.Expect(names).To(gomega.ContainElement("Name3"))
 
-	meta, found = mapping.UnregisterName("Name2")
+	meta, found = mapping.Delete("Name2")
 	gomega.Expect(found).To(gomega.BeTrue())
 	gomega.Expect(meta).To(gomega.BeEquivalentTo("value2"))
 
@@ -65,7 +65,7 @@ func TestCrudOps(t *testing.T) {
 	gomega.Expect(found).To(gomega.BeFalse())
 	gomega.Expect(meta).To(gomega.BeNil())
 
-	meta, found = mapping.UnregisterName("Unknown")
+	meta, found = mapping.Delete("Unknown")
 	gomega.Expect(found).To(gomega.BeFalse())
 	gomega.Expect(meta).To(gomega.BeNil())
 }
@@ -81,17 +81,17 @@ func TestSecondaryIndexes(t *testing.T) {
 		return res
 	})
 
-	mapping.RegisterName("Name1", "value")
+	mapping.Put("Name1", "value")
 	meta, found := mapping.Lookup("Name1")
 	gomega.Expect(found).To(gomega.BeTrue())
 	gomega.Expect(meta).To(gomega.BeEquivalentTo("value"))
 
-	mapping.RegisterName("Name2", "value")
+	mapping.Put("Name2", "value")
 	meta, found = mapping.Lookup("Name2")
 	gomega.Expect(found).To(gomega.BeTrue())
 	gomega.Expect(meta).To(gomega.BeEquivalentTo("value"))
 
-	mapping.RegisterName("Name3", "different")
+	mapping.Put("Name3", "different")
 	meta, found = mapping.Lookup("Name3")
 	gomega.Expect(found).To(gomega.BeTrue())
 	gomega.Expect(meta).To(gomega.BeEquivalentTo("different"))
@@ -105,7 +105,7 @@ func TestSecondaryIndexes(t *testing.T) {
 	names = mapping.LookupByMetadata("Unknown index", "value")
 	gomega.Expect(names).To(gomega.BeNil())
 
-	mapping.RegisterName("Name2", "different")
+	mapping.Put("Name2", "different")
 	names = mapping.LookupByMetadata(secondaryIx, "different")
 	gomega.Expect(names).To(gomega.ContainElement("Name2"))
 	gomega.Expect(names).To(gomega.ContainElement("Name3"))
@@ -120,7 +120,7 @@ func TestNotifications(t *testing.T) {
 	err := mapping.Watch("subscriber", ToChan(ch))
 	gomega.Expect(err).To(gomega.BeNil())
 
-	mapping.RegisterName("Name1", "value")
+	mapping.Put("Name1", "value")
 	meta, found := mapping.Lookup("Name1")
 	gomega.Expect(found).To(gomega.BeTrue())
 	gomega.Expect(meta).To(gomega.BeEquivalentTo("value"))
@@ -135,7 +135,7 @@ func TestNotifications(t *testing.T) {
 		t.FailNow()
 	}
 
-	mapping.RegisterName("Name1", "modified")
+	mapping.Put("Name1", "modified")
 	meta, found = mapping.Lookup("Name1")
 	gomega.Expect(found).To(gomega.BeTrue())
 	gomega.Expect(meta).To(gomega.BeEquivalentTo("modified"))
@@ -150,7 +150,7 @@ func TestNotifications(t *testing.T) {
 		t.FailNow()
 	}
 
-	mapping.UnregisterName("Name1")
+	mapping.Delete("Name1")
 	meta, found = mapping.Lookup("Name1")
 	gomega.Expect(found).To(gomega.BeFalse())
 	gomega.Expect(meta).To(gomega.BeNil())
