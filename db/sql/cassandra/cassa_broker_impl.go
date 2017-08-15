@@ -104,7 +104,7 @@ func (it *ValIterator) GetNext(outVal interface{}) (stop bool) {
 		return !ok //if not ok than stop
 	}
 
-	ptrs := structs.ListExportedFieldsPtrs(outVal, cqlExported)
+	ptrs := structs.ListExportedFieldsPtrs(outVal, true, cqlExported)
 	ok := it.Delegate.Scan(ptrs...)
 	return !ok //if not ok than stop
 }

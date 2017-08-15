@@ -20,6 +20,7 @@ import (
 	"github.com/ligato/cn-infra/db/sql"
 	"github.com/ligato/cn-infra/db/sql/cassandra"
 	"github.com/onsi/gomega"
+	"github.com/prometheus/common/log"
 )
 
 // TestListValues1_convenient is most convenient way of selecting slice of entities
@@ -34,7 +35,8 @@ func TestListValues1_convenient(t *testing.T) {
 
 	query := sql.FROM(UserTable, sql.WHERE(sql.Field(&UserTable.LastName, sql.EQ("Bond"))))
 
-	sqlStr, _ /*binding*/, err := cassandra.SelectExpToString(query)
+	sqlStr, bindings, err := cassandra.SelectExpToString(query)
+	log.Infof("bindings %v", bindings)
 	gomega.Expect(sqlStr).Should(gomega.BeEquivalentTo(
 		"SELECT id, first_name, last_name FROM User WHERE last_name = ?"))
 
@@ -172,3 +174,29 @@ func TestListValues5_customTableSchema(t *testing.T) {
 	gomega.Expect(users).ToNot(gomega.BeNil())
 	gomega.Expect(users).To(gomega.BeEquivalentTo(&[]CustomizedTablenameAndSchema{*entity}))
 }
+
+//TODO: fix me
+// TestListValues6_convenient checks whether we are able to retrieve uuid
+/*func TestListValues6_convenient(t *testing.T) {
+	gomega.RegisterTestingT(t)
+
+	session := mockSession()
+	defer session.Close()
+	db := cassandra.NewBrokerUsingSession(session)
+
+	query := sql.FROM(TweetTable, sql.WHERE(sql.Field(&TweetTable.ID, sql.EQ(myID))))
+
+	sqlStr, bindings, err := cassandra.SelectExpToString(query)
+	log.Infof("bindings = %v", bindings)
+	gomega.Expect(sqlStr).Should(gomega.BeEquivalentTo(
+		"SELECT id, text FROM Tweet WHERE id = ?"))
+
+	mockQuery(session, query, cells(MyTweet))
+
+	tweets := &[]Tweet{}
+	err = sql.SliceIt(tweets, db.ListValues(query))
+
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+	gomega.Expect(tweets).ToNot(gomega.BeNil())
+	gomega.Expect(tweets).To(gomega.BeEquivalentTo(&[]Tweet{*MyTweet}))
+}*/

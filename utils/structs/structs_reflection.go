@@ -15,9 +15,9 @@
 package structs
 
 import (
+	"github.com/satori/go.uuid"
 	"reflect"
 	"strings"
-	"github.com/gocql/gocql"
 )
 
 // FindField compares the pointers (pointerToAField with all fields in pointerToAStruct)
@@ -73,10 +73,13 @@ func ListExportedFieldsWithVals(val interface{}, predicates ...ExportedPredicate
 		if FieldExported(&structField, predicates...) {
 			// if exported
 			fields = append(fields, &structField)
-			values = append(values, valRefl.Field(i).Interface())
+			//values = append(values, valRefl.Field(i).Interface())
+
 		}
 	}
 
+	//TODO: to be fixed for UUID
+	values = ListExportedFieldsPtrs(val, false, predicates...)
 	return fields, values
 }
 
@@ -101,7 +104,7 @@ func FieldExported(field *reflect.StructField, predicates ...ExportedPredicate) 
 }
 
 // ListExportedFieldsPtrs iterates struct fields and return slice of pointers to field values
-func ListExportedFieldsPtrs(val interface{}, predicates ...ExportedPredicate) []interface{} {
+func ListExportedFieldsPtrs(val interface{}, filterPK bool, predicates ...ExportedPredicate) []interface{} {
 	rVal := reflect.Indirect(reflect.ValueOf(val))
 	ptrs := []interface{}{}
 	for i := 0; i < rVal.NumField(); i++ {
@@ -124,21 +127,17 @@ func ListExportedFieldsPtrs(val interface{}, predicates ...ExportedPredicate) []
 			if field.IsNil() {
 				p := reflect.New(field.Type())
 				field.Set(p.Elem())
-				if field.Type() != reflect.TypeOf(gocql.UUID{}) {
-					ptrs = append(ptrs, field.Addr().Interface())
-				}
+				ptrs = append(ptrs, field.Addr().Interface())
 			} else {
-				if field.Type() != reflect.TypeOf(gocql.UUID{}) {
-					ptrs = append(ptrs, field.Interface())
-				}
+				ptrs = append(ptrs, field.Interface())
 			}
 		default:
 			if field.CanAddr() {
-				if field.Type() != reflect.TypeOf(gocql.UUID{}) {
+				if field.Type() != reflect.TypeOf(uuid.UUID{}) && filterPK {
 					ptrs = append(ptrs, field.Addr().Interface())
 				}
 			} else if field.IsValid() {
-				if field.Type() != reflect.TypeOf(gocql.UUID{}) {
+				if field.Type() != reflect.TypeOf(uuid.UUID{}) && filterPK {
 					ptrs = append(ptrs, field.Interface())
 				}
 			} else {

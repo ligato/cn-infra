@@ -38,7 +38,7 @@ func PutExpToString(whereCondition sql.Expression, entity interface{}) (sqlStr s
 		return "", nil, err
 	}
 
-	bindings = structs.ListExportedFieldsPtrs(entity, cqlExported)
+	bindings = structs.ListExportedFieldsPtrs(entity, false, cqlExported)
 	whereBinding := whereCondtionStr.Binding()
 	if whereBinding != nil {
 		bindings = append(bindings, whereBinding...)
