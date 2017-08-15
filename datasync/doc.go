@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package datasync defines the interfaces for the abstraction of a data
-// transport between app plugins and backend data sources (such
-// as data stores, message buses, or gRPC-connected clients).
+// Package datasync defines the interfaces that abstract the data transport
+// between app plugins and backend data sources, such as data stores,
+// message buses, or gRPC-connected clients.
 //
 // These events are processed asynchronously.
 // App plugin that watches data changes gives callback for each event

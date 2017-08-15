@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package etcdv3 contains abstraction on top of the key-value data store.
-//
+// Package etcdv3 is the implementation of the key-value Data Broker client
+// API for the etcdv3 key-value data store.  See cn-infra/db/keyval for the
+// definition of the key-value Data Broker client API.
+
 // The entity that provides access to the data store is called BytesConnectionEtcd.
 //
 //      +-----------------------+       crud/watch         ______
