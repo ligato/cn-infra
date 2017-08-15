@@ -55,9 +55,9 @@ type User struct {
 
 // Tweet structure using uuid for testing purposes
 type Tweet struct {
-	ID uuid.UUID `cql:"id"`
+	ID uuid.UUID
 	//ID 		gocql.UUID
-	Text string `cql:"text"`
+	Text string
 }
 
 // CustomizedTablenameAndSchema implements sql.TableName, sql.SchemaName interfaces

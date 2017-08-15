@@ -73,13 +73,12 @@ func ListExportedFieldsWithVals(val interface{}, predicates ...ExportedPredicate
 		if FieldExported(&structField, predicates...) {
 			// if exported
 			fields = append(fields, &structField)
-			//values = append(values, valRefl.Field(i).Interface())
-
+			values = append(values, valRefl.Field(i).Interface())
 		}
 	}
 
 	//TODO: to be fixed for UUID
-	values = ListExportedFieldsPtrs(val, false, predicates...)
+	//values = ListExportedFieldsPtrs(val, false, predicates...)
 	return fields, values
 }
 
@@ -127,9 +126,13 @@ func ListExportedFieldsPtrs(val interface{}, filterPK bool, predicates ...Export
 			if field.IsNil() {
 				p := reflect.New(field.Type())
 				field.Set(p.Elem())
+				//if field.Type() != reflect.TypeOf(uuid.UUID{}) && filterPK {
 				ptrs = append(ptrs, field.Addr().Interface())
+				//}
 			} else {
+				//if field.Type() != reflect.TypeOf(uuid.UUID{}) && filterPK {
 				ptrs = append(ptrs, field.Interface())
+				//}
 			}
 		default:
 			if field.CanAddr() {
