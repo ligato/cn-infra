@@ -1,7 +1,8 @@
 # Flavors
 
-A flavor is a reusable collection of plugins with initialized [dependencies](../docs/guidelines/PLUGIN_DEPENDENCIES.md). 
-CN-Infra provides the following [flavors](../docs/guidelines/PLUGIN_FLAVORS.md):
+A flavor is a reusable collection of plugins with initialized 
+[dependencies](../docs/guidelines/PLUGIN_DEPENDENCIES.md). CN-Infra provides
+the following [flavors](../docs/guidelines/PLUGIN_FLAVORS.md):
 * [generic flavor](generic) - a collection of plugins that are useful for almost
   every micro-service
 * [etcd + kafka flavor](etcdkafka) - adds etcd & kafka client plugin instances to 
