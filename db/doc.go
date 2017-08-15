@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package db defines common Data Broker types, and it the parent package
-// containing Data Broker client implementations for various key-value and
-// SQL data stores.
+// Package db defines the common Data Broker types, and it is the parent
+// package for Data Broker client implementations for various key-value
+// and SQL data stores.
 package db
