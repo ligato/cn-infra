@@ -32,6 +32,7 @@ var UserTable = &User{}
 
 // User is simple structure used in automated tests
 type User struct {
+	ID        gocql.UUID `cql:"userid"`
 	FirstName string `cql:"first_name"`
 	LastName  string `cql:"last_name"`
 	//NetIP      net.IP //mapped to native cassandra type
@@ -129,7 +130,7 @@ func exampleDDL(session *gocql.Session) (err error) {
 	}
 
 	if err := session.Query(`CREATE TABLE IF NOT EXISTS demo.user (
-			userid text PRIMARY KEY,
+			userid uuid PRIMARY KEY,
 				first_name text,
 				last_name text,
 				Udt03 frozen<Udt03>,
@@ -154,18 +155,18 @@ func exampleDDL(session *gocql.Session) (err error) {
 }
 
 func exampleDML(session *gocql.Session) (err error) {
-	_ /*ip01 */, ipPrefix01, err := net.ParseCIDR("192.168.1.2/24")
+	_ /*ip01 */ , ipPrefix01, err := net.ParseCIDR("192.168.1.2/24")
 	if err != nil {
 		return err
 	}
 	db := cassandra.NewBrokerUsingSession(gockle.NewSession(session))
-	written := &User{"Fero", "Mrkva", /*ip01, */
-		&Wrapper01{ipPrefix01}, &Udt03{Tx: "tx1", Tx2: "tx2" /*, Inet1: "201.202.203.204"*/},
-
-		Udt04{"kuk", &Udt03{Tx: "txxxxxxxxx1", Tx2: "txxxxxxxxx2" /*, Inet1: "201.202.203.204"*/}},
-		[]Udt03{{Tx: "txt1Col", Tx2: "txt2Col"}},
+	written := &User{FirstName: "Fero", LastName: "Mrkva", /*ip01, */
+		WrapIP:                 &Wrapper01{ipPrefix01},
+		Udt03:                  &Udt03{Tx: "tx1", Tx2: "tx2" /*, Inet1: "201.202.203.204"*/ },
+		Udt04:                  Udt04{"kuk", &Udt03{Tx: "txxxxxxxxx1", Tx2: "txxxxxxxxx2" /*, Inet1: "201.202.203.204"*/ }},
+		UdtCol:                 []Udt03{{Tx: "txt1Col", Tx2: "txt2Col"}},
 	}
-	err = db.Put(sql.Exp("userid='Fero Mrkva'"), written)
+	err = db.Put(sql.Exp("userid=c37d661d-7e61-49ea-96a5-68c34e83db3a"), written)
 	if err == nil {
 		fmt.Println("Successfully written: ", written)
 	} else {
