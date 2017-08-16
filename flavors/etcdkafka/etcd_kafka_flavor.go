@@ -22,11 +22,11 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/redis"
 )
 
-// Flavor glues together generic.Flavor plugins with:
+// FlavorGeneric glues together generic.FlavorGeneric plugins with:
 // - ETCD (useful for watching config.)
 // - Kafka plugins (useful for publishing events)
 type Flavor struct {
-	Generic generic.Flavor
+	Generic generic.FlavorGeneric
 	Etcd    etcdv3.Plugin
 	Redis   redis.Plugin
 	Kafka   kafka.Plugin

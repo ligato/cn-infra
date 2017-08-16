@@ -21,16 +21,16 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/datasync"
+	"github.com/ligato/cn-infra/datasync/adapters"
+	"github.com/ligato/cn-infra/datasync/rpc/grpcsync"
+	"github.com/ligato/cn-infra/datasync/syncbase"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
 	"github.com/unrolled/render"
 	"net/http"
 	"time"
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/datasync/rpc/grpcsync"
-	"github.com/ligato/cn-infra/datasync/syncbase"
-	"github.com/ligato/cn-infra/datasync/adapters"
 )
 
 // PluginID used in the Agent Core flavors
@@ -58,9 +58,9 @@ type Plugin struct {
 	HTTPport   string
 
 	logging.Logger
-	server      *http.Server
-	mx          *mux.Router
-	formatter   *render.Render
+	server    *http.Server
+	mx        *mux.Router
+	formatter *render.Render
 }
 
 // Init is entry point called by Agent Core

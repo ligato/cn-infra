@@ -24,8 +24,8 @@ import (
 	"github.com/ligato/cn-infra/datasync/adapters"
 )
 
-// Flavor glues together multiple plugins that are useful for almost every micro-service
-type Flavor struct {
+// FlavorGeneric glues together multiple plugins that are useful for almost every micro-service
+type FlavorGeneric struct {
 	Transports 	 adapters.TransportAggregator
 	Logrus       logrus.Plugin
 	HTTP         httpmux.Plugin
@@ -37,15 +37,15 @@ type Flavor struct {
 }
 
 // Inject sets object references
-func (f *Flavor) Inject() error {
+func (f *FlavorGeneric) Inject() error {
 	if f.injected {
 		return nil
 	}
 
-	// HTTP plugin initializes grpc transport
 	f.HTTP.LogFactory = &f.Logrus
 	f.HTTP.Transports = &f.Transports
-
+	//TODO f.HTTP.Logger = f.Logrus.LoggerWithPrefix(f.PluginName(&f.HTTP))
+	//TODO f.HTTP.Config = f.Config.ConfigWithPrefix(f.PluginName(&f.HTTP))
 	f.LogManager.ManagedLoggers = &f.Logrus
 	f.LogManager.HTTP = &f.HTTP
 	f.StatusCheck.HTTP = &f.HTTP
@@ -57,7 +57,7 @@ func (f *Flavor) Inject() error {
 }
 
 // Plugins combines all Plugins in flavor to the list
-func (f *Flavor) Plugins() []*core.NamedPlugin {
+func (f *FlavorGeneric) Plugins() []*core.NamedPlugin {
 	f.Inject()
 	return core.ListPluginsInFlavor(f)
 }

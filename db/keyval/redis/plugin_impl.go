@@ -16,12 +16,12 @@ package redis
 
 import (
 	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/datasync"
+	"github.com/ligato/cn-infra/datasync/adapters"
+	"github.com/ligato/cn-infra/datasync/persisted/dbsync"
 	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
-	"github.com/ligato/cn-infra/datasync/adapters"
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/datasync/persisted/dbsync"
 )
 
 // PluginID used in the Agent Core flavors
@@ -29,7 +29,7 @@ const PluginID core.PluginName = "RedisClient"
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
-	Transports     *adapters.TransportAggregator
+	Transports   *adapters.TransportAggregator
 	LogFactory   logging.LogFactory
 	ServiceLabel *servicelabel.Plugin
 	*plugin.Skeleton
@@ -66,7 +66,7 @@ func (p *Plugin) Init() error {
 	return nil
 }
 
-// InitTransport initializes ETCD transport adapter which then can be injected to other plugins
+// InitTransport initializes Redis transport adapter which then can be injected to other plugins
 func (p *Plugin) InitTransport(logger logging.Logger) (datasync.TransportAdapter, error) {
 	pool, err := CreateNodeClient(NodeConfig{})
 	if err != nil {

@@ -15,18 +15,17 @@
 package adapters
 
 import (
+	"fmt"
 	"github.com/ligato/cn-infra/datasync"
 	log "github.com/ligato/cn-infra/logging/logrus"
-	"fmt"
 )
 
 // TransportAggregator is cumulative adapter which contains all available transport types
 type TransportAggregator struct {
-	grpcAdapter datasync.TransportAdapter
-	etcdAdapter datasync.TransportAdapter
+	grpcAdapter  datasync.TransportAdapter
+	etcdAdapter  datasync.TransportAdapter
 	redisAdapter datasync.TransportAdapter
 }
-
 
 // RegisterGrpcTransport is used to register GRPC transport
 func (ta *TransportAggregator) RegisterGrpcTransport(adapter datasync.TransportAdapter) {

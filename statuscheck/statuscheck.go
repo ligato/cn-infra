@@ -23,13 +23,13 @@ import (
 	"sync"
 	"time"
 
+	"fmt"
 	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/datasync/adapters"
 	"github.com/ligato/cn-infra/httpmux"
 	log "github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/statuscheck/model/status"
 	"github.com/unrolled/render"
-	"github.com/ligato/cn-infra/datasync/adapters"
-	"fmt"
 )
 
 // PluginID uniquely identifies the plugin.
@@ -59,7 +59,7 @@ const (
 type Plugin struct {
 	HTTP       *httpmux.Plugin
 	Transports *adapters.TransportAggregator
-	access     sync.Mutex                // lock for the Plugin data
+	access     sync.Mutex // lock for the Plugin data
 
 	agentStat   *status.AgentStatus             // overall agent status
 	pluginStat  map[string]*status.PluginStatus // plugin's status
