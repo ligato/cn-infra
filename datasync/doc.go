@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The datasync package defines the interfaces for the abstraction of data
+// Package datasync defines the interfaces for the abstraction of data
 // transport between app plugins and backend data sources (such
 // as data stores, message buses, or gRPC-connected clients).
 //
