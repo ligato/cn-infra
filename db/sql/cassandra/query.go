@@ -38,7 +38,7 @@ func PutExpToString(whereCondition sql.Expression, entity interface{}) (sqlStr s
 		return "", nil, err
 	}
 
-	bindings = structs.ListExportedFieldsPtrs(entity, cqlExported)
+	_, bindings = structs.ListExportedFieldsPtrs(entity, cqlExported)
 	whereBinding := whereCondtionStr.Binding()
 	if whereBinding != nil {
 		bindings = append(bindings, whereBinding...)
@@ -208,9 +208,9 @@ func sliceOfFieldNames(val interface{} /*, opts Options*/) (fieldNames []string)
 	return fieldNames
 }
 
-// SliceOfFieldsWithVals generates slice of translated (cql tag) field names with field values
-func SliceOfFieldsWithVals(val interface{} /*, opts Options*/) (fieldNames []string, vals []interface{}) {
-	fields, vals := structs.ListExportedFieldsWithVals(val)
+// SliceOfFieldsWithValPtrs generates slice of translated (cql tag) field names with field values
+func SliceOfFieldsWithValPtrs(val interface{} /*, opts Options*/) (fieldNames []string, vals []interface{}) {
+	fields, vals := structs.ListExportedFieldsPtrs(val)
 
 	fieldNames = []string{}
 	for _, field := range fields {
