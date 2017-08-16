@@ -24,11 +24,11 @@ import (
 	"time"
 
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/httpmux"
 	log "github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/statuscheck/model/status"
 	"github.com/unrolled/render"
+	"github.com/ligato/cn-infra/datasync/adapters"
 )
 
 // PluginID uniquely identifies the plugin.
@@ -56,9 +56,9 @@ const (
 
 // Plugin struct holds all plugin-related data.
 type Plugin struct {
-	HTTP      *httpmux.Plugin
-	Transport *datasync.TransportAdapter
-	access    sync.Mutex // lock for the Plugin data
+	HTTP       *httpmux.Plugin
+	Transports *adapters.TransportAggregator
+	access     sync.Mutex                // lock for the Plugin data
 
 	agentStat   *status.AgentStatus             // overall agent status
 	pluginStat  map[string]*status.PluginStatus // plugin's status
@@ -208,15 +208,21 @@ func (p *Plugin) ReportStateChange(pluginName core.PluginName, state PluginState
 // publishAgentData writes the current global agent state into ETCD.
 func (p *Plugin) publishAgentData() error {
 	p.agentStat.LastUpdate = time.Now().Unix()
-	adapter := *p.Transport
+	adapter, err := p.Transports.RetrieveGrpcTransport()
+	if err != nil {
+		return err
+	}
 	return adapter.PublishData(status.AgentStatusKey(), p.agentStat)
 }
 
 // publishPluginData writes the current plugin state into ETCD.
 func (p *Plugin) publishPluginData(pluginName core.PluginName, pluginStat *status.PluginStatus) error {
-	pluginStat.LastUpdate = time.Now().Unix()
-	adapter := *p.Transport
+	adapter, err := p.Transports.RetrieveGrpcTransport()
+	if err != nil {
+		return err
+	}
 	return adapter.PublishData(status.PluginStatusKey(string(pluginName)), pluginStat)
+	return nil
 }
 
 // publishAllData publishes global agent + all plugins state data into ETCD.

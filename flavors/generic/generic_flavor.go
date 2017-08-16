@@ -21,10 +21,12 @@ import (
 	"github.com/ligato/cn-infra/servicelabel"
 	"github.com/ligato/cn-infra/logging/logmanager"
 	"github.com/ligato/cn-infra/statuscheck"
+	"github.com/ligato/cn-infra/datasync/adapters"
 )
 
-// FlavorGeneric glues together multiple plugins that are useful for almost every micro-service
-type FlavorGeneric struct {
+// Flavor glues together multiple plugins that are useful for almost every micro-service
+type Flavor struct {
+	Transports 	 adapters.TransportAggregator
 	Logrus       logrus.Plugin
 	HTTP         httpmux.Plugin
 	LogManager   logmanager.Plugin
@@ -35,18 +37,19 @@ type FlavorGeneric struct {
 }
 
 // Inject sets object references
-func (f *FlavorGeneric) Inject() error {
+func (f *Flavor) Inject() error {
 	if f.injected {
 		return nil
 	}
 
+	// HTTP plugin initializes grpc transport
 	f.HTTP.LogFactory = &f.Logrus
-	//TODO f.HTTP.Logger = f.Logrus.LoggerWithPrefix(f.PluginName(&f.HTTP))
-	//TODO f.HTTP.Config = f.Config.ConfigWithPrefix(f.PluginName(&f.HTTP))
+	f.HTTP.Transports = &f.Transports
+
 	f.LogManager.ManagedLoggers = &f.Logrus
 	f.LogManager.HTTP = &f.HTTP
 	f.StatusCheck.HTTP = &f.HTTP
-	f.StatusCheck.Transport = &f.HTTP.Transport
+	f.StatusCheck.Transports = &f.Transports
 
 	f.injected = true
 
@@ -54,7 +57,7 @@ func (f *FlavorGeneric) Inject() error {
 }
 
 // Plugins combines all Plugins in flavor to the list
-func (f *FlavorGeneric) Plugins() []*core.NamedPlugin {
+func (f *Flavor) Plugins() []*core.NamedPlugin {
 	f.Inject()
 	return core.ListPluginsInFlavor(f)
 }

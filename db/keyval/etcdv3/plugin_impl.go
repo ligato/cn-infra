@@ -16,14 +16,15 @@ package etcdv3
 
 import (
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/datasync/persisted/dbsync"
 	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
 	"github.com/ligato/cn-infra/statuscheck"
 	"github.com/ligato/cn-infra/utils/config"
 	"github.com/namsral/flag"
+	"github.com/ligato/cn-infra/datasync"
+	"github.com/ligato/cn-infra/datasync/persisted/dbsync"
+	"github.com/ligato/cn-infra/datasync/adapters"
 )
 
 const (
@@ -35,7 +36,7 @@ const (
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
-	Transport      datasync.TransportAdapter
+	Transports     *adapters.TransportAggregator
 	LogFactory     logging.LogFactory
 	ServiceLabel   *servicelabel.Plugin
 	StatusCheck    *statuscheck.Plugin
@@ -93,10 +94,11 @@ func (p *Plugin) Init() error {
 	}
 
 	// Init ETCD transport
-	p.Transport, err = p.InitTransport(p.Skeleton.Logger)
+	etcdTransport, err := p.InitTransport(p.Skeleton.Logger)
 	if err != nil {
 		return err
 	}
+	p.Transports.RegisterEtcdTransport(etcdTransport)
 
 	// Register for providing status reports (polling mode)
 	if p.StatusCheck != nil {
@@ -132,3 +134,4 @@ func (p *Plugin) InitTransport(logger logging.Logger) (datasync.TransportAdapter
 	watcher := connection.NewWatcher(p.ServiceLabel.GetAgentPrefix())
 	return dbsync.NewAdapter(string(PluginID), broker, watcher), nil
 }
+
