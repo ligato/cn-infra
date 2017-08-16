@@ -70,9 +70,9 @@ const (
 	flightSlotCount    = 5
 	flightStatusSize   = 2*flightSlotCount + hangarSlotCount + 1
 	flightIDFormat     = "%s%02d"
-	hangarKeyFormat    = "%2s%2d:%d"
+	hangarKeyFormat    = "%2s%02d:%d"
 	columnSep          = "      "
-	redisPause         = 0.01
+	redisPause         = 0.1
 )
 
 var motions = []string{" ->", "<- "}
@@ -104,7 +104,6 @@ var hangarWatcher keyval.ProtoWatcher
 
 var prefix string
 var debug bool
-var redigo bool
 
 func main() {
 	if setup() {
@@ -120,19 +119,10 @@ func setup() bool {
 		return false
 	}
 
-	if redigo {
-		if _, yes := cfg.(redis.NodeConfig); !yes {
-			fmt.Printf("Redigo only works on redis.NodeConfig, not %T\n", cfg)
-			return false
-		}
-		redisConn = createConnectionRedigo(cfg)
-	} else {
-		redisConn = createConnection(cfg)
-	}
-
 	printHeaders()
-
 	setupFlightStatusFormat()
+
+	redisConn = createConnection(cfg)
 
 	var arrivalProto, departureProto, hangarProto *kvproto.ProtoWrapper
 	arrivalProto = kvproto.NewProtoWrapper(redisConn)
@@ -162,8 +152,6 @@ func loadConfig() interface{} {
 		"Specifies key prefix")
 	flag.BoolVar(&debug, "debug", false,
 		"Specifies whether to enable debugging; default to false")
-	flag.BoolVar(&redigo, "redigo", false,
-		"Specifies whether to use redigo API instead; default to false")
 	flag.Parse()
 
 	flag.Usage = func() {
@@ -173,7 +161,7 @@ func loadConfig() interface{} {
 				// put quotes around string
 				format = "  -%s=%q: %s\n"
 			} else {
-				if f.Name != "debug" && f.Name != "redigo" {
+				if f.Name != "debug" {
 					return
 				}
 				format = "  -%s=%s: %s\n"
@@ -212,19 +200,6 @@ func createConnection(cfg interface{}) *redis.BytesConnectionRedis {
 	if err != nil {
 		safeclose.Close(client)
 		log.Panicf("NewBytesConnection() failed: %s", err)
-	}
-	return conn
-}
-
-func createConnectionRedigo(cfg interface{}) *redis.BytesConnectionRedis {
-	pool, err := redis.CreateNodeClientConnPool(cfg.(redis.NodeConfig))
-	if err != nil {
-		log.Panicf("CreateNodeClientConnPool() failed: %s", err)
-	}
-	conn, err := redis.NewBytesConnectionRedis(pool, log)
-	if err != nil {
-		safeclose.Close(pool)
-		log.Panicf("NewBytesConnectionRedigo() failed: %s", err)
 	}
 	return conn
 }
@@ -306,13 +281,13 @@ func printFlightCounts() {
 
 func runArrivals() {
 	go func() {
-		for i := 0; i < flightSlotCount-1; i++ {
+		for i := 0; i < flightSlotCount/2+1; i++ {
 			newArrival()
 		}
 		pause := 2*(runwayClearance+runwayInterval*float64(runwayLength-flightIDLength)) +
 			9*redisPause
-		low := pause - 0.3*pause
-		high := pause + 0.3*pause
+		low := pause - 0.5*pause
+		high := pause
 		for {
 			newArrival()
 			sleep(low, high)
