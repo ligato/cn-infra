@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The statuscheck package provides an API for reporting status changes from plugins to the statuscheck plugin,
+// Package statuscheck provides an API for reporting status changes from plugins to the statuscheck plugin,
 // which exposes them via etcd and HTTP.
 //
 // The API provides only two functions, one for registering the plugin for status change reporting and one
