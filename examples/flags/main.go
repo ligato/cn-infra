@@ -25,7 +25,7 @@ func main() {
 	// Init close channel to stop the example
 	closeChannel := make(chan struct{}, 1)
 
-	flavor := generic.FlavorGeneric{}
+	flavor := generic.Flavor{}
 
 	// Example plugin (flags)
 	examplePlugin := &core.NamedPlugin{PluginName: PluginID, Plugin: &ExamplePlugin{}}

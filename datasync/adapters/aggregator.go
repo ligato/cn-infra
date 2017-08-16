@@ -28,14 +28,14 @@ type TransportAggregator struct {
 func (t *TransportAggregator) RegisterGrpcTransport(adapter datasync.TransportAdapter) {
 	if adapter != nil {
 		t.grpcAdapter = adapter
-		log.Warn("GRPC transport adapter registered")
+		log.Info("GRPC transport adapter registered")
 	}
 }
 
 func (t *TransportAggregator) RegisterEtcdTransport(adapter datasync.TransportAdapter) {
 	if adapter != nil {
 		t.etcdAdapter = adapter
-		log.Warn("ETCD transport adapter registered")
+		log.Info("ETCD transport adapter registered")
 	}
 }
 
