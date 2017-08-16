@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package redis implements client API to Redis key-value data store.  The API confirms to the
-// specification defined in the package cn-infra/db/keyval.
+// Package redis is the implementation of the key-value Data Broker client
+// API for the Redis key-value data store. See cn-infra/db/keyval for the
+// definition of the key-value Data Broker client API.
 //
 // The entity BytesConnectionRedis provides access to CRUD as well as event subscription API's.
 //

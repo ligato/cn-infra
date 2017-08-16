@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package cassandra contains implementation on top of the sql Broker interface data store.
+// Package cassandra is the implementation of the SQL Data Broker client
+// API for the Cassandra data store. See cn-infra/db/sql for the definition
+// of the key-value Data Broker client API.
 //
 // The entity that provides access to the data store is called gocql.Session (wrapped by Broker for convenience).
 //
