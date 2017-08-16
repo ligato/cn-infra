@@ -25,6 +25,7 @@ type TransportAggregator struct {
 	etcdAdapter datasync.TransportAdapter
 }
 
+// RegisterGrpcTransport is used to register GRPC transport
 func (t *TransportAggregator) RegisterGrpcTransport(adapter datasync.TransportAdapter) {
 	if adapter != nil {
 		t.grpcAdapter = adapter
@@ -32,6 +33,7 @@ func (t *TransportAggregator) RegisterGrpcTransport(adapter datasync.TransportAd
 	}
 }
 
+// RegisterEtcdTransport is used to register ETCD transport
 func (t *TransportAggregator) RegisterEtcdTransport(adapter datasync.TransportAdapter) {
 	if adapter != nil {
 		t.etcdAdapter = adapter
@@ -39,18 +41,29 @@ func (t *TransportAggregator) RegisterEtcdTransport(adapter datasync.TransportAd
 	}
 }
 
-func (t *TransportAggregator) RetrieveGrpcTransport() (datasync.TransportAdapter, error) {
+// RetrieveGrpcTransport returns GRPC transport if registered
+func (t *TransportAggregator) RetrieveGrpcTransport() datasync.TransportAdapter {
 	if t.grpcAdapter == nil {
-		return nil, fmt.Errorf("GRPC adapter is not registered")
+		return nil
 	}
-	return t.grpcAdapter, nil
+	return t.grpcAdapter
 }
 
-func (t *TransportAggregator) RetrieveEtcdTransport() (datasync.TransportAdapter, error) {
+// RetrieveGrpcTransport returns ETCD transport if registered
+func (t *TransportAggregator) RetrieveEtcdTransport() datasync.TransportAdapter {
 	if t.etcdAdapter == nil {
-		return nil, fmt.Errorf("ETCD adapter is not registered")
+		return nil
 	}
-	return t.etcdAdapter, nil
+	return t.etcdAdapter
 }
 
-
+// RetrieveTransport returns first available transport. If no transport is available, return error
+func (t *TransportAggregator) RetrieveTransport() (datasync.TransportAdapter, error) {
+	if t.grpcAdapter != nil {
+		return t.grpcAdapter, nil
+	} else if t.etcdAdapter != nil {
+		return t.etcdAdapter, nil
+	} else {
+		return nil, fmt.Errorf("No transport is available")
+	}
+}

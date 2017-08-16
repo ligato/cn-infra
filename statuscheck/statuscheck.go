@@ -29,6 +29,7 @@ import (
 	"github.com/ligato/cn-infra/statuscheck/model/status"
 	"github.com/unrolled/render"
 	"github.com/ligato/cn-infra/datasync/adapters"
+	"fmt"
 )
 
 // PluginID uniquely identifies the plugin.
@@ -208,20 +209,20 @@ func (p *Plugin) ReportStateChange(pluginName core.PluginName, state PluginState
 // publishAgentData writes the current global agent state into ETCD.
 func (p *Plugin) publishAgentData() error {
 	p.agentStat.LastUpdate = time.Now().Unix()
-	adapter, err := p.Transports.RetrieveGrpcTransport()
-	if err != nil {
-		return err
+	transport := p.Transports.RetrieveGrpcTransport()
+	if transport != nil {
+		return fmt.Errorf("Transport is nil")
 	}
-	return adapter.PublishData(status.AgentStatusKey(), p.agentStat)
+	return transport.PublishData(status.AgentStatusKey(), p.agentStat)
 }
 
 // publishPluginData writes the current plugin state into ETCD.
 func (p *Plugin) publishPluginData(pluginName core.PluginName, pluginStat *status.PluginStatus) error {
-	adapter, err := p.Transports.RetrieveGrpcTransport()
-	if err != nil {
-		return err
+	transport := p.Transports.RetrieveGrpcTransport()
+	if transport != nil {
+		return fmt.Errorf("Transport is nil")
 	}
-	return adapter.PublishData(status.PluginStatusKey(string(pluginName)), pluginStat)
+	return transport.PublishData(status.PluginStatusKey(string(pluginName)), pluginStat)
 	return nil
 }
 
