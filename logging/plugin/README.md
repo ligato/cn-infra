@@ -6,8 +6,8 @@ A particular logging implementation uses this skeleton.
 **API**
 
 Logging skeleton implements the following interfaces:
-- [`LogFactory`](../plugin.go)
-- [`LogManagement`](../plugin.go)
+- [`LogFactory`](../plugin_api.go)
+- [`LogManagement`](../plugin_api.go)
 
 
 **Configuration**

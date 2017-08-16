@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package core contains CN-Infra code that implements the lifecycle
-// management (start, stop) for a CN-Infra based apps and defines
-// the Core lifecycle SPI that must be implemented by each plugin.
+// Package core contains the implementation of lifecycle management
+// (start, stop) for CN-Infra based apps and defines the Core lifecycle
+// SPI that must be implemented by each plugin.
 package core

@@ -66,9 +66,9 @@ func NewNamedMapping(logger logging.Logger, owner core.PluginName, title string,
 	return &mem
 }
 
-// RegisterName adds an item to the mapping associated with the name. If there is an already stored
+// Put adds an item to the mapping associated with the name. If there is an already stored
 // item with that name, it is overwritten.
-func (mem *memNamedMapping) RegisterName(name string, metadata interface{}) {
+func (mem *memNamedMapping) Put(name string, metadata interface{}) {
 	mem.access.Lock()
 	defer mem.access.Unlock()
 
@@ -78,8 +78,8 @@ func (mem *memNamedMapping) RegisterName(name string, metadata interface{}) {
 
 }
 
-// UnregisterName removes an item associated with the given name from the mapping.
-func (mem *memNamedMapping) UnregisterName(name string) (metadata interface{}, found bool) {
+// Delete removes an item associated with the given name from the mapping.
+func (mem *memNamedMapping) Delete(name string) (metadata interface{}, found bool) {
 	mem.access.Lock()
 	defer mem.access.Unlock()
 

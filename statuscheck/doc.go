@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package statuscheck provides an API for reporting status changes from plugins to the statuscheck plugin,
-// which exposes them via etcd and HTTP.
+// Package statuscheck collects health status from other plugins through
+// a plugin status report API and exposes the collected overall health
+// status to the outside world via ETCD and a REST API.
 //
 // The API provides only two functions, one for registering the plugin for status change reporting and one
 // for reporting status changes.
