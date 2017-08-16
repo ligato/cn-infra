@@ -15,7 +15,6 @@
 package structs
 
 import (
-	"github.com/satori/go.uuid"
 	"reflect"
 	"strings"
 )
