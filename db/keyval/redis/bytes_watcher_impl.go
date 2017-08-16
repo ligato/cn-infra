@@ -19,7 +19,6 @@ import (
 
 	"fmt"
 
-	redigo "github.com/garyburd/redigo/redis"
 	goredis "github.com/go-redis/redis"
 	"github.com/ligato/cn-infra/db"
 	"github.com/ligato/cn-infra/db/keyval"
@@ -97,18 +96,16 @@ func (db *BytesConnectionRedis) Watch(respChan chan keyval.BytesWatchResp, keys 
 	if db.closed {
 		return fmt.Errorf("Watch(%v) called on a closed connection", keys)
 	}
-	return watch(db, respChan, db.closeCh, nil, keys...)
+	return watch(db, respChan, db.closeCh, nil, nil, keys...)
 }
 
-func watch(db *BytesConnectionRedis, respChan chan<- keyval.BytesWatchResp,
-	closeChan <-chan struct{}, trimPrefix func(key string) string, keys ...string) error {
-
-	if db.pool != nil {
-		return redigoWatch(db, respChan, closeChan, trimPrefix, keys...)
-	}
-
+func watch(db *BytesConnectionRedis, respChan chan<- keyval.BytesWatchResp, closeChan <-chan struct{},
+	addPrefix func(key string) string, trimPrefix func(key string) string, keys ...string) error {
 	patterns := make([]string, len(keys))
 	for i, k := range keys {
+		if addPrefix != nil {
+			k = addPrefix(k)
+		}
 		patterns[i] = keySpaceEventPrefix + wildcard(k)
 	}
 	pubSub := db.client.PSubscribe(patterns...)
@@ -177,112 +174,10 @@ func startWatch(db *BytesConnectionRedis, pubSub *goredis.PubSub,
 	}()
 }
 
-func redigoWatch(db *BytesConnectionRedis, respChan chan<- keyval.BytesWatchResp,
-	closeChan <-chan struct{}, trimPrefix func(key string) string, keys ...string) error {
-
-	patterns := make([]interface{}, len(keys))
-	for i, k := range keys {
-		patterns[i] = keySpaceEventPrefix + wildcard(k)
-	}
-
-	// Allocate 1 connection per watch...
-	conn := db.pool.Get()
-	pubSub := redigo.PubSubConn{Conn: conn}
-	err := pubSub.PSubscribe(patterns...)
-	if err != nil {
-		safeclose.Close(pubSub)
-		db.Errorf("PSubscribe %v failed: %s", patterns, err)
-		return err
-	}
-	go func() {
-		defer func() { db.Debugf("Watch(%v) exited", patterns) }()
-		for {
-			val := pubSub.Receive()
-			closing, err := db.redigoHandleChange(val, respChan, closeChan, trimPrefix)
-			if err != nil && !db.closed {
-				db.Errorf("Watch(%v) encountered error: %s", patterns, err)
-			}
-			if closing {
-				return
-			}
-		}
-	}()
-	go func() {
-		_, active := <-closeChan
-		if !active {
-			db.Debugf("Received signal to close Watch(%v)", patterns)
-			err := pubSub.PUnsubscribe(patterns...)
-			if err != nil {
-				db.Errorf("PUnsubscribe %v failed: %s", patterns, err)
-			}
-			safeclose.Close(pubSub)
-		}
-	}()
-	return nil
-}
-
-func (db *BytesConnectionRedis) redigoHandleChange(val interface{}, respChan chan<- keyval.BytesWatchResp,
-	closeChan <-chan struct{}, trimPrefix func(key string) string) (close bool, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			// In case something like this happens:
-			// panic: send on closed channel
-			var ok bool
-			err, ok = r.(error)
-			if !ok {
-				err = fmt.Errorf("pkg: %v", r)
-			}
-		}
-	}()
-
-	switch n := val.(type) {
-	case redigo.Subscription:
-		db.Debugf("Subscription: %s %s %d", n.Kind, n.Channel, n.Count)
-		if n.Count == 0 {
-			return true, nil
-		}
-	case redigo.PMessage:
-		db.Debugf("PMessage: %s %s %s", n.Pattern, n.Channel, n.Data)
-		key := n.Channel[strings.Index(n.Channel, ":")+1:]
-		switch cmd := string(n.Data); cmd {
-		case "set":
-			// Ouch, keyspace event does not convey value.  Need to retrieve it.
-			val, _, rev, err := db.GetValue(key)
-			if err != nil {
-				db.Errorf("GetValue(%s) failed with error %s", key, err)
-			}
-			if val == nil {
-				db.Errorf("GetValue(%s) returned nil", key)
-			}
-			if trimPrefix != nil {
-				key = trimPrefix(key)
-			}
-			respChan <- NewBytesWatchPutResp(key, val, rev)
-		case "del", "expired":
-			if trimPrefix != nil {
-				key = trimPrefix(key)
-			}
-			respChan <- NewBytesWatchDelResp(key, 0)
-		}
-		//TODO NICE-to-HAVE no block here if buffer is overflown
-	case redigo.Message:
-		// Not subscribing to this event type yet
-		db.Debugf("Message: %s %s which I did not subscribe !", n.Channel, n.Data)
-	case error:
-		return true, n
-	}
-
-	return false, nil
-}
-
 // Watch starts subscription for changes associated with the selected key. Watch events will be delivered to respChan.
 func (pdb *BytesBrokerWatcherRedis) Watch(respChan chan keyval.BytesWatchResp, keys ...string) error {
 	if pdb.delegate.closed {
 		return fmt.Errorf("Watch(%v) called on a closed connection", keys)
 	}
-	prefixedKeys := make([]string, len(keys))
-	for i, k := range keys {
-		prefixedKeys[i] = pdb.prefix + k
-	}
-	return watch(pdb.delegate, respChan, pdb.closeCh, pdb.trimPrefix, prefixedKeys...)
+	return watch(pdb.delegate, respChan, pdb.closeCh, pdb.addPrefix, pdb.trimPrefix, keys...)
 }

@@ -21,7 +21,6 @@ import (
 	goredis "github.com/go-redis/redis"
 	"github.com/howeyc/crc16"
 	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
 type op struct {
@@ -33,13 +32,9 @@ type op struct {
 // Txn allows to group operations into the transaction. Transaction executes multiple operations
 // in a more efficient way in contrast to executing them one by one.
 type Txn struct {
-	db     *BytesConnectionRedis
-	ops    []op
-	prefix string
-}
-
-func (tx *Txn) addPrefix(key string) string {
-	return tx.prefix + key
+	db        *BytesConnectionRedis
+	ops       []op
+	addPrefix func(key string) string
 }
 
 // Put adds a new 'put' operation to a previously created transaction.
@@ -48,14 +43,20 @@ func (tx *Txn) addPrefix(key string) string {
 // the existing value will be overwritten with the value from this
 // operation.
 func (tx *Txn) Put(key string, value []byte) keyval.BytesTxn {
-	tx.ops = append(tx.ops, op{tx.addPrefix(key), value, false})
+	if tx.addPrefix != nil {
+		key = tx.addPrefix(key)
+	}
+	tx.ops = append(tx.ops, op{key, value, false})
 	return tx
 }
 
 // Delete adds a new 'delete' operation to a previously created
 // transaction.
 func (tx *Txn) Delete(key string) keyval.BytesTxn {
-	tx.ops = append(tx.ops, op{tx.addPrefix(key), nil, true})
+	if tx.addPrefix != nil {
+		key = tx.addPrefix(key)
+	}
+	tx.ops = append(tx.ops, op{key, nil, true})
 	return tx
 }
 
@@ -70,11 +71,6 @@ func (tx *Txn) Commit() (err error) {
 
 	if len(tx.ops) == 0 {
 		return nil
-	}
-
-	// redigo
-	if tx.db.pool != nil {
-		return redigoPseudoTxn(tx)
 	}
 
 	// go-redis
@@ -95,36 +91,6 @@ func (tx *Txn) Commit() (err error) {
 			checkCrossSlot(tx)
 		}
 		return fmt.Errorf("%T.Exec() failed: %s", pipeline, err)
-	}
-	return nil
-}
-
-func redigoPseudoTxn(tx *Txn) error {
-	toBeDeleted := []interface{}{}
-	msetArgs := []interface{}{}
-	for _, op := range tx.ops {
-		if op.del {
-			toBeDeleted = append(toBeDeleted, op.key)
-		} else {
-			msetArgs = append(msetArgs, op.key)
-			msetArgs = append(msetArgs, string(op.value))
-		}
-	}
-
-	conn := tx.db.pool.Get()
-	defer safeclose.Close(conn)
-
-	if len(toBeDeleted) > 0 {
-		_, err := conn.Do("DEL", toBeDeleted...)
-		if err != nil {
-			return fmt.Errorf("Do(DEL) failed: %s", err)
-		}
-	}
-	if len(msetArgs) > 0 {
-		_, err := conn.Do("MSET", msetArgs...)
-		if err != nil {
-			return fmt.Errorf("Do(MSET) failed: %s", err)
-		}
 	}
 	return nil
 }
@@ -158,14 +124,16 @@ func checkCrossSlot(tx *Txn) bool {
 }
 
 func getHashSlot(key string) uint16 {
+	var tag string
 	start := strings.Index(key, "{")
 	if start != -1 {
 		start++
-		end := strings.Index(key[start:], "}")
+		tagSlice := key[start:]
+		end := strings.Index(tagSlice, "}")
 		if end != -1 {
-			key = key[start:end]
+			tag = tagSlice[:end]
 		}
 	}
 	const redisHashSlotCount = 16384
-	return crc16.ChecksumCCITT([]byte(key)) % redisHashSlotCount
+	return crc16.ChecksumCCITT([]byte(tag)) % redisHashSlotCount
 }
