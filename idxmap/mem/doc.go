@@ -24,7 +24,7 @@
 //
 // To insert a new item into the mapping, execute:
 //
-//     mapping.Put(name, metadata)
+//     mapping.Put(name, value)
 //
 // Put can also be used to overwrite an existing item associated with the name.
 //
