@@ -17,7 +17,6 @@ package sql
 import (
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"reflect"
-	"log"
 )
 
 // SliceIt reads everything from the ValIterator & stores it to pointerToASlice
@@ -53,8 +52,6 @@ func SliceIt(pointerToASlice interface{}, it ValIterator) error {
 	}
 	for {
 		row := reflect.New(sliceElemType)
-		log.Printf("row = %v", row)
-		log.Printf("row data = %v", row.Interface())
 		if stop := it.GetNext(row.Interface()); stop {
 			break
 		}

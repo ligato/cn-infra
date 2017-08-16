@@ -130,7 +130,7 @@ func ListExportedFieldsPtrs(val interface{}, filterPK bool, predicates ...Export
 			}
 		default:
 			if field.CanAddr() {
-				if field.Type() != reflect.TypeOf(uuid.UUID{}) {
+				if structField.Name != "ID" {
 					ptrs = append(ptrs, field.Addr().Interface())
 				} else {
 					if !filterPK {
@@ -138,7 +138,7 @@ func ListExportedFieldsPtrs(val interface{}, filterPK bool, predicates ...Export
 					}
 				}
 			} else if field.IsValid() {
-				if field.Type() != reflect.TypeOf(uuid.UUID{}) {
+				if structField.Name != "ID" {
 					ptrs = append(ptrs, field.Interface())
 				} else {
 					if !filterPK {

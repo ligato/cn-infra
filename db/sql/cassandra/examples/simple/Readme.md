@@ -10,7 +10,7 @@ In the example connection to etcd is configured using `--cfg` argument.
 If the file is not specified  application tries to connect
  to Cassandra on localhost on default port 9042.
  
-The example contains one programs:
+The example contains one program:
 ```
-go run main.go
+go run main.go <ClientConfigFilePath>
 ```
