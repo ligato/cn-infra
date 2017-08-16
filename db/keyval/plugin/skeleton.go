@@ -58,6 +58,7 @@ func (plugin *Skeleton) Init() (err error) {
 	}
 	plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.conn, &keyval.SerializerJSON{})
 
+	// todo remove transport registration
 	prefixedBroker := plugin.conn.NewBroker(plugin.serviceLabel.GetAgentPrefix())
 	prefixedWatcher := plugin.conn.NewWatcher(plugin.serviceLabel.GetAgentPrefix())
 	datasync.RegisterTransport(dbsync.NewAdapter(plugin.name, prefixedBroker, prefixedWatcher))
@@ -66,8 +67,8 @@ func (plugin *Skeleton) Init() (err error) {
 		dbWOfDifferentAgent := plugin.conn.NewWatcher(plugin.serviceLabel.GetDifferentAgentPrefix(microserviceLabel))
 		return dbsync.NewAdapter(microserviceLabel, dbOfDifferentAgent, dbWOfDifferentAgent)
 	})
-	return err
 
+	return err
 }
 
 // AfterInit is called once all plugin have been initialized. The connection to datastore

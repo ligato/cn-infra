@@ -36,14 +36,14 @@ func init() {
 
 // Plugin implements the Plugin interface.
 type Plugin struct {
+	Transport  datasync.TransportAdapter
 	LogFactory logging.LogFactory
 	HTTPport   string
 
 	logging.Logger
-	server     *http.Server
-	mx         *mux.Router
-	formatter  *render.Render
-	grpcServer *grpcsync.Adapter
+	server    *http.Server
+	mx        *mux.Router
+	formatter *render.Render
 }
 
 // Init is entry point called by Agent Core
@@ -64,9 +64,8 @@ func (plugin *Plugin) Init() (err error) {
 		IndentJSON: true,
 	})
 
-	plugin.grpcServer = grpcsync.NewAdapter()
-	plugin.Debug("grpctransp: ", plugin.grpcServer)
-	err = datasync.RegisterTransport(&syncbase.Adapter{Watcher: plugin.grpcServer})
+	// Register grpc transport adapter
+	plugin.Transport = plugin.initGrpcTransportAdapter()
 
 	return err
 }
@@ -108,6 +107,12 @@ func (plugin *Plugin) AfterInit() error {
 
 // Close cleans up the resources
 func (plugin *Plugin) Close() error {
-	_, err := safeclose.CloseAll(plugin.grpcServer, plugin.server)
+	_, err := safeclose.CloseAll(plugin.Transport, plugin.server)
 	return err
+}
+
+// Init grpc adapter
+func (plugin *Plugin) initGrpcTransportAdapter() datasync.TransportAdapter {
+	grpcAdapter := grpcsync.NewAdapter()
+	return &syncbase.Adapter{Watcher: grpcAdapter}
 }
