@@ -20,49 +20,68 @@ import (
 	"fmt"
 )
 
+// TransportAggregator is cumulative adapter which contains all available transport types
 type TransportAggregator struct {
 	grpcAdapter datasync.TransportAdapter
 	etcdAdapter datasync.TransportAdapter
+	redisAdapter datasync.TransportAdapter
 }
 
+
 // RegisterGrpcTransport is used to register GRPC transport
-func (t *TransportAggregator) RegisterGrpcTransport(adapter datasync.TransportAdapter) {
+func (ta *TransportAggregator) RegisterGrpcTransport(adapter datasync.TransportAdapter) {
 	if adapter != nil {
-		t.grpcAdapter = adapter
+		ta.grpcAdapter = adapter
 		log.Info("GRPC transport adapter registered")
 	}
 }
 
 // RegisterEtcdTransport is used to register ETCD transport
-func (t *TransportAggregator) RegisterEtcdTransport(adapter datasync.TransportAdapter) {
+func (ta *TransportAggregator) RegisterEtcdTransport(adapter datasync.TransportAdapter) {
 	if adapter != nil {
-		t.etcdAdapter = adapter
+		ta.etcdAdapter = adapter
 		log.Info("ETCD transport adapter registered")
 	}
 }
 
-// RetrieveGrpcTransport returns GRPC transport if registered
-func (t *TransportAggregator) RetrieveGrpcTransport() datasync.TransportAdapter {
-	if t.grpcAdapter == nil {
-		return nil
+// RegisterRedisTransport is used to register Redis transport
+func (ta *TransportAggregator) RegisterRedisTransport(adapter datasync.TransportAdapter) {
+	if adapter != nil {
+		ta.redisAdapter = adapter
+		log.Info("Redis transport adapter registered")
 	}
-	return t.grpcAdapter
 }
 
-// RetrieveGrpcTransport returns ETCD transport if registered
-func (t *TransportAggregator) RetrieveEtcdTransport() datasync.TransportAdapter {
-	if t.etcdAdapter == nil {
+// RetrieveGrpcTransport returns GRPC transport if registered
+func (ta *TransportAggregator) RetrieveGrpcTransport() datasync.TransportAdapter {
+	if ta.grpcAdapter == nil {
 		return nil
 	}
-	return t.etcdAdapter
+	return ta.grpcAdapter
+}
+
+// RetrieveEtcdTransport returns ETCD transport if registered
+func (ta *TransportAggregator) RetrieveEtcdTransport() datasync.TransportAdapter {
+	if ta.etcdAdapter == nil {
+		return nil
+	}
+	return ta.etcdAdapter
+}
+
+// RetrieveRedisTransport returns Redis transport if registered
+func (ta *TransportAggregator) RetrieveRedisTransport() datasync.TransportAdapter {
+	if ta.redisAdapter == nil {
+		return nil
+	}
+	return ta.redisAdapter
 }
 
 // RetrieveTransport returns first available transport. If no transport is available, return error
-func (t *TransportAggregator) RetrieveTransport() (datasync.TransportAdapter, error) {
-	if t.grpcAdapter != nil {
-		return t.grpcAdapter, nil
-	} else if t.etcdAdapter != nil {
-		return t.etcdAdapter, nil
+func (ta *TransportAggregator) RetrieveTransport() (datasync.TransportAdapter, error) {
+	if ta.etcdAdapter != nil {
+		return ta.etcdAdapter, nil
+	} else if ta.grpcAdapter != nil {
+		return ta.grpcAdapter, nil
 	} else {
 		return nil, fmt.Errorf("No transport is available")
 	}

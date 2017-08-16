@@ -19,7 +19,9 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
-	"github.com/namsral/flag"
+	"github.com/ligato/cn-infra/datasync/adapters"
+	"github.com/ligato/cn-infra/datasync"
+	"github.com/ligato/cn-infra/datasync/persisted/dbsync"
 )
 
 // PluginID used in the Agent Core flavors
@@ -27,52 +29,54 @@ const PluginID core.PluginName = "RedisClient"
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
-	LogFactory     logging.LogFactory
-	ServiceLabel   *servicelabel.Plugin
-	ConfigFileName string
+	Transports     *adapters.TransportAggregator
+	LogFactory   logging.LogFactory
+	ServiceLabel *servicelabel.Plugin
 	*plugin.Skeleton
-}
-
-var defaultConfigFileName string
-
-func init() {
-	flag.StringVar(&defaultConfigFileName, "redis-config", "",
-		"Location of Redis configuration file; Can also be set via environment variable REDIS_CONFIG")
-}
-
-func (p *Plugin) retrieveConfig() (cfg interface{}, err error) {
-	var configFile string
-	if p.ConfigFileName != "" {
-		configFile = p.ConfigFileName
-	} else if defaultConfigFileName != "" {
-		configFile = defaultConfigFileName
-	}
-
-	if configFile != "" {
-		cfg, err = LoadConfig(configFile)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return cfg, nil
 }
 
 // Init is called on plugin startup. It establishes the connection to redis.
 func (p *Plugin) Init() error {
-	cfg, err := p.retrieveConfig()
-	if err != nil {
-		return err
-	}
-	client, err := CreateClient(cfg)
+
+	// FIXME: properly retrieve config
+	pool, err := CreateNodeClient(NodeConfig{})
 	if err != nil {
 		return err
 	}
 
 	skeleton := plugin.NewSkeleton(string(PluginID), p.LogFactory, p.ServiceLabel,
 		func(log logging.Logger) (plugin.Connection, error) {
-			return NewBytesConnection(client, log)
+			return NewBytesConnection(pool, log)
 		},
 	)
+
 	p.Skeleton = skeleton
-	return p.Skeleton.Init()
+	err = p.Skeleton.Init()
+	if err != nil {
+		return err
+	}
+
+	// Init Redis transport
+	transportRedis, err := p.InitTransport(p.Skeleton.Logger)
+	if err != nil {
+		return err
+	}
+	p.Transports.RegisterRedisTransport(transportRedis)
+
+	return nil
+}
+
+// InitTransport initializes ETCD transport adapter which then can be injected to other plugins
+func (p *Plugin) InitTransport(logger logging.Logger) (datasync.TransportAdapter, error) {
+	pool, err := CreateNodeClient(NodeConfig{})
+	if err != nil {
+		return nil, err
+	}
+	connection, err := NewBytesConnection(pool, logger)
+	if err != nil {
+		return nil, err
+	}
+	broker := connection.NewBroker(p.ServiceLabel.GetAgentPrefix())
+	watcher := connection.NewWatcher(p.ServiceLabel.GetAgentPrefix())
+	return dbsync.NewAdapter(string(PluginID), broker, watcher), nil
 }

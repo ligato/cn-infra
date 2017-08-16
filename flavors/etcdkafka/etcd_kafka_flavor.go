@@ -19,6 +19,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/flavors/generic"
 	"github.com/ligato/cn-infra/messaging/kafka"
+	"github.com/ligato/cn-infra/db/keyval/redis"
 )
 
 // Flavor glues together generic.Flavor plugins with:
@@ -27,6 +28,7 @@ import (
 type Flavor struct {
 	Generic generic.Flavor
 	Etcd    etcdv3.Plugin
+	Redis   redis.Plugin
 	Kafka   kafka.Plugin
 
 	injected bool
@@ -44,6 +46,10 @@ func (f *Flavor) Inject() error {
 	f.Etcd.ServiceLabel = &f.Generic.ServiceLabel
 	f.Etcd.StatusCheck = &f.Generic.StatusCheck
 	f.Etcd.Transports = &f.Generic.Transports
+
+	f.Redis.LogFactory = &f.Generic.Logrus
+	f.Redis.ServiceLabel = &f.Generic.ServiceLabel
+	f.Redis.Transports = &f.Generic.Transports
 
 	f.Kafka.LogFactory = &f.Generic.Logrus
 	f.Kafka.ServiceLabel = &f.Generic.ServiceLabel

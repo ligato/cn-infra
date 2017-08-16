@@ -223,7 +223,6 @@ func (p *Plugin) publishPluginData(pluginName core.PluginName, pluginStat *statu
 		return fmt.Errorf("Transport is nil")
 	}
 	return transport.PublishData(status.PluginStatusKey(string(pluginName)), pluginStat)
-	return nil
 }
 
 // publishAllData publishes global agent + all plugins state data into ETCD.
