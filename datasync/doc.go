@@ -17,8 +17,8 @@
 // message buses, or gRPC-connected clients.
 //
 // These events are processed asynchronously.
-// App plugin that watches data changes gives callback for each event
+// The app plugin that watches data changes gives callback for each event
 // (e.g. successful configuration or an error).
 //
-// See the examples under dedicated examples package.
+// See the examples under the dedicated examples package.
 package datasync
