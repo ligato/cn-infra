@@ -34,10 +34,6 @@ import:
   version: v2.1.8
 - package: github.com/Songmu/prompter
   version: 0.1.0
-- package: github.com/garyburd/redigo
-  version: v1.1.0
-- package: github.com/rafaeljusto/redigomock
-  version: v2.0
 - package: github.com/gocql/gocql
   version: 88748c7b290d13b288055f5dea4d1c49d44db06d
 - package: gopkg.in/inf.v0

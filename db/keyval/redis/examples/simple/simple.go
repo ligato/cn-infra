@@ -28,7 +28,7 @@ var watcher keyval.BytesWatcher
 
 var prefix string
 var debug bool
-var redigo bool
+var debugIterator bool
 
 func main() {
 	//generateSampleConfigs()
@@ -39,17 +39,8 @@ func main() {
 	}
 	fmt.Printf("config: %T:\n%v\n", cfg, cfg)
 	fmt.Printf("prefix: %s\n", prefix)
-	fmt.Printf("redigo: %t\n", redigo)
 
-	if redigo {
-		if _, yes := cfg.(redis.NodeConfig); !yes {
-			fmt.Printf("Redigo only works on redis.NodeConfig, not %T\n", cfg)
-			return
-		}
-		redisConn = createConnectionRedigo(cfg)
-	} else {
-		redisConn = createConnection(cfg)
-	}
+	redisConn = createConnection(cfg)
 	broker = redisConn.NewBroker(prefix)
 	watcher = redisConn.NewWatcher(prefix)
 
@@ -61,8 +52,8 @@ func loadConfig() interface{} {
 		"Specifies key prefix")
 	flag.BoolVar(&debug, "debug", false,
 		"Specifies whether to enable debugging; default to false")
-	flag.BoolVar(&redigo, "redigo", false,
-		"Specifies whether to use redigo API instead; default to false")
+	flag.BoolVar(&debugIterator, "debug-iterator", false,
+		"Specifies whether to enable debugging; default to false")
 	flag.Parse()
 
 	flag.Usage = func() {
@@ -72,7 +63,7 @@ func loadConfig() interface{} {
 				// put quotes around string
 				format = "  -%s=%q: %s\n"
 			} else {
-				if f.Name != "debug" && f.Name != "redigo" {
+				if f.Name != "debug" && f.Name != "debug-iterator" {
 					return
 				}
 				format = "  -%s=%s: %s\n"
@@ -115,19 +106,6 @@ func createConnection(cfg interface{}) *redis.BytesConnectionRedis {
 	return conn
 }
 
-func createConnectionRedigo(cfg interface{}) *redis.BytesConnectionRedis {
-	pool, err := redis.CreateNodeClientConnPool(cfg.(redis.NodeConfig))
-	if err != nil {
-		log.Panicf("CreateNodeClientConnPool() failed: %s", err)
-	}
-	conn, err := redis.NewBytesConnectionRedis(pool, log)
-	if err != nil {
-		safeclose.Close(pool)
-		log.Panicf("NewBytesConnectionRedigo() failed: %s", err)
-	}
-	return conn
-}
-
 func runSimpleExmple() {
 	var err error
 
@@ -141,7 +119,7 @@ func runSimpleExmple() {
 	respChan := make(chan keyval.BytesWatchResp, 10)
 	err = watcher.Watch(respChan, keyPrefix)
 	if err != nil {
-		log.Errorf(err.Error())
+		log.Error(err.Error())
 	}
 	go func() {
 		for {
@@ -178,6 +156,9 @@ func runSimpleExmple() {
 	listKeys(keyPrefix)
 	listVal(keyPrefix)
 
+	doKeyInterator()
+	doKeyValInterator()
+
 	del(keyPrefix, keyval.WithPrefix())
 
 	fmt.Println("==> NOTE: All keys should have been deleted")
@@ -207,7 +188,7 @@ func put(key, value string, opts ...keyval.PutOption) {
 	err := broker.Put(key, []byte(value), opts...)
 	if err != nil {
 		//log.Panicf(err.Error())
-		log.Errorf(err.Error())
+		log.Error(err.Error())
 	}
 }
 
@@ -219,7 +200,7 @@ func get(key string) {
 
 	val, found, revision, err = broker.GetValue(key)
 	if err != nil {
-		log.Errorf(err.Error())
+		log.Error(err.Error())
 	} else if found {
 		log.Infof("GetValue(%s) = %t ; val = %s ; revision = %d", key, found, val, revision)
 	} else {
@@ -233,7 +214,7 @@ func listKeys(keyPrefix string) {
 
 	keys, err = broker.ListKeys(keyPrefix)
 	if err != nil {
-		log.Errorf(err.Error())
+		log.Error(err.Error())
 	} else {
 		var count int32
 		for {
@@ -254,7 +235,7 @@ func listVal(keyPrefix string) {
 
 	keyVals, err = broker.ListValues(keyPrefix)
 	if err != nil {
-		log.Errorf(err.Error())
+		log.Error(err.Error())
 	} else {
 		var count int32
 		for {
@@ -269,13 +250,89 @@ func listVal(keyPrefix string) {
 	}
 }
 
+func doKeyInterator() {
+	prefix := "k_iter-"
+	max := 100
+	for i := 1; i <= max; i++ {
+		key := fmt.Sprintf("%s%d", prefix, i)
+		broker.Put(key, []byte(key))
+	}
+	var level logging.LogLevel
+	if debugIterator {
+		level = log.GetLevel()
+		log.SetLevel(logging.DebugLevel)
+	}
+	iterator, err := broker.ListKeys(prefix)
+	if err != nil {
+		log.Error(err.Error())
+	}
+	count := 0
+	for {
+		_, _, last := iterator.GetNext()
+		if last {
+			if count == max {
+				log.Infof("doKeyInterator(): Expected %d keys; Found %d", max, count)
+			} else {
+				log.Errorf("doKeyInterator(): Expected %d keys; Found %d", max, count)
+			}
+			break
+		}
+		if debug || debugIterator {
+			time.Sleep(200 * time.Millisecond)
+		}
+		count++
+	}
+	if debugIterator {
+		log.SetLevel(level)
+	}
+	broker.Delete(prefix, keyval.WithPrefix())
+}
+
+func doKeyValInterator() {
+	prefix := "kv_iter-"
+	max := 100
+	for i := 1; i <= max; i++ {
+		key := fmt.Sprintf("%s%d", prefix, i)
+		broker.Put(key, []byte(key))
+	}
+	var level logging.LogLevel
+	if debugIterator {
+		level = log.GetLevel()
+		log.SetLevel(logging.DebugLevel)
+	}
+	iterator, err := broker.ListValues(prefix)
+	if err != nil {
+		log.Error(err.Error())
+	}
+	count := 0
+	for {
+		_, last := iterator.GetNext()
+		if last {
+			if count == max {
+				log.Infof("doKeyValInterator(): Expected %d keyVals; Found %d", max, count)
+			} else {
+				log.Errorf("doKeyValInterator(): Expected %d keyVals; Found %d", max, count)
+			}
+			break
+		}
+		if debug || debugIterator {
+			time.Sleep(200 * time.Millisecond)
+		}
+		count++
+	}
+	if debugIterator {
+		log.SetLevel(level)
+	}
+	broker.Delete(prefix, keyval.WithPrefix())
+}
+
 func del(keyPrefix string, opt ...keyval.DelOption) {
 	var found bool
 	var err error
 
 	found, err = broker.Delete(keyPrefix, opt)
 	if err != nil {
-		log.Errorf(err.Error())
+		log.Error(err.Error())
 		return
 	}
 	log.Infof("Delete(%s): found = %t", keyPrefix, found)

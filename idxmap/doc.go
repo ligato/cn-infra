@@ -16,7 +16,7 @@
 // - write & lookup data by indexes
 // - index data using multiple indexes
 // - watch data changes in the map
-// - create local cache data of key value store (such as ETCD).
+// - create local cache data of key value store (such as etcd).
 //
 //  Primary Index                Item                                Secondary indexes
 // ===================================================================================
@@ -31,20 +31,20 @@
 //
 //
 //
-// Function `RegisterName` adds a value (item) into the mapping. In the
+// Function `Put` adds a value (item) into the mapping. In the
 // function call the primary index(name) for the item is specified. The
 // values of the primary index are unique, if the name already exists,
 // then the item is overwritten. To retrieve an item identified by the
 // primary index, use the `Lookup` function. An item can be removed from
-// the mapping by calling the `UnregisterName` function. The names that
+// the mapping by calling the `Delete` function. The names that
 // are currently registered can be retrieved by calling the `ListNames`
 // function.
 //
-// The constructor allows to define a `createIndexes` function that extracts
+// The constructor allows you to define a `createIndexes` function that extracts
 // secondary indices from stored items. The function returns a map indexed
 // by names of secondary indexes, and the values are the extracted values
 // for the particular item. The values of secondary indexes are not necessarily
-// unique. To retrieve items based on secondary indicess use the
+// unique. To retrieve items based on secondary indices use the
 // `LookupByMetadata` function. In contrast to the lookup by primary index,
 // the function may return multiple names.
 //

@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package plugin contains logging plugin skeleton reused in
-// a particular plugin implementation (logrus/plugin_impl.go).
+// Package plugin contains the logging plugin skeleton used in the
+// logging plugin implementation (logrus/plugin_impl.go).
 package plugin

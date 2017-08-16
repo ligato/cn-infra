@@ -46,12 +46,12 @@ type NamedMappingDtoWithoutMeta struct {
 type NamedMappingRW interface {
 	NamedMapping
 
-	// RegisterName registers a new item into the mapping associated with the name.
+	// Put registers a new item into the mapping associated with the name.
 	// Name is the primary unique key, if an item was registered before it is overwritten.
-	RegisterName(name string, metadata interface{})
+	Put(name string, metadata interface{})
 
-	// UnregisterName removes an item associated with the name from the mapping.
-	UnregisterName(name string) (metadata interface{}, exists bool)
+	// Delete removes an item associated with the name from the mapping.
+	Delete(name string) (metadata interface{}, exists bool)
 }
 
 // NamedMapping is the "user API" to the mapping. It provides
