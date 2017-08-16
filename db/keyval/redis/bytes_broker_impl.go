@@ -193,6 +193,10 @@ func (db *BytesConnectionRedis) Delete(key string, opts ...keyval.DelOption) (fo
 	return (intCmd.Val() != 0), nil
 }
 
+func (it *bytesKeyIterator) Close() error {
+	return it.err
+}
+
 // GetNext returns the next item from the iterator.
 // If the iterator has reached the last item previously, lastReceived is set to true.
 func (it *bytesKeyIterator) GetNext() (key string, rev int64, lastReceived bool) {
@@ -223,6 +227,10 @@ func (it *bytesKeyIterator) GetNext() (key string, rev int64, lastReceived bool)
 	it.index++
 
 	return key, 0, false
+}
+
+func (it *bytesKeyValIterator) Close() error {
+	return it.err
 }
 
 // GetNext returns the next item from the iterator.
