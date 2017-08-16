@@ -3,9 +3,9 @@ The CN-Infra Data Broker abstraction (see the diagram below) is based on
 two APIs: 
 * **The Broker API** - used by app plugins to PULL (i.e. retrieve) data
   from a data store or PUSH (i.e. write) data into the data store.  Data
-   can be retrieved for a specific or by running a query. Data can be 
-   written for a specific key. Multiple writes can be executed in a 
-   transaction.
+  can be retrieved for a specific key or by running a query. Data can be 
+  written for a specific key. Multiple writes can be executed in a 
+  transaction.
 * **The Watcher API** - used by app plugins to WATCH data on a specified 
   key; Watching means to monitor data changes on and be notified as soon 
   as the change occurs.
