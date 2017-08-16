@@ -47,6 +47,7 @@ type bytesKeyIterator struct {
 	pattern    string
 	cursor     uint64
 	trimPrefix func(key string) string
+	err        error
 }
 
 // bytesKeyValIterator is an iterator returned by ListValues call
@@ -195,6 +196,9 @@ func (db *BytesConnectionRedis) Delete(key string, opts ...keyval.DelOption) (fo
 // GetNext returns the next item from the iterator.
 // If the iterator has reached the last item previously, lastReceived is set to true.
 func (it *bytesKeyIterator) GetNext() (key string, rev int64, lastReceived bool) {
+	if it.err != nil {
+		return "", 0, true
+	}
 	if it.index >= len(it.keys) {
 		if it.cursor == 0 {
 			return "", 0, true
@@ -202,6 +206,7 @@ func (it *bytesKeyIterator) GetNext() (key string, rev int64, lastReceived bool)
 		var err error
 		it.keys, it.cursor, err = scanKeys(it.db, it.pattern, it.cursor)
 		if err != nil {
+			it.err = err
 			it.db.Errorf("GetNext() failed: %s (pattern %s)", err.Error(), it.pattern)
 			return "", 0, true
 		}
@@ -223,6 +228,9 @@ func (it *bytesKeyIterator) GetNext() (key string, rev int64, lastReceived bool)
 // GetNext returns the next item from the iterator.
 // If the iterator has reached the last item previously, lastReceived set to true.
 func (it *bytesKeyValIterator) GetNext() (kv keyval.BytesKeyVal, lastReceived bool) {
+	if it.err != nil {
+		return nil, true
+	}
 	if it.index >= len(it.values) {
 		if it.cursor == 0 {
 			return nil, true
@@ -230,6 +238,7 @@ func (it *bytesKeyValIterator) GetNext() (kv keyval.BytesKeyVal, lastReceived bo
 		var err error
 		it.keys, it.cursor, err = scanKeys(it.db, it.pattern, it.cursor)
 		if err != nil {
+			it.err = err
 			it.db.Errorf("GetNext() failed: %s (pattern %s)", err.Error(), it.pattern)
 			return nil, true
 		}
@@ -238,6 +247,7 @@ func (it *bytesKeyValIterator) GetNext() (kv keyval.BytesKeyVal, lastReceived bo
 		}
 		it.values, err = getValues(it.db, it.keys)
 		if err != nil {
+			it.err = err
 			it.db.Errorf("GetNext() failed: %s (pattern %s)", err.Error(), it.pattern)
 			return nil, true
 		}
