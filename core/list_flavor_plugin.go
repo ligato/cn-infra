@@ -15,8 +15,9 @@
 package core
 
 import (
-	log "github.com/ligato/cn-infra/logging/logrus"
 	"reflect"
+
+	log "github.com/ligato/cn-infra/logging/logrus"
 )
 
 // ListPluginsInFlavor uses reflection to traverse top level fields of Flavor structure.

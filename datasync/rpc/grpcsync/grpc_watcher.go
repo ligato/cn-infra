@@ -19,11 +19,12 @@ import (
 
 	//TODO "github.com/gorilla/rpc/json"
 	"fmt"
+	"net"
+
 	"github.com/ligato/cn-infra/datasync/syncbase"
 	"github.com/ligato/cn-infra/datasync/syncbase/msg"
 	log "github.com/ligato/cn-infra/logging/logrus"
 	"google.golang.org/grpc"
-	"net"
 )
 
 // NewAdapter creates a new instance of Adapter.

@@ -17,10 +17,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/ligato/cn-infra/logging/logrus"
 	"net/http"
 	"time"
+
+	"github.com/gorilla/mux"
+	"github.com/ligato/cn-infra/logging/logrus"
 )
 
 const loggerName = "loggerName"

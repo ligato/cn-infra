@@ -54,7 +54,7 @@
 // To insert single key-value pair into etcd run:
 //		db.Put(key, data)
 // To remove a value identified by key:
-//      db.Delete(key)
+//      datasync.Delete(key)
 //
 // In addition to single key-value pair approach, the transaction API is provided. Transaction
 // executes multiple operations in a more efficient way than one by one execution.

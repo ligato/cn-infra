@@ -15,8 +15,9 @@
 package local
 
 import (
-	"github.com/ligato/cn-infra/datasync/syncbase"
 	"sync"
+
+	"github.com/ligato/cn-infra/datasync/syncbase"
 )
 
 var (

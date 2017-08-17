@@ -1,12 +1,13 @@
 package mux
 
 import (
+	"testing"
+
 	"github.com/Shopify/sarama"
 	"github.com/Shopify/sarama/mocks"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/onsi/gomega"
-	"testing"
 )
 
 func getMockConsumerFactory(t *testing.T) ConsumerFactory {

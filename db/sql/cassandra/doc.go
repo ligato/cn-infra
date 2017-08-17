@@ -41,7 +41,7 @@
 // To insert single key-value pair into Cassandra run (both values are pointers, JamesBond is instance of User struct.):
 //		db.Put(sql.PK(&JamesBond.ID), JamesBond)
 // To remove a value identified by key:
-//      db.Delete(sql.FROM(JamesBond, sql.WHERE(sql.PK(&JamesBond.ID)))
+//      datasync.Delete(sql.FROM(JamesBond, sql.WHERE(sql.PK(&JamesBond.ID)))
 //
 // To retrieve a value identified by key (both values are pointers):
 //    data, found, rev, err := db.GetValue(sql.FROM(UserTable, sql.WHERE(sql.Field(&UserTable.ID, sql.EQ("James Bond"))))

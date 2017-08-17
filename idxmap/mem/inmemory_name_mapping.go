@@ -16,12 +16,13 @@ package mem
 
 import (
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/idxmap"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
-	"sync"
-	"time"
 )
 
 // NotifTimeout for delivery of notification

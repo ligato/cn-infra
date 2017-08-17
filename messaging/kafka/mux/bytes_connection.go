@@ -2,6 +2,7 @@ package mux
 
 import (
 	"fmt"
+
 	"github.com/Shopify/sarama"
 	"github.com/ligato/cn-infra/messaging"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
