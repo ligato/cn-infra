@@ -14,6 +14,8 @@
 
 package keyval
 
+import "github.com/ligato/cn-infra/datasync"
+
 // BytesWatcher define API for monitoring changes in datastore
 type BytesWatcher interface {
 	// Watch starts subscription for changes associated with the selected keys.
