@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/ligato/cn-infra/datasync"
 	log "github.com/ligato/cn-infra/logging/logrus"
 )
 
