@@ -56,7 +56,7 @@ func (adapter *Adapter) WatchData(resyncName string, changeChan chan datasync.Ch
 // PublishData using ETCD or any other default transport
 func (adapter *Adapter) PublishData(key string, data proto.Message) error {
 	if data == nil {
-		_, err := adapter.datasync.Delete(key)
+		_, err := adapter.db.Delete(key)
 		return err
 	}
 
