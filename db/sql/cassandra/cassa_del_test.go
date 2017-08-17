@@ -35,7 +35,7 @@ func TestDel1_convenient(t *testing.T) {
 			"James Bond",
 		})
 
-	err := datasync.Delete(sql.FROM(JamesBond, sql.WHERE(sql.FieldEQ(&JamesBond.ID))))
+	err := db.Delete(sql.FROM(JamesBond, sql.WHERE(sql.FieldEQ(&JamesBond.ID))))
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
@@ -55,6 +55,6 @@ func TestDel2_customTableSchema(t *testing.T) {
 			"James Bond",
 		})
 
-	err := datasync.Delete(sql.FROM(entity, sql.WHERE(sql.FieldEQ(&entity.ID))))
+	err := db.Delete(sql.FROM(entity, sql.WHERE(sql.FieldEQ(&entity.ID))))
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
