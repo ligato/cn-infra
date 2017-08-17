@@ -25,11 +25,12 @@ import (
 	"strings"
 	"sync"
 
+	"regexp"
+	"sync/atomic"
+
 	lg "github.com/Sirupsen/logrus"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/satori/go.uuid"
-	"regexp"
-	"sync/atomic"
 )
 
 // Logger is wrapper of Logrus logger. In addition to Logrus functionality it

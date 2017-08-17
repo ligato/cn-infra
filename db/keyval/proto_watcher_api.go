@@ -15,7 +15,7 @@
 package keyval
 
 import (
-	"github.com/ligato/cn-infra/db"
+	"github.com/ligato/cn-infra/datasync"
 )
 
 // ProtoWatcher define API for monitoring changes in a datastore
@@ -26,8 +26,6 @@ type ProtoWatcher interface {
 
 // ProtoWatchResp represents a notification about change. It is sent through the watch resp channel.
 type ProtoWatchResp interface {
-	ProtoKvPair
-	GetChangeType() db.PutDel
-	// GetPrevValue unmarshals the value before the change into the msg argument
-	GetRevision() int64
+	//???ProtoKvPair
+	datasync.ProtoWatchResp
 }

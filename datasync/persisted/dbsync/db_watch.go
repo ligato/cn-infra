@@ -15,14 +15,14 @@
 package dbsync
 
 import (
+	"time"
+
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/resync"
 	resync_types "github.com/ligato/cn-infra/datasync/resync/resyncevent"
 	"github.com/ligato/cn-infra/datasync/syncbase"
-	"github.com/ligato/cn-infra/db"
 	"github.com/ligato/cn-infra/db/keyval"
 	log "github.com/ligato/cn-infra/logging/logrus"
-	"time"
 )
 
 // WatchBrokerKeys implements go routines on top of Change & Resync channels
@@ -69,7 +69,7 @@ func watchAndResyncBrokerKeys(resyncName string, changeChan chan datasync.Change
 func (keys *watchBrokerKeys) watchChanges(watchCh chan keyval.BytesWatchResp) {
 	for x := range watchCh {
 		var prev datasync.LazyValue
-		if db.Delete == x.GetChangeType() {
+		if datasync.Delete == x.GetChangeType() {
 			_, prev = keys.adapater.base.LastRev().Del(x.GetKey())
 		} else {
 			_, prev = keys.adapater.base.LastRev().PutWithRevision(x.GetKey(),

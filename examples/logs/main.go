@@ -1,11 +1,12 @@
 package main
 
 import (
+	"time"
+
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/flavors/generic"
 	"github.com/ligato/cn-infra/logging"
 	log "github.com/ligato/cn-infra/logging/logrus"
-	"time"
 )
 
 // *************************************************************************

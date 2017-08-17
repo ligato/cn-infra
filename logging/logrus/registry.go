@@ -16,9 +16,10 @@ package logrus
 
 import (
 	"fmt"
+	"sync"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/ligato/cn-infra/logging"
-	"sync"
 )
 
 // LoggerRegistry holds all created loggers
