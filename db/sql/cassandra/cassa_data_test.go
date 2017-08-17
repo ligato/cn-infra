@@ -86,7 +86,7 @@ func mockExec(sessionMock *gockle.SessionMock, query string, binding []interface
 
 // cells is a helper that harvests all exported fields values
 func cells(entity interface{}) (cellsInRow *row) {
-	fields, values := cassandra.SliceOfFieldsWithVals(entity)
+	fields, values := cassandra.SliceOfFieldsWithValPtrs(entity)
 	return &row{values, fields}
 }
 
