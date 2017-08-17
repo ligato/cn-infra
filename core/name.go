@@ -37,14 +37,14 @@ func (np *NamedPlugin) String() string {
 	return string(np.PluginName)
 }
 
-// GetPluginName tries to use reflection to find field name
+// PluginNameOfFlavor tries to use reflection to find field name
 // by traversing all field pointers of a structure instance
 //
 // Example usage to prepare logger name:
 //
-//    flavor.Logrus.NewLogger(GetPluginName(flavor, &flavor.ETCD))
+//    flavor.Logrus.NewLogger(PluginNameOfFlavor(&flavor.ETCD, flavor))
 //
-func GetPluginName(flavor interface{}, ptrToPluginInFlavor interface{}) (
+func PluginNameOfFlavor(ptrToPluginInFlavor interface{}, flavor interface{}) (
 	name PluginName, found bool) {
 
 	field, found := structs.FindField(flavor, ptrToPluginInFlavor)
