@@ -63,7 +63,7 @@ type WithKey interface {
 	GetKey() string
 }
 
-// WithKey is a helper interface which intent is to ensure that same
+// WithChangeType is a helper interface which intent is to ensure that same
 // method declaration is used in different interfaces (composition of interfaces)
 type WithChangeType interface {
 	GetChangeType() PutDel
