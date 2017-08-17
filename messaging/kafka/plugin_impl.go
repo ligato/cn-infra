@@ -25,6 +25,7 @@ import (
 	"github.com/ligato/cn-infra/statuscheck"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
+	"github.com/ligato/cn-infra/messaging"
 )
 
 // PluginID used in the Agent Core flavors
@@ -113,6 +114,18 @@ func (p *Plugin) NewConnection(name string) *mux.Connection {
 // uses proto-modelled messages.
 func (p *Plugin) NewProtoConnection(name string) *mux.ProtoConnection {
 	return p.mx.NewProtoConnection(name, &keyval.SerializerJSON{})
+}
+
+func (p *Plugin) NewSyncPublisher(topic string) messaging.ProtoPublisher {
+	return p.NewProtoConnection("").NewSyncPublisher(topic)
+}
+
+func (p *Plugin) NewAsyncPublisher(topic string,  successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessage, error)) messaging.ProtoPublisher {
+	return p.NewProtoConnection("").NewAsyncPublisher(topic, successClb, errorClb)
+}
+
+func (p *Plugin) NewWatcher(name string) messaging.ProtoWatcher {
+	return p.NewProtoConnection(name)
 }
 
 // Receive client config according to kafka config data

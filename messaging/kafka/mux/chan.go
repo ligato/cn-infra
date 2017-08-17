@@ -19,16 +19,17 @@ import (
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/messaging"
 	"time"
+	"github.com/ligato/cn-infra/messaging/kafka/client"
 )
 
 // DefaultMsgTimeout for delivery of notification
 const DefaultMsgTimeout = 2 * time.Second
 
-func ToBytesMsgChan(ch chan messaging.BytesMessage, opts ...interface{}) func(dto messaging.BytesMessage) {
+func ToBytesMsgChan(ch chan *client.ConsumerMessage, opts ...interface{}) func(*client.ConsumerMessage) {
 
 	timeout, logger := parseOpts(opts...)
 
-	return func(dto messaging.BytesMessage) {
+	return func(dto *client.ConsumerMessage) {
 		select {
 		case ch <- dto:
 		case <-time.After(timeout):
@@ -37,39 +38,13 @@ func ToBytesMsgChan(ch chan messaging.BytesMessage, opts ...interface{}) func(dt
 	}
 }
 
-func ToBytesMsgErrChan(ch chan messaging.BytesMessageErr, opts ...interface{}) func(dto messaging.BytesMessageErr) {
+func ToProtoMsgChan(ch chan messaging.ProtoMessage, opts ...interface{}) func(messaging.ProtoMessage) {
 
 	timeout, logger := parseOpts(opts...)
 
-	return func(dto messaging.BytesMessageErr) {
+	return func(msg messaging.ProtoMessage) {
 		select {
-		case ch <- dto:
-		case <-time.After(timeout):
-			logger.Warn("Unable to deliver message")
-		}
-	}
-}
-
-func ToProtoMsgChan(ch chan messaging.ProtoMessage, opts ...interface{}) func(dto messaging.ProtoMessage) {
-
-	timeout, logger := parseOpts(opts...)
-
-	return func(dto messaging.ProtoMessage) {
-		select {
-		case ch <- dto:
-		case <-time.After(timeout):
-			logger.Warn("Unable to deliver message")
-		}
-	}
-}
-
-func ToProtoMsgErrChan(ch chan messaging.ProtoMessageErr, opts ...interface{}) func(dto messaging.ProtoMessageErr) {
-
-	timeout, logger := parseOpts(opts...)
-
-	return func(dto messaging.ProtoMessageErr) {
-		select {
-		case ch <- dto:
+		case ch <- msg:
 		case <-time.After(timeout):
 			logger.Warn("Unable to deliver message")
 		}

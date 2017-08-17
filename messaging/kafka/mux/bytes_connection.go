@@ -3,7 +3,7 @@ package mux
 import (
 	"fmt"
 	"github.com/Shopify/sarama"
-	"github.com/ligato/cn-infra/messaging"
+	"github.com/ligato/cn-infra/messaging/kafka/client"
 )
 
 // Connection is an entity that provides access to shared producers/consumers of multiplexer.
@@ -15,6 +15,11 @@ type Connection struct {
 	name string
 }
 
+// BytesPublisher allows to publish a message of type []bytes into messaging system.
+type BytesPublisher interface {
+	Publish(key string, data []byte) error
+}
+
 type bytesSyncPublisherKafka struct {
 	conn  *Connection
 	topic string
@@ -23,14 +28,14 @@ type bytesSyncPublisherKafka struct {
 type bytesAsyncPublisherKafka struct {
 	conn         *Connection
 	topic        string
-	succCallback func(messaging.BytesMessage)
-	errCallback  func(messaging.BytesMessageErr)
+	succCallback func(*client.ProducerMessage)
+	errCallback  func(*client.ProducerError)
 }
 
 // ConsumeTopic is called to start consuming of a topic.
 // Function can be called until the multiplexer is started, it returns an error otherwise.
 // The provided channel should be buffered, otherwise messages might be lost.
-func (conn *Connection) ConsumeTopic(msgClb func(message messaging.BytesMessage), topics ...string) error {
+func (conn *Connection) ConsumeTopic(msgClb func(message *client.ConsumerMessage), topics ...string) error {
 	conn.multiplexer.rwlock.Lock()
 	defer conn.multiplexer.rwlock.Unlock()
 
@@ -43,7 +48,7 @@ func (conn *Connection) ConsumeTopic(msgClb func(message messaging.BytesMessage)
 		subs, found := conn.multiplexer.mapping[topic]
 
 		if !found {
-			subs = &map[string]func(messaging.BytesMessage){}
+			subs = &map[string]func(*client.ConsumerMessage){}
 			conn.multiplexer.mapping[topic] = subs
 		}
 		// add subscription to consumerList
@@ -69,7 +74,7 @@ func (conn *Connection) SendSyncString(topic string, key string, value string) (
 }
 
 //SendSyncMessage sends a message using the sync API
-func (conn *Connection) SendSyncMessage(topic string, key messaging.Encoder, value messaging.Encoder) (offset int64, err error) {
+func (conn *Connection) SendSyncMessage(topic string, key client.Encoder, value client.Encoder) (offset int64, err error) {
 	msg, err := conn.multiplexer.syncProducer.SendMsg(topic, key, value)
 	if err != nil {
 		return 0, err
@@ -78,23 +83,23 @@ func (conn *Connection) SendSyncMessage(topic string, key messaging.Encoder, val
 }
 
 // SendAsyncByte sends a message that uses byte encoder using the async API
-func (conn *Connection) SendAsyncByte(topic string, key []byte, value []byte, meta interface{}, successClb func(messaging.BytesMessage), errClb func(messaging.BytesMessageErr)) {
+func (conn *Connection) SendAsyncByte(topic string, key []byte, value []byte, meta interface{}, successClb func(*client.ProducerMessage), errClb func(*client.ProducerError)) {
 	conn.SendAsyncMessage(topic, sarama.ByteEncoder(key), sarama.ByteEncoder(value), meta, successClb, errClb)
 }
 
 // SendAsyncString sends a message that uses string encoder using the async API
-func (conn *Connection) SendAsyncString(topic string, key string, value string, meta interface{}, successClb func(messaging.BytesMessage), errClb func(messaging.BytesMessageErr)) {
+func (conn *Connection) SendAsyncString(topic string, key string, value string, meta interface{}, successClb func(*client.ProducerMessage), errClb func(*client.ProducerError)) {
 	conn.SendAsyncMessage(topic, sarama.StringEncoder(key), sarama.StringEncoder(value), meta, successClb, errClb)
 }
 
 // SendAsyncMessage sends a message using the async API
-func (conn *Connection) SendAsyncMessage(topic string, key messaging.Encoder, value messaging.Encoder, meta interface{}, successClb func(messaging.BytesMessage), errClb func(messaging.BytesMessageErr)) {
+func (conn *Connection) SendAsyncMessage(topic string, key client.Encoder, value client.Encoder, meta interface{}, successClb func(*client.ProducerMessage), errClb func(*client.ProducerError)) {
 	auxMeta := &asyncMeta{successClb: successClb, errorClb: errClb, usersMeta: meta}
 	conn.multiplexer.asyncProducer.SendMsg(topic, key, value, auxMeta)
 }
 
 // NewSyncPublisher creates a new instance of bytesSyncPublisherKafka that allows to publish sync kafka messages using common messaging API
-func (conn *Connection) NewSyncPublisher(topic string) messaging.BytesPublisher {
+func (conn *Connection) NewSyncPublisher(topic string) BytesPublisher {
 	return &bytesSyncPublisherKafka{conn, topic}
 }
 
@@ -105,7 +110,7 @@ func (p *bytesSyncPublisherKafka) Publish(key string, data []byte) error {
 }
 
 // NewAsyncPublisher creates a new instance of bytesAsyncPublisherKafka that allows to publish async kafka messages using common messaging API
-func (conn *Connection) NewAsyncPublisher(topic string, successClb func(messaging.BytesMessage), errorClb func(err messaging.BytesMessageErr)) messaging.BytesPublisher {
+func (conn *Connection) NewAsyncPublisher(topic string, successClb func(*client.ProducerMessage), errorClb func(err *client.ProducerError)) BytesPublisher {
 	return &bytesAsyncPublisherKafka{conn, topic, successClb, errorClb}
 }
 

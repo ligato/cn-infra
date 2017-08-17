@@ -16,11 +16,17 @@ package client
 
 import (
 	"fmt"
+	"github.com/Shopify/sarama"
 	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/messaging"
 	"time"
 )
+
+// Encoder defines an interface that is used as argument of producer functions.
+// It wraps the sarama.Encoder
+type Encoder interface {
+	sarama.Encoder
+}
 
 // ConsumerMessage encapsulates a Kafka message returned by the consumer.
 type ConsumerMessage struct {
@@ -82,10 +88,10 @@ type ProducerMessage struct {
 	Topic string
 	// The partitioning key for this message. Pre-existing Encoders include
 	// StringEncoder and ByteEncoder.
-	Key messaging.Encoder
+	Key Encoder
 	// The actual message to store in Kafka. Pre-existing Encoders include
 	// StringEncoder and ByteEncoder.
-	Value messaging.Encoder
+	Value Encoder
 
 	// This field is used to hold arbitrary data you wish to include so it
 	// will be available when receiving on the Successes and Errors channels.

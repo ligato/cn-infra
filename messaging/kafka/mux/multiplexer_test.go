@@ -16,7 +16,7 @@ package mux
 
 import (
 	"github.com/Shopify/sarama"
-	"github.com/ligato/cn-infra/messaging"
+	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/onsi/gomega"
 	"testing"
 )
@@ -31,8 +31,8 @@ func TestMultiplexer(t *testing.T) {
 	c2 := mux.NewConnection("c2")
 	gomega.Expect(c2).NotTo(gomega.BeNil())
 
-	ch1 := make(chan messaging.BytesMessage)
-	ch2 := make(chan messaging.BytesMessage)
+	ch1 := make(chan *client.ConsumerMessage)
+	ch2 := make(chan *client.ConsumerMessage)
 
 	err := c1.ConsumeTopic(ToBytesMsgChan(ch1), "topic1")
 	gomega.Expect(err).To(gomega.BeNil())
@@ -62,8 +62,8 @@ func TestStopConsuming(t *testing.T) {
 	c2 := mux.NewConnection("c2")
 	gomega.Expect(c2).NotTo(gomega.BeNil())
 
-	ch1 := make(chan messaging.BytesMessage)
-	ch2 := make(chan messaging.BytesMessage)
+	ch1 := make(chan *client.ConsumerMessage)
+	ch2 := make(chan *client.ConsumerMessage)
 
 	err := c1.ConsumeTopic(ToBytesMsgChan(ch1), "topic1")
 	gomega.Expect(err).To(gomega.BeNil())

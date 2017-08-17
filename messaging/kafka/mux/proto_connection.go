@@ -31,7 +31,7 @@ type protoAsyncPublisherKafka struct {
 	conn         *ProtoConnection
 	topic        string
 	succCallback func(messaging.ProtoMessage)
-	errCallback  func(messaging.ProtoMessageErr)
+	errCallback  func(messaging.ProtoMessage, error)
 }
 
 // SendSyncMessage sends a message using the sync API
@@ -48,29 +48,25 @@ func (conn *ProtoConnection) SendSyncMessage(topic string, key string, value pro
 }
 
 // SendAsyncMessage sends a message using the async API
-func (conn *ProtoConnection) SendAsyncMessage(topic string, key string, value proto.Message, meta interface{}, successClb func(messaging.ProtoMessage), errClb func(messaging.ProtoMessageErr)) error {
+func (conn *ProtoConnection) SendAsyncMessage(topic string, key string, value proto.Message, meta interface{}, successClb func(messaging.ProtoMessage), errClb func(messaging.ProtoMessage, error)) error {
 	data, err := conn.serializer.Marshal(value)
 	if err != nil {
 		return err
 	}
-	succByteClb := func(msg messaging.BytesMessage) {
+	succByteClb := func(msg *client.ProducerMessage) {
 		protoMsg := &client.ProtoProducerMessage{
-			ProducerMessage: msg.(*client.ProducerMessage),
+			ProducerMessage: msg,
 			Serializer:      conn.serializer,
 		}
 		successClb(protoMsg)
 	}
 
-	errByteClb := func(msg messaging.BytesMessageErr) {
-		kafkaMsg := msg.(*client.ProducerError)
-		protoMsg := &client.ProtoProducerMessageErr{
-			ProtoProducerMessage: &client.ProtoProducerMessage{
-				ProducerMessage: kafkaMsg.ProducerMessage,
-				Serializer:      conn.serializer,
-			},
-			Err: kafkaMsg.Err,
+	errByteClb := func(msg *client.ProducerError) {
+		protoMsg := &client.ProtoProducerMessage{
+			ProducerMessage: msg.ProducerMessage,
+			Serializer:      conn.serializer,
 		}
-		errClb(protoMsg)
+		errClb(protoMsg, msg.Err)
 	}
 
 	auxMeta := &asyncMeta{successClb: succByteClb, errorClb: errByteClb, usersMeta: meta}
@@ -89,8 +85,8 @@ func (conn *ProtoConnection) ConsumeTopic(msgClb func(messaging.ProtoMessage), t
 		return fmt.Errorf("ConsumeTopic can be called only if the multiplexer has not been started yet")
 	}
 
-	byteClb := func(bm messaging.BytesMessage) {
-		pm := client.NewProtoConsumerMessage(bm.(*client.ConsumerMessage), conn.serializer)
+	byteClb := func(bm *client.ConsumerMessage) {
+		pm := client.NewProtoConsumerMessage(bm, conn.serializer)
 		msgClb(pm)
 	}
 
@@ -99,7 +95,7 @@ func (conn *ProtoConnection) ConsumeTopic(msgClb func(messaging.ProtoMessage), t
 		subs, found := conn.multiplexer.mapping[topic]
 
 		if !found {
-			subs = &map[string]func(messaging.BytesMessage){}
+			subs = &map[string]func(*client.ConsumerMessage){}
 			conn.multiplexer.mapping[topic] = subs
 		}
 		// add subscription to consumerList
@@ -114,6 +110,14 @@ func (conn *ProtoConnection) StopConsuming(topic string) error {
 	return conn.multiplexer.stopConsuming(topic, conn.name)
 }
 
+func (conn *ProtoConnection) Watch(msgClb func(messaging.ProtoMessage), topics ...string) error {
+	return conn.ConsumeTopic(msgClb, topics...)
+}
+
+func (conn *ProtoConnection) StopWatch(topic string) error {
+	return conn.StopConsuming(topic)
+}
+
 // NewSyncPublisher creates a new instance of protoSyncPublisherKafka that allows to publish sync kafka messages using common messaging API
 func (conn *ProtoConnection) NewSyncPublisher(topic string) messaging.ProtoPublisher {
 	return &protoSyncPublisherKafka{conn, topic}
@@ -126,7 +130,7 @@ func (p *protoSyncPublisherKafka) Publish(key string, message proto.Message) err
 }
 
 // NewAsyncPublisher creates a new instance of protoAsyncPublisherKafka that allows to publish sync kafka messages using common messaging API
-func (conn *ProtoConnection) NewAsyncPublisher(topic string, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) messaging.ProtoPublisher {
+func (conn *ProtoConnection) NewAsyncPublisher(topic string, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessage, error)) messaging.ProtoPublisher {
 	return &protoAsyncPublisherKafka{conn, topic, successClb, errorClb}
 }
 

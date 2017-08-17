@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/messaging"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"sync"
@@ -38,7 +37,7 @@ type Multiplexer struct {
 
 	// Mapping provides the mapping of subscribed consumers organized by topics(key of the first map)
 	// name of the consumer(key of the second map)
-	mapping map[string]*map[string]func(message messaging.BytesMessage)
+	mapping map[string]*map[string]func(*client.ConsumerMessage)
 
 	// factory that crates consumer used in the Multiplexer
 	consumerFactory func(topics []string, groupId string) (*client.Consumer, error)
@@ -47,8 +46,8 @@ type Multiplexer struct {
 
 // asyncMeta is auxiliary structure used by Multiplexer to distribute consumer messages
 type asyncMeta struct {
-	successClb func(messaging.BytesMessage)
-	errorClb   func(messaging.BytesMessageErr)
+	successClb func(*client.ProducerMessage)
+	errorClb   func(error *client.ProducerError)
 	usersMeta  interface{}
 }
 
@@ -59,7 +58,7 @@ func NewMultiplexer(consumerFactory ConsumerFactory, syncP *client.SyncProducer,
 		syncProducer:  syncP,
 		asyncProducer: asyncP,
 		name:          name,
-		mapping:       map[string]*map[string]func(message messaging.BytesMessage){},
+		mapping:       map[string]*map[string]func(*client.ConsumerMessage){},
 		closeCh:       make(chan struct{}),
 	}
 
@@ -138,12 +137,12 @@ func (mux *Multiplexer) Close() {
 }
 
 // NewConnection creates instance of the Connection that will be provide access to shared Multiplexer's clients.
-func (mux *Multiplexer) NewConnection(name string) messaging.Connection {
+func (mux *Multiplexer) NewConnection(name string) *Connection {
 	return &Connection{multiplexer: mux, name: name}
 }
 
 // NewProtoConnection creates instance of the ProtoConnection that will be provide access to shared Multiplexer's clients.
-func (mux *Multiplexer) NewProtoConnection(name string, serializer keyval.Serializer) messaging.ProtoConnection {
+func (mux *Multiplexer) NewProtoConnection(name string, serializer keyval.Serializer) *ProtoConnection {
 	return &ProtoConnection{multiplexer: mux, serializer: serializer, name: name}
 }
 
