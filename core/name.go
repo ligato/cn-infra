@@ -14,6 +14,12 @@
 
 package core
 
+import (
+	"reflect"
+
+	"github.com/ligato/cn-infra/utils/structs"
+)
+
 // PluginName is a part of the plugin's API and it is supposed
 // to be defined as a publicly accessible string constant.
 // It is used to obtain the appropriate instance of the registry
@@ -29,4 +35,25 @@ type NamedPlugin struct {
 // String returns the PluginName
 func (np *NamedPlugin) String() string {
 	return string(np.PluginName)
+}
+
+// GetPluginName tries to use reflection to find field name
+// by traversing all field pointers of a structure instance
+//
+// Example usage to prepare logger name:
+//
+//    flavor.Logrus.NewLogger(GetPluginName(flavor, &flavor.ETCD))
+//
+func GetPluginName(structureInstance interface{}, pointerAToField interface{}) (
+	name PluginName, found bool) {
+
+	field, found := structs.FindField(structureInstance, pointerAToField)
+	return pluginName(field), found
+}
+
+func pluginName(field *reflect.StructField) PluginName {
+	if field == nil {
+		return PluginName("")
+	}
+	return PluginName(field.Name)
 }

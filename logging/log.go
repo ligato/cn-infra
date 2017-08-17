@@ -45,6 +45,34 @@ type Logger interface {
 	WithFields(fields map[string]interface{}) LogWithLevel
 }
 
+// PluginLogger is intended for:
+// 1. small plugins (that just need one logger; name corresponds to plugin name)
+// 2. large plugins that need multiple loggers (all loggers share same name prefix)
+type PluginLogger interface {
+	// Plugin has by default possibility to log
+	// Logger name is initialized with plugin name
+	Logger
+
+	// LogFactory can be optionally used by large plugins
+	// to create child loggers (their names are prefixed by plugin logger name)
+	LogFactory
+}
+
+// NewPluginLogger is used to initialize plugin logger by name
+// and optionally created children (their name prefixed by plugin logger name)
+//
+// Example usage:
+//
+//    flavor.ETCD.Logger =
+// 			NewPluginLogger(GetPluginName(flavor, &flavor.ETCD), flavor.Logrus)
+//
+func NewPluginLogger(name string, factory LogFactory) PluginLogger {
+	logger, _ := factory.NewLogger(name)
+
+	return &pluginLogger{logger,
+						 prefixedLogFactory{name, factory}}
+}
+
 // Fields is a type accepted by WithFields method. It can be used to instantiate map using shorter notation.
 type Fields map[string]interface{}
 
@@ -111,4 +139,18 @@ func (level LogLevel) String() string {
 	}
 
 	return "unknown"
+}
+
+type pluginLogger struct {
+	Logger
+	LogFactory
+}
+
+type prefixedLogFactory struct {
+	prefix   string
+	delegate LogFactory
+}
+
+func (factory *prefixedLogFactory) NewLogger(name string) (Logger, error) {
+	return factory.delegate.NewLogger(factory.prefix + name)
 }
