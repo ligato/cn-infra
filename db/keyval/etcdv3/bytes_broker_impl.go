@@ -112,7 +112,7 @@ func (db *BytesConnectionEtcd) Close() error {
 // using a prefix pass keyval.Root constant as argument.
 func (db *BytesConnectionEtcd) NewBroker(prefix string) keyval.BytesBroker {
 	return &BytesBrokerWatcherEtcd{Logger: db.Logger, kv: namespace.NewKV(db.etcdClient, prefix), lessor: db.lessor,
-		opTimeout:                         db.opTimeout, watcher: namespace.NewWatcher(db.etcdClient, prefix), closeCh: db.closeCh}
+		opTimeout: db.opTimeout, watcher: namespace.NewWatcher(db.etcdClient, prefix), closeCh: db.closeCh}
 }
 
 // NewWatcher creates a new instance of a proxy that provides
@@ -121,7 +121,7 @@ func (db *BytesConnectionEtcd) NewBroker(prefix string) keyval.BytesBroker {
 // using a prefix pass keyval.Root constant as argument.
 func (db *BytesConnectionEtcd) NewWatcher(prefix string) keyval.BytesWatcher {
 	return &BytesBrokerWatcherEtcd{Logger: db.Logger, kv: namespace.NewKV(db.etcdClient, prefix), lessor: db.lessor,
-		opTimeout:                         db.opTimeout, watcher: namespace.NewWatcher(db.etcdClient, prefix), closeCh: db.closeCh}
+		opTimeout: db.opTimeout, watcher: namespace.NewWatcher(db.etcdClient, prefix), closeCh: db.closeCh}
 }
 
 // Put calls Put function of BytesConnectionEtcd. KeyPrefix defined in constructor is prepended to key argument.
@@ -423,7 +423,7 @@ func (ctx *bytesKeyIterator) Close() error {
 
 // Close does nothing since db cursors are not needed.
 // The method needs to be here to implement Iterator API.
-func (kv *bytesKeyVal) Close() error {
+func (ctx *bytesKeyVal) Close() error {
 	return nil
 }
 
