@@ -16,6 +16,7 @@ package keyval
 
 import (
 	"github.com/golang/protobuf/proto"
+	"io"
 )
 
 // ProtoBroker is decorator that allows to read/write proto file modelled data.
@@ -47,6 +48,8 @@ type ProtoKvPair interface {
 type ProtoKeyIterator interface {
 	// GetNext retrieves the following item from the context.
 	GetNext() (key string, rev int64, stop bool)
+	// Closer is needed for closing the iterator (please check error returned by Close method)
+	io.Closer
 }
 
 // ProtoKeyVal represents a single key-value pair
@@ -60,4 +63,6 @@ type ProtoKeyVal interface {
 type ProtoKeyValIterator interface {
 	// GetNext retrieves the following value from the context. GetValue is unmarshaled into the provided argument.
 	GetNext() (kv ProtoKeyVal, stop bool)
+	// Closer is needed for closing the iterator (please check error returned by Close method)
+	io.Closer
 }
