@@ -22,7 +22,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/datasync/adapters"
 	"github.com/ligato/cn-infra/datasync/rpc/grpcsync"
 	"github.com/ligato/cn-infra/datasync/syncbase"
 	"github.com/ligato/cn-infra/logging"
@@ -53,7 +52,7 @@ func init() {
 
 // Plugin implements the Plugin interface.
 type Plugin struct {
-	Transports *adapters.TransportAggregator
+	Transport  datasync.TransportAdapter
 	LogFactory logging.LogFactory
 	HTTPport   string
 
@@ -82,7 +81,8 @@ func (plugin *Plugin) Init() (err error) {
 	})
 
 	// Register grpc transport adapter
-	plugin.Transports.RegisterGrpcTransport(plugin.initGrpcTransportAdapter())
+	plugin.Transport = plugin.initGrpcTransportAdapter()
+	//plugin.Transports.RegisterGrpcTransport(plugin.initGrpcTransportAdapter())
 
 	return err
 }
@@ -124,7 +124,7 @@ func (plugin *Plugin) AfterInit() error {
 
 // Close cleans up the resources
 func (plugin *Plugin) Close() error {
-	_, err := safeclose.CloseAll(plugin.Transports, plugin.server)
+	_, err := safeclose.CloseAll(plugin.Transport, plugin.server)
 	return err
 }
 

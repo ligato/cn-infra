@@ -17,7 +17,6 @@ package etcdv3
 import (
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/datasync/adapters"
 	"github.com/ligato/cn-infra/datasync/persisted/dbsync"
 	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/logging"
@@ -36,7 +35,7 @@ const (
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
-	Transports     *adapters.TransportAggregator
+	Transport      datasync.TransportAdapter
 	LogFactory     logging.LogFactory
 	ServiceLabel   *servicelabel.Plugin
 	StatusCheck    *statuscheck.Plugin
@@ -94,11 +93,10 @@ func (p *Plugin) Init() error {
 	}
 
 	// Init ETCD transport
-	etcdTransport, err := p.InitTransport(p.Skeleton.Logger)
+	p.Transport, err = p.InitTransport(p.Skeleton.Logger)
 	if err != nil {
 		return err
 	}
-	p.Transports.RegisterEtcdTransport(etcdTransport)
 
 	// Register for providing status reports (polling mode)
 	if p.StatusCheck != nil {

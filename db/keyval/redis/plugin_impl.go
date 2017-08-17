@@ -17,7 +17,6 @@ package redis
 import (
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/datasync/adapters"
 	"github.com/ligato/cn-infra/datasync/persisted/dbsync"
 	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/logging"
@@ -29,7 +28,7 @@ const PluginID core.PluginName = "RedisClient"
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
-	Transports   *adapters.TransportAggregator
+	Transport    datasync.TransportAdapter
 	LogFactory   logging.LogFactory
 	ServiceLabel *servicelabel.Plugin
 	*plugin.Skeleton
@@ -57,11 +56,10 @@ func (p *Plugin) Init() error {
 	}
 
 	// Init Redis transport
-	transportRedis, err := p.InitTransport(p.Skeleton.Logger)
+	p.Transport, err = p.InitTransport(p.Skeleton.Logger)
 	if err != nil {
 		return err
 	}
-	p.Transports.RegisterRedisTransport(transportRedis)
 
 	return nil
 }

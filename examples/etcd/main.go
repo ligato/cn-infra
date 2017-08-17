@@ -94,7 +94,6 @@ type ExamplePlugin struct {
 func (plugin *ExamplePlugin) Init() error {
 	// Initialize plugin fields
 	plugin.exampleConfigurator = &ExampleConfigurator{plugin.ServiceLabel}
-	plugin.transport = datasync.GetTransport() // todo remove
 	plugin.resyncChannel = make(chan datasync.ResyncEvent)
 	plugin.changeChannel = make(chan datasync.ChangeEvent)
 
