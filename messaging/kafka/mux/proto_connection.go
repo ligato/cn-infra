@@ -31,7 +31,7 @@ type protoAsyncPublisherKafka struct {
 	conn         *ProtoConnection
 	topic        string
 	succCallback func(messaging.ProtoMessage)
-	errCallback  func(messaging.ProtoMessage, error)
+	errCallback  func(messaging.ProtoMessageErr)
 }
 
 // SendSyncMessage sends a message using the sync API
@@ -48,7 +48,7 @@ func (conn *ProtoConnection) SendSyncMessage(topic string, key string, value pro
 }
 
 // SendAsyncMessage sends a message using the async API
-func (conn *ProtoConnection) SendAsyncMessage(topic string, key string, value proto.Message, meta interface{}, successClb func(messaging.ProtoMessage), errClb func(messaging.ProtoMessage, error)) error {
+func (conn *ProtoConnection) SendAsyncMessage(topic string, key string, value proto.Message, meta interface{}, successClb func(messaging.ProtoMessage), errClb func(messaging.ProtoMessageErr)) error {
 	data, err := conn.serializer.Marshal(value)
 	if err != nil {
 		return err
@@ -62,11 +62,14 @@ func (conn *ProtoConnection) SendAsyncMessage(topic string, key string, value pr
 	}
 
 	errByteClb := func(msg *client.ProducerError) {
-		protoMsg := &client.ProtoProducerMessage{
-			ProducerMessage: msg.ProducerMessage,
-			Serializer:      conn.serializer,
+		protoMsg := &client.ProtoProducerMessageErr{
+			ProtoProducerMessage: &client.ProtoProducerMessage{
+				ProducerMessage: msg.ProducerMessage,
+				Serializer:      conn.serializer,
+			},
+			Err: msg.Err,
 		}
-		errClb(protoMsg, msg.Err)
+		errClb(protoMsg)
 	}
 
 	auxMeta := &asyncMeta{successClb: succByteClb, errorClb: errByteClb, usersMeta: meta}
@@ -130,7 +133,7 @@ func (p *protoSyncPublisherKafka) Publish(key string, message proto.Message) err
 }
 
 // NewAsyncPublisher creates a new instance of protoAsyncPublisherKafka that allows to publish sync kafka messages using common messaging API
-func (conn *ProtoConnection) NewAsyncPublisher(topic string, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessage, error)) messaging.ProtoPublisher {
+func (conn *ProtoConnection) NewAsyncPublisher(topic string, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) messaging.ProtoPublisher {
 	return &protoAsyncPublisherKafka{conn, topic, successClb, errorClb}
 }
 

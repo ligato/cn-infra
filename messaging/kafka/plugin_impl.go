@@ -19,13 +19,13 @@ import (
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/messaging"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/messaging/kafka/mux"
 	"github.com/ligato/cn-infra/servicelabel"
 	"github.com/ligato/cn-infra/statuscheck"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
-	"github.com/ligato/cn-infra/messaging"
 )
 
 // PluginID used in the Agent Core flavors
@@ -120,7 +120,7 @@ func (p *Plugin) NewSyncPublisher(topic string) messaging.ProtoPublisher {
 	return p.NewProtoConnection("").NewSyncPublisher(topic)
 }
 
-func (p *Plugin) NewAsyncPublisher(topic string,  successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessage, error)) messaging.ProtoPublisher {
+func (p *Plugin) NewAsyncPublisher(topic string, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) messaging.ProtoPublisher {
 	return p.NewProtoConnection("").NewAsyncPublisher(topic, successClb, errorClb)
 }
 

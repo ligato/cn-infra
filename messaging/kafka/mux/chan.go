@@ -18,8 +18,8 @@ import (
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/messaging"
-	"time"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
+	"time"
 )
 
 // DefaultMsgTimeout for delivery of notification
@@ -45,6 +45,19 @@ func ToProtoMsgChan(ch chan messaging.ProtoMessage, opts ...interface{}) func(me
 	return func(msg messaging.ProtoMessage) {
 		select {
 		case ch <- msg:
+		case <-time.After(timeout):
+			logger.Warn("Unable to deliver message")
+		}
+	}
+}
+
+func ToBytesMsgErrChan(ch chan messaging.ProtoMessageErr, opts ...interface{}) func(messaging.ProtoMessageErr) {
+
+	timeout, logger := parseOpts(opts...)
+
+	return func(dto messaging.ProtoMessageErr) {
+		select {
+		case ch <- dto:
 		case <-time.After(timeout):
 			logger.Warn("Unable to deliver message")
 		}

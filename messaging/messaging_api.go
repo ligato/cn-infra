@@ -22,7 +22,7 @@ import (
 // Mux defines API for the plugins that use access to kafka brokers.
 type Mux interface {
 	NewSyncPublisher(topic string) ProtoPublisher
-	NewAsyncPublisher(topic string, successClb func(ProtoMessage), errorClb func(ProtoMessage, error)) ProtoPublisher
+	NewAsyncPublisher(topic string, successClb func(ProtoMessage), errorClb func(err ProtoMessageErr)) ProtoPublisher
 	NewWatcher(name string) ProtoWatcher
 }
 
