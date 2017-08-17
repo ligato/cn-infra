@@ -12,11 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package idxmap provides mapping structure that allows to:
-// - write & lookup data by indexes
-// - index data using multiple indexes
-// - watch data changes in the map
-// - create local cache data of key value store (such as etcd).
+// Package idxmap provides mapping structure that in addition to built-in map
+// provides notifications about changes in the mapping and allows to retrieve items
+// by fields in the value structure.
 //
 //  Primary Index                Item                                Secondary indexes
 // ===================================================================================
@@ -35,9 +33,9 @@
 // function call the primary index(name) for the item is specified. The
 // values of the primary index are unique, if the name already exists,
 // then the item is overwritten. To retrieve an item identified by the
-// primary index, use the `Lookup` function. An item can be removed from
+// primary index, use the `GetValue` function. An item can be removed from
 // the mapping by calling the `Delete` function. The names that
-// are currently registered can be retrieved by calling the `ListNames`
+// are currently registered can be retrieved by calling the `ListAllNames`
 // function.
 //
 // The constructor allows you to define a `createIndexes` function that extracts
@@ -45,7 +43,7 @@
 // by names of secondary indexes, and the values are the extracted values
 // for the particular item. The values of secondary indexes are not necessarily
 // unique. To retrieve items based on secondary indices use the
-// `LookupByMetadata` function. In contrast to the lookup by primary index,
+// `ListNames` function. In contrast to the lookup by primary index,
 // the function may return multiple names.
 //
 // `Watch` allows to define a callback that is called when a change in the

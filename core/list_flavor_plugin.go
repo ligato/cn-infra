@@ -61,7 +61,7 @@ func listPluginsInFlavor(flavorValue reflect.Value) []*NamedPlugin {
 			fieldVal := flavorValue.Field(i)
 			plug := fieldPlugin(field, fieldVal, pluginType)
 			if plug != nil {
-				res = append(res, &NamedPlugin{PluginName: PluginName(field.Name), Plugin: plug})
+				res = append(res, &NamedPlugin{PluginName: pluginName(&field), Plugin: plug})
 				log.WithField("fieldName", field.Name).Debug("Found plugin ", field.Type)
 			} else {
 				// try to inspect flavor structure recursively

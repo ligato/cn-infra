@@ -19,9 +19,11 @@ import (
 	"github.com/ligato/cn-infra/db/keyval"
 )
 
-// BytesPublisher allows to publish a message of type []bytes into messaging system.
-type BytesPublisher interface {
-	Publish(key string, data []byte) error
+// Mux defines API for the plugins that use access to kafka brokers.
+type Mux interface {
+	NewSyncPublisher(topic string) ProtoPublisher
+	NewAsyncPublisher(topic string, successClb func(ProtoMessage), errorClb func(err ProtoMessageErr)) ProtoPublisher
+	NewWatcher(subscriberName string) ProtoWatcher
 }
 
 // ProtoPublisher allows to publish a message of type proto.Message into messaging system.
@@ -29,12 +31,20 @@ type ProtoPublisher interface {
 	Publish(key string, data proto.Message) error
 }
 
-// BytesMessage defines functions for inspection of a message received from messaging system.
-type BytesMessage interface {
-	keyval.BytesKvPair
+// ProtoWatcher allows to subscribe for receiving of messages published to given topics.
+type ProtoWatcher interface {
+	Watch(msgCallback func(ProtoMessage), topics ...string) error
+	StopWatch(topic string) error
 }
 
 // ProtoMessage defines functions for inspection of a message receive from messaging system.
 type ProtoMessage interface {
 	keyval.ProtoKvPair
+	GetTopic() string
+}
+
+// ProtoMessageErr represents a message that was not published successfully to a messaging system.
+type ProtoMessageErr interface {
+	ProtoMessage
+	Error() error
 }
