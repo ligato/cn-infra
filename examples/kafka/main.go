@@ -6,7 +6,6 @@ import (
 	"github.com/ligato/cn-infra/flavors/etcdkafka"
 	log "github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/messaging"
-	"github.com/ligato/cn-infra/messaging/kafka/mux"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"time"
 )
@@ -82,14 +81,14 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	plugin.kafkaSyncPublisher = plugin.Kafka.NewSyncPublisher("example-plugin")
 
 	// Create an asynchronous publisher for the selected topic.
-	plugin.kafkaAsyncPublisher = plugin.Kafka.NewAsyncPublisher("example-plugin", mux.ToProtoMsgChan(plugin.asyncMessageChannel), mux.ToProtoMsgErrChan(plugin.asyncErrorChannel))
+	plugin.kafkaAsyncPublisher = plugin.Kafka.NewAsyncPublisher("example-plugin", messaging.ToProtoMsgChan(plugin.asyncMessageChannel), messaging.ToProtoMsgErrChan(plugin.asyncErrorChannel))
 
 	plugin.kafkaWatcher = plugin.Kafka.NewWatcher("example-plugin")
 
 	// ConsumePartition is called to start consuming a topic/partition.
 	topic := "example-topic"
 	plugin.subscription = make(chan messaging.ProtoMessage)
-	err = plugin.kafkaWatcher.Watch(mux.ToProtoMsgChan(plugin.subscription), topic)
+	err = plugin.kafkaWatcher.Watch(messaging.ToProtoMsgChan(plugin.subscription), topic)
 	if err != nil {
 		log.Error(err)
 	}
