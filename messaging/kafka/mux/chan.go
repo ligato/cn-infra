@@ -59,9 +59,39 @@ func ToBytesMsgChan(ch chan *client.ConsumerMessage, opts ...interface{}) func(*
 
 	timeout, logger := parseOpts(opts...)
 
-	return func(dto *client.ConsumerMessage) {
+	return func(msg *client.ConsumerMessage) {
 		select {
-		case ch <- dto:
+		case ch <- msg:
+		case <-time.After(timeout):
+			logger.Warn("Unable to deliver message")
+		}
+	}
+}
+
+// ToBytesProducerChan allows to receive ProducerMessage through channel. This function can be used as an argument for
+// methods publishing using async API.
+func ToBytesProducerChan(ch chan *client.ProducerMessage, opts ...interface{}) func(*client.ProducerMessage) {
+
+	timeout, logger := parseOpts(opts...)
+
+	return func(msg *client.ProducerMessage) {
+		select {
+		case ch <- msg:
+		case <-time.After(timeout):
+			logger.Warn("Unable to deliver message")
+		}
+	}
+}
+
+// ToBytesProducerErrChan allows to receive ProducerMessage through channel. This function can be used as an argument for
+// methods publishing using async API.
+func ToBytesProducerErrChan(ch chan *client.ProducerError, opts ...interface{}) func(*client.ProducerError) {
+
+	timeout, logger := parseOpts(opts...)
+
+	return func(msg *client.ProducerError) {
+		select {
+		case ch <- msg:
 		case <-time.After(timeout):
 			logger.Warn("Unable to deliver message")
 		}

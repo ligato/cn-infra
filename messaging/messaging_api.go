@@ -23,7 +23,7 @@ import (
 type Mux interface {
 	NewSyncPublisher(topic string) ProtoPublisher
 	NewAsyncPublisher(topic string, successClb func(ProtoMessage), errorClb func(err ProtoMessageErr)) ProtoPublisher
-	NewWatcher(name string) ProtoWatcher
+	NewWatcher(subscriberName string) ProtoWatcher
 }
 
 // ProtoPublisher allows to publish a message of type proto.Message into messaging system.
