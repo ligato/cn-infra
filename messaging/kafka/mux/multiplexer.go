@@ -2,12 +2,13 @@ package mux
 
 import (
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/utils/safeclose"
-	"sync"
-	"time"
 )
 
 // Multiplexer encapsulates clients to kafka cluster (syncProducer, asyncProducer, consumer).

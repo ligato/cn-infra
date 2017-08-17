@@ -15,9 +15,10 @@
 package resynceventimpl
 
 import (
-	"github.com/ligato/cn-infra/datasync/resync/resyncevent"
 	"sync"
 	"time"
+
+	"github.com/ligato/cn-infra/datasync/resync/resyncevent"
 )
 
 // Registration for Resync

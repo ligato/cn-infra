@@ -16,10 +16,11 @@ package client
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/Shopify/sarama"
 	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/db/keyval"
-	"time"
 )
 
 // Encoder defines an interface that is used as argument of producer functions.

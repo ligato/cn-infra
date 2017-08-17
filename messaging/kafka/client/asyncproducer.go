@@ -18,9 +18,10 @@ import (
 	"crypto/md5"
 	"errors"
 	"fmt"
+	"sync"
+
 	"github.com/Shopify/sarama"
 	"github.com/ligato/cn-infra/logging"
-	"sync"
 )
 
 // AsyncProducer allows to publish message to kafka using asynchronous API.

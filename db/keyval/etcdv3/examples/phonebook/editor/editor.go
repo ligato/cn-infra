@@ -3,13 +3,14 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3/examples/phonebook/model/phonebook"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/utils/config"
-	"os"
 )
 
 const (
@@ -98,7 +99,7 @@ func delete(db keyval.ProtoBroker, name string) {
 	key := phonebook.EtcdContactPath(&phonebook.Contact{Name: name})
 
 	//Remove the key
-	db.Delete(key)
+	datasync.Delete(key)
 	fmt.Println("Removing ", key)
 }
 

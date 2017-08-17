@@ -15,10 +15,11 @@
 package client
 
 import (
+	"testing"
+
 	"github.com/Shopify/sarama"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/onsi/gomega"
-	"testing"
 )
 
 func ExampleSyncProducer() {
