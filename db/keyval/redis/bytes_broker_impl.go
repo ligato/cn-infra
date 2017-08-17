@@ -136,6 +136,7 @@ func (db *BytesConnectionRedis) GetValue(key string) (data []byte, found bool, r
 }
 
 // ListKeys returns an iterator used to traverse keys that start with the given match string.
+// When done traversing, you must close the iterator by calling its Close() method.
 func (db *BytesConnectionRedis) ListKeys(match string) (keyval.BytesKeyIterator, error) {
 	if db.closed {
 		return nil, fmt.Errorf("ListKeys(%s) called on a closed connection", match)
@@ -143,7 +144,8 @@ func (db *BytesConnectionRedis) ListKeys(match string) (keyval.BytesKeyIterator,
 	return listKeys(db, match, nil, nil)
 }
 
-// ListValues lists values for all the keys that start with the given match string.
+// ListValues returns an iterator used to traverse key value pairs for all the keys that start with the given match string.
+// When done traversing, you must close the iterator by calling its Close() method.
 func (db *BytesConnectionRedis) ListValues(match string) (keyval.BytesKeyValIterator, error) {
 	if db.closed {
 		return nil, fmt.Errorf("ListValues(%s) called on a closed connection", match)
@@ -193,12 +195,13 @@ func (db *BytesConnectionRedis) Delete(key string, opts ...keyval.DelOption) (fo
 	return (intCmd.Val() != 0), nil
 }
 
+// Close closes the iterator.  Returns error, if any.  Otherwise, nil.
 func (it *bytesKeyIterator) Close() error {
 	return it.err
 }
 
 // GetNext returns the next item from the iterator.
-// If the iterator has reached the last item previously, lastReceived is set to true.
+// If the iterator encounters error or has reached the last item previously, lastReceived is set to true.
 func (it *bytesKeyIterator) GetNext() (key string, rev int64, lastReceived bool) {
 	if it.err != nil {
 		return "", 0, true
@@ -229,12 +232,13 @@ func (it *bytesKeyIterator) GetNext() (key string, rev int64, lastReceived bool)
 	return key, 0, false
 }
 
+// Close closes the iterator.  Returns error, if any.  Otherwise, nil.
 func (it *bytesKeyValIterator) Close() error {
 	return it.err
 }
 
 // GetNext returns the next item from the iterator.
-// If the iterator has reached the last item previously, lastReceived set to true.
+// If the iterator encounters error or has reached the last item previously, lastReceived is set to true.
 func (it *bytesKeyValIterator) GetNext() (kv keyval.BytesKeyVal, lastReceived bool) {
 	if it.err != nil {
 		return nil, true
@@ -466,6 +470,7 @@ func (pdb *BytesBrokerWatcherRedis) GetValue(key string) (data []byte, found boo
 // ListKeys calls ListKeys function of BytesConnectionRedis.
 // Prefix will be prepended to key argument when searching.
 // The returned keys, however, will have the prefix trimmed.
+// When done traversing, you must close the iterator by calling its Close() method.
 func (pdb *BytesBrokerWatcherRedis) ListKeys(match string) (keyval.BytesKeyIterator, error) {
 	if pdb.delegate.closed {
 		return nil, fmt.Errorf("ListKeys(%s) called on a closed connection", match)
@@ -476,6 +481,7 @@ func (pdb *BytesBrokerWatcherRedis) ListKeys(match string) (keyval.BytesKeyItera
 // ListValues calls ListValues function of BytesConnectionRedis.
 // Prefix will be prepended to key argument when searching.
 // The returned keys, however, will have the prefix trimmed.
+// When done traversing, you must close the iterator by calling its Close() method.
 func (pdb *BytesBrokerWatcherRedis) ListValues(match string) (keyval.BytesKeyValIterator, error) {
 	if pdb.delegate.closed {
 		return nil, fmt.Errorf("ListValues(%s) called on a closed connection", match)
