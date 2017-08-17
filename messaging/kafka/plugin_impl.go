@@ -36,12 +36,6 @@ func init() {
 	flag.StringVar(&configFile, "kafka-config", "", "Location of the Kafka configuration file; also set via 'KAFKA_CONFIG' env variable.")
 }
 
-// Mux defines API for the plugins that use access to kafka brokers.
-type Mux interface {
-	NewConnection(name string) *mux.Connection
-	NewProtoConnection(name string) *mux.ProtoConnection
-}
-
 // Plugin provides API for interaction with kafka brokers.
 type Plugin struct {
 	LogFactory   logging.LogFactory

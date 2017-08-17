@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/Shopify/sarama"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/messaging"
 	"sync"
 )
 
@@ -117,7 +118,7 @@ func (ref *AsyncProducer) SendMsgByte(topic string, key []byte, msg []byte, meta
 }
 
 // SendMsg sends an async message to Kafka
-func (ref *AsyncProducer) SendMsg(topic string, key Encoder, msg Encoder, metadata interface{}) {
+func (ref *AsyncProducer) SendMsg(topic string, key messaging.Encoder, msg messaging.Encoder, metadata interface{}) {
 	if msg == nil {
 		return
 	}
@@ -234,8 +235,8 @@ func (ref *AsyncProducer) errorHandler(in <-chan *sarama.ProducerError) {
 				Partition: msg.Partition,
 			}
 			perr2 := &ProducerError{
-				Msg: pmsg,
-				Err: err,
+				ProducerMessage: pmsg,
+				Err:             err,
 			}
 			val, _ := msg.Value.Encode()
 			ref.Errorf("message %s errored in topic(%s)/partition(%d)/offset(%d)\n", string(val), pmsg.Topic, pmsg.Partition, pmsg.Offset)

@@ -16,17 +16,11 @@ package client
 
 import (
 	"fmt"
-	"github.com/Shopify/sarama"
 	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ligato/cn-infra/messaging"
 	"time"
 )
-
-// Encoder defines an interface that is used as argument of producer functions.
-// It wraps the sarama.Encoder
-type Encoder interface {
-	sarama.Encoder
-}
 
 // ConsumerMessage encapsulates a Kafka message returned by the consumer.
 type ConsumerMessage struct {
@@ -35,6 +29,11 @@ type ConsumerMessage struct {
 	Partition  int32
 	Offset     int64
 	Timestamp  time.Time
+}
+
+// GetTopic return topic associated with the message
+func (cm *ConsumerMessage) GetTopic() string {
+	return cm.Topic
 }
 
 // GetKey returns key associated with the message
@@ -73,16 +72,20 @@ func (cm *ProtoConsumerMessage) GetValue(msg proto.Message) error {
 	return nil
 }
 
+func (cm *ProtoConsumerMessage) GetTopic() string {
+	return cm.Topic
+}
+
 // ProducerMessage is the collection of elements passed to the Producer in order to send a message.
 type ProducerMessage struct {
 	// The Kafka topic for this message.
 	Topic string
 	// The partitioning key for this message. Pre-existing Encoders include
 	// StringEncoder and ByteEncoder.
-	Key Encoder
+	Key messaging.Encoder
 	// The actual message to store in Kafka. Pre-existing Encoders include
 	// StringEncoder and ByteEncoder.
-	Value Encoder
+	Value messaging.Encoder
 
 	// This field is used to hold arbitrary data you wish to include so it
 	// will be available when receiving on the Successes and Errors channels.
@@ -101,19 +104,18 @@ type ProducerMessage struct {
 	Partition int32
 }
 
-// ProducerError is the type of error generated when the producer fails to deliver a message.
-// It contains the original ProducerMessage as well as the actual error value.
-type ProducerError struct {
-	Msg *ProducerMessage
-	Err error
+func (pm *ProducerMessage) GetTopic() string {
+	return pm.Topic
 }
 
-func (ref *ProducerError) Error() string {
-	return ref.Err.Error()
+func (pm *ProducerMessage) GetKey() string {
+	key, _ := pm.Key.Encode()
+	return string(key)
 }
 
-func (ref *ProducerError) String() string {
-	return fmt.Sprintf("ProducerError: %s, error: %v\n", ref.Msg, ref.Err)
+func (pm *ProducerMessage) GetValue() []byte {
+	val, _ := pm.Value.Encode()
+	return val
 }
 
 func (ref *ProducerMessage) String() string {
@@ -141,4 +143,50 @@ func (ref *ProducerMessage) String() string {
 	val, _ := ref.Value.Encode()
 
 	return fmt.Sprintf("ProducerMessage - Topic: %s, Key: %s, Value: %s, Meta: %v, Offset: %d, Partition: %d\n", ref.Topic, string(key), string(val), meta, ref.Offset, ref.Partition)
+}
+
+// ProducerError is the type of error generated when the producer fails to deliver a message.
+// It contains the original ProducerMessage as well as the actual error value.
+type ProducerError struct {
+	*ProducerMessage
+	Err error
+}
+
+func (ref *ProducerError) Error() error {
+	return ref.Err
+}
+
+func (ref *ProducerError) String() string {
+	return fmt.Sprintf("ProducerError: %s, error: %v\n", ref.ProducerMessage, ref.Err.Error())
+}
+
+type ProtoProducerMessage struct {
+	*ProducerMessage
+	Serializer keyval.Serializer
+}
+
+func (ppm *ProtoProducerMessage) GetTopic() string {
+	return ppm.Topic
+}
+
+func (ppm *ProtoProducerMessage) GetKey() string {
+	key, _ := ppm.Key.Encode()
+	return string(key)
+}
+
+func (ppm *ProtoProducerMessage) GetValue(msg proto.Message) error {
+	err := ppm.Serializer.Unmarshal(ppm.ProducerMessage.GetValue(), msg)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type ProtoProducerMessageErr struct {
+	*ProtoProducerMessage
+	Err error
+}
+
+func (pme *ProtoProducerMessageErr) Error() error {
+	return pme.Err
 }
