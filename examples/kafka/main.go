@@ -76,20 +76,20 @@ type ExamplePlugin struct {
 // Init is the entry point into the plugin that is called by Agent Core when the Agent is coming up.
 // The Go native plugin mechanism that was introduced in Go 1.8
 func (plugin *ExamplePlugin) Init() (err error) {
+	topic := "example-topic"
 	// Init channels required for async handler
 	plugin.asyncMessageChannel = make(chan messaging.ProtoMessage, 0)
 	plugin.asyncErrorChannel = make(chan messaging.ProtoMessageErr, 0)
 
 	// Create a synchronous publisher for the selected topic.
-	plugin.kafkaSyncPublisher = plugin.Kafka.NewSyncPublisher("example-plugin")
+	plugin.kafkaSyncPublisher = plugin.Kafka.NewSyncPublisher(topic)
 
 	// Create an asynchronous publisher for the selected topic.
-	plugin.kafkaAsyncPublisher = plugin.Kafka.NewAsyncPublisher("example-plugin", messaging.ToProtoMsgChan(plugin.asyncMessageChannel), messaging.ToProtoMsgErrChan(plugin.asyncErrorChannel))
+	plugin.kafkaAsyncPublisher = plugin.Kafka.NewAsyncPublisher(topic, messaging.ToProtoMsgChan(plugin.asyncMessageChannel), messaging.ToProtoMsgErrChan(plugin.asyncErrorChannel))
 
 	plugin.kafkaWatcher = plugin.Kafka.NewWatcher("example-plugin")
 
 	// ConsumePartition is called to start consuming a topic/partition.
-	topic := "example-topic"
 	plugin.subscription = make(chan messaging.ProtoMessage)
 	err = plugin.kafkaWatcher.Watch(messaging.ToProtoMsgChan(plugin.subscription), topic)
 	if err != nil {
