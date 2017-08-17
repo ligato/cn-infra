@@ -21,10 +21,10 @@ type bytesSyncPublisherKafka struct {
 }
 
 type bytesAsyncPublisherKafka struct {
-	conn       *Connection
-	topic      string
-	successClb func(messaging.BytesMessage)
-	errClb     func(messaging.BytesMessageErr)
+	conn         *Connection
+	topic        string
+	succCallback func(messaging.BytesMessage)
+	errCallback  func(messaging.BytesMessageErr)
 }
 
 // ConsumeTopic is called to start consuming of a topic.
@@ -111,6 +111,6 @@ func (conn *Connection) NewAsyncPublisher(topic string, successClb func(messagin
 
 // Publish publishes a message into kafka
 func (p *bytesAsyncPublisherKafka) Publish(key string, data []byte) error {
-	p.conn.SendAsyncMessage(p.topic, sarama.StringEncoder(key), sarama.ByteEncoder(data), nil, p.successClb, p.errClb)
+	p.conn.SendAsyncMessage(p.topic, sarama.StringEncoder(key), sarama.ByteEncoder(data), nil, p.succCallback, p.errCallback)
 	return nil
 }

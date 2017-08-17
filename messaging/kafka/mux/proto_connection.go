@@ -28,10 +28,10 @@ type protoSyncPublisherKafka struct {
 }
 
 type protoAsyncPublisherKafka struct {
-	conn       *ProtoConnection
-	topic      string
-	successClb func(messaging.ProtoMessage)
-	errClb     func(messaging.ProtoMessageErr)
+	conn         *ProtoConnection
+	topic        string
+	succCallback func(messaging.ProtoMessage)
+	errCallback  func(messaging.ProtoMessageErr)
 }
 
 // SendSyncMessage sends a message using the sync API
@@ -132,5 +132,5 @@ func (conn *ProtoConnection) NewAsyncPublisher(topic string, successClb func(mes
 
 // Publish publishes a message into kafka
 func (p *protoAsyncPublisherKafka) Publish(key string, message proto.Message) error {
-	return p.conn.SendAsyncMessage(p.topic, key, message, nil, p.successClb, p.errClb)
+	return p.conn.SendAsyncMessage(p.topic, key, message, nil, p.succCallback, p.errCallback)
 }
