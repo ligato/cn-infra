@@ -26,8 +26,6 @@ type BytesWatcher interface {
 // BytesWatchResp represents a notification about change. It is sent through the watch resp channel.
 type BytesWatchResp interface {
 	BytesKvPair
-	// GetChangeType type of the change associated with the WatchResp
-	GetChangeType() datasync.PutDel
-	// GetRevision returns revision associated with the WatchResp
-	GetRevision() int64
+	datasync.WithChangeType
+	datasync.WithRevision
 }
