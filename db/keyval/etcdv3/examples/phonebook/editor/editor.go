@@ -99,7 +99,7 @@ func delete(db keyval.ProtoBroker, name string) {
 	key := phonebook.EtcdContactPath(&phonebook.Contact{Name: name})
 
 	//Remove the key
-	datasync.Delete(key)
+	db.Delete(key)
 	fmt.Println("Removing ", key)
 }
 
