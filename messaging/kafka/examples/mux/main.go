@@ -39,17 +39,17 @@ func main() {
 	signalChan := make(chan os.Signal)
 	signal.Notify(signalChan, os.Interrupt)
 
-	cn.SendAsyncString("test", "key", "async!!", "meta", succCh, errCh)
+	cn.SendAsyncString("test", "key", "async!!", "meta", mux.ToBytesProducerChan(succCh), mux.ToBytesProducerErrChan(errCh))
 
 	select {
 	case success := <-succCh:
 		fmt.Println("Successfully send async msg", success.Metadata)
 	case err := <-errCh:
-		fmt.Println("Error while sending async msg", err.Err, err.Msg.Metadata)
+		fmt.Println("Error while sending async msg", err.Err, err.ProducerMessage.Metadata)
 	}
 
 	consumerChan := make(chan *client.ConsumerMessage)
-	err = cn.ConsumeTopic(consumerChan, "test")
+	err = cn.ConsumeTopic(mux.ToBytesMsgChan(consumerChan), "test")
 	mx.Start()
 	if err == nil {
 		fmt.Println("Consuming test partition")

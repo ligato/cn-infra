@@ -19,6 +19,7 @@ import (
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/messaging"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/messaging/kafka/mux"
 	"github.com/ligato/cn-infra/servicelabel"
@@ -34,12 +35,6 @@ var configFile string
 
 func init() {
 	flag.StringVar(&configFile, "kafka-config", "", "Location of the Kafka configuration file; also set via 'KAFKA_CONFIG' env variable.")
-}
-
-// Mux defines API for the plugins that use access to kafka brokers.
-type Mux interface {
-	NewConnection(name string) *mux.Connection
-	NewProtoConnection(name string) *mux.ProtoConnection
 }
 
 // Plugin provides API for interaction with kafka brokers.
@@ -119,6 +114,21 @@ func (p *Plugin) NewConnection(name string) *mux.Connection {
 // uses proto-modelled messages.
 func (p *Plugin) NewProtoConnection(name string) *mux.ProtoConnection {
 	return p.mx.NewProtoConnection(name, &keyval.SerializerJSON{})
+}
+
+// NewSyncPublisher creates a publisher that allows to publish messages using synchronous API.
+func (p *Plugin) NewSyncPublisher(topic string) messaging.ProtoPublisher {
+	return p.NewProtoConnection("").NewSyncPublisher(topic)
+}
+
+// NewAsyncPublisher creates a publisher that allows to publish messages using asynchronous API.
+func (p *Plugin) NewAsyncPublisher(topic string, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) messaging.ProtoPublisher {
+	return p.NewProtoConnection("").NewAsyncPublisher(topic, successClb, errorClb)
+}
+
+// NewWatcher creates a watcher that allows to start/stop consuming of messaging published to given topics.
+func (p *Plugin) NewWatcher(name string) messaging.ProtoWatcher {
+	return p.NewProtoConnection(name)
 }
 
 // Receive client config according to kafka config data

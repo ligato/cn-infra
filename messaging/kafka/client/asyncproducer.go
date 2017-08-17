@@ -234,8 +234,8 @@ func (ref *AsyncProducer) errorHandler(in <-chan *sarama.ProducerError) {
 				Partition: msg.Partition,
 			}
 			perr2 := &ProducerError{
-				Msg: pmsg,
-				Err: err,
+				ProducerMessage: pmsg,
+				Err:             err,
 			}
 			val, _ := msg.Value.Encode()
 			ref.Errorf("message %s errored in topic(%s)/partition(%d)/offset(%d)\n", string(val), pmsg.Topic, pmsg.Partition, pmsg.Offset)
