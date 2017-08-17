@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"strings"
 
+	"errors"
 	"github.com/alicebob/miniredis"
 	goredis "github.com/go-redis/redis"
 	"github.com/ligato/cn-infra/db"
@@ -323,9 +324,9 @@ func TestKeyIterator(t *testing.T) {
 	max := 100
 	for i := 1; i <= max; i++ {
 		key := fmt.Sprintf("%s%d", prefix, i)
-		bytesConn.Put(key, []byte(key))
+		bytesBrokerWatcher.Put(key, []byte(key))
 	}
-	iterator, err := bytesConn.ListKeys(prefix)
+	iterator, err := bytesBrokerWatcher.ListKeys(prefix)
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	count := 0
 	for {
@@ -336,6 +337,22 @@ func TestKeyIterator(t *testing.T) {
 		}
 		count++
 	}
+
+	// test it.err
+	iterator, err = bytesBrokerWatcher.ListKeys(prefix)
+	it := iterator.(*bytesKeyIterator)
+	it.err = errors.New("unittest")
+	_, _, last := it.GetNext()
+	gomega.Expect(last).Should(gomega.BeTrue())
+	err = it.Close()
+	gomega.Expect(err).Should(gomega.HaveOccurred())
+
+	// test it.index
+	iterator, err = bytesBrokerWatcher.ListKeys(prefix)
+	it = iterator.(*bytesKeyIterator)
+	it.index = max
+	it.cursor = 1 // This only meant to trigger scan.  miniRedis, however, will not accept non 0 cursor.
+	_, _, _ = it.GetNext()
 }
 
 func TestKeyValIterator(t *testing.T) {
@@ -345,9 +362,9 @@ func TestKeyValIterator(t *testing.T) {
 	max := 100
 	for i := 1; i <= max; i++ {
 		key := fmt.Sprintf("%s%d", prefix, i)
-		bytesConn.Put(key, []byte(key))
+		bytesBrokerWatcher.Put(key, []byte(key))
 	}
-	iterator, err := bytesConn.ListValues(prefix)
+	iterator, err := bytesBrokerWatcher.ListValues(prefix)
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	count := 0
 	for {
@@ -358,6 +375,22 @@ func TestKeyValIterator(t *testing.T) {
 		}
 		count++
 	}
+
+	// test it.err
+	iterator, err = bytesBrokerWatcher.ListValues(prefix)
+	it := iterator.(*bytesKeyValIterator)
+	it.err = errors.New("unittest")
+	_, last := it.GetNext()
+	gomega.Expect(last).Should(gomega.BeTrue())
+	err = it.Close()
+	gomega.Expect(err).Should(gomega.HaveOccurred())
+
+	// test it.index
+	iterator, err = bytesBrokerWatcher.ListValues(prefix)
+	it = iterator.(*bytesKeyValIterator)
+	it.index = max
+	it.cursor = 1 // This only meant to trigger scan.  miniRedis, however, will not accept non 0 cursor.
+	_, _ = it.GetNext()
 }
 
 func TestDel(t *testing.T) {
