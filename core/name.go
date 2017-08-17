@@ -44,10 +44,10 @@ func (np *NamedPlugin) String() string {
 //
 //    flavor.Logrus.NewLogger(GetPluginName(flavor, &flavor.ETCD))
 //
-func GetPluginName(structureInstance interface{}, pointerAToField interface{}) (
+func GetPluginName(flavor interface{}, ptrToPluginInFlavor interface{}) (
 	name PluginName, found bool) {
 
-	field, found := structs.FindField(structureInstance, pointerAToField)
+	field, found := structs.FindField(flavor, ptrToPluginInFlavor)
 	return pluginName(field), found
 }
 
