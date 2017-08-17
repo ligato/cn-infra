@@ -10,7 +10,6 @@ import (
 
 	"os"
 
-	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/redis"
 	"github.com/ligato/cn-infra/logging"
@@ -376,11 +375,11 @@ func generateSampleConfigs() {
 	var cfg interface{}
 
 	cfg = redis.NodeConfig{
-		Endpoint:               "localhost:6379",
-		DB:                     0,
+		Endpoint: "localhost:6379",
+		DB:       0,
 		EnableReadQueryOnSlave: false,
-		TLS:                    redis.TLS{},
-		ClientConfig:           clientConfig,
+		TLS:          redis.TLS{},
+		ClientConfig: clientConfig,
 	}
 	config.SaveConfigToYamlFile(cfg, "./node-client.yaml", 0644, makeTypeHeader(cfg))
 

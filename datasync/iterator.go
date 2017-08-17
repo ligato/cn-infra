@@ -11,7 +11,9 @@ type KeyValIterator interface {
 
 // KeyVal represents a single key-value pair
 type KeyVal interface {
-	WithKey
+	// GetKey returns the key of the pair
+	GetKey() string
+
 	LazyValueWithRev
 }
 

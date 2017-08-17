@@ -38,47 +38,11 @@ type CallbackResult interface {
 
 // ProtoWatchResp contains changed value
 type ProtoWatchResp interface {
-	ChangeValue
-	WithKey
-	WithPrevValue
-}
-
-// ChangeValue represents single propagated change.
-type ChangeValue interface {
-	LazyValueWithRev
-	WithChangeType
-}
-
-// LazyValueWithRev defines value that is unmarshalled into proto message on demand with a revision.
-// The reason for defining interface with only one method is primary to unify interfaces in this package
-type LazyValueWithRev interface {
-	LazyValue
-	WithRevision
-}
-
-// WithKey is a helper interface which intent is to ensure that same
-// method declaration is used in different interfaces (composition of interfaces)
-type WithKey interface {
-	// GetKey returns the key of the pair
+	// GetKey returns the key in the data change event key-value tuple
 	GetKey() string
-}
 
-// WithChangeType is a helper interface which intent is to ensure that same
-// method declaration is used in different interfaces (composition of interfaces)
-type WithChangeType interface {
-	GetChangeType() PutDel
-}
+	ChangeValue
 
-// WithRevision is a helper interface which intent is to ensure that same
-// method declaration is used in different interfaces (composition of interfaces)
-type WithRevision interface {
-	// GetRevision gets revision of current value
-	GetRevision() (rev int64)
-}
-
-// WithPrevValue is a helper interface which intent is to ensure that same
-// method declaration is used in different interfaces (composition of interfaces)
-type WithPrevValue interface {
 	// GetPrevValue gets previous value in the data change event.
 	// The caller must provide an address of a proto message buffer
 	// for each value.
@@ -86,6 +50,21 @@ type WithPrevValue interface {
 	// - prevValueExist flag is set to 'true' if prevValue was filled
 	// - error if value argument can not be properly filled
 	GetPrevValue(prevValue proto.Message) (prevValueExist bool, err error)
+}
+
+// ChangeValue represents single propagated change.
+type ChangeValue interface {
+	GetChangeType() PutDel
+	LazyValueWithRev
+}
+
+// LazyValueWithRev defines value that is unmarshalled into proto message on demand with a revision.
+// The reason for defining interface with only one method is primary to unify interfaces in this package
+type LazyValueWithRev interface {
+	LazyValue
+
+	// GetRevision gets revision of current value
+	GetRevision() (rev int64)
 }
 
 // LazyValue defines value that is unmarshalled into proto message on demand.

@@ -14,8 +14,6 @@
 
 package keyval
 
-import "github.com/ligato/cn-infra/datasync"
-
 // BytesWatcher define API for monitoring changes in datastore
 type BytesWatcher interface {
 	// Watch starts subscription for changes associated with the selected keys.
@@ -26,6 +24,8 @@ type BytesWatcher interface {
 // BytesWatchResp represents a notification about change. It is sent through the watch resp channel.
 type BytesWatchResp interface {
 	BytesKvPair
-	datasync.WithChangeType
-	datasync.WithRevision
+	// GetChangeType type of the change associated with the WatchResp
+	GetChangeType() datasync.PutDel
+	// GetRevision returns revision associated with the WatchResp
+	GetRevision() int64
 }
