@@ -15,9 +15,10 @@
 package idxmap
 
 import (
-	"github.com/ligato/cn-infra/logging/logroot"
 	"time"
+
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logroot"
 )
 
 // DefaultNotifTimeout for delivery of notification
