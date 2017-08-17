@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3/examples/phonebook/model/phonebook"
