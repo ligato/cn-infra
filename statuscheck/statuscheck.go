@@ -57,10 +57,10 @@ const (
 
 // Plugin struct holds all plugin-related data.
 type Plugin struct {
-	HTTP      *httpmux.Plugin
-	Transport *datasync.TransportAdapter // Injected transport
-	adapter   datasync.TransportAdapter  // Derived transport adapter
-	access    sync.Mutex                 // lock for the Plugin data
+	HTTP     *httpmux.Plugin
+	Adapters *[]datasync.TransportAdapter // Injected transport
+	adapter  datasync.TransportAdapter   // Derived transport adapter
+	access   sync.Mutex                  // lock for the Plugin data
 
 	agentStat   *status.AgentStatus             // overall agent status
 	pluginStat  map[string]*status.PluginStatus // plugin's status
@@ -72,11 +72,13 @@ type Plugin struct {
 
 // Init is the plugin entry point called by the Agent Core.
 func (p *Plugin) Init() error {
-	// Transport
-	p.adapter = *p.Transport
-	if p.adapter == nil {
-		return fmt.Errorf("Transport adapter is not available")
+	// Adapters
+	if len(*p.Adapters) == 0 {
+		return fmt.Errorf("No adapter is available")
 	}
+	adapters := *p.Adapters
+	p.adapter = adapters[0]
+	
 	// write initial status data into ETCD
 	p.agentStat = &status.AgentStatus{
 		BuildVersion: core.BuildVersion,

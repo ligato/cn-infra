@@ -18,7 +18,6 @@ import (
 	"github.com/ligato/cn-infra/core"
 )
 
-
 // NamedMapping is the "user API" to the mapping. It provides
 // read-only access.
 type NamedMapping interface {

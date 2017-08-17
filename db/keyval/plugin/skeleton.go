@@ -16,6 +16,7 @@ package plugin
 
 import (
 	"github.com/ligato/cn-infra/datasync"
+	"github.com/ligato/cn-infra/datasync/adapters"
 	"github.com/ligato/cn-infra/datasync/persisted/dbsync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
@@ -31,6 +32,7 @@ type Connection interface {
 
 // Skeleton of a KV plugin is a generic part of KV plugin.
 type Skeleton struct {
+	Transport    *adapters.TransportAggregator
 	Logger       logging.Logger
 	serviceLabel *servicelabel.Plugin
 	name         string
@@ -42,8 +44,9 @@ type Skeleton struct {
 
 // NewSkeleton creates a new instance of the Skeleton with the given connector.
 // The connection is established in AfterInit phase.
-func NewSkeleton(name string, factory logging.LogFactory, serviceLabel *servicelabel.Plugin, connector func(log logging.Logger) (Connection, error)) *Skeleton {
-	return &Skeleton{serviceLabel: serviceLabel, name: name, logFactory: factory, connect: connector}
+func NewSkeleton(name string, transport *adapters.TransportAggregator, factory logging.LogFactory, serviceLabel *servicelabel.Plugin,
+	connector func(log logging.Logger) (Connection, error)) *Skeleton {
+	return &Skeleton{Transport: transport, serviceLabel: serviceLabel, name: name, logFactory: factory, connect: connector}
 }
 
 // Init is called on plugin startup
@@ -58,10 +61,7 @@ func (plugin *Skeleton) Init() (err error) {
 	}
 	plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.conn, &keyval.SerializerJSON{})
 
-	// todo remove transport registration
-	prefixedBroker := plugin.conn.NewBroker(plugin.serviceLabel.GetAgentPrefix())
-	prefixedWatcher := plugin.conn.NewWatcher(plugin.serviceLabel.GetAgentPrefix())
-	datasync.RegisterTransport(dbsync.NewAdapter(plugin.name, prefixedBroker, prefixedWatcher))
+	plugin.Transport.InitTransport(plugin.conn, plugin.serviceLabel, plugin.name)
 	datasync.RegisterTransportOfDifferentAgent(func(microserviceLabel string) datasync.TransportAdapter {
 		dbOfDifferentAgent := plugin.conn.NewBroker(plugin.serviceLabel.GetDifferentAgentPrefix(microserviceLabel))
 		dbWOfDifferentAgent := plugin.conn.NewWatcher(plugin.serviceLabel.GetDifferentAgentPrefix(microserviceLabel))

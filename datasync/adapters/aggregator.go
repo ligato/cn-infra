@@ -16,18 +16,29 @@ package adapters
 
 import (
 	"github.com/ligato/cn-infra/datasync"
-	log "github.com/ligato/cn-infra/logging/logrus"
+	"github.com/ligato/cn-infra/datasync/persisted/dbsync"
+	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ligato/cn-infra/servicelabel"
+	"github.com/ligato/cn-infra/datasync/rpc/grpcsync"
+	"github.com/ligato/cn-infra/datasync/syncbase"
 )
 
 // TransportAggregator is cumulative adapter which contains all available transport types
 type TransportAggregator struct {
-	Transports []*datasync.TransportAdapter
+	Adapters []datasync.TransportAdapter
 }
 
-// AddTransport to the aggregator
-func (ta *TransportAggregator) AddTransport(adapter *datasync.TransportAdapter) {
-	if adapter != nil {
-		ta.Transports = append(ta.Transports, adapter)
-		log.Infof("Registered transport: %v", adapter)
-	}
+// InitTransport initializes new transport with provided connection and stores it to the aggregator
+func (ta *TransportAggregator) InitTransport(kvPlugin keyval.KvBytesPlugin, sl *servicelabel.Plugin, name string) {
+	broker := kvPlugin.NewBroker(sl.GetAgentPrefix())
+	watcher := kvPlugin.NewWatcher(sl.GetAgentPrefix())
+	adapter := dbsync.NewAdapter(name, broker, watcher)
+	ta.Adapters = append(ta.Adapters, adapter)
+}
+
+// InitGrpcTransport initializes a GRPC transport and stores it to the aggregator
+func (ta *TransportAggregator) InitGrpcTransport() {
+	grpcAdapter := grpcsync.NewAdapter()
+	adapter := &syncbase.Adapter{Watcher: grpcAdapter}
+	ta.Adapters = append(ta.Adapters, adapter)
 }

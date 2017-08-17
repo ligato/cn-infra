@@ -43,6 +43,7 @@ func (f *Flavor) Inject() error {
 	f.Etcd.LogFactory = &f.Generic.Logrus
 	f.Etcd.ServiceLabel = &f.Generic.ServiceLabel
 	f.Etcd.StatusCheck = &f.Generic.StatusCheck
+	f.Etcd.Transport = &f.Generic.Transports
 
 	f.Kafka.LogFactory = &f.Generic.Logrus
 	f.Kafka.ServiceLabel = &f.Generic.ServiceLabel

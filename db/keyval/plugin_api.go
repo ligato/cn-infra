@@ -17,12 +17,22 @@ package keyval
 // Root denotes that no prefix is prepended to the keys.
 const Root = ""
 
-// KvPlugin provides unifying interface for different key-value datastore implementations.
-type KvPlugin interface {
+// KvProtoPlugin provides unifying interface for different key-value datastore implementations.
+type KvProtoPlugin interface {
 	// NewPrefixedBroker returns a ProtoBroker instance that prepends given keyPrefix to all keys in its calls. To avoid
 	// using a prefix pass keyval.Root constant as argument.
 	NewBroker(keyPrefix string) ProtoBroker
 	// NewPrefixedWatcher returns a ProtoWatcher instance. Given key prefix is prepended to keys during watch subscribe phase.
 	// The prefix is removed from the key retrieved by GetKey() in ProtoWatchResp. To avoid  using a prefix pass keyval.Root constant as argument.
 	NewWatcher(keyPrefix string) ProtoWatcher
+}
+
+// KvBytesPlugin provides unifying interface for different key-value datastore implementations.
+type KvBytesPlugin interface {
+	// NewPrefixedBroker returns a BytesBroker instance that prepends given keyPrefix to all keys in its calls. To avoid
+	// using a prefix pass keyval.Root constant as argument.
+	NewBroker(keyPrefix string) BytesBroker
+	// NewPrefixedWatcher returns a BytesWatcher instance. Given key prefix is prepended to keys during watch subscribe phase.
+	// The prefix is removed from the key retrieved by GetKey() in BytesWatchResp. To avoid  using a prefix pass keyval.Root constant as argument.
+	NewWatcher(keyPrefix string) BytesWatcher
 }

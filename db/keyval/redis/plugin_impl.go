@@ -16,8 +16,7 @@ package redis
 
 import (
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/datasync/persisted/dbsync"
+	"github.com/ligato/cn-infra/datasync/adapters"
 	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
@@ -28,7 +27,7 @@ const PluginID core.PluginName = "RedisClient"
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
-	Transport    datasync.TransportAdapter
+	Transport    *adapters.TransportAggregator
 	LogFactory   logging.LogFactory
 	ServiceLabel *servicelabel.Plugin
 	*plugin.Skeleton
@@ -43,38 +42,24 @@ func (p *Plugin) Init() error {
 		return err
 	}
 
-	skeleton := plugin.NewSkeleton(string(PluginID), p.LogFactory, p.ServiceLabel,
+	// Init skeleton
+	skeleton := plugin.NewSkeleton(string(PluginID),
+		p.Transport,
+		p.LogFactory,
+		p.ServiceLabel,
 		func(log logging.Logger) (plugin.Connection, error) {
-			return NewBytesConnection(pool, log)
+			connection, err := NewBytesConnection(pool, p.Logger)
+			if err != nil {
+				return nil, err
+			}
+			return connection, nil
 		},
 	)
-
 	p.Skeleton = skeleton
 	err = p.Skeleton.Init()
 	if err != nil {
 		return err
 	}
 
-	// Init Redis transport
-	p.Transport, err = p.InitTransport(p.Skeleton.Logger)
-	if err != nil {
-		return err
-	}
-
 	return nil
-}
-
-// InitTransport initializes Redis transport adapter which then can be injected to other plugins
-func (p *Plugin) InitTransport(logger logging.Logger) (datasync.TransportAdapter, error) {
-	pool, err := CreateNodeClient(NodeConfig{})
-	if err != nil {
-		return nil, err
-	}
-	connection, err := NewBytesConnection(pool, logger)
-	if err != nil {
-		return nil, err
-	}
-	broker := connection.NewBroker(p.ServiceLabel.GetAgentPrefix())
-	watcher := connection.NewWatcher(p.ServiceLabel.GetAgentPrefix())
-	return dbsync.NewAdapter(string(PluginID), broker, watcher), nil
 }

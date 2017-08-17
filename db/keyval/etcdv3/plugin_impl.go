@@ -16,8 +16,7 @@ package etcdv3
 
 import (
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/datasync/persisted/dbsync"
+	"github.com/ligato/cn-infra/datasync/adapters"
 	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
@@ -35,7 +34,7 @@ const (
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
-	Transport      datasync.TransportAdapter
+	Transport      *adapters.TransportAggregator
 	LogFactory     logging.LogFactory
 	ServiceLabel   *servicelabel.Plugin
 	StatusCheck    *statuscheck.Plugin
@@ -69,6 +68,7 @@ func (p *Plugin) retrieveConfig() (*Config, error) {
 
 // Init is called at plugin startup. The connection to etcd is established.
 func (p *Plugin) Init() error {
+	var err error
 	cfg, err := p.retrieveConfig()
 	if err != nil {
 		return err
@@ -76,6 +76,7 @@ func (p *Plugin) Init() error {
 
 	// Init skeleton
 	skeleton := plugin.NewSkeleton(string(PluginID),
+		p.Transport,
 		p.LogFactory,
 		p.ServiceLabel,
 		func(log logging.Logger) (plugin.Connection, error) {
@@ -88,12 +89,6 @@ func (p *Plugin) Init() error {
 	)
 	p.Skeleton = skeleton
 	err = p.Skeleton.Init()
-	if err != nil {
-		return err
-	}
-
-	// Init ETCD transport
-	p.Transport, err = p.InitTransport(p.Skeleton.Logger)
 	if err != nil {
 		return err
 	}
@@ -112,23 +107,4 @@ func (p *Plugin) Init() error {
 	}
 
 	return nil
-}
-
-// InitTransport initializes ETCD transport adapter which then can be injected to other plugins
-func (p *Plugin) InitTransport(logger logging.Logger) (datasync.TransportAdapter, error) {
-	cfg, err := p.retrieveConfig()
-	if err != nil {
-		return nil, err
-	}
-	etcdConfig, err := ConfigToClientv3(cfg)
-	if err != nil {
-		return nil, err
-	}
-	connection, err := NewEtcdConnectionWithBytes(*etcdConfig, logger)
-	if err != nil {
-		return nil, err
-	}
-	broker := connection.NewBroker(p.ServiceLabel.GetAgentPrefix())
-	watcher := connection.NewWatcher(p.ServiceLabel.GetAgentPrefix())
-	return dbsync.NewAdapter(string(PluginID), broker, watcher), nil
 }

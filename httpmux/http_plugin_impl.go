@@ -21,15 +21,13 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/datasync/rpc/grpcsync"
-	"github.com/ligato/cn-infra/datasync/syncbase"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
 	"github.com/unrolled/render"
 	"net/http"
 	"time"
+	"github.com/ligato/cn-infra/datasync/adapters"
 )
 
 // PluginID used in the Agent Core flavors
@@ -52,7 +50,7 @@ func init() {
 
 // Plugin implements the Plugin interface.
 type Plugin struct {
-	Transport  datasync.TransportAdapter
+	Transport  *adapters.TransportAggregator
 	LogFactory logging.LogFactory
 	HTTPport   string
 
@@ -81,8 +79,7 @@ func (plugin *Plugin) Init() (err error) {
 	})
 
 	// Register grpc transport adapter
-	plugin.Transport = plugin.initGrpcTransportAdapter()
-	//plugin.Transports.RegisterGrpcTransport(plugin.initGrpcTransportAdapter())
+	plugin.Transport.InitGrpcTransport()
 
 	return err
 }
@@ -126,10 +123,4 @@ func (plugin *Plugin) AfterInit() error {
 func (plugin *Plugin) Close() error {
 	_, err := safeclose.CloseAll(plugin.Transport, plugin.server)
 	return err
-}
-
-// Init grpc adapter
-func (plugin *Plugin) initGrpcTransportAdapter() datasync.TransportAdapter {
-	grpcAdapter := grpcsync.NewAdapter()
-	return &syncbase.Adapter{Watcher: grpcAdapter}
 }
