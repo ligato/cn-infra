@@ -15,9 +15,10 @@
 package mux
 
 import (
-	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"time"
+
 	"github.com/ligato/cn-infra/messaging"
+	"github.com/ligato/cn-infra/messaging/kafka/client"
 )
 
 // ToBytesMsgChan allows to receive ConsumerMessage through channel. This function can be used as an argument for
