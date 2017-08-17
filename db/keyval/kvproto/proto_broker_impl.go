@@ -226,6 +226,12 @@ func listKeysProtoInternal(broker keyval.BytesBroker, prefix string) (keyval.Pro
 	return &protoKeyIterator{ctx}, nil
 }
 
+// Close does nothing since db cursors are not needed.
+// The method needs to be here to implement Iterator API.
+func (ctx *protoKeyValIterator) Close() error {
+	return nil
+}
+
 // GetNext returns the following item from the result set. If data was returned, found is set to true.
 func (ctx *protoKeyValIterator) GetNext() (kv keyval.ProtoKeyVal, stop bool) {
 	pair, stop := ctx.delegate.GetNext()
@@ -234,6 +240,12 @@ func (ctx *protoKeyValIterator) GetNext() (kv keyval.ProtoKeyVal, stop bool) {
 	}
 
 	return &protoKeyVal{pair, ctx.serializer}, stop
+}
+
+// Close does nothing since db cursors are not needed.
+// The method needs to be here to implement Iterator API.
+func (ctx *protoKeyIterator) Close() error {
+	return nil
 }
 
 // GetNext returns the following item from the result set. If data was returned, found is set to true.
