@@ -17,6 +17,7 @@ package keyval
 import (
 	"github.com/golang/protobuf/proto"
 	"io"
+	"github.com/ligato/cn-infra/datasync"
 )
 
 // ProtoBroker is decorator that allows to read/write proto file modelled data.
@@ -38,10 +39,8 @@ type ProtoBroker interface {
 
 // ProtoKvPair group getter for single key-value pair
 type ProtoKvPair interface {
-	// GetKey returns the key of the pair
-	GetKey() string
-	// GetValue returns the value of the pair
-	GetValue(proto.Message) error
+	datasync.LazyValue
+	datasync.WithKey
 }
 
 // ProtoKeyIterator is an iterator returned by ListKeys call
@@ -55,8 +54,7 @@ type ProtoKeyIterator interface {
 // ProtoKeyVal represents a single key-value pair
 type ProtoKeyVal interface {
 	ProtoKvPair
-	// GetRevision returns revision associated with the latest change in the key-value pair
-	GetRevision() int64
+	datasync.WithRevision
 }
 
 // ProtoKeyValIterator is an iterator returned by ListValues call.

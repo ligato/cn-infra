@@ -26,6 +26,6 @@ type ProtoWatcher interface {
 
 // ProtoWatchResp represents a notification about change. It is sent through the watch resp channel.
 type ProtoWatchResp interface {
-	//???ProtoKvPair
-	datasync.ProtoWatchResp
+	datasync.ChangeValue
+	datasync.WithKey
 }
