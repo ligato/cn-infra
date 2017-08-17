@@ -67,8 +67,8 @@
 //
 // CRUD
 //   // put
-//   err = db.Put("some-key", []byte("some-value"))
-//   err = db.Put("some-temp-key", []byte("valid for 20 seconds"),
+//   err = datasync.Put("some-key", []byte("some-value"))
+//   err = datasync.Put("some-temp-key", []byte("valid for 20 seconds"),
 //                keyval.WithTTL(20*time.Second))
 //
 //   // get
@@ -100,7 +100,7 @@
 //   }
 //
 //   // delete
-//   found, err := db.Delete("some-key")
+//   found, err := datasync.Delete("some-key")
 //
 //   // transaction
 //   var txn keyval.BytesTxn = db.NewTxn()
@@ -115,10 +115,10 @@
 //       select {
 //       case r := <-watchChan:
 //           switch r.GetChangeType() {
-//           case db.Put:
+//           case datasync.Put:
 //               log.Infof("Watcher received %v: %s=%s", r.GetChangeType(),
 //                         r.GetKey(), string(r.GetValue()))
-//           case db.Delete:
+//           case datasync.Delete:
 //               ...
 //           }
 //       ...

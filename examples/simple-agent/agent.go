@@ -15,12 +15,13 @@
 package main
 
 import (
+	"os"
+	"time"
+
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/flavors/etcdkafka"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
-	"os"
-	"time"
 )
 
 func main() {

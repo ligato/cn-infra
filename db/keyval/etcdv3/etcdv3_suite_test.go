@@ -18,6 +18,8 @@ import (
 	"errors"
 	"testing"
 
+	"time"
+
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/mvcc/mvccpb"
 	"github.com/ligato/cn-infra/db"
@@ -25,7 +27,6 @@ import (
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
-	"time"
 )
 
 var dataBroker *BytesConnectionEtcd
@@ -277,7 +278,7 @@ func TestWatchDeleteResp(t *testing.T) {
 	gomega.RegisterTestingT(t)
 	createResp := NewBytesWatchDelResp(key, rev)
 	gomega.Expect(createResp).NotTo(gomega.BeNil())
-	gomega.Expect(createResp.GetChangeType()).To(gomega.BeEquivalentTo(db.Delete))
+	gomega.Expect(createResp.GetChangeType()).To(gomega.BeEquivalentTo(datasync.Delete))
 	gomega.Expect(createResp.GetKey()).To(gomega.BeEquivalentTo(key))
 	gomega.Expect(createResp.GetValue()).To(gomega.BeNil())
 	gomega.Expect(createResp.GetRevision()).To(gomega.BeEquivalentTo(rev))

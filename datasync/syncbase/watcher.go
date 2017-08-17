@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/db"
 	log "github.com/ligato/cn-infra/logging/logrus"
 )
 
@@ -111,7 +110,7 @@ func (adapter *Watcher) PropagateChanges(txData map[string] /*key*/ datasync.Cha
 				if strings.HasPrefix(key, prefix) {
 					var prev datasync.LazyValueWithRev
 					var curRev int64
-					if db.Delete == val.GetChangeType() {
+					if datasync.Delete == val.GetChangeType() {
 						_, prev = adapter.lastRev.Del(key)
 						if prev != nil {
 							curRev = prev.GetRevision() + 1

@@ -17,11 +17,12 @@ package restsync
 import (
 	"github.com/ligato/cn-infra/datasync"
 
+	"net/http"
+
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/datasync/syncbase"
 	log "github.com/ligato/cn-infra/logging/logrus"
 	"github.com/unrolled/render"
-	"net/http"
 )
 
 // just a shortcut to make following code more readable

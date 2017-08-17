@@ -16,10 +16,10 @@ package dbsync
 
 import (
 	"encoding/json"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/syncbase"
-	"github.com/ligato/cn-infra/db"
 	"github.com/ligato/cn-infra/db/keyval"
 )
 
@@ -37,7 +37,7 @@ type ChangeWatchResp struct {
 }
 
 // GetChangeType - see the comment in implemented interface datasync.ChangeEvent
-func (ev *ChangeWatchResp) GetChangeType() db.PutDel {
+func (ev *ChangeWatchResp) GetChangeType() datasync.PutDel {
 	return ev.delegate.GetChangeType()
 }
 
@@ -49,7 +49,7 @@ func (ev *ChangeWatchResp) GetKey() string {
 // GetValue delegates to WatchResp. For description of parameter and output values see the comment
 // in implemented interface datasync.ChangeEvent
 func (ev *ChangeWatchResp) GetValue(val proto.Message) (err error) {
-	if ev.delegate.GetChangeType() != db.Delete {
+	if ev.delegate.GetChangeType() != datasync.Delete {
 		return json.Unmarshal(ev.delegate.GetValue(), val)
 	}
 
