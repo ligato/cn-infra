@@ -27,7 +27,6 @@ import (
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
-	"github.com/ligato/cn-infra/datasync"
 )
 
 var dataBroker *BytesConnectionEtcd
