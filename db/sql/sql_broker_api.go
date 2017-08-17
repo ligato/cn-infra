@@ -24,7 +24,7 @@ type Broker interface {
 	// Put puts single value (inBinding) into the data store
 	// Example usage:
 	//
-	//    err = datasync.Put("ID='James Bond'", &User{"James Bond", "James", "Bond"})
+	//    err = db.Put("ID='James Bond'", &User{"James Bond", "James", "Bond"})
 	//
 	Put(where Expression, inBinding interface{} /* TODO opts ...PutOption*/) error
 

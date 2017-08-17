@@ -166,7 +166,7 @@ func exampleDML(session *gocql.Session) (err error) {
 		Udt04:                  Udt04{"kuk", &Udt03{Tx: "txxxxxxxxx1", Tx2: "txxxxxxxxx2" /*, Inet1: "201.202.203.204"*/ }},
 		UdtCol:                 []Udt03{{Tx: "txt1Col", Tx2: "txt2Col"}},
 	}
-	err = datasync.Put(sql.Exp("userid=c37d661d-7e61-49ea-96a5-68c34e83db3a"), written)
+	err = db.Put(sql.Exp("userid=c37d661d-7e61-49ea-96a5-68c34e83db3a"), written)
 	if err == nil {
 		fmt.Println("Successfully written: ", written)
 	} else {

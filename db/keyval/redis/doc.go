@@ -67,8 +67,8 @@
 //
 // CRUD
 //   // put
-//   err = datasync.Put("some-key", []byte("some-value"))
-//   err = datasync.Put("some-temp-key", []byte("valid for 20 seconds"),
+//   err = db.Put("some-key", []byte("some-value"))
+//   err = db.Put("some-temp-key", []byte("valid for 20 seconds"),
 //                keyval.WithTTL(20*time.Second))
 //
 //   // get
