@@ -14,6 +14,8 @@
 
 package etcdv3
 
+import "github.com/ligato/cn-infra/datasync"
+
 // BytesWatchPutResp is sent when new key-value pair has been inserted or the value is updated
 type BytesWatchPutResp struct {
 	key   string
