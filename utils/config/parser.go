@@ -15,9 +15,10 @@
 package config
 
 import (
-	"github.com/ghodss/yaml"
 	"io/ioutil"
 	"os"
+
+	"github.com/ghodss/yaml"
 )
 
 // ParseConfigFromYamlFile parses a configuration from a file

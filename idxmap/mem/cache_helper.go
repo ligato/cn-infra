@@ -3,7 +3,6 @@ package mem
 import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/db"
 	"github.com/ligato/cn-infra/idxmap"
 )
 
@@ -35,19 +34,19 @@ func (helper *CacheHelper) DoWatching(resyncName string, watcher datasync.Watche
 }
 
 // DoChange calls:
-// - Put in case of db.Put
+// - Put in case of datasync.Put
 // - Delete in case of data.Del
 func (helper *CacheHelper) DoChange(dataChng datasync.ChangeEvent) error {
 	var err error
 	switch dataChng.GetChangeType() {
-	case db.Put:
+	case datasync.Put:
 		current := proto.Clone(helper.DataPrototype)
 		dataChng.GetValue(current)
 		name, err := helper.ParseName(dataChng.GetKey())
 		if err == nil {
 			helper.IDX.Put(name, current)
 		}
-	case db.Delete:
+	case datasync.Delete:
 		name, err := helper.ParseName(dataChng.GetKey())
 		if err == nil {
 			helper.IDX.Delete(name)

@@ -40,7 +40,7 @@ func TestPut1_convenient(t *testing.T) {
 		"Bond",       //set last_name
 		"James Bond", //where
 	})
-	err := db.Put(sql.FieldEQ(&JamesBond.ID), JamesBond)
+	err := datasync.Put(sql.FieldEQ(&JamesBond.ID), JamesBond)
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
@@ -62,7 +62,7 @@ func TestPut2_EQ(t *testing.T) {
 		"Bond",       //set last_name
 		"James Bond", //where
 	})
-	err := db.Put(sql.Field(&JamesBond.ID, sql.EQ(JamesBond.ID)), JamesBond)
+	err := datasync.Put(sql.Field(&JamesBond.ID, sql.EQ(JamesBond.ID)), JamesBond)
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
@@ -87,6 +87,6 @@ func TestPut3_customTableSchema(t *testing.T) {
 		"Bond",       //set last_name
 		"James Bond", //where
 	})
-	err := db.Put(sql.FieldEQ(&entity.ID), entity)
+	err := datasync.Put(sql.FieldEQ(&entity.ID), entity)
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 }

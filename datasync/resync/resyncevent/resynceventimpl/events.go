@@ -15,8 +15,9 @@
 package resynceventimpl
 
 import (
-	"github.com/ligato/cn-infra/datasync/resync/resyncevent"
 	"time"
+
+	"github.com/ligato/cn-infra/datasync/resync/resyncevent"
 )
 
 // NewStatusEvent is a constructor
