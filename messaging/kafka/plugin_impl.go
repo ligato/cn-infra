@@ -116,14 +116,17 @@ func (p *Plugin) NewProtoConnection(name string) *mux.ProtoConnection {
 	return p.mx.NewProtoConnection(name, &keyval.SerializerJSON{})
 }
 
+// NewSyncPublisher creates a publisher that allows to publish messages using synchronous API.
 func (p *Plugin) NewSyncPublisher(topic string) messaging.ProtoPublisher {
 	return p.NewProtoConnection("").NewSyncPublisher(topic)
 }
 
+// NewAsyncPublisher creates a publisher that allows to publish messages using asynchronous API.
 func (p *Plugin) NewAsyncPublisher(topic string, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) messaging.ProtoPublisher {
 	return p.NewProtoConnection("").NewAsyncPublisher(topic, successClb, errorClb)
 }
 
+// NewWatcher creates a watcher that allows to start/stop consuming of messaging published to given topics.
 func (p *Plugin) NewWatcher(name string) messaging.ProtoWatcher {
 	return p.NewProtoConnection(name)
 }

@@ -43,6 +43,7 @@ type ProtoMessage interface {
 	GetTopic() string
 }
 
+// ProtoMessageErr represents a message that was not published successfully to a messaging system.
 type ProtoMessageErr interface {
 	ProtoMessage
 	Error() error

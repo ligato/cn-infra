@@ -25,19 +25,7 @@ import (
 // DefaultMsgTimeout for delivery of notification
 const DefaultMsgTimeout = 2 * time.Second
 
-func ToBytesMsgChan(ch chan *client.ConsumerMessage, opts ...interface{}) func(*client.ConsumerMessage) {
-
-	timeout, logger := parseOpts(opts...)
-
-	return func(dto *client.ConsumerMessage) {
-		select {
-		case ch <- dto:
-		case <-time.After(timeout):
-			logger.Warn("Unable to deliver message")
-		}
-	}
-}
-
+// ToProtoMsgChan allows to receive messages through channel instead of callback.
 func ToProtoMsgChan(ch chan messaging.ProtoMessage, opts ...interface{}) func(messaging.ProtoMessage) {
 
 	timeout, logger := parseOpts(opts...)
@@ -51,11 +39,27 @@ func ToProtoMsgChan(ch chan messaging.ProtoMessage, opts ...interface{}) func(me
 	}
 }
 
-func ToBytesMsgErrChan(ch chan messaging.ProtoMessageErr, opts ...interface{}) func(messaging.ProtoMessageErr) {
+// ToProtoMsgErrChan allows to receive error messages through channel instead of callback.
+func ToProtoMsgErrChan(ch chan messaging.ProtoMessageErr, opts ...interface{}) func(messaging.ProtoMessageErr) {
 
 	timeout, logger := parseOpts(opts...)
 
-	return func(dto messaging.ProtoMessageErr) {
+	return func(msg messaging.ProtoMessageErr) {
+		select {
+		case ch <- msg:
+		case <-time.After(timeout):
+			logger.Warn("Unable to deliver message")
+		}
+	}
+}
+
+// ToBytesMsgChan allows to receive ConsumerMessage through channel. This function can be used as an argument for
+// ConsumeTopic call.
+func ToBytesMsgChan(ch chan *client.ConsumerMessage, opts ...interface{}) func(*client.ConsumerMessage) {
+
+	timeout, logger := parseOpts(opts...)
+
+	return func(dto *client.ConsumerMessage) {
 		select {
 		case ch <- dto:
 		case <-time.After(timeout):

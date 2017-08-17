@@ -27,6 +27,7 @@ func getMockConsumerFactory(t *testing.T) ConsumerFactory {
 	}
 }
 
+// GetMultiplexerMock returns mock of Multiplexer that can be used for testing purposes.
 func GetMultiplexerMock(t *testing.T) (*Multiplexer, *mocks.AsyncProducer, *mocks.SyncProducer) {
 	asyncP, aMock := client.GetAsyncProducerMock(t)
 	syncP, sMock := client.GetSyncProducerMock(t)
