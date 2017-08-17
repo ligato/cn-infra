@@ -22,12 +22,11 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/mvcc/mvccpb"
-	"github.com/ligato/cn-infra/db"
+	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
-	"github.com/ligato/cn-infra/datasync"
 )
 
 var dataBroker *BytesConnectionEtcd
@@ -267,7 +266,7 @@ func TestWatchPutResp(t *testing.T) {
 	gomega.RegisterTestingT(t)
 	createResp := NewBytesWatchPutResp(key, value, rev)
 	gomega.Expect(createResp).NotTo(gomega.BeNil())
-	gomega.Expect(createResp.GetChangeType()).To(gomega.BeEquivalentTo(db.Put))
+	gomega.Expect(createResp.GetChangeType()).To(gomega.BeEquivalentTo(datasync.Put))
 	gomega.Expect(createResp.GetKey()).To(gomega.BeEquivalentTo(key))
 	gomega.Expect(createResp.GetValue()).To(gomega.BeEquivalentTo(value))
 	gomega.Expect(createResp.GetRevision()).To(gomega.BeEquivalentTo(rev))
