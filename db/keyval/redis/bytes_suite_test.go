@@ -35,6 +35,7 @@ import (
 	"github.com/ligato/cn-infra/utils/config"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/onsi/gomega"
+	"github.com/ligato/cn-infra/datasync"
 )
 
 var miniRedis *miniredis.Miniredis
