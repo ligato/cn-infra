@@ -44,7 +44,7 @@ func (np *NamedPlugin) String() string {
 //
 //    flavor.Logrus.NewLogger(PluginNameOfFlavor(&flavor.ETCD, flavor))
 //
-func PluginNameOfFlavor(ptrToPluginInFlavor interface{}, flavor interface{}) (
+func PluginNameOfFlavor(ptrToPluginInFlavor interface{}, flavor Flavor) (
 	name PluginName, found bool) {
 
 	field, found := structs.FindField(flavor, ptrToPluginInFlavor)
