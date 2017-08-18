@@ -14,32 +14,19 @@
 
 package statuscheck
 
-//go:generate protoc --proto_path=model/status --gogo_out=model/status model/status/status.proto
-
 import (
 	"context"
-	"encoding/json"
-	"net/http"
 	"sync"
 	"time"
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/httpmux"
-	log "github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/health/statuscheck/model/status"
-	"github.com/unrolled/render"
 	"github.com/ligato/cn-infra/logging"
 )
 
 // PluginID uniquely identifies the plugin.
 const PluginID core.PluginName = "StatusCheck"
-
-// PluginState is a data type used to describe the current operational state of a plugin.
-type PluginState string
-
-// PluginStateProbe defines parameters of a function used for plugin state probing.
-type PluginStateProbe func() (PluginState, error)
 
 const (
 	// Init state means that the initialization of the plugin is in progress.
@@ -49,20 +36,15 @@ const (
 	// Error state means that some error has occurred in the plugin.
 	Error PluginState = "error"
 
-	livenessProbePath      string        = "/liveness"      // liveness probe URL
-	readinessProbePath     string        = "/readiness"     // readiness probe URL
 	periodicWriteTimeout   time.Duration = time.Second * 10 // frequency of periodic writes of state data into ETCD
 	periodicProbingTimeout time.Duration = time.Second * 5  // frequency of periodic plugin state probing
 )
 
 // Plugin struct holds all plugin-related data.
 type Plugin struct {
-	LogFactory logging.LogFactory
-	HTTP       *httpmux.Plugin
-	Probe      *httpmux.HTTPPort
+	Log logging.PluginLogger
 
-	Transport datasync.TransportAdapter
-	access    sync.Mutex                // lock for the Plugin data
+	access sync.Mutex // lock for the Plugin data
 
 	agentStat   *status.AgentStatus             // overall agent status
 	pluginStat  map[string]*status.PluginStatus // plugin's status
@@ -70,31 +52,12 @@ type Plugin struct {
 
 	cancel context.CancelFunc // cancel can be used to cancel all goroutines and their jobs inside of the plugin
 	wg     sync.WaitGroup     // wait group that allows to wait until all goroutines of the plugin have finished
+
+	Transport datasync.KeyProtoValWriter
 }
 
 // Init is the plugin entry point called by the Agent Core.
 func (p *Plugin) Init() error {
-	// Start Init() and AfterInit() for new probe in case the port is different from agent http
-	if p.HTTP.HTTPport.Port != p.Probe.Port {
-		log.Warnf("Custom port: %v", p.Probe)
-		p.HTTP = &httpmux.Plugin{
-			LogFactory: p.LogFactory,
-			HTTPport: p.Probe,
-		}
-		err := p.HTTP.Init()
-		if err != nil {
-			return err
-		}
-		err = p.HTTP.AfterInit()
-		if err != nil {
-			return err
-		}
-	}
-
-	log.Warnf("Starting statuscheck on port %v", p.HTTP.HTTPport.Port)
-
-	// init data transport
-	p.Transport = datasync.GetTransport()
 
 	// write initial status data into ETCD
 	p.agentStat = &status.AgentStatus{
@@ -103,9 +66,6 @@ func (p *Plugin) Init() error {
 		State:        status.OperationalState_INIT,
 		StartTime:    time.Now().Unix(),
 		LastChange:   time.Now().Unix(),
-	}
-	if p.Transport == nil {
-		log.Infof("Statuscheck transport is nil")
 	}
 
 	p.publishAgentData()
@@ -133,12 +93,6 @@ func (p *Plugin) Init() error {
 func (p *Plugin) AfterInit() error {
 	p.access.Lock()
 	defer p.access.Unlock()
-
-	if p.HTTP != nil {
-		log.Debug("Initializing k8s health check probes.")
-		p.HTTP.RegisterHTTPHandler(livenessProbePath, p.livenessProbeHandler, "GET")
-		p.HTTP.RegisterHTTPHandler(readinessProbePath, p.readinessProbeHandler, "GET")
-	}
 
 	// transition to OK state if there are no plugins
 	if len(p.pluginStat) == 0 {
@@ -176,7 +130,7 @@ func (p *Plugin) Register(pluginName core.PluginName, probe PluginStateProbe) {
 	// write initial status data into ETCD
 	p.publishPluginData(pluginName, stat)
 
-	log.Infof("Plugin %v: status check probe registered", pluginName)
+	p.Log.Infof("Plugin %v: status check probe registered", pluginName)
 }
 
 // ReportStateChange can be used to report a change in the status of a previously registered plugin.
@@ -186,7 +140,7 @@ func (p *Plugin) ReportStateChange(pluginName core.PluginName, state PluginState
 
 	stat, ok := p.pluginStat[string(pluginName)]
 	if !ok {
-		log.Errorf("Unregistered plugin %s is reporting the state, ignoring.", pluginName)
+		p.Log.Errorf("Unregistered plugin %s is reporting the state, ignoring.", pluginName)
 		return
 	}
 
@@ -204,7 +158,7 @@ func (p *Plugin) ReportStateChange(pluginName core.PluginName, state PluginState
 		return
 	}
 
-	log.WithFields(log.Fields{"plugin": pluginName, "state": state, "lastErr": lastError}).Debug(
+	p.Log.WithFields(map[string]interface{}{"plugin": pluginName, "state": state, "lastErr": lastError}).Debug(
 		"Agent plugin state update.")
 
 	// update plugin state
@@ -239,7 +193,7 @@ func (p *Plugin) ReportStateChange(pluginName core.PluginName, state PluginState
 func (p *Plugin) publishAgentData() error {
 	p.agentStat.LastUpdate = time.Now().Unix()
 	if p.Transport != nil {
-		return p.Transport.PublishData(status.AgentStatusKey(), p.agentStat)
+		return p.Transport.Put(status.AgentStatusKey(), p.agentStat)
 	}
 	return nil
 }
@@ -248,7 +202,7 @@ func (p *Plugin) publishAgentData() error {
 func (p *Plugin) publishPluginData(pluginName core.PluginName, pluginStat *status.PluginStatus) error {
 	pluginStat.LastUpdate = time.Now().Unix()
 	if p.Transport != nil {
-		return p.Transport.PublishData(status.PluginStatusKey(string(pluginName)), pluginStat)
+		return p.Transport.Put(status.PluginStatusKey(string(pluginName)), pluginStat)
 	}
 	return nil
 }
@@ -313,34 +267,11 @@ func (p *Plugin) getAgentState() status.OperationalState {
 	return p.agentStat.State
 }
 
-// readinessProbeHandler handles k8s readiness probe.
-func (p *Plugin) readinessProbeHandler(formatter *render.Render) http.HandlerFunc {
-
-	return func(w http.ResponseWriter, req *http.Request) {
-		stat, _ := json.Marshal(p.agentStat)
-		if p.getAgentState() == status.OperationalState_OK {
-			w.WriteHeader(http.StatusOK)
-			w.Write(stat)
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write(stat)
-		}
-	}
-}
-
-// livenessProbeHandler handles k8s liveness probe.
-func (p *Plugin) livenessProbeHandler(formatter *render.Render) http.HandlerFunc {
-
-	return func(w http.ResponseWriter, req *http.Request) {
-		stat, _ := json.Marshal(p.agentStat)
-		if p.getAgentState() == status.OperationalState_INIT || p.getAgentState() == status.OperationalState_OK {
-			w.WriteHeader(http.StatusOK)
-			w.Write(stat)
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write(stat)
-		}
-	}
+// GetAgentStatus return current global operational state of the agent.
+func (p *Plugin) GetAgentStatus() status.AgentStatus {
+	p.access.Lock()
+	defer p.access.Unlock()
+	return *(p.agentStat)
 }
 
 // stateToProto converts agent state type into protobuf agent state type.

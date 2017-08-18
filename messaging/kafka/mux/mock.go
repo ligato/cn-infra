@@ -28,9 +28,18 @@ func getMockConsumerFactory(t *testing.T) ConsumerFactory {
 	}
 }
 
-// GetMultiplexerMock returns mock of Multiplexer that can be used for testing purposes.
-func GetMultiplexerMock(t *testing.T) (*Multiplexer, *mocks.AsyncProducer, *mocks.SyncProducer) {
+// Mock returns mock of Multiplexer that can be used for testing purposes.
+func Mock(t *testing.T) *KafkaMock {
 	asyncP, aMock := client.GetAsyncProducerMock(t)
 	syncP, sMock := client.GetSyncProducerMock(t)
-	return NewMultiplexer(getMockConsumerFactory(t), syncP, asyncP, "name", logroot.Logger()), aMock, sMock
+	return &KafkaMock{
+		NewMultiplexer(getMockConsumerFactory(t), syncP, asyncP, "name", logroot.Logger()),
+		aMock, sMock}
+}
+
+// KafkaMock for the tests
+type KafkaMock struct {
+	Mux      *Multiplexer
+	SyncPub  *mocks.AsyncProducer
+	AsyncPub *mocks.SyncProducer
 }

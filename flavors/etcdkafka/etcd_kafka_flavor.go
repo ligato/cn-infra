@@ -16,6 +16,7 @@ package etcdkafka
 
 import (
 	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/datasync/persisted/dbsync"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/flavors/generic"
 	"github.com/ligato/cn-infra/messaging/kafka"
@@ -26,9 +27,11 @@ import (
 // - Kafka plugins (useful for publishing events)
 type Flavor struct {
 	Generic generic.FlavorGeneric
-	Etcd    etcdv3.Plugin
-	Kafka   kafka.Plugin
 
+	Etcd         etcdv3.Plugin
+	EtcdDataSync dbsync.Adapter
+
+	Kafka kafka.Plugin
 
 	injected bool
 }
@@ -44,6 +47,8 @@ func (f *Flavor) Inject() error {
 	f.Etcd.LogFactory = &f.Generic.Logrus
 	f.Etcd.ServiceLabel = &f.Generic.ServiceLabel
 	f.Etcd.StatusCheck = &f.Generic.StatusCheck
+	//TODO f.EtcdDataSync = &f.
+	//TODO f.Generic.HealthProbe.Transport = &f.EtcdDataSync
 
 	f.Kafka.LogFactory = &f.Generic.Logrus
 	f.Kafka.ServiceLabel = &f.Generic.ServiceLabel

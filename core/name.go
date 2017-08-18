@@ -15,8 +15,6 @@
 package core
 
 import (
-	"reflect"
-
 	"github.com/ligato/cn-infra/utils/structs"
 )
 
@@ -44,16 +42,11 @@ func (np *NamedPlugin) String() string {
 //
 //    flavor.Logrus.NewLogger(PluginNameOfFlavor(&flavor.ETCD, flavor))
 //
-func PluginNameOfFlavor(ptrToPluginInFlavor interface{}, flavor Flavor) (
-	name PluginName, found bool) {
+func PluginNameOfFlavor(ptrToPluginInFlavor interface{}, flavor Flavor) (name string) {
 
 	field, found := structs.FindField(flavor, ptrToPluginInFlavor)
-	return pluginName(field), found
-}
-
-func pluginName(field *reflect.StructField) PluginName {
-	if field == nil {
-		return PluginName("")
+	if !found {
+		panic("not found field of flavor")
 	}
-	return PluginName(field.Name)
+	return field.Name
 }
