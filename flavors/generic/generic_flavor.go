@@ -22,13 +22,14 @@ import (
 	"github.com/ligato/cn-infra/logging/logmanager"
 	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/health/probe"
+	"github.com/ligato/cn-infra/logging"
 )
 
 // FlavorGeneric glues together multiple plugins that are useful for almost every micro-service
 type FlavorGeneric struct {
 	Logrus       logrus.Plugin
 	ServiceLabel servicelabel.Plugin
-	Probe 		 probe.Plugin
+	HealthProbe  probe.Plugin
 	HTTP         httpmux.Plugin
 	LogManager   logmanager.Plugin
 	StatusCheck  statuscheck.Plugin
@@ -42,17 +43,14 @@ func (f *FlavorGeneric) Inject() error {
 		return nil
 	}
 
-	f.Probe.LogFactory = &f.Logrus
-	f.HTTP.LogFactory = &f.Logrus
-	f.HTTP.HTTPport = &f.Probe.HTTPPort
-	//TODO f.HTTPProbe.Logger = f.Logrus.LoggerWithPrefix(f.PluginName(&f.HTTPProbe))
-	//TODO f.HTTPProbe.Config = f.Config.ConfigWithPrefix(f.PluginName(&f.HTTPProbe))
+	f.HTTP.Log = logging.NewPluginLogger(core.PluginNameOfFlavor(&f.HTTP, f), f.Logrus)
+	//TODO f.HTTPProbe.Config = config.NewPluginConfig(f.PluginName(&f.HTTPProbe))
 	f.LogManager.ManagedLoggers = &f.Logrus
 	f.LogManager.HTTP = &f.HTTP
-	f.StatusCheck.LogFactory = &f.Logrus
-	f.StatusCheck.Probe = &f.Probe.ProbePort
-	f.StatusCheck.HTTP = &f.HTTP
-	//f.StatusCheck.Transport todo inject transport
+	f.StatusCheck.Log = logging.NewPluginLogger(core.PluginNameOfFlavor(&f.StatusCheck, f), f.Logrus)
+	f.HealthProbe.Log = logging.NewPluginLogger(core.PluginNameOfFlavor(&f.HealthProbe, f), f.Logrus)
+	f.HealthProbe.HTTP = &f.HTTP
+	//f.HealthProbe.Transport todo inject local transport
 
 	f.injected = true
 

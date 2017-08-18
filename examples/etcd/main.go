@@ -155,7 +155,7 @@ func (configurator *ExampleConfigurator) Close() {}
 
 const etcdIndex string = "index"
 
-// Publisher creates a simple data, then demonstrates CRUD operations with ETCD
+// KeyProtoValWriter creates a simple data, then demonstrates CRUD operations with ETCD
 func (configurator *ExampleConfigurator) etcdPublisher() {
 	// Get data broker to communicate with ETCD
 	cfg := &etcdv3.Config{}
@@ -209,7 +209,7 @@ func (configurator *ExampleConfigurator) etcdPublisher() {
 	dataBroker.Delete(etcdKeyPrefixLabel(configurator.ServiceLabel.GetAgentLabel(), etcdIndex))
 }
 
-// Publisher creates a simple data, then demonstrates transaction operations with ETCD
+// KeyProtoValWriter creates a simple data, then demonstrates transaction operations with ETCD
 func (configurator *ExampleConfigurator) etcdTxnPublisher() {
 	log.Info("Preparing bridge domain data")
 	// Get data broker to communicate with ETCD
@@ -312,7 +312,7 @@ func (plugin *ExamplePlugin) consumer() {
 // Watcher is subscribed to data change channel and resync channel. ETCD transport adapter is used for this purpose
 func (plugin *ExamplePlugin) subscribeWatcher() (err error) {
 	plugin.watchDataReg, err = plugin.transport.
-		WatchData("Example etcd plugin", plugin.changeChannel, plugin.resyncChannel, etcdKeyPrefix(plugin.ServiceLabel.GetAgentLabel()))
+		Watch("Example etcd plugin", plugin.changeChannel, plugin.resyncChannel, etcdKeyPrefix(plugin.ServiceLabel.GetAgentLabel()))
 	if err != nil {
 		return err
 	}

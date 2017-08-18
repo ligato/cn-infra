@@ -1,13 +1,14 @@
 package main
 
 import (
+	"time"
+
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/examples/model"
 	"github.com/ligato/cn-infra/flavors/etcdkafka"
 	log "github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/messaging"
 	"github.com/ligato/cn-infra/utils/safeclose"
-	"time"
 )
 
 //********************************************************************
@@ -132,7 +133,7 @@ func (plugin *ExamplePlugin) producer() {
 		BoolVal:   true,
 	}
 	log.Info("Sending Kafka notification (protobuf)")
-	err := plugin.kafkaSyncPublisher.Publish("proto-key", enc)
+	err := plugin.kafkaSyncPublisher.Put("proto-key", enc)
 	if err != nil {
 		log.Errorf("Failed to sync-send a proto message, error %v", err)
 	} else {
@@ -143,7 +144,7 @@ func (plugin *ExamplePlugin) producer() {
 	// on an event channel when the message has been successfully sent to Kafka. An error message is sent to
 	// the app asynchronously if the message could not be sent.
 	log.Info("Sending async Kafka notification (protobuf)")
-	plugin.kafkaAsyncPublisher.Publish("async-proto-key", enc)
+	plugin.kafkaAsyncPublisher.Put("async-proto-key", enc)
 }
 
 /************

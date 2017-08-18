@@ -15,16 +15,17 @@
 package keyval
 
 import (
+	"io"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/datasync"
-	"io"
 )
 
 // ProtoBroker is decorator that allows to read/write proto file modelled data.
 // It marshals/unmarshals go structures to slice of bytes and vice versa behind the scenes.
 type ProtoBroker interface {
-	// Put puts single key-value pair into etcd
-	Put(key string, data proto.Message, opts ...PutOption) error
+	// Put puts single key-value pair into key value store
+	datasync.KeyProtoValWriter
 	// NewTxn creates a transaction
 	NewTxn() ProtoTxn
 	// GetValue retrieves one item under the provided key. If the item exists it is unmarshaled into the reqObj.
@@ -34,7 +35,7 @@ type ProtoBroker interface {
 	// ListKeys is similar to the ListValues the difference is that values are not fetched
 	ListKeys(prefix string) (ProtoKeyIterator, error)
 	// Delete removes data stored under the key
-	Delete(key string, opts ...DelOption) (existed bool, err error)
+	Delete(key string, opts ...datasync.DelOption) (existed bool, err error)
 }
 
 // ProtoKvPair group getter for single key-value pair

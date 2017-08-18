@@ -98,7 +98,7 @@ func (db *BytesConnectionRedis) NewTxn() keyval.BytesTxn {
 }
 
 // Put sets the key/value in Redis data store. Replaces value if the key already exists.
-func (db *BytesConnectionRedis) Put(key string, data []byte, opts ...keyval.PutOption) error {
+func (db *BytesConnectionRedis) Put(key string, data []byte, opts ...datasync.PutOption) error {
 	if db.closed {
 		return fmt.Errorf("Put(%s) called on a closed connection", key)
 	}
@@ -154,7 +154,7 @@ func (db *BytesConnectionRedis) ListValues(match string) (keyval.BytesKeyValIter
 }
 
 // Delete deletes all the keys that start with the given match string.
-func (db *BytesConnectionRedis) Delete(key string, opts ...keyval.DelOption) (found bool, err error) {
+func (db *BytesConnectionRedis) Delete(key string, opts ...datasync.DelOption) (found bool, err error) {
 	if db.closed {
 		return false, fmt.Errorf("Delete(%s) called on a closed connection", key)
 	}
@@ -447,7 +447,7 @@ func (pdb *BytesBrokerWatcherRedis) NewTxn() keyval.BytesTxn {
 }
 
 // Put calls Put function of BytesConnectionRedis. Prefix will be prepended to key argument.
-func (pdb *BytesBrokerWatcherRedis) Put(key string, data []byte, opts ...keyval.PutOption) error {
+func (pdb *BytesBrokerWatcherRedis) Put(key string, data []byte, opts ...datasync.PutOption) error {
 	if pdb.delegate.closed {
 		return fmt.Errorf("Put(%s) called on a closed connection", key)
 	}
@@ -491,7 +491,7 @@ func (pdb *BytesBrokerWatcherRedis) ListValues(match string) (keyval.BytesKeyVal
 
 // Delete calls Delete function of BytesConnectionRedis.
 // Prefix will be prepended to key argument when searching.
-func (pdb *BytesBrokerWatcherRedis) Delete(match string, opts ...keyval.DelOption) (found bool, err error) {
+func (pdb *BytesBrokerWatcherRedis) Delete(match string, opts ...datasync.DelOption) (found bool, err error) {
 	if pdb.delegate.closed {
 		return false, fmt.Errorf("Delete(%s) called on a closed connection", match)
 	}

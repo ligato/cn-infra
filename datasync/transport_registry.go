@@ -31,7 +31,7 @@ var (
 
 type nilTransportAdapter struct{}
 
-// WatchData using ETCD or any other data transport
+// Watch using ETCD or any other data transport
 func (*nilTransportAdapter) WatchData(resyncName string, changeChan chan ChangeEvent, resyncChan chan ResyncEvent,
 	keyPrefixes ...string) (WatchDataRegistration, error) {
 	return &nilReg{}, nil
@@ -43,8 +43,8 @@ func (*nilReg) Close() error {
 	return nil
 }
 
-// PublishData to ETCD or any other data transport (from other Agent Plugins)
-func (*nilTransportAdapter) PublishData(key string, data proto.Message) error {
+// Put to ETCD or any other data transport (from other Agent Plugins)
+func (*nilTransportAdapter) Put(key string, data proto.Message) error {
 	return nil
 }
 
@@ -97,14 +97,14 @@ type compositeTransport struct {
 	transports []TransportAdapter
 }
 
-func (x *compositeTransport) WatchData(resyncName string, changeChan chan ChangeEvent, resyncChan chan ResyncEvent,
+func (x *compositeTransport) Watch(resyncName string, changeChan chan ChangeEvent, resyncChan chan ResyncEvent,
 	keyPrefixes ...string) (WatchDataRegistration, error) {
 	access.Lock()
 	defer access.Unlock()
 
 	partialRegs := []WatchDataRegistration{}
 	for _, transport := range x.transports {
-		reg, err := transport.WatchData(resyncName, changeChan, resyncChan, keyPrefixes...)
+		reg, err := transport.Watch(resyncName, changeChan, resyncChan, keyPrefixes...)
 		if err != nil {
 			return nil, err
 		}
@@ -114,10 +114,10 @@ func (x *compositeTransport) WatchData(resyncName string, changeChan chan Change
 	return &compositeWatchDataRegistration{partialRegs}, nil
 }
 
-// PublishData to all registered transports
-func (x *compositeTransport) PublishData(key string, data proto.Message) error {
+// Put to all registered transports
+func (x *compositeTransport) Put(key string, data proto.Message, opts ...PutOption) error {
 	for _, transport := range x.transports {
-		err := transport.PublishData(key, data)
+		err := transport.Put(key, data)
 		if err != nil {
 			return err
 		}

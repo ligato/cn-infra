@@ -19,11 +19,10 @@ import (
 	"net/http"
 
 	"fmt"
+
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/rpc/grpcsync"
-	"github.com/ligato/cn-infra/datasync/syncbase"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
@@ -50,11 +49,13 @@ func init() {
 
 // Plugin implements the Plugin interface.
 type Plugin struct {
-	LogFactory logging.LogFactory
-	HTTPport   string
+	Log logging.PluginLogger
 
+	// Used to simplify if not whole config needs to be configured
+	HTTPport string
 	// Config is a rich alternative comparing to HTTPport
-	Config *Config
+	// TODO Config *Config
+
 	// Used mainly for testing purposes
 	listenAndServe ListenAndServe
 
@@ -69,12 +70,7 @@ type Plugin struct {
 // - It prepares Gorilla MUX HTTP Router
 // - registers grpc transport
 func (plugin *Plugin) Init() (err error) {
-	plugin.Logger, err = plugin.LogFactory.NewLogger(string(PluginID))
-	if err != nil {
-		return err
-	}
-
-	if plugin.HTTPport == "" {
+	if plugin.HTTPport == "" /*TODO && plugin.Config == nil*/ {
 		plugin.HTTPport = httpPort
 	}
 
@@ -83,9 +79,10 @@ func (plugin *Plugin) Init() (err error) {
 		IndentJSON: true,
 	})
 
-	plugin.grpcServer = grpcsync.NewAdapter()
-	plugin.Debug("grpctransp: ", plugin.grpcServer)
-	err = datasync.RegisterTransport(&syncbase.Adapter{Watcher: plugin.grpcServer})
+	//TODO separate plugin:
+	//plugin.grpcServer = grpcsync.NewAdapter()
+	//plugin.Debug("grpctransp: ", plugin.grpcServer)
+	//err = datasync.RegisterTransport(&syncbase.Adapter{Watcher: plugin.grpcServer})
 
 	return err
 }
@@ -100,9 +97,9 @@ func (plugin *Plugin) RegisterHTTPHandler(path string,
 // AfterInit starts the HTTP server
 func (plugin *Plugin) AfterInit() (err error) {
 	var cfgCopy Config
-	if plugin.Config != nil {
+	/*TODO if plugin.Config != nil {
 		cfgCopy = *plugin.Config
-	}
+	}*/
 
 	if cfgCopy.Endpoint == "" {
 		cfgCopy.Endpoint = fmt.Sprintf("0.0.0.0:%s", plugin.HTTPport)
