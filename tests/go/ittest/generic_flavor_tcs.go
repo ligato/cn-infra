@@ -20,6 +20,7 @@ type suiteGenericFlavor struct {
 	mock.HttpMock
 }
 
+// MockGenericFlavor initializes generic flavor with HTTP mock
 func MockGenericFlavor(mock *mock.HttpMock) *generic.FlavorGeneric {
 	return &generic.FlavorGeneric{
 		HTTP: *httpmux.FromExistingServer(mock.SetHandler),
@@ -45,9 +46,11 @@ func (t *suiteGenericFlavor) TC03StatusCheck() {
 	flavor.StatusCheck.Register(tstPlugin, nil)
 	flavor.StatusCheck.ReportStateChange(tstPlugin, "tst", nil)
 
-	t.HttpMock.NewRequest("GET", flavor.ServiceLabel.GetAgentPrefix()+
+	result, err := t.HttpMock.NewRequest("GET", flavor.ServiceLabel.GetAgentPrefix()+
 		"/check/status/v1/agent", nil)
-	//TODO assert flavor.StatusCheck using IDX map???
+	gomega.Expect(err).Should(gomega.BeNil(), "logger is not initialized")
+	gomega.Expect(result).ShouldNot(gomega.BeNil(), "http result is not initialized")
+	gomega.Expect(result).Should(gomega.BeEquivalentTo(200))
 
 	defer t.Teardown()
 }
