@@ -91,8 +91,8 @@ func TestPut3_customTableSchema(t *testing.T) {
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
-// TestPut4_convenient is most convenient way of putting one entity to cassandra
-func TestPut4_convenient(t *testing.T) {
+// TestPut4_uuid_EQ used to verify inserting entity having a field of type gocql.UUID and using FieldEQ in where condition
+func TestPut4_uuid_FieldEQ(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
 	session := mockSession()
@@ -113,8 +113,8 @@ func TestPut4_convenient(t *testing.T) {
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
-// TestPut5_EQ is most convenient way of putting one entity to cassandra
-func TestPut5_EQ(t *testing.T) {
+// TestPut5_EQ used to verify inserting entity having a field of type gocql.UUID and using EQ in where condition
+func TestPut5_uuid_EQ(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
 	session := mockSession()

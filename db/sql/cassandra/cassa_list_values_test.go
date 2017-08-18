@@ -173,8 +173,8 @@ func TestListValues5_customTableSchema(t *testing.T) {
 	gomega.Expect(users).To(gomega.BeEquivalentTo(&[]CustomizedTablenameAndSchema{*entity}))
 }
 
-// TestListValues6_convenient checks whether we are able to retrieve uuid
-func TestListValues6_convenient(t *testing.T) {
+// TestListValues6_uuid checks whether we are able to retrieve uuid field
+func TestListValues6_uuid(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
 	session := mockSession()

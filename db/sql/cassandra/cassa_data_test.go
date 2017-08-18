@@ -21,7 +21,6 @@ import (
 	"github.com/ligato/cn-infra/db/sql"
 	"github.com/ligato/cn-infra/db/sql/cassandra"
 	"github.com/maraino/go-mock"
-	"github.com/satori/go.uuid"
 	"github.com/willfaught/gockle"
 )
 
@@ -29,7 +28,7 @@ import (
 var JamesBond = &User{ID: "James Bond", FirstName: "James", LastName: "Bond"}
 var PeterBond = &User{ID: "Peter Bond", FirstName: "Peter", LastName: "Bond"}
 
-var myID uuid.UUID = uuid.NewV1()
+var myID gocql.UUID = gocql.TimeUUID()
 var MyTweet = &Tweet{ID: myID.String(), Text: "hello"}
 
 // instance that represents users table (used in queries to define columns)

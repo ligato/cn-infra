@@ -225,6 +225,7 @@ func sliceOfFieldNames(val interface{} /*, opts Options*/) (fieldNames []string)
 }
 
 // SliceOfFieldsWithValPtrs generates slice of translated (cql tag) field names with field values
+// used for unit testing purposes only - list_values test
 func SliceOfFieldsWithValPtrs(val interface{} /*, opts Options*/) (fieldNames []string, vals []interface{}) {
 	fields, vals := structs.ListExportedFieldsPtrs(val)
 
