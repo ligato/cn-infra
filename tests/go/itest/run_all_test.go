@@ -17,6 +17,7 @@ func Test(t *testing.T) {
 	go func() {
 		RunTestSuite(&suiteLocalFlavor{T: t}, t)
 		RunTestSuite(&suiteGenericFlavor{T: t}, t)
+		RunTestSuite(&suiteKafkaEtcdFlavor{T: t}, t)
 
 		doneChan <- struct{}{}
 	}()
