@@ -45,7 +45,7 @@ var TweetTable = &Tweet{}
 
 // User is simple structure for testing purposes
 type User struct {
-	ID                string `cql:"id"`
+	ID                string `cql:"id" pk:"id"`
 	FirstName         string `cql:"first_name"`
 	LastName          string `cql:"last_name"`
 	ExportedButNotCql string `cql:"-"`
@@ -54,13 +54,13 @@ type User struct {
 
 // Tweet structure using uuid for testing purposes
 type Tweet struct {
-	ID   string `cql:"id"`
+	ID   string `cql:"id" pk:"id"`
 	Text string `cql:"text"`
 }
 
 // CustomizedTablenameAndSchema implements sql.TableName, sql.SchemaName interfaces
 type CustomizedTablenameAndSchema struct {
-	ID       string `cql:"id"`
+	ID       string `cql:"id" pk:"id"`
 	LastName string `cql:"last_name"`
 }
 
