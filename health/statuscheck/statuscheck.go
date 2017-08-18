@@ -27,8 +27,9 @@ import (
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/httpmux"
 	log "github.com/ligato/cn-infra/logging/logrus"
-	"github.com/ligato/cn-infra/statuscheck/model/status"
+	"github.com/ligato/cn-infra/health/statuscheck/model/status"
 	"github.com/unrolled/render"
+	"github.com/ligato/cn-infra/logging"
 )
 
 // PluginID uniquely identifies the plugin.
@@ -56,9 +57,12 @@ const (
 
 // Plugin struct holds all plugin-related data.
 type Plugin struct {
-	HTTP      *httpmux.Plugin
+	LogFactory logging.LogFactory
+	HTTP       *httpmux.Plugin
+	Probe      *httpmux.HTTPPort
+
 	Transport datasync.TransportAdapter
-	access    sync.Mutex // lock for the Plugin data
+	access    sync.Mutex                // lock for the Plugin data
 
 	agentStat   *status.AgentStatus             // overall agent status
 	pluginStat  map[string]*status.PluginStatus // plugin's status
@@ -70,6 +74,28 @@ type Plugin struct {
 
 // Init is the plugin entry point called by the Agent Core.
 func (p *Plugin) Init() error {
+	// Start Init() and AfterInit() for new probe in case the port is different from agent http
+	if p.HTTP.HTTPport.Port != p.Probe.Port {
+		log.Warnf("Custom port: %v", p.Probe)
+		p.HTTP = &httpmux.Plugin{
+			LogFactory: p.LogFactory,
+			HTTPport: p.Probe,
+		}
+		err := p.HTTP.Init()
+		if err != nil {
+			return err
+		}
+		err = p.HTTP.AfterInit()
+		if err != nil {
+			return err
+		}
+	}
+
+	log.Warnf("Starting statuscheck on port %v", p.HTTP.HTTPport.Port)
+
+	// init data transport
+	p.Transport = datasync.GetTransport()
+
 	// write initial status data into ETCD
 	p.agentStat = &status.AgentStatus{
 		BuildVersion: core.BuildVersion,

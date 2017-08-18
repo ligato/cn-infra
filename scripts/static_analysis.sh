@@ -18,7 +18,8 @@ function static_analysis() {
   local LOGGING=$(${TOOL} "${PWD}/logging${SELECTOR}")
   local MESSAGING=$(${TOOL} "${PWD}/messaging${SELECTOR}")
   local SERVICELABEL=$(${TOOL} "${PWD}/servicelabel${SELECTOR}")
-  local STATUSCHECK=$(${TOOL} "${PWD}/statuscheck${SELECTOR}")
+  local PROBE=$(${TOOL} "${PWD}/health/probe${SELECTOR}")
+  local STATUSCHECK=$(${TOOL} "${PWD}/health/statuscheck${SELECTOR}")
   local UTILS=$(${TOOL} "${PWD}/utils${SELECTOR}")
 
   local ALL="$CORE
@@ -30,6 +31,7 @@ $IDXMAP
 $LOGGING
 $MESSAGING
 $SERVICELABEL
+$PROBE
 $STATUSCHECK
 $UTILS
 "

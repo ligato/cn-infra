@@ -21,45 +21,21 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/datasync/rpc/grpcsync"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/utils/safeclose"
-	"github.com/namsral/flag"
 	"github.com/unrolled/render"
 )
 
 const (
 	// PluginID used in the Agent Core flavors
 	PluginID core.PluginName = "HTTP"
-	// DefaultHTTPPort is used as a default HTTP rest server startup unless different port was configured
-	DefaultHTTPPort = "9191"
-	// DefaultProbePort is used as a default HTTP probe server startup unless different port was configured
-	DefaultProbePort = "9190"
-	// Rest server instance identifier
-	Rest = "rest"
-	// Probe server instance identifier
-	Probe = "probe"
 )
-
-var (
-	httpPort string
-	probePort string
-)
-
-// init is here only for parsing program arguments
-func init() {
-	flag.StringVar(&httpPort, "http-port", DefaultHTTPPort,
-		"Listen port for the Agent's HTTP server.")
-	flag.StringVar(&probePort, "probe-http-port", DefaultProbePort,
-		"Listen probe port for the Agent's HTTP server.")
-}
 
 // Plugin implements the Plugin interface.
 type Plugin struct {
 	LogFactory logging.LogFactory
-	HTTPport   string
-	// todo this field is currently set in Inject()
-	InstanceIdentifier string
+	HTTPport   *HTTPPort
+	port 		string
 
 	logging.Logger
 	server    *http.Server
@@ -71,21 +47,10 @@ type Plugin struct {
 // - It prepares Gorilla MUX HTTP Router
 // - registers grpc transport
 func (plugin *Plugin) Init() (err error) {
-	plugin.Logger, err = plugin.LogFactory.NewLogger(string(PluginID) + "-" + plugin.InstanceIdentifier)
+	plugin.port = plugin.HTTPport.Port
+	plugin.Logger, err = plugin.LogFactory.NewLogger(string(PluginID) + "-" + plugin.port)
 	if err != nil {
 		return err
-	}
-
-	// Set probe server port
-	if plugin.InstanceIdentifier == Probe {
-		if plugin.HTTPport == "" {
-			plugin.HTTPport = probePort
-		}
-		// Set rest port
-	} else {
-		if plugin.HTTPport == "" {
-			plugin.HTTPport = httpPort
-		}
 	}
 
 	plugin.mx = mux.NewRouter()
@@ -110,7 +75,7 @@ func (plugin *Plugin) RegisterHTTPHandler(path string,
 
 // AfterInit starts the HTTP server
 func (plugin *Plugin) AfterInit() error {
-	address := fmt.Sprintf("0.0.0.0:%s", plugin.HTTPport)
+	address := fmt.Sprintf("0.0.0.0:%s", plugin.port)
 	//TODO NICE-to-HAVE make this configurable
 	plugin.server = &http.Server{Addr: address, Handler: plugin.mx}
 
@@ -140,4 +105,9 @@ func (plugin *Plugin) AfterInit() error {
 func (plugin *Plugin) Close() error {
 	err := safeclose.Close(plugin.server)
 	return err
+}
+
+// HTTPPort contains port value as string
+type HTTPPort struct {
+	Port string
 }

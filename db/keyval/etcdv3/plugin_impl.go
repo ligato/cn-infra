@@ -20,7 +20,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
-	"github.com/ligato/cn-infra/statuscheck"
+	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/utils/config"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
