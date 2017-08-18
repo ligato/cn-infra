@@ -15,7 +15,7 @@
 package messaging
 
 import (
-	"github.com/golang/protobuf/proto"
+	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
 )
 
@@ -28,7 +28,7 @@ type Mux interface {
 
 // ProtoPublisher allows to publish a message of type proto.Message into messaging system.
 type ProtoPublisher interface {
-	Publish(key string, data proto.Message) error
+	datasync.KeyProtoValWriter
 }
 
 // ProtoWatcher allows to subscribe for receiving of messages published to given topics.

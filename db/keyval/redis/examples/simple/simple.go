@@ -184,7 +184,7 @@ func runSimpleExmple() {
 	time.Sleep(30 * time.Second)
 }
 
-func put(key, value string, opts ...keyval.PutOption) {
+func put(key, value string, opts ...datasync.PutOption) {
 	err := broker.Put(key, []byte(value), opts...)
 	if err != nil {
 		//log.Panicf(err.Error())
@@ -326,7 +326,7 @@ func doKeyValInterator() {
 	broker.Delete(prefix, keyval.WithPrefix())
 }
 
-func del(keyPrefix string, opt ...keyval.DelOption) {
+func del(keyPrefix string, opt ...datasync.DelOption) {
 	var found bool
 	var err error
 

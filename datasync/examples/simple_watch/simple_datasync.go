@@ -73,7 +73,7 @@ func (plugin *ExamplePlugin) Init() (err error) {
 // AfterInit starts watching the data
 func (plugin *ExamplePlugin) AfterInit() error {
 	// subscribe plugin.channel for watching data (to really receive the data)
-	plugin.Watcher.WatchData("watchingXY", plugin.dataChange, plugin.dataResync, "keysXY")
+	plugin.Watcher.Watch("watchingXY", plugin.dataChange, plugin.dataResync, "keysXY")
 
 	return nil
 }

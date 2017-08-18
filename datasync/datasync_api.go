@@ -25,22 +25,22 @@ import (
 // in a uniform & consistent way.
 type TransportAdapter interface {
 	Watcher
-	Publisher
+	KeyProtoValWriter
 }
 
 // Watcher is used by plugin to subscribe to both data change events and
 // data resync events. Multiple keys can be specified, the caller will
 // be subscribed to events on each key.
 type Watcher interface {
-	// WatchData using ETCD or any other data transport
-	WatchData(resyncName string, changeChan chan ChangeEvent, resyncChan chan ResyncEvent,
+	// Watch using ETCD or any other data transport
+	Watch(resyncName string, changeChan chan ChangeEvent, resyncChan chan ResyncEvent,
 		keyPrefixes ...string) (WatchDataRegistration, error)
 }
 
-// Publisher allows plugins to push their data changes to a data store.
-type Publisher interface {
-	// PublishData to ETCD or any other data transport (from other Agent Plugins)
-	PublishData(key string, data proto.Message) error
+// KeyProtoValWriter allows plugins to push their data changes to a data store.
+type KeyProtoValWriter interface {
+	// Put to ETCD or any other data transport (from other Agent Plugins)
+	Put(key string, data proto.Message, opts ...PutOption) error
 }
 
 // WatchDataRegistration is a facade that avoids importing the io.Closer package

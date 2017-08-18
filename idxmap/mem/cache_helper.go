@@ -19,7 +19,7 @@ func (helper *CacheHelper) DoWatching(resyncName string, watcher datasync.Watche
 	changeChan := make(chan datasync.ChangeEvent, 100)
 	resyncChan := make(chan datasync.ResyncEvent, 100)
 
-	watcher.WatchData(resyncName, changeChan, resyncChan, helper.Prefix)
+	watcher.Watch(resyncName, changeChan, resyncChan, helper.Prefix)
 
 	for {
 		select {

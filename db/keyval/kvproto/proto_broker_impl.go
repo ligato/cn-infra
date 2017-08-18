@@ -16,6 +16,7 @@ package kvproto
 
 import (
 	"github.com/golang/protobuf/proto"
+	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
 )
 
@@ -102,18 +103,20 @@ func (pdb *protoBroker) NewTxn() keyval.ProtoTxn {
 // Put writes the provided key-value item into the data store.
 //
 // Returns an error if the item could not be written, ok otherwise.
-func (db *ProtoWrapper) Put(key string, value proto.Message, opts ...keyval.PutOption) error {
+func (db *ProtoWrapper) Put(key string, value proto.Message, opts ...datasync.PutOption) error {
 	return putProtoInternal(db.broker, db.serializer, key, value, opts...)
 }
 
 // Put writes the provided key-value item into the data store.
 //
 // Returns an error if the item could not be written, ok otherwise.
-func (pdb *protoBroker) Put(key string, value proto.Message, opts ...keyval.PutOption) error {
+func (pdb *protoBroker) Put(key string, value proto.Message, opts ...datasync.PutOption) error {
 	return putProtoInternal(pdb.broker, pdb.serializer, key, value, opts...)
 }
 
-func putProtoInternal(broker keyval.BytesBroker, serializer keyval.Serializer, key string, value proto.Message, opts ...keyval.PutOption) error {
+func putProtoInternal(broker keyval.BytesBroker, serializer keyval.Serializer, key string, value proto.Message,
+	opts ...datasync.PutOption) error {
+
 	// Marshal value to protobuf
 	binData, err := serializer.Marshal(value)
 	if err != nil {
@@ -124,12 +127,12 @@ func putProtoInternal(broker keyval.BytesBroker, serializer keyval.Serializer, k
 }
 
 // Delete removes from datastore key-value items stored under key.
-func (db *ProtoWrapper) Delete(key string, opts ...keyval.DelOption) (existed bool, err error) {
+func (db *ProtoWrapper) Delete(key string, opts ...datasync.DelOption) (existed bool, err error) {
 	return db.broker.Delete(key, opts...)
 }
 
 // Delete removes from datastore key-value items stored under key.
-func (pdb *protoBroker) Delete(key string, opts ...keyval.DelOption) (existed bool, err error) {
+func (pdb *protoBroker) Delete(key string, opts ...datasync.DelOption) (existed bool, err error) {
 	return pdb.broker.Delete(key, opts...)
 }
 

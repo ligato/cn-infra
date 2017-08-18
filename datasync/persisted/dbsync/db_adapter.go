@@ -37,7 +37,7 @@ type Adapter struct {
 }
 
 // WatchData using ETCD or any other default transport.
-func (adapter *Adapter) WatchData(resyncName string, changeChan chan datasync.ChangeEvent,
+func (adapter *Adapter) Watch(resyncName string, changeChan chan datasync.ChangeEvent,
 	resyncChan chan datasync.ResyncEvent, keyPrefixes ...string) (datasync.WatchDataRegistration, error) {
 
 	reg, err := adapter.base.WatchData(resyncName, changeChan, resyncChan, keyPrefixes...)
@@ -53,8 +53,8 @@ func (adapter *Adapter) WatchData(resyncName string, changeChan chan datasync.Ch
 	return reg, err
 }
 
-// PublishData using ETCD or any other default transport
-func (adapter *Adapter) PublishData(key string, data proto.Message) error {
+// Put using ETCD or any other default transport
+func (adapter *Adapter) Put(key string, data proto.Message, options ...datasync.PutOption) error {
 	if data == nil {
 		_, err := adapter.db.Delete(key)
 		return err

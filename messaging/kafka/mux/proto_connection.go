@@ -5,6 +5,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/golang/protobuf/proto"
+	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/messaging"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
@@ -129,8 +130,8 @@ func (conn *ProtoConnection) NewSyncPublisher(topic string) messaging.ProtoPubli
 	return &protoSyncPublisherKafka{conn, topic}
 }
 
-// Publish publishes a message into kafka
-func (p *protoSyncPublisherKafka) Publish(key string, message proto.Message) error {
+// Put publishes a message into kafka
+func (p *protoSyncPublisherKafka) Put(key string, message proto.Message, opts ...datasync.PutOption) error {
 	_, err := p.conn.SendSyncMessage(p.topic, key, message)
 	return err
 }
@@ -140,7 +141,7 @@ func (conn *ProtoConnection) NewAsyncPublisher(topic string, successClb func(mes
 	return &protoAsyncPublisherKafka{conn, topic, successClb, errorClb}
 }
 
-// Publish publishes a message into kafka
-func (p *protoAsyncPublisherKafka) Publish(key string, message proto.Message) error {
+// Put publishes a message into kafka
+func (p *protoAsyncPublisherKafka) Put(key string, message proto.Message, opts ...datasync.PutOption) error {
 	return p.conn.SendAsyncMessage(p.topic, key, message, nil, p.succCallback, p.errCallback)
 }

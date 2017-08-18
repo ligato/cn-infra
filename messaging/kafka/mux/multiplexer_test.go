@@ -24,12 +24,12 @@ import (
 
 func TestMultiplexer(t *testing.T) {
 	gomega.RegisterTestingT(t)
-	mux, _, _ := GetMultiplexerMock(t)
-	gomega.Expect(mux).NotTo(gomega.BeNil())
+	mock := Mock(t)
+	gomega.Expect(mock.Mux).NotTo(gomega.BeNil())
 
-	c1 := mux.NewConnection("c1")
+	c1 := mock.Mux.NewConnection("c1")
 	gomega.Expect(c1).NotTo(gomega.BeNil())
-	c2 := mux.NewConnection("c2")
+	c2 := mock.Mux.NewConnection("c2")
 	gomega.Expect(c2).NotTo(gomega.BeNil())
 
 	ch1 := make(chan *client.ConsumerMessage)
@@ -40,14 +40,14 @@ func TestMultiplexer(t *testing.T) {
 	err = c2.ConsumeTopic(ToBytesMsgChan(ch2), "topic2", "topic3")
 	gomega.Expect(err).To(gomega.BeNil())
 
-	mux.Start()
-	gomega.Expect(mux.started).To(gomega.BeTrue())
+	mock.Mux.Start()
+	gomega.Expect(mock.Mux.started).To(gomega.BeTrue())
 
 	// once the multiplexer is start an attempt to subscribe returns an error
 	err = c1.ConsumeTopic(ToBytesMsgChan(ch1), "anotherTopic1")
 	gomega.Expect(err).NotTo(gomega.BeNil())
 
-	mux.Close()
+	mock.Mux.Close()
 	close(ch1)
 	close(ch2)
 
@@ -55,12 +55,12 @@ func TestMultiplexer(t *testing.T) {
 
 func TestStopConsuming(t *testing.T) {
 	gomega.RegisterTestingT(t)
-	mux, _, _ := GetMultiplexerMock(t)
-	gomega.Expect(mux).NotTo(gomega.BeNil())
+	mock := Mock(t)
+	gomega.Expect(mock).NotTo(gomega.BeNil())
 
-	c1 := mux.NewConnection("c1")
+	c1 := mock.Mux.NewConnection("c1")
 	gomega.Expect(c1).NotTo(gomega.BeNil())
-	c2 := mux.NewConnection("c2")
+	c2 := mock.Mux.NewConnection("c2")
 	gomega.Expect(c2).NotTo(gomega.BeNil())
 
 	ch1 := make(chan *client.ConsumerMessage)
@@ -71,8 +71,8 @@ func TestStopConsuming(t *testing.T) {
 	err = c2.ConsumeTopic(ToBytesMsgChan(ch2), "topic2", "topic3")
 	gomega.Expect(err).To(gomega.BeNil())
 
-	mux.Start()
-	gomega.Expect(mux.started).To(gomega.BeTrue())
+	mock.Mux.Start()
+	gomega.Expect(mock.Mux.started).To(gomega.BeTrue())
 
 	err = c1.StopConsuming("topic1")
 	gomega.Expect(err).To(gomega.BeNil())
@@ -85,7 +85,7 @@ func TestStopConsuming(t *testing.T) {
 	err = c1.StopConsuming("topic2")
 	gomega.Expect(err).NotTo(gomega.BeNil())
 
-	mux.Close()
+	mock.Mux.Close()
 	close(ch1)
 	close(ch2)
 
@@ -93,57 +93,57 @@ func TestStopConsuming(t *testing.T) {
 
 func TestSendSync(t *testing.T) {
 	gomega.RegisterTestingT(t)
-	mux, _, syncP := GetMultiplexerMock(t)
-	gomega.Expect(mux).NotTo(gomega.BeNil())
+	mock := Mock(t)
+	gomega.Expect(mock.Mux).NotTo(gomega.BeNil())
 
-	c1 := mux.NewConnection("c1")
+	c1 := mock.Mux.NewConnection("c1")
 	gomega.Expect(c1).NotTo(gomega.BeNil())
 
-	mux.Start()
-	gomega.Expect(mux.started).To(gomega.BeTrue())
+	mock.Mux.Start()
+	gomega.Expect(mock.Mux.started).To(gomega.BeTrue())
 
-	syncP.ExpectSendMessageAndSucceed()
+	mock.SyncPub.ExpectSendMessageAndSucceed()
 	_, err := c1.SendSyncByte("topic", []byte("key"), []byte("value"))
 	gomega.Expect(err).To(gomega.BeNil())
 
-	syncP.ExpectSendMessageAndSucceed()
+	mock.SyncPub.ExpectSendMessageAndSucceed()
 	_, err = c1.SendSyncString("topic", "key", "value")
 	gomega.Expect(err).To(gomega.BeNil())
 
-	syncP.ExpectSendMessageAndSucceed()
+	mock.SyncPub.ExpectSendMessageAndSucceed()
 	_, err = c1.SendSyncMessage("topic", sarama.ByteEncoder([]byte("key")), sarama.ByteEncoder([]byte("value")))
 	gomega.Expect(err).To(gomega.BeNil())
 
 	publisher := c1.NewSyncPublisher("test")
-	syncP.ExpectSendMessageAndSucceed()
+	mock.SyncPub.ExpectSendMessageAndSucceed()
 	publisher.Publish("key", []byte("val"))
 
-	mux.Close()
+	mock.Mux.Close()
 }
 
 func TestSendAsync(t *testing.T) {
 	gomega.RegisterTestingT(t)
-	mux, asyncP, _ := GetMultiplexerMock(t)
-	gomega.Expect(mux).NotTo(gomega.BeNil())
+	mock := Mock(t)
+	gomega.Expect(mock.Mux).NotTo(gomega.BeNil())
 
-	c1 := mux.NewConnection("c1")
+	c1 := mock.Mux.NewConnection("c1")
 	gomega.Expect(c1).NotTo(gomega.BeNil())
 
-	mux.Start()
-	gomega.Expect(mux.started).To(gomega.BeTrue())
+	mock.Mux.Start()
+	gomega.Expect(mock.Mux.started).To(gomega.BeTrue())
 
-	asyncP.ExpectInputAndSucceed()
+	mock.AsyncPub.ExpectInputAndSucceed()
 	c1.SendAsyncByte("topic", []byte("key"), []byte("value"), nil, nil, nil)
 
-	asyncP.ExpectInputAndSucceed()
+	mock.AsyncPub.ExpectInputAndSucceed()
 	c1.SendAsyncString("topic", "key", "value", nil, nil, nil)
 
-	asyncP.ExpectInputAndSucceed()
+	mock.AsyncPub.ExpectInputAndSucceed()
 	c1.SendAsyncMessage("topic", sarama.ByteEncoder([]byte("key")), sarama.ByteEncoder([]byte("value")), nil, nil, nil)
 
-	publisher := c1.NewAsyncPublisher("test", nil, nil)
-	asyncP.ExpectInputAndSucceed()
+	publisher := c1.Newmock.AsyncPublisher("test", nil, nil)
+	mock.AsyncPub.ExpectInputAndSucceed()
 	publisher.Publish("key", []byte("val"))
 
-	mux.Close()
+	mock.Mux.Close()
 }
