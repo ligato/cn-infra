@@ -21,6 +21,7 @@ import (
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
 	"github.com/namsral/flag"
+	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
 // PluginID used in the Agent Core flavors
@@ -34,7 +35,7 @@ type Plugin struct {
 	ServiceLabel   *servicelabel.Plugin
 	Connection     keyval.KvBytesPlugin
 	ConfigFileName string
-	*plugin.Skeleton
+	Skeleton 	   *plugin.Skeleton
 	logging.Logger
 }
 
@@ -68,7 +69,8 @@ func (p *Plugin) Init() error {
 
 // Close resources
 func (p *Plugin) Close() error {
-	return nil
+	_, err := safeclose.CloseAll(p.Skeleton, p.Connection)
+	return err
 }
 
 func init() {

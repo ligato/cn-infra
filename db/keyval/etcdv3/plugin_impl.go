@@ -23,6 +23,7 @@ import (
 	"github.com/ligato/cn-infra/statuscheck"
 	"github.com/ligato/cn-infra/utils/config"
 	"github.com/namsral/flag"
+	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
 const (
@@ -105,7 +106,8 @@ func (p *Plugin) Init() error {
 
 // Close resources
 func (p *Plugin) Close() error {
-	return nil
+	_, err := safeclose.CloseAll(p.Skeleton, p.Connection)
+	return err
 }
 
 func init() {

@@ -20,6 +20,7 @@ import (
 	"github.com/ligato/cn-infra/datasync/persisted/dbsync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/servicelabel"
+	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
 // PluginID used in the Agent Core flavors
@@ -47,5 +48,6 @@ func (plugin *Plugin) Init() error {
 
 // Close resources
 func (plugin *Plugin) Close() error {
-	return nil
+	err := safeclose.Close(plugin.KvPlugin)
+	return err
 }
