@@ -23,32 +23,19 @@ import (
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/utils/safeclose"
-	"github.com/namsral/flag"
 	"github.com/unrolled/render"
 )
 
-// PluginID used in the Agent Core flavors
-const PluginID core.PluginName = "HTTP"
-
 const (
-	// DefaultHTTPPort is used during HTTP server startup unless different port was configured
-	DefaultHTTPPort = "9191"
+	// PluginID used in the Agent Core flavors
+	PluginID core.PluginName = "HTTP"
 )
-
-var (
-	httpPort string
-)
-
-// init is here only for parsing program arguments
-func init() {
-	flag.StringVar(&httpPort, "http-port", DefaultHTTPPort,
-		"Listen port for the Agent's HTTP server.")
-}
 
 // Plugin implements the Plugin interface.
 type Plugin struct {
 	LogFactory logging.LogFactory
-	HTTPport   string
+	HTTPport   *HTTPPort
+	port 		string
 
 	logging.Logger
 	server    *http.Server
@@ -60,19 +47,21 @@ type Plugin struct {
 // - It prepares Gorilla MUX HTTP Router
 // - registers grpc transport
 func (plugin *Plugin) Init() (err error) {
-	plugin.Logger, err = plugin.LogFactory.NewLogger(string(PluginID))
+	plugin.port = plugin.HTTPport.Port
+	plugin.Logger, err = plugin.LogFactory.NewLogger(string(PluginID) + "-" + plugin.port)
 	if err != nil {
 		return err
-	}
-
-	if plugin.HTTPport == "" {
-		plugin.HTTPport = httpPort
 	}
 
 	plugin.mx = mux.NewRouter()
 	plugin.formatter = render.New(render.Options{
 		IndentJSON: true,
 	})
+
+	// todo grpc temporary disabled
+	//plugin.grpcServer = grpcsync.NewAdapter()
+	//plugin.Debug("grpctransp: ", plugin.grpcServer)
+	//err = datasync.RegisterTransport(&syncbase.Adapter{Watcher: plugin.grpcServer})
 
 	return err
 }
@@ -86,7 +75,7 @@ func (plugin *Plugin) RegisterHTTPHandler(path string,
 
 // AfterInit starts the HTTP server
 func (plugin *Plugin) AfterInit() error {
-	address := fmt.Sprintf("0.0.0.0:%s", plugin.HTTPport)
+	address := fmt.Sprintf("0.0.0.0:%s", plugin.port)
 	//TODO NICE-to-HAVE make this configurable
 	plugin.server = &http.Server{Addr: address, Handler: plugin.mx}
 
@@ -116,4 +105,9 @@ func (plugin *Plugin) AfterInit() error {
 func (plugin *Plugin) Close() error {
 	err := safeclose.Close(plugin.server)
 	return err
+}
+
+// HTTPPort contains port value as string
+type HTTPPort struct {
+	Port string
 }
