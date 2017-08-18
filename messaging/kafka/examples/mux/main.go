@@ -16,13 +16,14 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
+
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 	log "github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/messaging/kafka/mux"
-	"os"
-	"os/signal"
 )
 
 func main() {

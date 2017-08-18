@@ -1,6 +1,11 @@
 package main
 
 import (
+	"os"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/resync"
@@ -13,10 +18,6 @@ import (
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/servicelabel"
 	"github.com/ligato/cn-infra/utils/config"
-	"os"
-	"strconv"
-	"strings"
-	"time"
 )
 
 // *************************************************************************
@@ -93,7 +94,6 @@ type ExamplePlugin struct {
 func (plugin *ExamplePlugin) Init() error {
 	// Initialize plugin fields
 	plugin.exampleConfigurator = &ExampleConfigurator{plugin.ServiceLabel}
-	plugin.transport = datasync.GetTransport()
 	plugin.resyncChannel = make(chan datasync.ResyncEvent)
 	plugin.changeChannel = make(chan datasync.ChangeEvent)
 

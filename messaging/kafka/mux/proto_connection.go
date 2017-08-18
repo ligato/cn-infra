@@ -2,6 +2,7 @@ package mux
 
 import (
 	"fmt"
+
 	"github.com/Shopify/sarama"
 	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/db/keyval"

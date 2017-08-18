@@ -15,8 +15,9 @@
 package logrus
 
 import (
-	"github.com/onsi/gomega"
 	"testing"
+
+	"github.com/onsi/gomega"
 )
 
 func TestListLoggers(t *testing.T) {

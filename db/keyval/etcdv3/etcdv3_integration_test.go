@@ -16,17 +16,18 @@ package etcdv3
 
 import (
 	"context"
+	"io/ioutil"
+	"os"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/embed"
 	"github.com/coreos/etcd/etcdserver/api/v3client"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/onsi/gomega"
-	"io/ioutil"
-	"os"
-	"sync"
-	"testing"
-	"time"
 )
 
 const (

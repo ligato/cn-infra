@@ -415,6 +415,18 @@ func (ctx *bytesKeyIterator) GetNext() (key string, rev int64, stop bool) {
 	return key, rev, false
 }
 
+// Close does nothing since db cursors are not needed.
+// The method needs to be here to implement Iterator API.
+func (ctx *bytesKeyIterator) Close() error {
+	return nil
+}
+
+// Close does nothing since db cursors are not needed.
+// The method needs to be here to implement Iterator API.
+func (kv *bytesKeyVal) Close() error {
+	return nil
+}
+
 // GetValue returns the value of the pair
 func (kv *bytesKeyVal) GetValue() []byte {
 	return kv.value

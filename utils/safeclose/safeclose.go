@@ -16,9 +16,10 @@ package safeclose
 
 import (
 	"errors"
-	"github.com/ligato/cn-infra/logging/logroot"
 	"io"
 	"reflect"
+
+	"github.com/ligato/cn-infra/logging/logroot"
 )
 
 // CloserWithoutErr is similar interface to GoLang Closer but Close() does not return error

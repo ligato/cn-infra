@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package dbsync is the implementation of the "datasync_api.go" API.
-// It is composed of the Data Broker & Watcher APIs
-// (which are basically facades in front of different key-value stores).
+// Package dbsync implements the datasync API for data stores. The datasync
+// API contains the Data Broker & Watcher APIs, which are basically facades
+// in front of different key-value or SQL stores.
 //
 // A key-value store is used as a transport channel between a remote client
 // and the agent(server). It stores data/configuration for multiple agents(servers).

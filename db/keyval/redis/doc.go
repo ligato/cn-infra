@@ -117,10 +117,10 @@
 //       select {
 //       case r := <-watchChan:
 //           switch r.GetChangeType() {
-//           case db.Put:
+//           case datasync.Put:
 //               log.Infof("Watcher received %v: %s=%s", r.GetChangeType(),
 //                         r.GetKey(), string(r.GetValue()))
-//           case db.Delete:
+//           case datasync.Delete:
 //               ...
 //           }
 //       ...
