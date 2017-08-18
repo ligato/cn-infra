@@ -17,11 +17,11 @@ type suiteGenericFlavor struct {
 	Given
 	When
 	Then
-	mock.HttpMock
+	mock.HTTPMock
 }
 
 // MockGenericFlavor initializes generic flavor with HTTP mock
-func MockGenericFlavor(mock *mock.HttpMock) *generic.FlavorGeneric {
+func MockGenericFlavor(mock *mock.HTTPMock) *generic.FlavorGeneric {
 	return &generic.FlavorGeneric{
 		HTTP: *httpmux.FromExistingServer(mock.SetHandler),
 	}
@@ -29,7 +29,7 @@ func MockGenericFlavor(mock *mock.HttpMock) *generic.FlavorGeneric {
 
 // TC01 asserts that injection works fine and agent starts & stops
 func (t *suiteGenericFlavor) TC01StartStop() {
-	flavor := MockGenericFlavor(&t.HttpMock)
+	flavor := MockGenericFlavor(&t.HTTPMock)
 	t.Setup(flavor, t.T)
 
 	gomega.Expect(t.agent).ShouldNot(gomega.BeNil(), "agent is not initialized")
@@ -46,7 +46,7 @@ func (t *suiteGenericFlavor) TC03StatusCheck() {
 	flavor.StatusCheck.Register(tstPlugin, nil)
 	flavor.StatusCheck.ReportStateChange(tstPlugin, "tst", nil)
 
-	result, err := t.HttpMock.NewRequest("GET", flavor.ServiceLabel.GetAgentPrefix()+
+	result, err := t.HTTPMock.NewRequest("GET", flavor.ServiceLabel.GetAgentPrefix()+
 		"/check/status/v1/agent", nil)
 	gomega.Expect(err).Should(gomega.BeNil(), "logger is not initialized")
 	gomega.Expect(result).ShouldNot(gomega.BeNil(), "http result is not initialized")
