@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package logmanager contains the log manager implementation that keeps
-// track of all loggers in the system and provides a REST API to manage
-// their respective log levels at run-time.
+// Package logmanager implements the log manager that allows users to set
+// log levels at run-time via a REST API.
 package logmanager

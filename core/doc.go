@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package core contains the implementation of the lifecycle management
-// (i.e. and graceful shutdown) for CN-Infra based apps, and defines the
-// Core lifecycle SPI that must be implemented by each plugin.
+// Package core manages the lifecycle of all plugins (start, graceful
+// shutdown) and defines the core lifecycle SPI. The core lifecycle SPI
+// must be implemented by each plugin.
 package core
