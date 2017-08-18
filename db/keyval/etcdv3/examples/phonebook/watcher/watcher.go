@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/ligato/cn-infra/db"
+	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3/examples/phonebook/model/phonebook"
@@ -74,12 +74,12 @@ watcherLoop:
 		select {
 		case resp := <-respChan:
 			switch resp.GetChangeType() {
-			case db.Put:
+			case datasync.Put:
 				contact := &phonebook.Contact{}
 				fmt.Println("Creating ", resp.GetKey())
 				resp.GetValue(contact)
 				printContact(contact)
-			case db.Delete:
+			case datasync.Delete:
 				fmt.Println("Removing ", resp.GetKey())
 			}
 			fmt.Println("============================================")

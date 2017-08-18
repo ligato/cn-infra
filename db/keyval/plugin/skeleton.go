@@ -35,39 +35,28 @@ type Skeleton struct {
 	serviceLabel *servicelabel.Plugin
 	name         string
 	logFactory   logging.LogFactory
-	conn         Connection
 	protoWrapper *kvproto.ProtoWrapper
-	connect      func(logger logging.Logger) (Connection, error)
+	connection   Connection
 }
 
 // NewSkeleton creates a new instance of the Skeleton with the given connector.
 // The connection is established in AfterInit phase.
-func NewSkeleton(name string, factory logging.LogFactory, serviceLabel *servicelabel.Plugin, connector func(log logging.Logger) (Connection, error)) *Skeleton {
-	return &Skeleton{serviceLabel: serviceLabel, name: name, logFactory: factory, connect: connector}
+func NewSkeleton(name string, factory logging.LogFactory, serviceLabel *servicelabel.Plugin,
+	connection Connection) *Skeleton {
+	return &Skeleton{serviceLabel: serviceLabel, name: name, logFactory: factory, connection: connection}
 }
 
 // Init is called on plugin startup
 func (plugin *Skeleton) Init() (err error) {
-	plugin.Logger, err = plugin.logFactory.NewLogger(plugin.name)
-	if err != nil {
-		return err
-	}
-	plugin.conn, err = plugin.connect(plugin.Logger)
-	if err != nil {
-		return err
-	}
-	plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.conn, &keyval.SerializerJSON{})
+	plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.connection, &keyval.SerializerJSON{})
 
-	prefixedBroker := plugin.conn.NewBroker(plugin.serviceLabel.GetAgentPrefix())
-	prefixedWatcher := plugin.conn.NewWatcher(plugin.serviceLabel.GetAgentPrefix())
-	datasync.RegisterTransport(dbsync.NewAdapter(plugin.name, prefixedBroker, prefixedWatcher))
 	datasync.RegisterTransportOfDifferentAgent(func(microserviceLabel string) datasync.TransportAdapter {
-		dbOfDifferentAgent := plugin.conn.NewBroker(plugin.serviceLabel.GetDifferentAgentPrefix(microserviceLabel))
-		dbWOfDifferentAgent := plugin.conn.NewWatcher(plugin.serviceLabel.GetDifferentAgentPrefix(microserviceLabel))
+		dbOfDifferentAgent := plugin.connection.NewBroker(plugin.serviceLabel.GetDifferentAgentPrefix(microserviceLabel))
+		dbWOfDifferentAgent := plugin.connection.NewWatcher(plugin.serviceLabel.GetDifferentAgentPrefix(microserviceLabel))
 		return dbsync.NewAdapter(microserviceLabel, dbOfDifferentAgent, dbWOfDifferentAgent)
 	})
-	return err
 
+	return err
 }
 
 // AfterInit is called once all plugin have been initialized. The connection to datastore
@@ -78,7 +67,7 @@ func (plugin *Skeleton) AfterInit() (err error) {
 
 // Close cleans up the resources
 func (plugin *Skeleton) Close() error {
-	return safeclose.Close(plugin.conn)
+	return safeclose.Close(plugin.connection)
 }
 
 // NewBroker creates new instance of prefixed broker that provides API with arguments of type proto.Message

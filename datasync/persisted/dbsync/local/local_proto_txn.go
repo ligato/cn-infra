@@ -20,7 +20,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/syncbase"
-	"github.com/ligato/cn-infra/db"
 	"github.com/ligato/cn-infra/db/keyval"
 )
 
@@ -64,9 +63,9 @@ func (txn *ProtoTxn) Commit() error {
 
 	kvs := map[string] /*key*/ datasync.ChangeValue{}
 	for key, item := range txn.items {
-		changeType := db.Put
+		changeType := datasync.Put
 		if item.Delete {
-			changeType = db.Delete
+			changeType = datasync.Delete
 		}
 
 		kvs[key] = syncbase.NewChange(key, item.Data, 0, changeType)

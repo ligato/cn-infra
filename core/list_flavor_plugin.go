@@ -15,13 +15,22 @@
 package core
 
 import (
-	log "github.com/ligato/cn-infra/logging/logrus"
 	"reflect"
+
+	log "github.com/ligato/cn-infra/logging/logrus"
 )
+
+// Flavor is structure that contains a particular combination of plugins
+// (fields of plugins)
+type Flavor interface {
+	// Plugins returns list of plugins.
+	// Name of the plugin is supposed to be related to field name of Flavor struct
+	Plugins() []*NamedPlugin
+}
 
 // ListPluginsInFlavor uses reflection to traverse top level fields of Flavor structure.
 // It extracts all plugins and returns them as a slice of NamedPlugins.
-func ListPluginsInFlavor(flavor interface{}) (plugins []*NamedPlugin) {
+func ListPluginsInFlavor(flavor Flavor) (plugins []*NamedPlugin) {
 	return listPluginsInFlavor(reflect.ValueOf(flavor))
 }
 

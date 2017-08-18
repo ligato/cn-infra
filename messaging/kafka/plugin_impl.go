@@ -23,7 +23,7 @@ import (
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/messaging/kafka/mux"
 	"github.com/ligato/cn-infra/servicelabel"
-	"github.com/ligato/cn-infra/statuscheck"
+	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
 )
@@ -45,6 +45,11 @@ type Plugin struct {
 	subscription chan (*client.ConsumerMessage)
 	mx           *mux.Multiplexer
 	consumer     *client.Consumer
+}
+
+// FromExistingMux is used mainly for testing purposes.
+func FromExistingMux(mux *mux.Multiplexer) *Plugin {
+	return &Plugin{mx: mux}
 }
 
 // Init is called at plugin initialization.
@@ -88,7 +93,9 @@ func (p *Plugin) Init() error {
 		logger.Warnf("Unable to start status check for kafka")
 	}
 
-	p.mx, err = mux.InitMultiplexer(configFile, p.ServiceLabel.GetAgentLabel(), logger)
+	if p.mx == nil {
+		p.mx, err = mux.InitMultiplexer(configFile, p.ServiceLabel.GetAgentLabel(), logger)
+	}
 
 	return err
 }

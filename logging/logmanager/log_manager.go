@@ -16,11 +16,12 @@ package logmanager
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/httpmux"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/unrolled/render"
-	"net/http"
 )
 
 // LoggerData encapsulates parameters of a logger represented as strings.

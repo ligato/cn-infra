@@ -27,8 +27,9 @@ import (
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/httpmux"
 	log "github.com/ligato/cn-infra/logging/logrus"
-	"github.com/ligato/cn-infra/statuscheck/model/status"
+	"github.com/ligato/cn-infra/health/statuscheck/model/status"
 	"github.com/unrolled/render"
+	"github.com/ligato/cn-infra/logging"
 )
 
 // PluginID uniquely identifies the plugin.
@@ -56,9 +57,11 @@ const (
 
 // Plugin struct holds all plugin-related data.
 type Plugin struct {
-	HTTP *httpmux.Plugin
+	LogFactory logging.LogFactory
+	HTTP       *httpmux.Plugin
+	Probe      *httpmux.HTTPPort
 
-	transport datasync.TransportAdapter // data transport adapter
+	Transport datasync.TransportAdapter
 	access    sync.Mutex                // lock for the Plugin data
 
 	agentStat   *status.AgentStatus             // overall agent status
@@ -71,9 +74,27 @@ type Plugin struct {
 
 // Init is the plugin entry point called by the Agent Core.
 func (p *Plugin) Init() error {
+	// Start Init() and AfterInit() for new probe in case the port is different from agent http
+	if p.HTTP.HTTPport.Port != p.Probe.Port {
+		log.Warnf("Custom port: %v", p.Probe)
+		p.HTTP = &httpmux.Plugin{
+			LogFactory: p.LogFactory,
+			HTTPport: p.Probe,
+		}
+		err := p.HTTP.Init()
+		if err != nil {
+			return err
+		}
+		err = p.HTTP.AfterInit()
+		if err != nil {
+			return err
+		}
+	}
+
+	log.Warnf("Starting statuscheck on port %v", p.HTTP.HTTPport.Port)
 
 	// init data transport
-	p.transport = datasync.GetTransport()
+	p.Transport = datasync.GetTransport()
 
 	// write initial status data into ETCD
 	p.agentStat = &status.AgentStatus{
@@ -83,6 +104,10 @@ func (p *Plugin) Init() error {
 		StartTime:    time.Now().Unix(),
 		LastChange:   time.Now().Unix(),
 	}
+	if p.Transport == nil {
+		log.Infof("Statuscheck transport is nil")
+	}
+
 	p.publishAgentData()
 
 	// init pluginStat map
@@ -213,13 +238,19 @@ func (p *Plugin) ReportStateChange(pluginName core.PluginName, state PluginState
 // publishAgentData writes the current global agent state into ETCD.
 func (p *Plugin) publishAgentData() error {
 	p.agentStat.LastUpdate = time.Now().Unix()
-	return p.transport.PublishData(status.AgentStatusKey(), p.agentStat)
+	if p.Transport != nil {
+		return p.Transport.PublishData(status.AgentStatusKey(), p.agentStat)
+	}
+	return nil
 }
 
 // publishPluginData writes the current plugin state into ETCD.
 func (p *Plugin) publishPluginData(pluginName core.PluginName, pluginStat *status.PluginStatus) error {
 	pluginStat.LastUpdate = time.Now().Unix()
-	return p.transport.PublishData(status.PluginStatusKey(string(pluginName)), pluginStat)
+	if p.Transport != nil {
+		return p.Transport.PublishData(status.PluginStatusKey(string(pluginName)), pluginStat)
+	}
+	return nil
 }
 
 // publishAllData publishes global agent + all plugins state data into ETCD.

@@ -1,61 +1,56 @@
+// Copyright (c) 2017 Cisco and/or its affiliates.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package httpmux
 
 import (
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/datasync/rpc/grpcsync"
-	"github.com/ligato/cn-infra/datasync/syncbase"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/utils/safeclose"
-	"github.com/namsral/flag"
-	"github.com/unrolled/render"
 	"net/http"
 	"time"
-)
 
-// PluginID used in the Agent Core flavors
-const PluginID core.PluginName = "HTTP"
+	"github.com/gorilla/mux"
+	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/utils/safeclose"
+	"github.com/unrolled/render"
+)
 
 const (
-	// DefaultHTTPPort is used during HTTP server startup unless different port was configured
-	DefaultHTTPPort = "9191"
+	// PluginID used in the Agent Core flavors
+	PluginID core.PluginName = "HTTP"
 )
-
-var (
-	httpPort string
-)
-
-// init is here only for parsing program arguments
-func init() {
-	flag.StringVar(&httpPort, "http-port", DefaultHTTPPort,
-		"Listen port for the Agent's HTTP server.")
-}
 
 // Plugin implements the Plugin interface.
 type Plugin struct {
 	LogFactory logging.LogFactory
-	HTTPport   string
+	HTTPport   *HTTPPort
+	port 		string
 
 	logging.Logger
-	server     *http.Server
-	mx         *mux.Router
-	formatter  *render.Render
-	grpcServer *grpcsync.Adapter
+	server    *http.Server
+	mx        *mux.Router
+	formatter *render.Render
 }
 
 // Init is entry point called by Agent Core
 // - It prepares Gorilla MUX HTTP Router
 // - registers grpc transport
 func (plugin *Plugin) Init() (err error) {
-	plugin.Logger, err = plugin.LogFactory.NewLogger(string(PluginID))
+	plugin.port = plugin.HTTPport.Port
+	plugin.Logger, err = plugin.LogFactory.NewLogger(string(PluginID) + "-" + plugin.port)
 	if err != nil {
 		return err
-	}
-
-	if plugin.HTTPport == "" {
-		plugin.HTTPport = httpPort
 	}
 
 	plugin.mx = mux.NewRouter()
@@ -63,9 +58,10 @@ func (plugin *Plugin) Init() (err error) {
 		IndentJSON: true,
 	})
 
-	plugin.grpcServer = grpcsync.NewAdapter()
-	plugin.Debug("grpctransp: ", plugin.grpcServer)
-	err = datasync.RegisterTransport(&syncbase.Adapter{Watcher: plugin.grpcServer})
+	// todo grpc temporary disabled
+	//plugin.grpcServer = grpcsync.NewAdapter()
+	//plugin.Debug("grpctransp: ", plugin.grpcServer)
+	//err = datasync.RegisterTransport(&syncbase.Adapter{Watcher: plugin.grpcServer})
 
 	return err
 }
@@ -79,7 +75,7 @@ func (plugin *Plugin) RegisterHTTPHandler(path string,
 
 // AfterInit starts the HTTP server
 func (plugin *Plugin) AfterInit() error {
-	address := fmt.Sprintf("0.0.0.0:%s", plugin.HTTPport)
+	address := fmt.Sprintf("0.0.0.0:%s", plugin.port)
 	//TODO NICE-to-HAVE make this configurable
 	plugin.server = &http.Server{Addr: address, Handler: plugin.mx}
 
@@ -107,6 +103,11 @@ func (plugin *Plugin) AfterInit() error {
 
 // Close cleans up the resources
 func (plugin *Plugin) Close() error {
-	_, err := safeclose.CloseAll(plugin.grpcServer, plugin.server)
+	err := safeclose.Close(plugin.server)
 	return err
+}
+
+// HTTPPort contains port value as string
+type HTTPPort struct {
+	Port string
 }

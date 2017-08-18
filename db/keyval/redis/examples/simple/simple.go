@@ -10,7 +10,7 @@ import (
 
 	"os"
 
-	"github.com/ligato/cn-infra/db"
+	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/redis"
 	"github.com/ligato/cn-infra/logging"
@@ -127,9 +127,9 @@ func runSimpleExmple() {
 			case r, ok := <-respChan:
 				if ok {
 					switch r.GetChangeType() {
-					case db.Put:
+					case datasync.Put:
 						log.Infof("Watcher received %v: %s=%s", r.GetChangeType(), r.GetKey(), string(r.GetValue()))
-					case db.Delete:
+					case datasync.Delete:
 						log.Infof("Watcher received %v: %s", r.GetChangeType(), r.GetKey())
 					}
 				} else {

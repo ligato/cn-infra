@@ -86,9 +86,9 @@ in one of the following functional areas:
     * [Log Manager](logging/logmanager) - allows the operator to set log
       level for each logger using a REST API.
     
-* **[Health](statuscheck)** - Self health check mechanism between plugins 
+* **[Health](health/statuscheck)** - Self health check mechanism between plugins 
     plus RPCs:
-    - [StatusCheck](statuscheck) - allows to monitor the status of plugins
+    - [StatusCheck](health/statuscheck) - allows to monitor the status of plugins
       and exposes it via HTTP
     - Probes (callable remotely from K8s)
   

@@ -15,9 +15,9 @@
 package idxmap
 
 import (
+	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"time"
-	"github.com/ligato/cn-infra/logging"
 )
 
 // DefaultNotifTimeout for delivery of notification
@@ -55,7 +55,7 @@ type WithTimeoutOpt struct {
 
 // WithTimeout creates an option for ToChan function that defines a timeout for notification delivery.
 func WithTimeout(timeout time.Duration) *WithTimeoutOpt {
-	return &WithTimeoutOpt{timeout:timeout}
+	return &WithTimeoutOpt{timeout: timeout}
 }
 
 // WithLoggerOpt defines a logger that logs if delivery of notification is unsuccessful.
@@ -65,5 +65,5 @@ type WithLoggerOpt struct {
 
 // WithLogger creates an option for ToChan function that specifies a logger to be used.
 func WithLogger(logger logging.Logger) *WithLoggerOpt {
-	return &WithLoggerOpt{logger:logger}
+	return &WithLoggerOpt{logger: logger}
 }

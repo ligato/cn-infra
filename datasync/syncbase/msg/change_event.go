@@ -16,8 +16,9 @@ package msg
 
 import (
 	"encoding/json"
+
 	"github.com/golang/protobuf/proto"
-	"github.com/ligato/cn-infra/db"
+	"github.com/ligato/cn-infra/datasync"
 	log "github.com/ligato/cn-infra/logging/logrus"
 )
 
@@ -33,12 +34,12 @@ type ChangeWatchResp struct {
 }
 
 // GetChangeType - see the comment in implemented interface datasync.ChangeEvent
-func (ev *ChangeWatchResp) GetChangeType() db.PutDel {
+func (ev *ChangeWatchResp) GetChangeType() datasync.PutDel {
 	if ev.message.OperationType == PutDel_DEL {
-		return db.Delete
+		return datasync.Delete
 	}
 
-	return db.Put
+	return datasync.Put
 }
 
 // GetKey returns the key associated with the change

@@ -2,10 +2,10 @@
 
 The `statuscheck` infrastructure plugin monitors the overall status of a 
 CN-Infra based app and form partial statuses of agents plugins.
-The status is exposed to external clients via [ETCD - datasync](../datasync) 
-and [HTTP](../httpmux), as shown in the following diagram:
+The status is exposed to external clients via [ETCD - datasync](../../datasync) 
+and [HTTP](../../httpmux), as shown in the following diagram:
 
-![status check](../docs/imgs/status_check.png)
+![status check](../../docs/imgs/status_check.png)
 
 For more detailed description see the godoc (especially [doc.go](doc.go)).
 
@@ -56,10 +56,10 @@ $ etcdctl get /vnf-agent/<agent-label>/check/status/v1/plugin/GOVPP
 ```
 
 ### PUSH Plugin Status:
-![status check pull](../docs/imgs/status_check_pull.png)
+![status check pull](../../docs/imgs/status_check_pull.png)
 
 ### PULL Plugins Status - PROBING:
-![status check push](../docs/imgs/status_check_push.png)
+![status check push](../../docs/imgs/status_check_push.png)
 
 
 [1]: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/
