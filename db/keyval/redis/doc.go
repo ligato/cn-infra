@@ -100,7 +100,9 @@
 //   }
 //
 //   // delete
-//   found, err := datasync.Delete("some-key")
+//   found, err := db.Delete("some-key")
+//   // or, delete all keys matching the prefix "some-key".
+//   found, err := db.Delete("some-key", keyval.WithPrefix())
 //
 //   // transaction
 //   var txn keyval.BytesTxn = db.NewTxn()
