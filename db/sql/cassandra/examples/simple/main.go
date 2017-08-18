@@ -32,7 +32,7 @@ var UserTable = &User{}
 
 // User is simple structure used in automated tests
 type User struct {
-	ID        gocql.UUID `cql:"userid"`
+	ID        gocql.UUID `cql:"userid" pk:"userid"`
 	FirstName string     `cql:"first_name"`
 	LastName  string     `cql:"last_name"`
 	//NetIP      net.IP //mapped to native cassandra type
