@@ -23,7 +23,7 @@ import (
 	"github.com/ligato/cn-infra/httpmux"
 )
 
-// HttpMock is supposed to be used to mock real HTTP server but have the ability
+// HTTPMock is supposed to be used to mock real HTTP server but have the ability
 // to test all other httpmux plugin related code
 //
 // Example:
@@ -31,18 +31,18 @@ import (
 //    httpmux.FromExistingServer(mock.SetHandler)
 //	  mock.NewRequest("GET", "/v1/a", nil)
 //
-type HttpMock struct {
+type HTTPMock struct {
 	handler http.Handler
 }
 
 // SetHandler is called from httpmux plugin during startup (handler is usually the gorilla mux instance)
-func (mock *HttpMock) SetHandler(config httpmux.Config, handler http.Handler) (httpServer io.Closer, err error) {
+func (mock *HTTPMock) SetHandler(config httpmux.Config, handler http.Handler) (httpServer io.Closer, err error) {
 	mock.handler = handler
 	return &doNothingCloser{}, nil
 }
 
 // NewRequest propagates the request to the httpmux
-func (mock *HttpMock) NewRequest(method, url string, body io.Reader) (*http.Response, error) {
+func (mock *HTTPMock) NewRequest(method, url string, body io.Reader) (*http.Response, error) {
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		return nil, err
