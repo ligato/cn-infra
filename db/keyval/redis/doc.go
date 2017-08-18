@@ -100,7 +100,7 @@
 //   }
 //
 //   // delete
-//   found, err := db.Delete("some-key")
+//   found, err := datasync.Delete("some-key")
 //
 //   // transaction
 //   var txn keyval.BytesTxn = db.NewTxn()
@@ -115,10 +115,10 @@
 //       select {
 //       case r := <-watchChan:
 //           switch r.GetChangeType() {
-//           case db.Put:
+//           case datasync.Put:
 //               log.Infof("Watcher received %v: %s=%s", r.GetChangeType(),
 //                         r.GetKey(), string(r.GetValue()))
-//           case db.Delete:
+//           case datasync.Delete:
 //               ...
 //           }
 //       ...

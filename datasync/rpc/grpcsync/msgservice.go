@@ -16,11 +16,12 @@ package grpcsync
 
 import (
 	"errors"
+	"io"
+	"strings"
+
 	"github.com/ligato/cn-infra/datasync/syncbase/msg"
 	log "github.com/ligato/cn-infra/logging/logrus"
 	"golang.org/x/net/context"
-	"io"
-	"strings"
 )
 
 // NewDataMsgServiceServer creates a new instance of DataMsgServiceServer

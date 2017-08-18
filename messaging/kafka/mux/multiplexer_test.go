@@ -15,10 +15,11 @@
 package mux
 
 import (
+	"testing"
+
 	"github.com/Shopify/sarama"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/onsi/gomega"
-	"testing"
 )
 
 func TestMultiplexer(t *testing.T) {

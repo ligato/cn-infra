@@ -14,7 +14,7 @@
 
 package etcdv3
 
-import "github.com/ligato/cn-infra/db"
+import "github.com/ligato/cn-infra/datasync"
 
 // BytesWatchPutResp is sent when new key-value pair has been inserted or the value is updated
 type BytesWatchPutResp struct {
@@ -29,8 +29,8 @@ func NewBytesWatchPutResp(key string, value []byte, revision int64) *BytesWatchP
 }
 
 // GetChangeType returns "Put" for BytesWatchPutResp
-func (resp *BytesWatchPutResp) GetChangeType() db.PutDel {
-	return db.Put
+func (resp *BytesWatchPutResp) GetChangeType() datasync.PutDel {
+	return datasync.Put
 }
 
 // GetKey returns the key that has been inserted
@@ -60,8 +60,8 @@ func NewBytesWatchDelResp(key string, revision int64) *BytesWatchDelResp {
 }
 
 // GetChangeType returns "Delete" for BytesWatchPutResp
-func (resp *BytesWatchDelResp) GetChangeType() db.PutDel {
-	return db.Delete
+func (resp *BytesWatchDelResp) GetChangeType() datasync.PutDel {
+	return datasync.Delete
 }
 
 // GetKey returns the key that has been deleted

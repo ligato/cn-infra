@@ -15,11 +15,12 @@
 package client
 
 import (
-	"github.com/ligato/cn-infra/logging/logroot"
-	"github.com/onsi/gomega"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/ligato/cn-infra/logging/logroot"
+	"github.com/onsi/gomega"
 )
 
 func ExampleAsyncProducer() {

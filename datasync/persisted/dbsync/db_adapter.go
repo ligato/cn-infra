@@ -16,6 +16,7 @@ package dbsync
 
 import (
 	"encoding/json"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/syncbase"

@@ -29,13 +29,13 @@ import (
 	"errors"
 	"github.com/alicebob/miniredis"
 	goredis "github.com/go-redis/redis"
-	"github.com/ligato/cn-infra/db"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/utils/config"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/onsi/gomega"
+	"github.com/ligato/cn-infra/datasync"
 )
 
 var miniRedis *miniredis.Miniredis
@@ -444,10 +444,10 @@ func consumeEvent(respChan chan keyval.BytesWatchResp, eventCount int) {
 		r, ok := <-respChan
 		if ok {
 			switch r.GetChangeType() {
-			case db.Put:
+			case datasync.Put:
 				log.Debugf("Watcher received %v: %s=%s (rev %d)",
 					r.GetChangeType(), r.GetKey(), string(r.GetValue()), r.GetRevision())
-			case db.Delete:
+			case datasync.Delete:
 				log.Debugf("Watcher received %v: %s (rev %d)",
 					r.GetChangeType(), r.GetKey(), r.GetRevision())
 				r.GetValue()

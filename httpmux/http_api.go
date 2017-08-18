@@ -1,9 +1,10 @@
 package httpmux
 
 import (
+	"net/http"
+
 	"github.com/gorilla/mux"
 	"github.com/unrolled/render"
-	"net/http"
 )
 
 // HTTPHandlers is an interface that is useful for other plugins that need to register HTTP Handlers.

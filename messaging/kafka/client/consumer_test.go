@@ -15,10 +15,11 @@
 package client
 
 import (
-	"github.com/bsm/sarama-cluster"
-	"github.com/ligato/cn-infra/logging/logroot"
 	"testing"
 	"time"
+
+	"github.com/bsm/sarama-cluster"
+	"github.com/ligato/cn-infra/logging/logroot"
 )
 
 var log = logroot.Logger()

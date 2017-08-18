@@ -17,15 +17,16 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+	"os/signal"
+	"time"
+
 	"github.com/Shopify/sarama"
 	"github.com/bsm/sarama-cluster"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 	log "github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
-	"os"
-	"os/signal"
-	"time"
 )
 
 var (

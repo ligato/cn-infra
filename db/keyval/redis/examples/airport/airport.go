@@ -16,7 +16,7 @@ import (
 	"math"
 	"sync/atomic"
 
-	"github.com/ligato/cn-infra/db"
+	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/db/keyval/redis"
@@ -262,9 +262,9 @@ func printHeaders() {
 		columnSep, flightIDLength*flightSlotCount, departure,
 		columnSep, hangar)
 	dash60 := "-----------------------------------------------------------"
-	waitingGuide := dash60[0 : flightIDLength*flightSlotCount]
+	waitingGuide := dash60[0: flightIDLength*flightSlotCount]
 	runwayGuide := dash60[0:runwayLength]
-	hangarGuide := dash60[0 : flightIDLength*hangarSlotCount]
+	hangarGuide := dash60[0: flightIDLength*hangarSlotCount]
 	fmt.Printf("%s%s%s%s%s%s%s\n",
 		waitingGuide, columnSep, runwayGuide, columnSep, waitingGuide, columnSep, hangarGuide)
 }
@@ -385,37 +385,37 @@ func flightID(flight flight.Info) string {
 
 func processArrival(r keyval.ProtoWatchResp) {
 	switch r.GetChangeType() {
-	case db.Put:
+	case datasync.Put:
 		go func() {
 			f := flight.Info{}
 			r.GetValue(&f)
 			f.Status = flight.Status_arrival
 			runwayChan <- f
 		}()
-	case db.Delete:
+	case datasync.Delete:
 		log.Debugf("%s deleted\n", r.GetKey())
 	}
 }
 
 func processDeparture(r keyval.ProtoWatchResp) {
 	switch r.GetChangeType() {
-	case db.Put:
+	case datasync.Put:
 		go func() {
 			f := flight.Info{}
 			r.GetValue(&f)
 			f.Status = flight.Status_departure
 			runwayChan <- f
 		}()
-	case db.Delete:
+	case datasync.Delete:
 		log.Debugf("%s deleted\n", r.GetKey())
 	}
 }
 
 func processHangar(r keyval.ProtoWatchResp) {
 	switch r.GetChangeType() {
-	case db.Put:
+	case datasync.Put:
 		log.Debugf("%s updated\n", r.GetKey())
-	case db.Delete:
+	case datasync.Delete:
 		key := r.GetKey()
 		f := flight.Info{}
 		scanHangarKey(key, &f)

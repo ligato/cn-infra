@@ -16,10 +16,11 @@ package mem
 
 import (
 	"fmt"
+	"sync"
+
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/idxmap"
 	"github.com/ligato/cn-infra/logging"
-	"sync"
 )
 
 // item stored in mapping

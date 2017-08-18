@@ -47,6 +47,11 @@ type Plugin struct {
 	consumer     *client.Consumer
 }
 
+// FromExistingMux is used mainly for testing purposes.
+func FromExistingMux(mux *mux.Multiplexer) *Plugin {
+	return &Plugin{mx: mux}
+}
+
 // Init is called at plugin initialization.
 func (p *Plugin) Init() error {
 	logger, err := p.LogFactory.NewLogger(string(PluginID))
@@ -88,7 +93,9 @@ func (p *Plugin) Init() error {
 		logger.Warnf("Unable to start status check for kafka")
 	}
 
-	p.mx, err = mux.InitMultiplexer(configFile, p.ServiceLabel.GetAgentLabel(), logger)
+	if p.mx == nil {
+		p.mx, err = mux.InitMultiplexer(configFile, p.ServiceLabel.GetAgentLabel(), logger)
+	}
 
 	return err
 }
