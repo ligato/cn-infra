@@ -1,10 +1,24 @@
+// Copyright (c) 2017 Cisco and/or its affiliates.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package httpmux
 
 import (
-	"fmt"
+	"io"
 	"net/http"
-	"time"
 
+	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
@@ -39,8 +53,13 @@ type Plugin struct {
 	LogFactory logging.LogFactory
 	HTTPport   string
 
+	// Config is a rich alternative comparing to HTTPport
+	Config *Config
+	// Used mainly for testing purposes
+	listenAndServe ListenAndServe
+
 	logging.Logger
-	server     *http.Server
+	server     io.Closer
 	mx         *mux.Router
 	formatter  *render.Render
 	grpcServer *grpcsync.Adapter
@@ -79,31 +98,24 @@ func (plugin *Plugin) RegisterHTTPHandler(path string,
 }
 
 // AfterInit starts the HTTP server
-func (plugin *Plugin) AfterInit() error {
-	address := fmt.Sprintf("0.0.0.0:%s", plugin.HTTPport)
-	//TODO NICE-to-HAVE make this configurable
-	plugin.server = &http.Server{Addr: address, Handler: plugin.mx}
-
-	var errCh chan error
-	go func() {
-		plugin.Info("Listening on http://", address)
-
-		if err := plugin.server.ListenAndServe(); err != nil {
-			errCh <- err
-		} else {
-			errCh <- nil
-		}
-	}()
-
-	select {
-	case err := <-errCh:
-		return err
-		// Wait 100ms to create a new stream, so it doesn't bring too much
-		// overhead when retry.
-	case <-time.After(100 * time.Millisecond):
-		//everything is probably fine
-		return nil
+func (plugin *Plugin) AfterInit() (err error) {
+	var cfgCopy Config
+	if plugin.Config != nil {
+		cfgCopy = *plugin.Config
 	}
+
+	if cfgCopy.Endpoint == "" {
+		cfgCopy.Endpoint = fmt.Sprintf("0.0.0.0:%s", plugin.HTTPport)
+	}
+
+	if plugin.listenAndServe != nil {
+		plugin.server, err = plugin.listenAndServe(cfgCopy, plugin.mx)
+	} else {
+		plugin.Info("Listening on http://", cfgCopy.Endpoint)
+		plugin.server, err = ListenAndServeHTTP(cfgCopy, plugin.mx)
+	}
+
+	return err
 }
 
 // Close cleans up the resources
