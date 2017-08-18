@@ -20,8 +20,8 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
-	"github.com/namsral/flag"
 	"github.com/ligato/cn-infra/utils/safeclose"
+	"github.com/namsral/flag"
 )
 
 // PluginID used in the Agent Core flavors
@@ -35,7 +35,7 @@ type Plugin struct {
 	ServiceLabel   *servicelabel.Plugin
 	Connection     keyval.KvBytesPlugin
 	ConfigFileName string
-	Skeleton 	   *plugin.Skeleton
+	Skeleton       *plugin.Skeleton
 	logging.Logger
 }
 

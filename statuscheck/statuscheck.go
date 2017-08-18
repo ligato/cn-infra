@@ -78,6 +78,10 @@ func (p *Plugin) Init() error {
 		StartTime:    time.Now().Unix(),
 		LastChange:   time.Now().Unix(),
 	}
+	if p.Transport == nil {
+		log.Infof("Statuscheck transport is nil")
+	}
+
 	p.publishAgentData()
 
 	// init pluginStat map
@@ -208,13 +212,19 @@ func (p *Plugin) ReportStateChange(pluginName core.PluginName, state PluginState
 // publishAgentData writes the current global agent state into ETCD.
 func (p *Plugin) publishAgentData() error {
 	p.agentStat.LastUpdate = time.Now().Unix()
-	return p.Transport.PublishData(status.AgentStatusKey(), p.agentStat)
+	if p.Transport != nil {
+		return p.Transport.PublishData(status.AgentStatusKey(), p.agentStat)
+	}
+	return nil
 }
 
 // publishPluginData writes the current plugin state into ETCD.
 func (p *Plugin) publishPluginData(pluginName core.PluginName, pluginStat *status.PluginStatus) error {
 	pluginStat.LastUpdate = time.Now().Unix()
-	return p.Transport.PublishData(status.PluginStatusKey(string(pluginName)), pluginStat)
+	if p.Transport != nil {
+		return p.Transport.PublishData(status.PluginStatusKey(string(pluginName)), pluginStat)
+	}
+	return nil
 }
 
 // publishAllData publishes global agent + all plugins state data into ETCD.

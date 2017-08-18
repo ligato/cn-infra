@@ -16,7 +16,7 @@ package dbsync
 
 import (
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/datasync/adapters"
+	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/persisted/dbsync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/servicelabel"
@@ -28,8 +28,8 @@ const PluginID core.PluginName = "db-sync"
 
 // Plugin dbsync implements Plugin interface
 type Plugin struct {
-	Aggregator   *adapters.TransportAggregator // to communicate with transport aggregator
-	KvPlugin     *keyval.KvBytesPlugin         // connection type
+	Adapter      datasync.TransportAdapter
+	KvPlugin     *keyval.KvBytesPlugin // connection type
 	ServiceLabel *servicelabel.Plugin
 }
 
@@ -39,8 +39,7 @@ func (plugin *Plugin) Init() error {
 	if etcdConnection != nil {
 		broker := etcdConnection.NewBroker(plugin.ServiceLabel.GetAgentPrefix())
 		watcher := etcdConnection.NewWatcher(plugin.ServiceLabel.GetAgentPrefix())
-		adapter := dbsync.NewAdapter(string(PluginID), broker, watcher)
-		plugin.Aggregator.Adapters = append(plugin.Aggregator.Adapters, adapter)
+		plugin.Adapter = dbsync.NewAdapter(string(PluginID), broker, watcher)
 	}
 
 	return nil
