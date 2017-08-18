@@ -166,7 +166,7 @@ func CreateClient(config interface{}) (Client, error) {
 	case SentinelConfig:
 		return CreateSentinelClient(cfg)
 	case nil:
-		return nil, fmt.Errorf("Configureation cannot be nil")
+		return nil, fmt.Errorf("Configuration cannot be nil")
 	}
 	return nil, fmt.Errorf("Unknown configureation type %T", config)
 }

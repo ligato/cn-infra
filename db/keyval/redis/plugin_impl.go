@@ -16,24 +16,62 @@ package redis
 
 import (
 	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
+	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
 )
 
 // PluginID used in the Agent Core flavors
 const PluginID core.PluginName = "RedisClient"
 
+var defaultConfigFileName string
+
 // Plugin implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
 	LogFactory     logging.LogFactory
 	ServiceLabel   *servicelabel.Plugin
+	Connection     keyval.KvBytesPlugin
 	ConfigFileName string
-	*plugin.Skeleton
+	Skeleton       *plugin.Skeleton
+	logging.Logger
 }
 
-var defaultConfigFileName string
+// Init is called on plugin startup. It establishes the connection to redis.
+func (p *Plugin) Init() error {
+	// Init logger
+	var err error
+	p.Logger, err = p.LogFactory.NewLogger(string(PluginID))
+	if err != nil {
+		return err
+	}
+
+	cfg, err := p.retrieveConfig()
+	if err != nil {
+		return err
+	}
+	client, err := CreateClient(cfg)
+	if err != nil {
+		return err
+	}
+
+	connection, err := NewBytesConnection(client, p.Logger)
+	if err != nil {
+		return err
+	}
+
+	skeleton := plugin.NewSkeleton(string(PluginID), p.LogFactory, p.ServiceLabel, connection)
+	p.Skeleton = skeleton
+	return p.Skeleton.Init()
+}
+
+// Close resources
+func (p *Plugin) Close() error {
+	_, err := safeclose.CloseAll(p.Skeleton, p.Connection)
+	return err
+}
 
 func init() {
 	flag.StringVar(&defaultConfigFileName, "redis-config", "",
@@ -55,24 +93,4 @@ func (p *Plugin) retrieveConfig() (cfg interface{}, err error) {
 		}
 	}
 	return cfg, nil
-}
-
-// Init is called on plugin startup. It establishes the connection to redis.
-func (p *Plugin) Init() error {
-	cfg, err := p.retrieveConfig()
-	if err != nil {
-		return err
-	}
-	client, err := CreateClient(cfg)
-	if err != nil {
-		return err
-	}
-
-	skeleton := plugin.NewSkeleton(string(PluginID), p.LogFactory, p.ServiceLabel,
-		func(log logging.Logger) (plugin.Connection, error) {
-			return NewBytesConnection(client, log)
-		},
-	)
-	p.Skeleton = skeleton
-	return p.Skeleton.Init()
 }

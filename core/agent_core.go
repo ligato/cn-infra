@@ -35,7 +35,7 @@ type Agent struct {
 	// The startup/initialization must take no longer that maxStartup.
 	MaxStartupTime time.Duration
 	// plugin list
-	plugins        []*NamedPlugin
+	plugins []*NamedPlugin
 	logging.Logger
 }
 

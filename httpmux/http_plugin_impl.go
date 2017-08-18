@@ -1,3 +1,17 @@
+// Copyright (c) 2017 Cisco and/or its affiliates.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package httpmux
 
 import (
@@ -7,9 +21,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/datasync/rpc/grpcsync"
-	"github.com/ligato/cn-infra/datasync/syncbase"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
@@ -40,10 +51,9 @@ type Plugin struct {
 	HTTPport   string
 
 	logging.Logger
-	server     *http.Server
-	mx         *mux.Router
-	formatter  *render.Render
-	grpcServer *grpcsync.Adapter
+	server    *http.Server
+	mx        *mux.Router
+	formatter *render.Render
 }
 
 // Init is entry point called by Agent Core
@@ -63,10 +73,6 @@ func (plugin *Plugin) Init() (err error) {
 	plugin.formatter = render.New(render.Options{
 		IndentJSON: true,
 	})
-
-	plugin.grpcServer = grpcsync.NewAdapter()
-	plugin.Debug("grpctransp: ", plugin.grpcServer)
-	err = datasync.RegisterTransport(&syncbase.Adapter{Watcher: plugin.grpcServer})
 
 	return err
 }
@@ -108,6 +114,6 @@ func (plugin *Plugin) AfterInit() error {
 
 // Close cleans up the resources
 func (plugin *Plugin) Close() error {
-	_, err := safeclose.CloseAll(plugin.grpcServer, plugin.server)
+	err := safeclose.Close(plugin.server)
 	return err
 }

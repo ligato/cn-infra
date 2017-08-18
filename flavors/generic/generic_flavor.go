@@ -19,7 +19,6 @@ import (
 	"github.com/ligato/cn-infra/httpmux"
 	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/servicelabel"
-
 	"github.com/ligato/cn-infra/logging/logmanager"
 	"github.com/ligato/cn-infra/statuscheck"
 )
@@ -47,6 +46,7 @@ func (f *FlavorGeneric) Inject() error {
 	f.LogManager.ManagedLoggers = &f.Logrus
 	f.LogManager.HTTP = &f.HTTP
 	f.StatusCheck.HTTP = &f.HTTP
+	//f.StatusCheck.Transport todo inject transport
 
 	f.injected = true
 
