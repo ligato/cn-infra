@@ -16,45 +16,79 @@ package redis
 
 import (
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/datasync/adapters"
+	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
+	"github.com/namsral/flag"
 )
 
 // PluginID used in the Agent Core flavors
 const PluginID core.PluginName = "RedisClient"
 
+var defaultConfigFileName string
+
 // Plugin implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
-	Transport    *adapters.TransportAggregator
-	LogFactory   logging.LogFactory
-	ServiceLabel *servicelabel.Plugin
+	LogFactory     logging.LogFactory
+	ServiceLabel   *servicelabel.Plugin
+	Connection     keyval.KvBytesPlugin
+	ConfigFileName string
 	*plugin.Skeleton
+	logging.Logger
 }
 
 // Init is called on plugin startup. It establishes the connection to redis.
 func (p *Plugin) Init() error {
-
-	// FIXME: properly retrieve config
-	pool, err := CreateNodeClient(NodeConfig{})
+	// Init logger
+	var err error
+	p.Logger, err = p.LogFactory.NewLogger(string(PluginID))
 	if err != nil {
 		return err
 	}
 
-	// Init skeleton
-	skeleton := plugin.NewSkeleton(string(PluginID),
-		p.Transport,
-		p.LogFactory,
-		p.ServiceLabel,
-		func(log logging.Logger) (plugin.Connection, error) {
-			connection, err := NewBytesConnection(pool, p.Logger)
-			if err != nil {
-				return nil, err
-			}
-			return connection, nil
-		},
-	)
+	cfg, err := p.retrieveConfig()
+	if err != nil {
+		return err
+	}
+	client, err := CreateClient(cfg)
+	if err != nil {
+		return err
+	}
+
+	connection, err := NewBytesConnection(client, p.Logger)
+	if err != nil {
+		return err
+	}
+
+	skeleton := plugin.NewSkeleton(string(PluginID), p.LogFactory, p.ServiceLabel, connection)
 	p.Skeleton = skeleton
 	return p.Skeleton.Init()
+}
+
+// Close resources
+func (p *Plugin) Close() error {
+	return nil
+}
+
+func init() {
+	flag.StringVar(&defaultConfigFileName, "redis-config", "",
+		"Location of Redis configuration file; Can also be set via environment variable REDIS_CONFIG")
+}
+
+func (p *Plugin) retrieveConfig() (cfg interface{}, err error) {
+	var configFile string
+	if p.ConfigFileName != "" {
+		configFile = p.ConfigFileName
+	} else if defaultConfigFileName != "" {
+		configFile = defaultConfigFileName
+	}
+
+	if configFile != "" {
+		cfg, err = LoadConfig(configFile)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return cfg, nil
 }

@@ -18,11 +18,6 @@ import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/datasync/persisted/dbsync"
-	"github.com/ligato/cn-infra/datasync/rpc/grpcsync"
-	"github.com/ligato/cn-infra/datasync/syncbase"
-	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/servicelabel"
 	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
@@ -31,7 +26,7 @@ type TransportAggregator struct {
 	Adapters []datasync.TransportAdapter
 }
 
-// TransportAggregator is cumulative adapter which contains all available transport types
+// AggregatedRegistration is cumulative adapter which contains all available transport types
 type AggregatedRegistration struct {
 	Registrations []datasync.WatchDataRegistration
 }
@@ -66,21 +61,6 @@ func (ta *TransportAggregator) PublishData(key string, data proto.Message) error
 		}
 	}
 	return wasError
-}
-
-// InitTransport initializes new transport with provided connection and stores it to the aggregator
-func (ta *TransportAggregator) InitTransport(kvPlugin keyval.KvBytesPlugin, sl *servicelabel.Plugin, name string) {
-	broker := kvPlugin.NewBroker(sl.GetAgentPrefix())
-	watcher := kvPlugin.NewWatcher(sl.GetAgentPrefix())
-	adapter := dbsync.NewAdapter(name, broker, watcher)
-	ta.Adapters = append(ta.Adapters, adapter)
-}
-
-// InitGrpcTransport initializes a GRPC transport and stores it to the aggregator
-func (ta *TransportAggregator) InitGrpcTransport() {
-	grpcAdapter := grpcsync.NewAdapter()
-	adapter := &syncbase.Adapter{Watcher: grpcAdapter}
-	ta.Adapters = append(ta.Adapters, adapter)
 }
 
 // Close every registration under watch aggregator

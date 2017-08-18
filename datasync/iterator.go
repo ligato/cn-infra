@@ -1,6 +1,5 @@
 package datasync
 
-
 // KeyValIterator is an iterator for KeyVals
 type KeyValIterator interface {
 	// GetNext retrieves the next value from the iterator context.  The retrieved
@@ -14,4 +13,3 @@ type KeyVal interface {
 	WithKey
 	LazyValueWithRev
 }
-

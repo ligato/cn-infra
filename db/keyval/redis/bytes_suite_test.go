@@ -29,13 +29,13 @@ import (
 	"errors"
 	"github.com/alicebob/miniredis"
 	goredis "github.com/go-redis/redis"
+	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/utils/config"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/onsi/gomega"
-	"github.com/ligato/cn-infra/datasync"
 )
 
 var miniRedis *miniredis.Miniredis

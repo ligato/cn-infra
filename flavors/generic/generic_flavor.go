@@ -22,11 +22,13 @@ import (
 	"github.com/ligato/cn-infra/logging/logmanager"
 	"github.com/ligato/cn-infra/statuscheck"
 	"github.com/ligato/cn-infra/datasync/adapters"
+	"github.com/ligato/cn-infra/datasync/grpcsync"
 )
 
 // FlavorGeneric glues together multiple plugins that are useful for almost every micro-service
 type FlavorGeneric struct {
 	Transports   adapters.TransportAggregator
+	GrpcSync  	grpcsync.Plugin
 	Logrus       logrus.Plugin
 	HTTP         httpmux.Plugin
 	LogManager   logmanager.Plugin
@@ -42,8 +44,10 @@ func (f *FlavorGeneric) Inject() error {
 		return nil
 	}
 
+	f.GrpcSync.Aggregator = &f.Transports
+	f.GrpcSync.ServiceLabel = &f.ServiceLabel
+
 	f.HTTP.LogFactory = &f.Logrus
-	f.HTTP.Transport = &f.Transports
 	//TODO f.HTTP.Logger = f.Logrus.LoggerWithPrefix(f.PluginName(&f.HTTP))
 	//TODO f.HTTP.Config = f.Config.ConfigWithPrefix(f.PluginName(&f.HTTP))
 	f.LogManager.ManagedLoggers = &f.Logrus

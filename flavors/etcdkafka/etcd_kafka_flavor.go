@@ -19,6 +19,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/flavors/generic"
 	"github.com/ligato/cn-infra/messaging/kafka"
+	"github.com/ligato/cn-infra/datasync/dbsync"
 )
 
 // FlavorGeneric glues together generic.FlavorGeneric plugins with:
@@ -28,6 +29,7 @@ type Flavor struct {
 	Generic generic.FlavorGeneric
 	Etcd    etcdv3.Plugin
 	Kafka   kafka.Plugin
+	EtcdSync dbsync.Plugin
 
 	injected bool
 }
@@ -43,7 +45,10 @@ func (f *Flavor) Inject() error {
 	f.Etcd.LogFactory = &f.Generic.Logrus
 	f.Etcd.ServiceLabel = &f.Generic.ServiceLabel
 	f.Etcd.StatusCheck = &f.Generic.StatusCheck
-	f.Etcd.Transport = &f.Generic.Transports
+
+	f.EtcdSync.Aggregator = &f.Generic.Transports
+	f.EtcdSync.ServiceLabel = &f.Generic.ServiceLabel
+	f.EtcdSync.KvPlugin = &f.Etcd.Connection
 
 	f.Kafka.LogFactory = &f.Generic.Logrus
 	f.Kafka.ServiceLabel = &f.Generic.ServiceLabel

@@ -21,13 +21,10 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/datasync/adapters"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
 	"github.com/unrolled/render"
-	"net/http"
-	"time"
 )
 
 // PluginID used in the Agent Core flavors
@@ -50,7 +47,6 @@ func init() {
 
 // Plugin implements the Plugin interface.
 type Plugin struct {
-	Transport  *adapters.TransportAggregator
 	LogFactory logging.LogFactory
 	HTTPport   string
 
@@ -77,9 +73,6 @@ func (plugin *Plugin) Init() (err error) {
 	plugin.formatter = render.New(render.Options{
 		IndentJSON: true,
 	})
-
-	// Register grpc transport adapter
-	plugin.Transport.InitGrpcTransport()
 
 	return err
 }
@@ -121,6 +114,6 @@ func (plugin *Plugin) AfterInit() error {
 
 // Close cleans up the resources
 func (plugin *Plugin) Close() error {
-	_, err := safeclose.CloseAll(plugin.Transport, plugin.server)
+	err := safeclose.Close(plugin.server)
 	return err
 }

@@ -16,8 +16,8 @@ package keyval
 
 import (
 	"github.com/golang/protobuf/proto"
-	"io"
 	"github.com/ligato/cn-infra/datasync"
+	"io"
 )
 
 // ProtoBroker is decorator that allows to read/write proto file modelled data.
