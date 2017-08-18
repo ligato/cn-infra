@@ -70,7 +70,7 @@ func NewPluginLogger(name string, factory LogFactory) PluginLogger {
 	logger, _ := factory.NewLogger(name)
 
 	return &pluginLogger{logger,
-						 &prefixedLogFactory{name, factory}}
+		&prefixedLogFactory{name, factory}}
 }
 
 // Fields is a type accepted by WithFields method. It can be used to instantiate map using shorter notation.

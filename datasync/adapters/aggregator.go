@@ -15,17 +15,57 @@
 package adapters
 
 import (
+	"fmt"
+	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/persisted/dbsync"
-	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/servicelabel"
 	"github.com/ligato/cn-infra/datasync/rpc/grpcsync"
 	"github.com/ligato/cn-infra/datasync/syncbase"
+	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ligato/cn-infra/servicelabel"
+	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
 // TransportAggregator is cumulative adapter which contains all available transport types
 type TransportAggregator struct {
 	Adapters []datasync.TransportAdapter
+}
+
+// TransportAggregator is cumulative adapter which contains all available transport types
+type AggregatedRegistration struct {
+	Registrations []datasync.WatchDataRegistration
+}
+
+// WatchData subscribes to every transport available within transport aggregator
+func (ta *TransportAggregator) WatchData(resyncName string, changeChan chan datasync.ChangeEvent, resyncChan chan datasync.ResyncEvent,
+	keyPrefixes ...string) (datasync.WatchDataRegistration, error) {
+	registrations := []datasync.WatchDataRegistration{}
+	for _, transport := range ta.Adapters {
+		watcherReg, err := transport.WatchData(resyncName, changeChan, resyncChan, keyPrefixes...)
+		if err != nil {
+			return nil, err
+		}
+		registrations = append(registrations, watcherReg)
+	}
+
+	return &AggregatedRegistration{
+		Registrations: registrations,
+	}, nil
+}
+
+// PublishData to every available transport
+func (ta *TransportAggregator) PublishData(key string, data proto.Message) error {
+	if len(ta.Adapters) == 0 {
+		return fmt.Errorf("No transport is availabel in aggregator")
+	}
+	var wasError error
+	for _, transport := range ta.Adapters {
+		err := transport.PublishData(key, data)
+		if err != nil {
+			wasError = err
+		}
+	}
+	return wasError
 }
 
 // InitTransport initializes new transport with provided connection and stores it to the aggregator
@@ -41,4 +81,10 @@ func (ta *TransportAggregator) InitGrpcTransport() {
 	grpcAdapter := grpcsync.NewAdapter()
 	adapter := &syncbase.Adapter{Watcher: grpcAdapter}
 	ta.Adapters = append(ta.Adapters, adapter)
+}
+
+// Close every registration under watch aggregator
+func (wa *AggregatedRegistration) Close() error {
+	_, err := safeclose.CloseAll(wa.Registrations)
+	return err
 }

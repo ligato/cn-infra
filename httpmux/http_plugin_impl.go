@@ -21,13 +21,13 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/datasync/adapters"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
 	"github.com/unrolled/render"
 	"net/http"
 	"time"
-	"github.com/ligato/cn-infra/datasync/adapters"
 )
 
 // PluginID used in the Agent Core flavors

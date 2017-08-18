@@ -56,10 +56,5 @@ func (p *Plugin) Init() error {
 		},
 	)
 	p.Skeleton = skeleton
-	err = p.Skeleton.Init()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return p.Skeleton.Init()
 }

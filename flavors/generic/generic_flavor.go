@@ -49,7 +49,7 @@ func (f *FlavorGeneric) Inject() error {
 	f.LogManager.ManagedLoggers = &f.Logrus
 	f.LogManager.HTTP = &f.HTTP
 	f.StatusCheck.HTTP = &f.HTTP
-	f.StatusCheck.Adapters = &f.Transports.Adapters
+	f.StatusCheck.Transport = &f.Transports
 
 	f.injected = true
 

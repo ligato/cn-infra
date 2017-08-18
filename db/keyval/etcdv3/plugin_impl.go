@@ -39,7 +39,7 @@ type Plugin struct {
 	ServiceLabel   *servicelabel.Plugin
 	StatusCheck    *statuscheck.Plugin
 	ConfigFileName string
-	*plugin.Skeleton
+	Skeleton       *plugin.Skeleton
 }
 
 var defaultConfigFileName string

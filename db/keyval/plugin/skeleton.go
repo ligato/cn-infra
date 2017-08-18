@@ -32,8 +32,8 @@ type Connection interface {
 
 // Skeleton of a KV plugin is a generic part of KV plugin.
 type Skeleton struct {
-	Transport    *adapters.TransportAggregator
 	Logger       logging.Logger
+	transport    *adapters.TransportAggregator
 	serviceLabel *servicelabel.Plugin
 	name         string
 	logFactory   logging.LogFactory
@@ -46,7 +46,7 @@ type Skeleton struct {
 // The connection is established in AfterInit phase.
 func NewSkeleton(name string, transport *adapters.TransportAggregator, factory logging.LogFactory, serviceLabel *servicelabel.Plugin,
 	connector func(log logging.Logger) (Connection, error)) *Skeleton {
-	return &Skeleton{Transport: transport, serviceLabel: serviceLabel, name: name, logFactory: factory, connect: connector}
+	return &Skeleton{transport: transport, serviceLabel: serviceLabel, name: name, logFactory: factory, connect: connector}
 }
 
 // Init is called on plugin startup
@@ -61,7 +61,7 @@ func (plugin *Skeleton) Init() (err error) {
 	}
 	plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.conn, &keyval.SerializerJSON{})
 
-	plugin.Transport.InitTransport(plugin.conn, plugin.serviceLabel, plugin.name)
+	plugin.transport.InitTransport(plugin.conn, plugin.serviceLabel, plugin.name)
 	datasync.RegisterTransportOfDifferentAgent(func(microserviceLabel string) datasync.TransportAdapter {
 		dbOfDifferentAgent := plugin.conn.NewBroker(plugin.serviceLabel.GetDifferentAgentPrefix(microserviceLabel))
 		dbWOfDifferentAgent := plugin.conn.NewWatcher(plugin.serviceLabel.GetDifferentAgentPrefix(microserviceLabel))
