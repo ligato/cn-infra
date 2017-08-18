@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package logging defines the logging API used by all plugins, which supports
+// Package logging defines the logging API. It used by all plugins, and supports
 // multiple log levels (severities) and various log message formats.
 package logging
