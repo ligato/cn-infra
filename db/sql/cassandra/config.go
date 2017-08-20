@@ -97,14 +97,9 @@ func ConfigToClientConfig(ymlConfig *Config) (*ClientConfig, error) {
 }
 
 // CreateSessionFromConfig Creates session from given configuration and keyspace
-func CreateSessionFromConfig(config Config) (*gocql.Session, error) {
+func CreateSessionFromConfig(config *ClientConfig) (*gocql.Session, error) {
 
-	gocqlClusterConfig := gocql.NewCluster(HostsAsString(config.Endpoints))
-	gocqlClusterConfig.Port = config.Port
-	gocqlClusterConfig.ConnectTimeout = config.DialTimeout
-	gocqlClusterConfig.Timeout = config.OpTimeout
-	gocqlClusterConfig.ReconnectInterval = config.RedialInterval
-	gocqlClusterConfig.ProtoVersion = config.ProtocolVersion
+	gocqlClusterConfig := gocql.NewCluster(HostsAsString(config.Hosts))
 
 	session, err := gocqlClusterConfig.CreateSession()
 
