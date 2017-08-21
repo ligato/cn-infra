@@ -52,7 +52,7 @@
 //
 // Create connection from configuration
 //   client, err := redis.CreateClient(cfg)
-//   db, err := redis.NewBytesConnection(client, logroot.Logger())
+//   db, err := redis.NewBytesConnection(client, logroot.StandardLogger())
 //
 // Create Brokers / Watchers from connection
 //   // create broker/watcher that share the same connection pools.
