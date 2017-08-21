@@ -20,7 +20,9 @@ import (
 
 	"github.com/ligato/cn-infra/datasync/resync/resyncevent"
 	"github.com/ligato/cn-infra/datasync/resync/resyncevent/resynceventimpl"
-	log "github.com/ligato/cn-infra/logging/logrus"
+	"github.com/ligato/cn-infra/logging"
+
+	"github.com/ligato/cn-infra/logging/logroot"
 )
 
 var (
@@ -30,7 +32,7 @@ var (
 // plugin function is used in api to access the plugin instance. It panics if the plugin instance is no
 func plugin() *Plugin {
 	if gPlugin == nil {
-		log.Panic("Resync Orchestration is not yet initialized but you are trying to use that")
+		logroot.Logger().Panic("Resync Orchestration is not yet initialized but you are trying to use that")
 	}
 
 	return gPlugin
@@ -38,6 +40,8 @@ func plugin() *Plugin {
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
+	Log logging.Logger
+
 	registrations map[string]*resynceventimpl.Registration
 	access        sync.Mutex
 }
@@ -83,7 +87,7 @@ func (plugin *Plugin) Register(resyncName string) resyncevent.Registration {
 	defer plugin.access.Unlock()
 
 	if _, found := plugin.registrations[resyncName]; found {
-		log.WithField("resyncName", resyncName).Panic("You are trying to register same resync twice")
+		plugin.Log.WithField("resyncName", resyncName).Panic("You are trying to register same resync twice")
 		return nil
 	}
 
@@ -101,7 +105,7 @@ func (plugin *Plugin) startResync() {
 		select {
 		case <-started.ReceiveAck():
 		case <-time.After(5 * time.Second):
-			log.WithField("regName", regName).Warn("Timeout of ACK")
+			plugin.Log.WithField("regName", regName).Warn("Timeout of ACK")
 		}
 	}
 

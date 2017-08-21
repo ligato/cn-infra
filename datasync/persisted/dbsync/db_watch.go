@@ -22,7 +22,7 @@ import (
 	resync_types "github.com/ligato/cn-infra/datasync/resync/resyncevent"
 	"github.com/ligato/cn-infra/datasync/syncbase"
 	"github.com/ligato/cn-infra/db/keyval"
-	log "github.com/ligato/cn-infra/logging/logrus"
+	"github.com/ligato/cn-infra/logging/logroot"
 )
 
 // WatchBrokerKeys implements go routines on top of Change & Resync channels
@@ -78,8 +78,8 @@ func (keys *watchBrokerKeys) watchChanges(watchCh chan keyval.BytesWatchResp) {
 
 		ch := NewChangeWatchResp(x, prev)
 
-		log.Debug("dbAdapter x:", x)
-		log.Debug("dbAdapter ch:", *ch)
+		logroot.Logger().Debug("dbAdapter x:", x)
+		logroot.Logger().Debug("dbAdapter ch:", *ch)
 
 		keys.changeChan <- ch
 		// TODO NICE-to-HAVE publish the err using the transport asynchronously
@@ -92,7 +92,7 @@ func (keys *watchBrokerKeys) watchResync(resyncReg resync_types.Registration) {
 		if resyncStatus.ResyncStatus() == resync_types.Started {
 			err := keys.resync()
 			if err != nil {
-				log.Error("error getting resync data ", err) //we are not able to propagate it somewhere else
+				logroot.Logger().Error("error getting resync data ", err) //we are not able to propagate it somewhere else
 				// TODO NICE-to-HAVE publish the err using the transport asynchronously
 			}
 		}
@@ -120,7 +120,7 @@ func (keys *watchBrokerKeys) resync() error {
 			return err
 		}
 	case <-time.After(4 * time.Second):
-		log.Warn("Timeout of resync callback")
+		logroot.Logger().Warn("Timeout of resync callback")
 	}
 
 	return nil

@@ -17,7 +17,7 @@ package core
 import (
 	"reflect"
 
-	log "github.com/ligato/cn-infra/logging/logrus"
+	"github.com/ligato/cn-infra/logging/logroot"
 )
 
 // Flavor is structure that contains a particular combination of plugins
@@ -39,7 +39,6 @@ func listPluginsInFlavor(flavorValue reflect.Value) []*NamedPlugin {
 	var res []*NamedPlugin
 
 	flavorType := flavorValue.Type()
-	log.WithField("flavorType", flavorType).Debug("ListPluginsInFlavor")
 
 	if flavorType.Kind() == reflect.Ptr {
 		flavorType = flavorType.Elem()
@@ -50,7 +49,6 @@ func listPluginsInFlavor(flavorValue reflect.Value) []*NamedPlugin {
 	}
 
 	if !flavorValue.IsValid() {
-		log.WithField("flavorType", flavorType).Debug("invalid")
 		return res
 	}
 
@@ -63,7 +61,6 @@ func listPluginsInFlavor(flavorValue reflect.Value) []*NamedPlugin {
 
 			exported := field.PkgPath == "" // PkgPath is empty for exported fields
 			if !exported {
-				log.WithField("fieldName", field.Name).Debug("Unexported field")
 				continue
 			}
 
@@ -71,7 +68,6 @@ func listPluginsInFlavor(flavorValue reflect.Value) []*NamedPlugin {
 			plug := fieldPlugin(field, fieldVal, pluginType)
 			if plug != nil {
 				res = append(res, &NamedPlugin{PluginName: PluginName(field.Name), Plugin: plug})
-				log.WithField("fieldName", field.Name).Debug("Found plugin ", field.Type)
 			} else {
 				// try to inspect flavor structure recursively
 				res = append(res, listPluginsInFlavor(fieldVal)...)
@@ -93,7 +89,7 @@ func fieldPlugin(field reflect.StructField, fieldVal reflect.Value, pluginType r
 		}
 	case reflect.Ptr, reflect.Interface:
 		if fieldVal.IsNil() {
-			log.WithField("fieldName", field.Name).Debug("Field is nil ", pluginType)
+			logroot.Logger().WithField("fieldName", field.Name).Debug("Field is nil ", pluginType)
 		} else if plug, ok := fieldVal.Interface().(Plugin); ok {
 			return plug
 		}

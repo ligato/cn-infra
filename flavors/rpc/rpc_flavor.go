@@ -12,47 +12,43 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package etcdkafka
+package rpc
 
 import (
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/datasync/persisted/dbsync"
-	"github.com/ligato/cn-infra/db/keyval/etcdv3"
-	"github.com/ligato/cn-infra/flavors/rpc"
-	"github.com/ligato/cn-infra/messaging/kafka"
+	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/health/probe"
+	"github.com/ligato/cn-infra/httpmux"
+	"github.com/ligato/cn-infra/logging/logmanager"
 )
 
-// FlavorRPC glues together generic.FlavorRPC plugins with:
-// - ETCD (useful for watching config.)
-// - Kafka plugins (useful for publishing events)
-type Flavor struct {
-	rpc.FlavorRPC
+// FlavorRPC glues together multiple plugins that are useful for almost every micro-service
+type FlavorRPC struct {
+	local.FlavorLocal
 
-	ETCD         etcdv3.Plugin
-	EtcdDataSync dbsync.Adapter
+	HTTP httpmux.Plugin
+	//TODO GRPC (& enable/disable using config)
 
-	Kafka kafka.Plugin
+	HealthRPC probe.Plugin
+	LogMngRPC logmanager.Plugin
 
 	injected bool
 }
 
 // Inject sets object references
-func (f *Flavor) Inject() error {
+func (f *FlavorRPC) Inject() error {
 	if f.injected {
 		return nil
 	}
 
-	f.FlavorRPC.Inject()
+	f.FlavorLocal.Inject()
 
-	f.ETCD.Log = f.LoggerFor("ETCD")
-	f.ETCD.ServiceLabel = &f.ServiceLabel
-	f.ETCD.StatusCheck = &f.StatusCheck
-	//TODO f.EtcdDataSync = &f.
-	//TODO f.Generic.HealthRPC.Transport = &f.EtcdDataSync
-
-	f.Kafka.Log = f.LoggerFor("Kafka")
-	f.Kafka.ServiceLabel = &f.ServiceLabel
-	f.Kafka.StatusCheck = &f.StatusCheck
+	f.HTTP.Log = f.LoggerFor("HTTP")
+	f.LogMngRPC.LogRegistry = f.FlavorLocal.LogRegistry()
+	f.LogMngRPC.HTTP = &f.HTTP
+	f.HealthRPC.Log = f.LoggerFor("HealthRPC")
+	f.HealthRPC.HTTP = &f.HTTP
+	//f.HealthRPC.Transport todo inject local transport
 
 	f.injected = true
 
@@ -60,7 +56,7 @@ func (f *Flavor) Inject() error {
 }
 
 // Plugins combines all Plugins in flavor to the list
-func (f *Flavor) Plugins() []*core.NamedPlugin {
+func (f *FlavorRPC) Plugins() []*core.NamedPlugin {
 	f.Inject()
 	return core.ListPluginsInFlavor(f)
 }

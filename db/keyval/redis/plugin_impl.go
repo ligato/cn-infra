@@ -31,23 +31,15 @@ var defaultConfigFileName string
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
-	LogFactory     logging.LogFactory
+	Log            logging.PluginLogger
 	ServiceLabel   *servicelabel.Plugin
 	Connection     keyval.KvBytesPlugin
 	ConfigFileName string
 	Skeleton       *plugin.Skeleton
-	logging.Logger
 }
 
 // Init is called on plugin startup. It establishes the connection to redis.
 func (p *Plugin) Init() error {
-	// Init logger
-	var err error
-	p.Logger, err = p.LogFactory.NewLogger(string(PluginID))
-	if err != nil {
-		return err
-	}
-
 	cfg, err := p.retrieveConfig()
 	if err != nil {
 		return err
@@ -62,7 +54,7 @@ func (p *Plugin) Init() error {
 		return err
 	}
 
-	skeleton := plugin.NewSkeleton(string(PluginID), p.LogFactory, p.ServiceLabel, connection)
+	skeleton := plugin.NewSkeleton(string(PluginID), p.ServiceLabel, connection)
 	p.Skeleton = skeleton
 	return p.Skeleton.Init()
 }
