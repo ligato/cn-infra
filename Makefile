@@ -86,22 +86,22 @@ endef
 # build examples only
 define build_examples_only
     @echo "# building examples"
-    @cd db/keyval/etcdv3/examples && make build
-    @cd db/keyval/redis/examples && make build
-    @cd db/sql/cassandra/examples/simple && go build
-    @cd logging/logrus/examples && make build
-    @cd messaging/kafka/examples && make build
+    @cd examples/etcdv3_broker && make build
+    @cd examples/redis_broker && make build
+    @cd examples/cassandra_broker && make build
+    @cd examples/log_logrus && make build
+    @cd examples/kafka_broker && make build
     @echo "# done"
 endef
 
 # clean examples only
 define clean_examples_only
     @echo "# cleaning examples"
-    @cd db/keyval/etcdv3/examples && make clean
-    @cd db/keyval/redis/examples && make clean
-    @cd db/sql/cassandra/examples/simple && rm -f simple
-    @cd logging/logrus/examples && make clean
-    @cd messaging/kafka/examples && make clean
+    @cd examples/etcdv3_broker && make clean
+    @cd examples/redis_broker && make clean
+    @cd examples/cassandra_broker && rm -f simple
+    @cd examples/log_logrus && make clean
+    @cd examples/kafka_broker && make clean
     @echo "# done"
 endef
 

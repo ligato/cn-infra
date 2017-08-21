@@ -6,13 +6,13 @@ real ETCD and/or Kafka plugins, so for specific examples, they have to be
 started first.
 
 Current examples:
-* **[etcd](etcd/main.go)** uses the ETCD data broker to write data into 
+* **[etcd](etcdv3_broker/main.go)** uses the ETCD data broker to write data into 
   ETCD, which are then caught by the watcher
 * **[flags](flags/main.go)** example registers flags and shows their 
   runtime values
 * **[kafka](kafka/main.go)** creates a simple plugin which registers a 
   Kafka consumer and sends a test notification
-* **[logs](logs/main.go)** shows how to use the logger and wotk wiht 
+* **[logs](logs_logrus/main.go)** shows how to use the logger and wotk wiht 
   log levels
 
 ## How to run an example

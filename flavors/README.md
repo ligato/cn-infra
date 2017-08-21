@@ -15,6 +15,6 @@ The following diagram shows:
 * plugins that are part of the flavor
 * initialized (injected) [statuscheck](../health/statuscheck) dependency 
   inside [etcd client plugin](../db/keyval/etcdv3) and [Kafka client plugin](../messaging/kafka)
-* [etcd + Kafka flavor](etcdkafka) extends [generic flavor](generic) 
+* [etcd + Kafka flavor](etcdkafka) extends [RPC flavor](rpc) 
 
 ![flavors](../docs/imgs/flavors.png)
