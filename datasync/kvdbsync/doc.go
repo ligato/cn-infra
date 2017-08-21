@@ -28,4 +28,4 @@
 // When data resynchronization (RESYNC) is triggered then the Data Broker is used
 // to read all particular keys & values from the key-value store. Reading all
 // particular keys & values is more reliable but less efficient data synchronization.
-package dbsync
+package kvdbsync

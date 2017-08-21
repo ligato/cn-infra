@@ -47,7 +47,7 @@ func (adapter *Adapter) RegisterTestHandler() {
 }
 
 // WatchData registers HTTP handlers - basically bridges them with local dbadapter
-func (adapter *Adapter) WatchData(resyncName string, changeChan chan datasync.ChangeEvent,
+func (adapter *Adapter) Watch(resyncName string, changeChan chan datasync.ChangeEvent,
 	resyncChan chan datasync.ResyncEvent, keyPrefixes ...string) (datasync.WatchRegistration, error) {
 
 	logroot.StandardLogger().Debug("REST KeyValProtoWatcher WatchData ", resyncName, " ", keyPrefixes)
@@ -59,5 +59,5 @@ func (adapter *Adapter) WatchData(resyncName string, changeChan chan datasync.Ch
 		//TODO httpmux.RegisterHTTPHandler("/vpprestcon/resync", putResync, "PUT")
 	}
 
-	return adapter.base.WatchData(resyncName, changeChan, resyncChan, keyPrefixes...)
+	return adapter.base.Watch(resyncName, changeChan, resyncChan, keyPrefixes...)
 }

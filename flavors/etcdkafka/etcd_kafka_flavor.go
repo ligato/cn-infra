@@ -16,7 +16,7 @@ package etcdkafka
 
 import (
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/datasync/persisted/dbsync"
+	"github.com/ligato/cn-infra/datasync/kvdbsync"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/flavors/rpc"
 	"github.com/ligato/cn-infra/messaging/kafka"
@@ -29,7 +29,7 @@ type Flavor struct {
 	rpc.FlavorRPC
 
 	ETCD         etcdv3.Plugin
-	EtcdDataSync dbsync.Adapter
+	ETCDDataSync kvdbsync.Plugin
 
 	Kafka kafka.Plugin
 
@@ -40,6 +40,8 @@ type Flavor struct {
 func (f *Flavor) Inject() error {
 	if f.injected {
 		return nil
+	} else {
+		f.injected = true
 	}
 
 	f.FlavorRPC.Inject()
@@ -47,14 +49,13 @@ func (f *Flavor) Inject() error {
 	f.ETCD.Log = f.LoggerFor("ETCD")
 	f.ETCD.ServiceLabel = &f.ServiceLabel
 	f.ETCD.StatusCheck = &f.StatusCheck
-	//TODO f.EtcdDataSync = &f.
-	//TODO f.Generic.HealthRPC.Transport = &f.EtcdDataSync
+	f.ETCDDataSync.KvPlugin = &f.ETCD
+	f.ETCDDataSync.ServiceLabel = &f.ServiceLabel
+	f.StatusCheck.Transport = &f.ETCDDataSync
 
 	f.Kafka.Log = f.LoggerFor("Kafka")
 	f.Kafka.ServiceLabel = &f.ServiceLabel
 	f.Kafka.StatusCheck = &f.StatusCheck
-
-	f.injected = true
 
 	return nil
 }

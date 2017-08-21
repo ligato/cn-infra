@@ -12,14 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dbsync
+package kvdbsync
 
 import (
 	"time"
 
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/resync"
-	resync_types "github.com/ligato/cn-infra/datasync/resync/resyncevent"
 	"github.com/ligato/cn-infra/datasync/syncbase"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/logging/logroot"
@@ -31,65 +30,64 @@ type watchBrokerKeys struct {
 	changeChan chan datasync.ChangeEvent
 	resyncChan chan datasync.ResyncEvent
 	prefixes   []string
+	adapter    *watcher
+}
 
-	adapater *Adapter
+type watcher struct {
+	db   keyval.ProtoBroker
+	dbW  keyval.ProtoWatcher
+	base *syncbase.Watcher
 }
 
 // WatchAndResyncBrokerKeys calls etcdmux.Watch() & resync.Register()
 // This creates go routines for each tuple changeChan+resyncChan.
 func watchAndResyncBrokerKeys(resyncName string, changeChan chan datasync.ChangeEvent, resyncChan chan datasync.ResyncEvent,
-	adapter *Adapter, keyPrefixes ...string) (*watchBrokerKeys, error) {
+	adapter *watcher, keyPrefixes ...string) (*watchBrokerKeys, error) {
 
 	var wasError error
-	watchCh := make(chan keyval.BytesWatchResp)
 	resyncReg := resync.Register(resyncName)
 
 	keys := &watchBrokerKeys{
 		resyncName: resyncName,
 		changeChan: changeChan,
 		resyncChan: resyncChan,
-		adapater:   adapter,
+		adapter:    adapter,
 		prefixes:   keyPrefixes}
 
 	if resyncReg != nil {
 		go keys.watchResync(resyncReg)
 	}
 	if changeChan != nil {
-		go keys.watchChanges(watchCh)
-
-		err := adapter.dbW.Watch(watchCh, keys.prefixes...)
+		err := keys.adapter.dbW.Watch(keys.watchChanges, keys.prefixes...)
 		if err != nil {
 			wasError = err
 		}
-
 	}
 	return keys, wasError
 }
 
-func (keys *watchBrokerKeys) watchChanges(watchCh chan keyval.BytesWatchResp) {
-	for x := range watchCh {
-		var prev datasync.LazyValue
-		if datasync.Delete == x.GetChangeType() {
-			_, prev = keys.adapater.base.LastRev().Del(x.GetKey())
-		} else {
-			_, prev = keys.adapater.base.LastRev().PutWithRevision(x.GetKey(),
-				syncbase.NewKeyValBytes(x.GetKey(), x.GetValue(), x.GetRevision()))
-		}
-
-		ch := NewChangeWatchResp(x, prev)
-
-		logroot.StandardLogger().Debug("dbAdapter x:", x)
-		logroot.StandardLogger().Debug("dbAdapter ch:", *ch)
-
-		keys.changeChan <- ch
-		// TODO NICE-to-HAVE publish the err using the transport asynchronously
+func (keys *watchBrokerKeys) watchChanges(x keyval.ProtoWatchResp) {
+	var prev datasync.LazyValue
+	if datasync.Delete == x.GetChangeType() {
+		_, prev = keys.adapter.base.LastRev().Del(x.GetKey())
+	} else {
+		_, prev = keys.adapter.base.LastRev().PutWithRevision(x.GetKey(),
+			syncbase.NewKeyVal(x.GetKey(), x, x.GetRevision()))
 	}
+
+	ch := NewChangeWatchResp(x, prev)
+
+	logroot.StandardLogger().Debug("dbAdapter x:", x)
+	logroot.StandardLogger().Debug("dbAdapter ch:", *ch)
+
+	keys.changeChan <- ch
+	// TODO NICE-to-HAVE publish the err using the transport asynchronously
 }
 
 // resyncReg.StatusChan == Started => resync
-func (keys *watchBrokerKeys) watchResync(resyncReg resync_types.Registration) {
+func (keys *watchBrokerKeys) watchResync(resyncReg resync.Registration) {
 	for resyncStatus := range resyncReg.StatusChan() {
-		if resyncStatus.ResyncStatus() == resync_types.Started {
+		if resyncStatus.ResyncStatus() == resync.Started {
 			err := keys.resync()
 			if err != nil {
 				logroot.StandardLogger().Error("error getting resync data ", err) //we are not able to propagate it somewhere else
@@ -104,7 +102,7 @@ func (keys *watchBrokerKeys) watchResync(resyncReg resync_types.Registration) {
 func (keys *watchBrokerKeys) resync() error {
 	its := map[string] /*keyPrefix*/ datasync.KeyValIterator{}
 	for _, keyPrefix := range keys.prefixes {
-		it, err := keys.adapater.db.ListValues(keyPrefix)
+		it, err := keys.adapter.db.ListValues(keyPrefix)
 		if err != nil {
 			return err
 		}

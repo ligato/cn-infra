@@ -16,10 +16,9 @@ package grpcsync
 
 import (
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/datasync/rpc/grpcsync"
+	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/syncbase"
 	"github.com/ligato/cn-infra/servicelabel"
-	"github.com/ligato/cn-infra/datasync"
 )
 
 // PluginID used in the Agent Core flavors
@@ -27,13 +26,13 @@ const PluginID core.PluginName = "grpc-sync"
 
 // Plugin grpcsync implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
-	Adapter      datasync.TransportAdapter
+	Adapter      datasync.KeyValProtoWatcher
 	ServiceLabel servicelabel.ReaderAPI
 }
 
 // Init uses provided connection to build new transport adapter
 func (plugin *Plugin) Init() error {
-	grpcAdapter := grpcsync.NewAdapter()
+	grpcAdapter := NewAdapter()
 	plugin.Adapter = &syncbase.Adapter{Watcher: grpcAdapter}
 
 	return nil

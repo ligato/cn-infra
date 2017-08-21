@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package contains implementation that notifies previously registered plugins
+// Package resync contains implementation that notifies previously registered plugins
 // that resync procedure needs to start.
 package resync

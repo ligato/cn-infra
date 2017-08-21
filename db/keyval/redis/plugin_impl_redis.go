@@ -35,7 +35,7 @@ type Plugin struct {
 	ServiceLabel   servicelabel.ReaderAPI
 	Connection     keyval.KvBytesPlugin
 	ConfigFileName string
-	Skeleton       *plugin.Skeleton
+	*plugin.Skeleton
 }
 
 // Init is called on plugin startup. It establishes the connection to redis.

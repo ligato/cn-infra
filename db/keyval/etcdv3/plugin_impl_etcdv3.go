@@ -42,7 +42,7 @@ type Plugin struct {
 	ServiceLabel servicelabel.ReaderAPI
 	StatusCheck  *statuscheck.Plugin
 
-	skeleton *plugin.Skeleton
+	*plugin.Skeleton
 
 	ConfigFileName string
 }

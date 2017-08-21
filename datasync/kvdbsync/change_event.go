@@ -12,11 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dbsync
+package kvdbsync
 
 import (
-	"encoding/json"
-
 	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/syncbase"
@@ -24,14 +22,14 @@ import (
 )
 
 // NewChangeWatchResp creates a new instance of ChangeWatchResp.
-func NewChangeWatchResp(delegate keyval.BytesWatchResp, prevVal datasync.LazyValue) *ChangeWatchResp {
+func NewChangeWatchResp(delegate keyval.ProtoWatchResp, prevVal datasync.LazyValue) *ChangeWatchResp {
 	return &ChangeWatchResp{delegate, prevVal, &syncbase.DoneChannel{DoneChan: nil}}
 }
 
 // ChangeWatchResp is a structure that adapts the BytesWatchResp to the
 // datasync api.
 type ChangeWatchResp struct {
-	delegate keyval.BytesWatchResp
+	delegate keyval.ProtoWatchResp
 	prev     datasync.LazyValue
 	*syncbase.DoneChannel
 }
@@ -50,7 +48,7 @@ func (ev *ChangeWatchResp) GetKey() string {
 // in implemented interface datasync.ChangeEvent
 func (ev *ChangeWatchResp) GetValue(val proto.Message) (err error) {
 	if ev.delegate.GetChangeType() != datasync.Delete {
-		return json.Unmarshal(ev.delegate.GetValue(), val)
+		return ev.delegate.GetValue(val)
 	}
 
 	return nil

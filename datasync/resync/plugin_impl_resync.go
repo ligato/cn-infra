@@ -18,7 +18,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ligato/cn-infra/datasync/resync/resyncevent"
 	"github.com/ligato/cn-infra/datasync/resync/resynceventimpl"
 	"github.com/ligato/cn-infra/logging"
 

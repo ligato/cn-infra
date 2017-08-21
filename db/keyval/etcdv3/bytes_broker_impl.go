@@ -162,38 +162,15 @@ func (pdb *BytesBrokerWatcherEtcd) Delete(key string, opts ...datasync.DelOption
 	return deleteInternal(pdb.Logger, pdb.kv, pdb.opTimeout, key, opts...)
 }
 
-// Watch starts subscription for changes associated with the selected keys. KeyPrefix defined in constructor is prepended to all
-// keys in the argument list. The prefix is removed from the keys used in watch events. Watch events will be delivered to respChan.
-func (pdb *BytesBrokerWatcherEtcd) Watch(respChan chan keyval.BytesWatchResp, keys ...string) error {
-	var err error
-	for _, k := range keys {
-		err = watchInternal(pdb.Logger, pdb.watcher, pdb.closeCh, k, respChan)
-		if err != nil {
-			break
-		}
-	}
-	return err
-}
-
-func handleWatchEvent(log logging.Logger, respChan chan keyval.BytesWatchResp, ev *clientv3.Event) {
-
-	var resp keyval.BytesWatchResp
+func handleWatchEvent(log logging.Logger, resp func(keyval.BytesWatchResp), ev *clientv3.Event) {
 	if ev.Type == mvccpb.DELETE {
-		resp = NewBytesWatchDelResp(string(ev.Kv.Key), ev.Kv.ModRevision)
+		resp(NewBytesWatchDelResp(string(ev.Kv.Key), ev.Kv.ModRevision))
 	} else if ev.IsCreate() || ev.IsModify() {
 		if ev.Kv.Value != nil {
-			resp = NewBytesWatchPutResp(string(ev.Kv.Key), ev.Kv.Value, ev.Kv.ModRevision)
+			resp(NewBytesWatchPutResp(string(ev.Kv.Key), ev.Kv.Value, ev.Kv.ModRevision))
 			log.Debug("NewBytesWatchPutResp")
 		}
 	}
-	if resp != nil {
-		select {
-		case respChan <- resp:
-		case <-time.After(defaultOpTimeout):
-			log.Warn("Unable to deliver watch event before timeout.")
-		}
-	}
-
 }
 
 // NewTxn creates a new transaction. A transaction can
@@ -212,10 +189,10 @@ func newTxnInternal(kv clientv3.KV) keyval.BytesTxn {
 }
 
 // Watch starts subscription for changes associated with the selected keys. Watch events will be delivered to respChan.
-func (db *BytesConnectionEtcd) Watch(respChan chan keyval.BytesWatchResp, keys ...string) error {
+func (db *BytesConnectionEtcd) Watch(resp func(keyval.BytesWatchResp), keys ...string) error {
 	var err error
 	for _, k := range keys {
-		err = watchInternal(db.Logger, db.etcdClient, db.closeCh, k, respChan)
+		err = watchInternal(db.Logger, db.etcdClient, db.closeCh, k, resp)
 		if err != nil {
 			break
 		}
@@ -224,7 +201,7 @@ func (db *BytesConnectionEtcd) Watch(respChan chan keyval.BytesWatchResp, keys .
 }
 
 // watchInternal starts the watch subscription for key.
-func watchInternal(log logging.Logger, watcher clientv3.Watcher, closeCh chan struct{}, key string, respChan chan keyval.BytesWatchResp) error {
+func watchInternal(log logging.Logger, watcher clientv3.Watcher, closeCh chan struct{}, key string, resp func(keyval.BytesWatchResp)) error {
 
 	recvChan := watcher.Watch(context.Background(), key, clientv3.WithPrefix(), clientv3.WithPrevKV())
 
@@ -233,7 +210,7 @@ func watchInternal(log logging.Logger, watcher clientv3.Watcher, closeCh chan st
 			select {
 			case wresp := <-recvChan:
 				for _, ev := range wresp.Events {
-					handleWatchEvent(log, respChan, ev)
+					handleWatchEvent(log, resp, ev)
 				}
 			case <-closeCh:
 				log.WithField("key", key).Debug("Watch ended")

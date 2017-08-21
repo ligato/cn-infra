@@ -14,13 +14,29 @@
 
 package etcdv3
 
-import "github.com/ligato/cn-infra/datasync"
+import (
+	"github.com/ligato/cn-infra/datasync"
+	"github.com/ligato/cn-infra/db/keyval"
+)
 
 // BytesWatchPutResp is sent when new key-value pair has been inserted or the value is updated
 type BytesWatchPutResp struct {
 	key   string
 	value []byte
 	rev   int64
+}
+
+// Watch starts subscription for changes associated with the selected keys. KeyPrefix defined in constructor is prepended to all
+// keys in the argument list. The prefix is removed from the keys used in watch events. Watch events will be delivered to respChan.
+func (pdb *BytesBrokerWatcherEtcd) Watch(resp func(keyval.BytesWatchResp), keys ...string) error {
+	var err error
+	for _, k := range keys {
+		err = watchInternal(pdb.Logger, pdb.watcher, pdb.closeCh, k, resp)
+		if err != nil {
+			break
+		}
+	}
+	return err
 }
 
 // NewBytesWatchPutResp creates an instance of BytesWatchPutResp

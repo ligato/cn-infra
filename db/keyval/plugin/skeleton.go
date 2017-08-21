@@ -15,8 +15,6 @@
 package plugin
 
 import (
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/datasync/persisted/dbsync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/servicelabel"
@@ -46,13 +44,6 @@ func NewSkeleton(name string, serviceLabel servicelabel.ReaderAPI,
 // Init is called on plugin startup
 func (plugin *Skeleton) Init() (err error) {
 	plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.connection, &keyval.SerializerJSON{})
-
-	datasync.RegisterTransportOfDifferentAgent(func(microserviceLabel string) datasync.TransportAdapter {
-		dbOfDifferentAgent := plugin.connection.NewBroker(plugin.serviceLabel.GetDifferentAgentPrefix(microserviceLabel))
-		dbWOfDifferentAgent := plugin.connection.NewWatcher(plugin.serviceLabel.GetDifferentAgentPrefix(microserviceLabel))
-		return dbsync.NewAdapter(microserviceLabel, dbOfDifferentAgent, dbWOfDifferentAgent)
-	})
-
 	return err
 }
 

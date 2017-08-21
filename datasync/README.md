@@ -19,7 +19,7 @@ initiates full data resync in the same order as the other plugins have been regi
   
 ## Watch data API
 Watch data API is used by app plugin (see following diagram and the [example](../examples/datasync_watch_etcd)) to:
-1. Subscribe channels for particular data changes `WatchData()` 
+1. Subscribe channels for particular data changes `Watch()` 
 while being abstracted from a particular message source (data store, message bus or RPC)
 2. Process Full Data RESYNC (startup, for certain fault recovery) event reprocess whole data set.
    Feedback is given to the user of this API (e.g. successful configuration or an error) by callback.

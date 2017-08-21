@@ -39,6 +39,8 @@ type FlavorRPC struct {
 func (f *FlavorRPC) Inject() error {
 	if f.injected {
 		return nil
+	} else {
+		f.injected = true
 	}
 
 	f.FlavorLocal.Inject()
@@ -50,8 +52,6 @@ func (f *FlavorRPC) Inject() error {
 	f.HealthRPC.Log = f.LoggerFor("HealthRPC")
 	f.HealthRPC.HTTP = &f.HTTP
 	//f.HealthRPC.Transport todo inject local transport
-
-	f.injected = true
 
 	return nil
 }

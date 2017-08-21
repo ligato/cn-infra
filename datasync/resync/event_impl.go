@@ -19,18 +19,18 @@ import (
 )
 
 // NewStatusEvent is a constructor
-func NewStatusEvent(status ResyncStatus) StatusEvent {
+func NewStatusEvent(status Status) StatusEvent {
 	return &statusEvent{status: status, ackChan: make(chan time.Time)}
 }
 
 // StatusEvent is propagated to Plugins using GOLANG channel
 type statusEvent struct {
-	status  ResyncStatus
+	status  Status
 	ackChan chan time.Time
 }
 
-// ResyncStatus gets the status
-func (event *statusEvent) ResyncStatus() ResyncStatus {
+// Status gets the status
+func (event *statusEvent) ResyncStatus() Status {
 	return event.status
 }
 

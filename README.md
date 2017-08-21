@@ -62,7 +62,7 @@ Platform plugins in the current CN-Infra release provide functionality
 in one of the following functional areas:
 
 * **RPC** - allows to expose application's API via REST or gRPC:
-    * [HTTPmux](httpmux) -  HTTP requests and allows app plugins to define
+    * [REST](rpc/rest) -  HTTP requests and allows app plugins to define
       their own REST APIs.
         
 * **Data Stores** - provides a common data store API for app plugins (the 

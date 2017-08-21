@@ -16,7 +16,7 @@ package sql
 
 import "github.com/ligato/cn-infra/datasync"
 
-// KeyValProtoWatcher define API for monitoring changes in a datastore
+// Watcher define API for monitoring changes in a datastore
 type Watcher interface {
 	// Watch starts to monitor changes in data store. Watch events will be delivered to the callback.
 	Watch(callback func(WatchResp), statement ...string) error

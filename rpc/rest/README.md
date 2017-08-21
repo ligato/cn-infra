@@ -1,11 +1,11 @@
 # HTTPmux
 
-The `HTTPmux` is a infrastructure Plugin which allows app plugins 
+The `REST Plugin` is a infrastructure Plugin which allows app plugins 
 to handle HTTP requests (see the following diagram) in this sequence:
 1. httpmux starts the HTTP server in its own goroutine
-2. Plugins register their handlers with `httpmux`. To service HTTP requests, 
+2. Plugins register their handlers with `REST Plugin`. To service HTTP requests, 
    a plugin must first implement a handler function and register it at a
-   given URL path using the `RegisterHTTPHandler` method. `httpmux` uses 
+   given URL path using the `RegisterHTTPHandler` method. `REST Plugin` uses 
    an  an HTTP request  multiplexer from the `gorilla/mux` package to 
    register the HTTP handlers by the specified URL path. 
 3. HTPP server routes HTTP requests to their respective registered handlers 
@@ -20,7 +20,7 @@ to handle HTTP requests (see the following diagram) in this sequence:
 
 **Example**
 
-The following example demonstrates the usage of the `httpmux` plugin API:
+The following example demonstrates the usage of the `REST Plugin` plugin API:
 ```
 // httpExampleHandler returns a very simple HTTP request handler.
 func httpExampleHandler(formatter *render.Render) http.HandlerFunc {
@@ -37,7 +37,7 @@ func httpExampleHandler(formatter *render.Render) http.HandlerFunc {
 httpmux.RegisterHTTPHandler("/example", httpExampleHandler, "GET")
 ```
 
-Once the handler is registered with `httpmux` and the agent is running, 
+Once the handler is registered with `REST Plugin` and the agent is running, 
 you can use `curl` to verify that it is operating properly:
 ```
 $ curl -X GET http://localhost:9191/example

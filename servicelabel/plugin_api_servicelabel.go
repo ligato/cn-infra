@@ -21,6 +21,8 @@ var agentPrefix = "/vnf-agent/"
 // MicroserviceLabelEnvVar label this is inferred from the flag name
 const MicroserviceLabelEnvVar = "MICROSERVICE_LABEL"
 
+// ReaderAPI allows to read agent micorservice label with prefix.
+// Reason for doing this is to have prefix for all keys of the agent.
 type ReaderAPI interface {
 	// GetAgentLabel returns string that is supposed to be used to distinguish
 	// (ETCD) key prefixes for particular VNF (particular VPP Agent configuration)

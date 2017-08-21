@@ -18,7 +18,11 @@ import (
 	"io"
 
 	"github.com/golang/protobuf/proto"
+	"time"
 )
+
+// DefaultNotifTimeout for delivery of notification
+const DefaultNotifTimeout = 2 * time.Second
 
 // KeyValProtoWatcher is used by plugin to subscribe to both data change events and
 // data resync events. Multiple keys can be specified, the caller will

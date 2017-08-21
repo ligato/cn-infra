@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dbsync
+package kvdbsync
 
 import (
 	"github.com/ligato/cn-infra/datasync"
@@ -21,20 +21,20 @@ import (
 )
 
 // NewIterator creates a new instance of Iterator.
-func NewIterator(delegate keyval.BytesKeyValIterator) *Iterator {
+func NewIterator(delegate keyval.ProtoKeyValIterator) *Iterator {
 	return &Iterator{delegate: delegate}
 }
 
 // Iterator adapts the db_proto.KeyValIterator to the datasync.KeyValIterator
 type Iterator struct {
-	delegate keyval.BytesKeyValIterator
+	delegate keyval.ProtoKeyValIterator
 }
 
 // GetNext just delegate GetNext
 func (it *Iterator) GetNext() (kv datasync.KeyVal, stop bool) {
-	kvbytes, stop := it.delegate.GetNext()
+	kv, stop = it.delegate.GetNext()
 	if stop {
 		return nil, stop
 	}
-	return syncbase.NewKeyValBytes(kvbytes.GetKey(), kvbytes.GetValue(), kvbytes.GetRevision()), stop
+	return kv, stop
 }

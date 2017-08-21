@@ -30,7 +30,7 @@ func NewWatcher() *Watcher {
 	return &Watcher{subscriptions: map[string]*Subscription{}, access: sync.Mutex{}, lastRev: NewLatestRev()}
 }
 
-// KeyValProtoWatcher propagates events using channels.
+// Watcher propagates events using channels.
 type Watcher struct {
 	subscriptions map[string]*Subscription
 	access        sync.Mutex
@@ -85,7 +85,7 @@ func (adapter *Watcher) WatchDataBase(resyncName string, changeChan chan datasyn
 }
 
 // WatchData just appends channels
-func (adapter *Watcher) WatchData(resyncName string, changeChan chan datasync.ChangeEvent,
+func (adapter *Watcher) Watch(resyncName string, changeChan chan datasync.ChangeEvent,
 	resyncChan chan datasync.ResyncEvent, keyPrefixes ...string) (datasync.WatchRegistration, error) {
 	return adapter.WatchDataBase(resyncName, changeChan, resyncChan, keyPrefixes...)
 }

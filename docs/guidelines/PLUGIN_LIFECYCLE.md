@@ -97,7 +97,7 @@ func connectResouce() (resource io.Closer, err error) {
 
 func (plugin * PluginXY) AfterInit() error {
     // subscribe plugin.channel for watching data (to really receive the data)
-    plugin.Watcher.WatchData("watchingXY", plugin.dataChange, plugin.dataResync, "keysXY")
+    plugin.Watcher.Watch("watchingXY", plugin.dataChange, plugin.dataResync, "keysXY")
 
     return nil
 }

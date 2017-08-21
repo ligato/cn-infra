@@ -16,7 +16,6 @@ package resync
 
 import (
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/datasync/resync/resyncevent"
 )
 
 // PluginID used in the Agent Core flavors
