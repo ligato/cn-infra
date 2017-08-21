@@ -36,7 +36,7 @@ type Adapter struct {
 	base *syncbase.Watcher
 }
 
-// Watch using ETCD or any other default transport.
+// WatchData using ETCD or any other default transport.
 func (adapter *Adapter) Watch(resyncName string, changeChan chan datasync.ChangeEvent,
 	resyncChan chan datasync.ResyncEvent, keyPrefixes ...string) (datasync.WatchDataRegistration, error) {
 
