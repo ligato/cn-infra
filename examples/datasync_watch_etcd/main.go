@@ -83,7 +83,7 @@ const PluginID core.PluginName = "example-plugin"
 type ExamplePlugin struct {
 	ServiceLabel        servicelabel.ReaderAPI
 	exampleConfigurator *ExampleConfigurator       // Plugin configurator
-	transport           datasync.TransportAdapter  // To access ETCD data
+	transport           datasync.KeyValProtoWatcher  // To access ETCD data
 	changeChannel       chan datasync.ChangeEvent  // Channel used by the watcher for change events
 	resyncChannel       chan datasync.ResyncEvent  // Channel used by the watcher for resync events
 	watchDataReg        datasync.WatchRegistration // To subscribe on data change/resync events
