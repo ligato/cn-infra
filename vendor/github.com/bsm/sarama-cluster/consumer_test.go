@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Consumer", func() {
