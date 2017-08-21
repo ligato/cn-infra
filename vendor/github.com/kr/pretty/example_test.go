@@ -2,6 +2,7 @@ package pretty_test
 
 import (
 	"fmt"
+
 	"github.com/kr/pretty"
 )
 

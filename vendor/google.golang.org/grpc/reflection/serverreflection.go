@@ -43,8 +43,8 @@ To register server reflection on a gRPC server:
 	s := grpc.NewServer()
 	pb.RegisterYourOwnServer(s, &server{})
 
-	// Register reflection service on gRPC server.
-	reflection.Register(s)
+	// put reflection service on gRPC server.
+	reflection.put(s)
 
 	s.Serve(lis)
 

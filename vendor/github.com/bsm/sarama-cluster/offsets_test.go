@@ -1,10 +1,5 @@
 package cluster
 
-import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-)
-
 var _ = Describe("OffsetStash", func() {
 	var subject *OffsetStash
 
