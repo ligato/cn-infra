@@ -20,7 +20,7 @@
 //
 //   +-----+    --> (Broker)   +------------------------+  -->  CRUD      +-------+
 //   | app |                   |  BytesConnectionRedis  |                 | Redis |
-//   +-----+    <-- (Watcher)  +------------------------+  <--  events    +-------+
+//   +-----+    <-- (KeyValProtoWatcher)  +------------------------+  <--  events    +-------+
 //
 // The code snippets below provide examples to help you get started.  For simplicity, error
 // handling is omitted.
@@ -118,7 +118,7 @@
 //       case r := <-watchChan:
 //           switch r.GetChangeType() {
 //           case datasync.Put:
-//               log.Infof("Watcher received %v: %s=%s", r.GetChangeType(),
+//               log.Infof("KeyValProtoWatcher received %v: %s=%s", r.GetChangeType(),
 //                         r.GetKey(), string(r.GetValue()))
 //           case datasync.Delete:
 //               ...

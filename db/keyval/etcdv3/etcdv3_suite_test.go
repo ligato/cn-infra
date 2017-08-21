@@ -254,8 +254,7 @@ func TestNewWatcher(t *testing.T) {
 
 func TestWatch(t *testing.T) {
 	gomega.RegisterTestingT(t)
-	respChan := make(chan keyval.BytesWatchResp)
-	err := pluginDataBroker.Watch(respChan, "key")
+	err := pluginDataBroker.Watch(func(keyval.BytesWatchResp) {}, "key")
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 

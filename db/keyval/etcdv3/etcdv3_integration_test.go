@@ -20,11 +20,11 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/etcdserver/api/v3client"
+	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3/mocks"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/onsi/gomega"
-	"github.com/ligato/cn-infra/datasync"
 )
 
 const (
@@ -94,7 +94,7 @@ func testPrefixedWatcher(t *testing.T) {
 	defer teardownBrokers()
 
 	watchCh := make(chan keyval.BytesWatchResp)
-	err := prefixedWatcher.Watch(watchCh, watchKey)
+	err := prefixedWatcher.Watch(keyval.ToChan(watchCh), watchKey)
 	gomega.Expect(err).To(gomega.BeNil())
 
 	wg := sync.WaitGroup{}

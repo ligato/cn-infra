@@ -18,15 +18,15 @@ import (
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/ligato/cn-infra/health/probe"
-	"github.com/ligato/cn-infra/httpmux"
 	"github.com/ligato/cn-infra/logging/logmanager"
+	"github.com/ligato/cn-infra/rpc/rest"
 )
 
 // FlavorRPC glues together multiple plugins that are useful for almost every micro-service
 type FlavorRPC struct {
 	local.FlavorLocal
 
-	HTTP httpmux.Plugin
+	HTTP rest.Plugin
 	//TODO GRPC (& enable/disable using config)
 
 	HealthRPC probe.Plugin
@@ -39,6 +39,8 @@ type FlavorRPC struct {
 func (f *FlavorRPC) Inject() error {
 	if f.injected {
 		return nil
+	} else {
+		f.injected = true
 	}
 
 	f.FlavorLocal.Inject()
@@ -50,8 +52,6 @@ func (f *FlavorRPC) Inject() error {
 	f.HealthRPC.Log = f.LoggerFor("HealthRPC")
 	f.HealthRPC.HTTP = &f.HTTP
 	//f.HealthRPC.Transport todo inject local transport
-
-	f.injected = true
 
 	return nil
 }

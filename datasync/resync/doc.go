@@ -12,11 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package resync ties datasync into the lifecycle of CN-Infra apps. In
-// particular the package implements:
-//  1. Data resynchronization (resync) event after the start/restart of
-//     the CN-Infra app or when ther app's connectivity to external data
-//     sources/sinks is lost and subsequently restored;
-//  2. Data resynchronization of the datasync transport upon Init()
-//     and Close()
+// Package resync contains implementation that notifies previously registered plugins
+// that resync procedure needs to start.
 package resync

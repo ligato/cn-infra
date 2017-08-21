@@ -14,9 +14,9 @@ You can download docker images from:
 * [https://github.com/Grokzen/docker-redis-cluster](https://github.com/Grokzen/docker-redis-cluster) (Redis standalone and cluster)
 
 Modify API configuration to match your environment. See sample configurations to use with the API here:
-* [node-client.yaml](https://github.com/ligato/cn-infra/blob/master/db/keyval/redis/examples/node-client.yaml)
-* [sentinel-client.yaml](https://github.com/ligato/cn-infra/blob/master/db/keyval/redis/examples/sentinel-client.yaml)
-* [cluster-client.yaml](https://github.com/ligato/cn-infra/blob/master/db/keyval/redis/examples/cluster-client.yaml)
+* [node-client.yaml](node-client.yaml)
+* [sentinel-client.yaml](sentinel-client.yaml)
+* [cluster-client.yaml](cluster-client.yaml)
 
 ## Simple Example
   * Straight API calls, no particular scenario

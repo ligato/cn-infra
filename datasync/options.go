@@ -14,7 +14,10 @@
 
 package datasync
 
-import "time"
+import (
+	"time"
+	"github.com/ligato/cn-infra/logging"
+)
 
 // PutOption defines options for Put operation. The particular options can be found below.
 type PutOption interface {
@@ -42,4 +45,25 @@ type WithPrefixOpt struct {
 // WithPrefix creates new instance of WithPrefixOpt.
 func WithPrefix() *WithPrefixOpt {
 	return &WithPrefixOpt{}
+}
+
+
+// WithTimeoutOpt defines the maximum time that is attempted to deliver notification.
+type WithTimeoutOpt struct {
+	Timeout time.Duration
+}
+
+// WithTimeout creates an option for ToChan function that defines a timeout for notification delivery.
+func WithTimeout(timeout time.Duration) *WithTimeoutOpt {
+	return &WithTimeoutOpt{timeout}
+}
+
+// WithLoggerOpt defines a logger that logs if delivery of notification is unsuccessful.
+type WithLoggerOpt struct {
+	Logger logging.Logger
+}
+
+// WithLogger creates an option for ToChan function that specifies a logger to be used.
+func WithLogger(logger logging.Logger) *WithLoggerOpt {
+	return &WithLoggerOpt{logger}
 }

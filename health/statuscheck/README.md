@@ -3,7 +3,7 @@
 The `statuscheck` infrastructure plugin monitors the overall status of a 
 CN-Infra based app and form partial statuses of agents plugins.
 The status is exposed to external clients via [ETCD - datasync](../../datasync) 
-and [HTTP](../../httpmux), as shown in the following diagram:
+and [HTTP](../../rpc/rest), as shown in the following diagram:
 
 ![status check](../../docs/imgs/status_check.png)
 

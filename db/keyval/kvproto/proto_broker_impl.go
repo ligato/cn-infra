@@ -32,11 +32,6 @@ type protoBroker struct {
 	serializer keyval.Serializer
 }
 
-type protoWatcher struct {
-	watcher    keyval.BytesWatcher
-	serializer keyval.Serializer
-}
-
 // protoKeyValIterator is an iterator returned by ListValues call
 type protoKeyValIterator struct {
 	delegate   keyval.BytesKeyValIterator
@@ -137,18 +132,10 @@ func (pdb *protoBroker) Delete(key string, opts ...datasync.DelOption) (existed 
 }
 
 // Watch subscribes for changes in datastore associated with the key. respChannel is used for delivery watch events
-func (db *ProtoWrapper) Watch(resp chan keyval.ProtoWatchResp, keys ...string) error {
-	byteCh := make(chan keyval.BytesWatchResp, 0)
-	err := db.broker.Watch(byteCh, keys...)
-	if err != nil {
-		return err
-	}
-	go func() {
-		for msg := range byteCh {
-			resp <- NewWatchResp(db.serializer, msg)
-		}
-	}()
-	return nil
+func (db *ProtoWrapper) Watch(resp func(keyval.ProtoWatchResp), keys ...string) error {
+	return db.broker.Watch(func(msg keyval.BytesWatchResp) {
+		resp(NewWatchResp(db.serializer, msg))
+	}, keys...)
 }
 
 // GetValue retrieves one key-value item from the datastore. The item
@@ -254,21 +241,6 @@ func (ctx *protoKeyIterator) Close() error {
 // GetNext returns the following item from the result set. If data was returned, found is set to true.
 func (ctx *protoKeyIterator) GetNext() (key string, rev int64, stop bool) {
 	return ctx.delegate.GetNext()
-}
-
-// Watch for changes in datastore respChannel is used for receiving watch events
-func (pdb *protoWatcher) Watch(resp chan keyval.ProtoWatchResp, keys ...string) error {
-	byteCh := make(chan keyval.BytesWatchResp, 0)
-	err := pdb.watcher.Watch(byteCh, keys...)
-	if err != nil {
-		return err
-	}
-	go func() {
-		for msg := range byteCh {
-			resp <- NewWatchResp(pdb.serializer, msg)
-		}
-	}()
-	return nil
 }
 
 // GetValue returns the value of the pair

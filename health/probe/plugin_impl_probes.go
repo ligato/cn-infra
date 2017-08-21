@@ -21,7 +21,7 @@ import (
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/health/statuscheck/model/status"
-	"github.com/ligato/cn-infra/httpmux"
+	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
@@ -53,7 +53,7 @@ type Plugin struct {
 	StatusCheck statuscheck.AgentStatusReader
 	Log         logging.PluginLogger
 
-	HTTP *httpmux.Plugin
+	HTTP *rest.Plugin
 
 	customProbe bool
 }
@@ -64,7 +64,7 @@ func (p *Plugin) Init() (err error) {
 
 	if p.HTTP.HTTPport != httpPort {
 		p.Log.Warnf("Custom port: %v", httpPort)
-		p.HTTP = &httpmux.Plugin{
+		p.HTTP = &rest.Plugin{
 			Log:      p.Log,
 			HTTPport: httpPort,
 		}

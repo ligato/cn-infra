@@ -92,14 +92,14 @@ func (resp *BytesWatchDelResp) GetRevision() int64 {
 
 // Watch starts subscription for changes associated with the selected key. Watch events will be delivered to respChan.
 // Subscription can be canceled by StopWatch call.
-func (db *BytesConnectionRedis) Watch(respChan chan keyval.BytesWatchResp, keys ...string) error {
+func (db *BytesConnectionRedis) Watch(resp func(keyval.BytesWatchResp), keys ...string) error {
 	if db.closed {
 		return fmt.Errorf("Watch(%v) called on a closed connection", keys)
 	}
-	return watch(db, respChan, db.closeCh, nil, nil, keys...)
+	return watch(db, resp, db.closeCh, nil, nil, keys...)
 }
 
-func watch(db *BytesConnectionRedis, respChan chan<- keyval.BytesWatchResp, closeChan <-chan struct{},
+func watch(db *BytesConnectionRedis, resp func(keyval.BytesWatchResp), closeChan <-chan struct{},
 	addPrefix func(key string) string, trimPrefix func(key string) string, keys ...string) error {
 	patterns := make([]string, len(keys))
 	for i, k := range keys {
@@ -109,7 +109,7 @@ func watch(db *BytesConnectionRedis, respChan chan<- keyval.BytesWatchResp, clos
 		patterns[i] = keySpaceEventPrefix + wildcard(k)
 	}
 	pubSub := db.client.PSubscribe(patterns...)
-	startWatch(db, pubSub, respChan, trimPrefix, patterns...)
+	startWatch(db, pubSub, resp, trimPrefix, patterns...)
 	go func() {
 		_, active := <-closeChan
 		if !active {
@@ -127,7 +127,7 @@ func watch(db *BytesConnectionRedis, respChan chan<- keyval.BytesWatchResp, clos
 }
 
 func startWatch(db *BytesConnectionRedis, pubSub *goredis.PubSub,
-	respChan chan<- keyval.BytesWatchResp, trimPrefix func(key string) string, patterns ...string) {
+	resp func(keyval.BytesWatchResp), trimPrefix func(key string) string, patterns ...string) {
 	go func() {
 		defer func() { db.Debugf("Watch(%v) exited", patterns) }()
 		db.Debugf("start Watch(%v)", patterns)
@@ -161,12 +161,12 @@ func startWatch(db *BytesConnectionRedis, pubSub *goredis.PubSub,
 				if trimPrefix != nil {
 					key = trimPrefix(key)
 				}
-				respChan <- NewBytesWatchPutResp(key, val, rev)
+				resp(NewBytesWatchPutResp(key, val, rev))
 			case "del", "expired":
 				if trimPrefix != nil {
 					key = trimPrefix(key)
 				}
-				respChan <- NewBytesWatchDelResp(key, 0)
+				resp(NewBytesWatchDelResp(key, 0))
 			default:
 				db.Debugf("%T: %s %s %s -- not handled", msg, msg.Pattern, msg.Channel, msg.Payload)
 			}
@@ -175,9 +175,9 @@ func startWatch(db *BytesConnectionRedis, pubSub *goredis.PubSub,
 }
 
 // Watch starts subscription for changes associated with the selected key. Watch events will be delivered to respChan.
-func (pdb *BytesBrokerWatcherRedis) Watch(respChan chan keyval.BytesWatchResp, keys ...string) error {
+func (pdb *BytesBrokerWatcherRedis) Watch(resp func(keyval.BytesWatchResp), keys ...string) error {
 	if pdb.delegate.closed {
 		return fmt.Errorf("Watch(%v) called on a closed connection", keys)
 	}
-	return watch(pdb.delegate, respChan, pdb.closeCh, pdb.addPrefix, pdb.trimPrefix, keys...)
+	return watch(pdb.delegate, resp, pdb.closeCh, pdb.addPrefix, pdb.trimPrefix, keys...)
 }

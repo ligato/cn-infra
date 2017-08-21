@@ -445,10 +445,10 @@ func consumeEvent(respChan chan keyval.BytesWatchResp, eventCount int) {
 		if ok {
 			switch r.GetChangeType() {
 			case datasync.Put:
-				log.Debugf("Watcher received %v: %s=%s (rev %d)",
+				log.Debugf("KeyValProtoWatcher received %v: %s=%s (rev %d)",
 					r.GetChangeType(), r.GetKey(), string(r.GetValue()), r.GetRevision())
 			case datasync.Delete:
-				log.Debugf("Watcher received %v: %s (rev %d)",
+				log.Debugf("KeyValProtoWatcher received %v: %s (rev %d)",
 					r.GetChangeType(), r.GetKey(), r.GetRevision())
 				r.GetValue()
 			}
@@ -529,7 +529,7 @@ func TestBrokerClosed(t *testing.T) {
 	txn = bytesConn.NewTxn()
 	gomega.Expect(txn).Should(gomega.BeNil())
 
-	bytesConn.Watch(respChan, "key")
+	bytesConn.Watch(keyval.ToChan(respChan), "key")
 
 	// bytesBrokerWatcher
 	err = bytesBrokerWatcher.Put("any", []byte("any"))
@@ -551,7 +551,7 @@ func TestBrokerClosed(t *testing.T) {
 	txn2 = bytesBrokerWatcher.NewTxn()
 	gomega.Expect(txn2).Should(gomega.BeNil())
 
-	bytesBrokerWatcher.Watch(respChan, "key")
+	bytesBrokerWatcher.Watch(keyval.ToChan(respChan), "key")
 
 	err = safeclose.Close(bytesConn)
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())

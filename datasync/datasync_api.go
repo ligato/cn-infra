@@ -18,23 +18,20 @@ import (
 	"io"
 
 	"github.com/golang/protobuf/proto"
+	"time"
 )
 
-// TransportAdapter is an high-level abstraction of a transport to a remote
-// data back end ETCD/Kafka/Rest/GRPC, used by Agent plugins to access data
-// in a uniform & consistent way.
-type TransportAdapter interface {
-	Watcher
-	KeyProtoValWriter
-}
+// DefaultNotifTimeout for delivery of notification
+const DefaultNotifTimeout = 2 * time.Second
 
-// Watcher is used by plugin to subscribe to both data change events and
+// KeyValProtoWatcher is used by plugin to subscribe to both data change events and
 // data resync events. Multiple keys can be specified, the caller will
 // be subscribed to events on each key.
-type Watcher interface {
+// See README.md for description of the Events.
+type KeyValProtoWatcher interface {
 	// Watch using ETCD or any other data transport
 	Watch(resyncName string, changeChan chan ChangeEvent, resyncChan chan ResyncEvent,
-		keyPrefixes ...string) (WatchDataRegistration, error)
+		keyPrefixes ...string) (WatchRegistration, error)
 }
 
 // KeyProtoValWriter allows plugins to push their data changes to a data store.
@@ -43,8 +40,8 @@ type KeyProtoValWriter interface {
 	Put(key string, data proto.Message, opts ...PutOption) error
 }
 
-// WatchDataRegistration is a facade that avoids importing the io.Closer package
+// WatchRegistration is a facade that avoids importing the io.Closer package
 // into Agent plugin implementations.
-type WatchDataRegistration interface {
+type WatchRegistration interface {
 	io.Closer
 }

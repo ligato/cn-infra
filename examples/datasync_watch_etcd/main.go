@@ -81,12 +81,12 @@ const PluginID core.PluginName = "example-plugin"
 
 // ExamplePlugin implements Plugin interface which is used to pass custom plugin instances to the agent
 type ExamplePlugin struct {
-	ServiceLabel        *servicelabel.Plugin
-	exampleConfigurator *ExampleConfigurator           // Plugin configurator
-	transport           datasync.TransportAdapter      // To access ETCD data
-	changeChannel       chan datasync.ChangeEvent      // Channel used by the watcher for change events
-	resyncChannel       chan datasync.ResyncEvent      // Channel used by the watcher for resync events
-	watchDataReg        datasync.WatchDataRegistration // To subscribe on data change/resync events
+	ServiceLabel        servicelabel.ReaderAPI
+	exampleConfigurator *ExampleConfigurator       // Plugin configurator
+	transport           datasync.KeyValProtoWatcher  // To access ETCD data
+	changeChannel       chan datasync.ChangeEvent  // Channel used by the watcher for change events
+	resyncChannel       chan datasync.ResyncEvent  // Channel used by the watcher for resync events
+	watchDataReg        datasync.WatchRegistration // To subscribe on data change/resync events
 }
 
 // Init is the entry point into the plugin that is called by Agent Core when the Agent is coming up.
@@ -126,7 +126,7 @@ func (plugin *ExamplePlugin) Close() error {
 // ExampleConfigurator usually initializes configuration-specific fields or other tasks (e.g. defines GOVPP channels
 // if they are used, checks VPP message compatibility etc.)
 type ExampleConfigurator struct {
-	ServiceLabel *servicelabel.Plugin
+	ServiceLabel servicelabel.ReaderAPI
 }
 
 // Init members of configurator
@@ -277,13 +277,13 @@ func etcdKeyPrefixLabel(agentLabel string, index string) string {
 }
 
 /***********
- * Watcher *
+ * KeyValProtoWatcher *
  ***********/
 
 // Consumer (watcher) is subscribed to watch on data store changes. Change arrives via data change channel and
 // its key is parsed
 func (plugin *ExamplePlugin) consumer() {
-	log.Print("Watcher started")
+	log.Print("KeyValProtoWatcher started")
 	for {
 		select {
 		case dataChng := <-plugin.changeChannel:
@@ -309,7 +309,7 @@ func (plugin *ExamplePlugin) consumer() {
 	}
 }
 
-// Watcher is subscribed to data change channel and resync channel. ETCD transport adapter is used for this purpose
+// KeyValProtoWatcher is subscribed to data change channel and resync channel. ETCD transport adapter is used for this purpose
 func (plugin *ExamplePlugin) subscribeWatcher() (err error) {
 	plugin.watchDataReg, err = plugin.transport.
 		Watch("Example etcd plugin", plugin.changeChannel, plugin.resyncChannel, etcdKeyPrefix(plugin.ServiceLabel.GetAgentLabel()))
@@ -317,7 +317,7 @@ func (plugin *ExamplePlugin) subscribeWatcher() (err error) {
 		return err
 	}
 
-	log.Info("Watcher subscribed")
+	log.Info("KeyValProtoWatcher subscribed")
 
 	return nil
 }

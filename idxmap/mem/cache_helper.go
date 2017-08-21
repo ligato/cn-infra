@@ -15,7 +15,7 @@ type CacheHelper struct {
 }
 
 // DoWatching is supposed to be used as a go routine. It select the data from channels in arguments.
-func (helper *CacheHelper) DoWatching(resyncName string, watcher datasync.Watcher) {
+func (helper *CacheHelper) DoWatching(resyncName string, watcher datasync.KeyValProtoWatcher) {
 	changeChan := make(chan datasync.ChangeEvent, 100)
 	resyncChan := make(chan datasync.ResyncEvent, 100)
 

@@ -5,8 +5,8 @@ import (
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/flavors/rpc"
-	"github.com/ligato/cn-infra/httpmux"
-	"github.com/ligato/cn-infra/httpmux/mock"
+	"github.com/ligato/cn-infra/rpc/rest"
+	"github.com/ligato/cn-infra/rpc/rest/mock"
 	"github.com/onsi/gomega"
 )
 
@@ -27,7 +27,7 @@ func (t *suiteFlavorRPC) Setup(flavor core.Flavor, golangT *testing.T) {
 func MockFlavorRPC() (*rpc.FlavorRPC, *mock.HTTPMock) {
 	httpMock := &mock.HTTPMock{}
 	return &rpc.FlavorRPC{
-		HTTP: *httpmux.FromExistingServer(httpMock.SetHandler),
+		HTTP: *rest.FromExistingServer(httpMock.SetHandler),
 	}, httpMock
 }
 

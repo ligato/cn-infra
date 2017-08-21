@@ -117,7 +117,7 @@ func runSimpleExmple() {
 	}
 
 	respChan := make(chan keyval.BytesWatchResp, 10)
-	err = watcher.Watch(respChan, keyPrefix)
+	err = watcher.Watch(keyval.ToChan(respChan), keyPrefix)
 	if err != nil {
 		log.Error(err.Error())
 	}
@@ -128,9 +128,9 @@ func runSimpleExmple() {
 				if ok {
 					switch r.GetChangeType() {
 					case datasync.Put:
-						log.Infof("Watcher received %v: %s=%s", r.GetChangeType(), r.GetKey(), string(r.GetValue()))
+						log.Infof("KeyValProtoWatcher received %v: %s=%s", r.GetChangeType(), r.GetKey(), string(r.GetValue()))
 					case datasync.Delete:
-						log.Infof("Watcher received %v: %s", r.GetChangeType(), r.GetKey())
+						log.Infof("KeyValProtoWatcher received %v: %s", r.GetChangeType(), r.GetKey())
 					}
 				} else {
 					log.Error("Something wrong with respChan... bail out")

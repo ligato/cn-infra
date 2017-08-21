@@ -6,4 +6,4 @@ A particular datastore plugin uses this skeleton.
 **API**
 
 Implements the interface:
-- [`KvPlugin`](../plugin_api.go)
+- [`KvPlugin`](../plugin_api_keyval.go)
