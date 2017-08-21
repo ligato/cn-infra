@@ -88,7 +88,7 @@ define build_examples_only
     @echo "# building examples"
     @cd examples/etcdv3_broker && make build
     @cd examples/redis_broker && make build
-    @cd examples/cassandra_broker && make build
+    @cd examples/cassandra_broker && go build
     @cd examples/log_logrus && make build
     @cd examples/kafka_broker && make build
     @echo "# done"

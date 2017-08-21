@@ -1,7 +1,7 @@
 # Phonebook example
 
 The etcd library is showcased on phonebook example. Phonebook entry - Contact is
-modelled by [protofile](phonebook/model/phonebook/phonebook.proto). Foreach entry name, company and phone
+modelled by [protofile](model/phonebook/phonebook.proto). Foreach entry name, company and phone
 number is stored.
 
 To generate go structs from proto file run:
@@ -27,7 +27,7 @@ The example contains three programs:
 ## View
 View showcase the data retrieval. It prints the content of the phonebook
 ```
-$go run phonebook/view/view.go --cfg etcd.conf
+$go run view/view.go --cfg etcd.conf
 Phonebook:
     John Doe
         Inc.
@@ -41,25 +41,25 @@ Revision 22
 ## Editor
 Editor allows to add
 ```
-$go run phonebook/editor/editor.go --cfg etcd.conf put "Peter Smith" "Company xy" "+48621896"
+$go run editor/editor.go --cfg etcd.conf put "Peter Smith" "Company xy" "+48621896"
 Saving  /phonebook/PeterSmith
 ```
 add multiple contacts in one transaction
 ```
-$go run phonebook/editor/editor.go puttxn '[{"name":"John Doe","company":"XY","phonenumber":"465464"}, {"name":"Tom New","company":"Comp","phonenumber":"123456"}]'
+$go run editor/editor.go puttxn '[{"name":"John Doe","company":"XY","phonenumber":"465464"}, {"name":"Tom New","company":"Comp","phonenumber":"123456"}]'
 Saving  /phonebook/JohnDoe
 Saving  /phonebook/TomNew
 ```
 and remove contacts from the phonebook
 ```
-$go run phonebook/editor/editor.go --cfg etcd.conf delete "John Doe"
+$go run editor/editor.go --cfg etcd.conf delete "John Doe"
 Removing  /phonebook/JohnDoe
 ```
 
 ## Watcher
 Watcher monitors and logs the changes in the phonebook.
 ```
-$go run phonebook/watcher/watcher.go 
+$go run watcher/watcher.go 
 Watching the key:  /phonebook/
 Creating  /phonebook/PeterSmith
         Peter Smith
