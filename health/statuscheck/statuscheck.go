@@ -60,8 +60,8 @@ type Plugin struct {
 	LogFactory logging.LogFactory
 	HTTP       *httpmux.Plugin
 	Probe      *httpmux.HTTPPort
+	Transport *datasync.TransportAdapter
 
-	Transport datasync.TransportAdapter
 	access    sync.Mutex                // lock for the Plugin data
 
 	agentStat   *status.AgentStatus             // overall agent status
@@ -92,9 +92,6 @@ func (p *Plugin) Init() error {
 	}
 
 	log.Warnf("Starting statuscheck on port %v", p.HTTP.HTTPport.Port)
-
-	// init data transport
-	p.Transport = datasync.GetTransport()
 
 	// write initial status data into ETCD
 	p.agentStat = &status.AgentStatus{
@@ -133,6 +130,10 @@ func (p *Plugin) Init() error {
 func (p *Plugin) AfterInit() error {
 	p.access.Lock()
 	defer p.access.Unlock()
+
+	if p.Transport == nil {
+		log.Warnf("Statuscheck: no transport adapter available")
+	}
 
 	if p.HTTP != nil {
 		log.Debug("Initializing k8s health check probes.")
@@ -238,8 +239,9 @@ func (p *Plugin) ReportStateChange(pluginName core.PluginName, state PluginState
 // publishAgentData writes the current global agent state into ETCD.
 func (p *Plugin) publishAgentData() error {
 	p.agentStat.LastUpdate = time.Now().Unix()
-	if p.Transport != nil {
-		return p.Transport.PublishData(status.AgentStatusKey(), p.agentStat)
+	adapter := *p.Transport
+	if adapter != nil {
+		return adapter.PublishData(status.AgentStatusKey(), p.agentStat)
 	}
 	return nil
 }
@@ -247,8 +249,9 @@ func (p *Plugin) publishAgentData() error {
 // publishPluginData writes the current plugin state into ETCD.
 func (p *Plugin) publishPluginData(pluginName core.PluginName, pluginStat *status.PluginStatus) error {
 	pluginStat.LastUpdate = time.Now().Unix()
-	if p.Transport != nil {
-		return p.Transport.PublishData(status.PluginStatusKey(string(pluginName)), pluginStat)
+	adapter := *p.Transport
+	if adapter != nil {
+		return adapter.PublishData(status.PluginStatusKey(string(pluginName)), pluginStat)
 	}
 	return nil
 }

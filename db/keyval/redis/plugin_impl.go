@@ -52,6 +52,12 @@ func (p *Plugin) Init() error {
 	if err != nil {
 		return err
 	}
+	// Do not throw error if redis config is missing
+	if cfg == nil {
+		p.Warn("Redis config is nil")
+		return nil
+	}
+
 	client, err := CreateClient(cfg)
 	if err != nil {
 		return err

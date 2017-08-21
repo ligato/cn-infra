@@ -21,6 +21,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/servicelabel"
 	"github.com/ligato/cn-infra/utils/safeclose"
+	"github.com/Sirupsen/logrus"
 )
 
 // PluginID used in the Agent Core flavors
@@ -35,13 +36,15 @@ type Plugin struct {
 
 // Init uses provided connection to build new transport adapter
 func (plugin *Plugin) Init() error {
-	etcdConnection := *plugin.KvPlugin
-	if etcdConnection != nil {
-		broker := etcdConnection.NewBroker(plugin.ServiceLabel.GetAgentPrefix())
-		watcher := etcdConnection.NewWatcher(plugin.ServiceLabel.GetAgentPrefix())
+	connection := *plugin.KvPlugin
+	if connection != nil {
+		broker := connection.NewBroker(plugin.ServiceLabel.GetAgentPrefix())
+		watcher := connection.NewWatcher(plugin.ServiceLabel.GetAgentPrefix())
 		plugin.Adapter = dbsync.NewAdapter(string(PluginID), broker, watcher)
+		logrus.Debugf("Initialized transport: %v", plugin.Adapter)
+	} else {
+		logrus.Debug("DbSync plugin init: provided connection is nil")
 	}
-
 	return nil
 }
 
