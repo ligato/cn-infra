@@ -27,12 +27,17 @@ type PluginState string
 // PluginStateProbe defines parameters of a function used for plugin state probing.
 type PluginStateProbe func() (PluginState, error)
 
-type PluginAPI interface {
+// PluginStatusWriter allows to register & write plugin status by other plugins
+type PluginStatusWriter interface {
 	// put registers a plugin for status change reporting.
 	Register(pluginName core.PluginName, probe PluginStateProbe)
+
 	// ReportStateChange can be used to report a change in the status of a previously registered plugin.
 	ReportStateChange(pluginName core.PluginName, state PluginState, lastError error)
+}
 
+// AgentStatusReader allows to lookup agent status by other plugins
+type AgentStatusReader interface {
 	// GetAgentStatus return current global operational state of the agent.
 	GetAgentStatus() status.AgentStatus
 }

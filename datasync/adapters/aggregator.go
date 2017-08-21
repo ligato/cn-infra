@@ -32,7 +32,7 @@ type AggregatedRegistration struct {
 }
 
 // Watch subscribes to every transport available within transport aggregator
-func (ta *TransportAggregator) WatchData(resyncName string, changeChan chan datasync.ChangeEvent, resyncChan chan datasync.ResyncEvent,
+func (ta *TransportAggregator) Watch(resyncName string, changeChan chan datasync.ChangeEvent, resyncChan chan datasync.ResyncEvent,
 	keyPrefixes ...string) (datasync.WatchDataRegistration, error) {
 	registrations := []datasync.WatchDataRegistration{}
 	for _, transport := range ta.Adapters {
