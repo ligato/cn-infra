@@ -15,12 +15,12 @@
 package kvdbsync
 
 import (
+	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/syncbase"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/servicelabel"
-	"github.com/gogo/protobuf/proto"
 )
 
 // PluginID used in the Agent Core flavors
@@ -37,10 +37,10 @@ type Plugin struct {
 // Init uses provided connection to build new transport watcher
 func (plugin *Plugin) Init() error {
 	if plugin.KvPlugin != nil {
-		broker := plugin.KvPlugin.NewBroker(plugin.ServiceLabel.GetAgentPrefix())
-		watcher := plugin.KvPlugin.NewWatcher(plugin.ServiceLabel.GetAgentPrefix())
+		db := plugin.KvPlugin.NewBroker(plugin.ServiceLabel.GetAgentPrefix())
+		dbW := plugin.KvPlugin.NewWatcher(plugin.ServiceLabel.GetAgentPrefix())
 
-		plugin.adapter = &watcher{broker, watcher, syncbase.NewWatcher()}
+		plugin.adapter = &watcher{db, dbW, syncbase.NewWatcher()}
 	}
 
 	return nil

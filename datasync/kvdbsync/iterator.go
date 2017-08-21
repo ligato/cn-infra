@@ -16,7 +16,6 @@ package kvdbsync
 
 import (
 	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/datasync/syncbase"
 	"github.com/ligato/cn-infra/db/keyval"
 )
 
