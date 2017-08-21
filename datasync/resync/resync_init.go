@@ -32,7 +32,7 @@ var (
 // plugin function is used in api to access the plugin instance. It panics if the plugin instance is no
 func plugin() *Plugin {
 	if gPlugin == nil {
-		logroot.Logger().Panic("Resync Orchestration is not yet initialized but you are trying to use that")
+		logroot.StandardLogger().Panic("Resync Orchestration is not yet initialized but you are trying to use that")
 	}
 
 	return gPlugin

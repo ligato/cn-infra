@@ -63,6 +63,6 @@ func (ev *ChangeEvent) Done(err error) {
 	if ev.delegate != nil {
 		ev.delegate.Done(err)
 	} else if err != nil {
-		logroot.Logger().Error(err)
+		logroot.StandardLogger().Error(err)
 	}
 }

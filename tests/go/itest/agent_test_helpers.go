@@ -32,7 +32,7 @@ func (t *AgentT) Setup(flavor core.Flavor, golangT *testing.T) {
 	gomega.RegisterTestingT(golangT)
 	t.t = golangT
 
-	t.agent = core.NewAgent(logroot.Logger(), 2000*time.Second, flavor.Plugins()...)
+	t.agent = core.NewAgent(logroot.StandardLogger(), 2000*time.Second, flavor.Plugins()...)
 	err := t.agent.Start()
 	if err != nil {
 		golangT.Fatal("error starting agent ", err)

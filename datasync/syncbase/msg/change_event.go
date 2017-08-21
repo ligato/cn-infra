@@ -70,6 +70,6 @@ func (ev *ChangeWatchResp) GetPrevValue(prevVal proto.Message) (prevExists bool,
 func (ev *ChangeWatchResp) Done(err error) {
 	//TODO publish response to the topic
 	if err != nil {
-		logroot.Logger().Error(err)
+		logroot.StandardLogger().Error(err)
 	}
 }

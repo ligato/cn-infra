@@ -140,10 +140,10 @@ func (mock *MockTxn) Commit() (*clientv3.TxnResponse, error) {
 func init() {
 	mockKv := &MockKV{}
 	mockKvErr := &MockKVErr{}
-	dataBroker = &BytesConnectionEtcd{Logger: logroot.Logger(), etcdClient: &clientv3.Client{KV: mockKv, Watcher: mockKv}}
-	dataBrokerErr = &BytesConnectionEtcd{Logger: logroot.Logger(), etcdClient: &clientv3.Client{KV: mockKvErr, Watcher: mockKvErr}}
-	pluginDataBroker = &BytesBrokerWatcherEtcd{Logger: logroot.Logger(), kv: mockKv, watcher: mockKv}
-	pluginDataBrokerErr = &BytesBrokerWatcherEtcd{Logger: logroot.Logger(), kv: mockKvErr, watcher: mockKvErr}
+	dataBroker = &BytesConnectionEtcd{Logger: logroot.StandardLogger(), etcdClient: &clientv3.Client{KV: mockKv, Watcher: mockKv}}
+	dataBrokerErr = &BytesConnectionEtcd{Logger: logroot.StandardLogger(), etcdClient: &clientv3.Client{KV: mockKvErr, Watcher: mockKvErr}}
+	pluginDataBroker = &BytesBrokerWatcherEtcd{Logger: logroot.StandardLogger(), kv: mockKv, watcher: mockKv}
+	pluginDataBrokerErr = &BytesBrokerWatcherEtcd{Logger: logroot.StandardLogger(), kv: mockKvErr, watcher: mockKvErr}
 }
 
 func TestNewTxn(t *testing.T) {

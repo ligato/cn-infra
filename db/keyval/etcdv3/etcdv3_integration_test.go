@@ -24,6 +24,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/etcdv3/mocks"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/onsi/gomega"
+	"github.com/ligato/cn-infra/datasync"
 )
 
 const (
@@ -185,7 +186,7 @@ func testDelWithPrefix(t *testing.T) {
 	gomega.Expect(found).To(gomega.BeTrue())
 	gomega.Expect(err).To(gomega.BeNil())
 
-	_, err = broker.Delete("something/a", keyval.WithPrefix())
+	_, err = broker.Delete("something/a", datasync.WithPrefix())
 	gomega.Expect(err).To(gomega.BeNil())
 
 	_, found, _, err = broker.GetValue("something/a/val1")
@@ -216,7 +217,7 @@ func expectWatchEvent(t *testing.T, wg *sync.WaitGroup, watchCh chan keyval.Byte
 
 func setupBrokers(t *testing.T) {
 	var err error
-	broker, err = NewEtcdConnectionUsingClient(v3client.New(embd.ETCD.Server), logroot.Logger())
+	broker, err = NewEtcdConnectionUsingClient(v3client.New(embd.ETCD.Server), logroot.StandardLogger())
 
 	gomega.Expect(err).To(gomega.BeNil())
 	gomega.Expect(broker).NotTo(gomega.BeNil())

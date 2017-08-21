@@ -41,7 +41,7 @@ func (embd *Embedded) Start(t *testing.T) {
 
 	select {
 	case <-embd.ETCD.Server.ReadyNotify():
-		logroot.Logger().Debug("Server is ready!")
+		logroot.StandardLogger().Debug("Server is ready!")
 	case <-time.After(etcdStartTimeout * time.Second):
 		embd.ETCD.Server.Stop() // trigger a shutdown
 		t.Error("Server took too long to start!")

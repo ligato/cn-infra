@@ -48,7 +48,7 @@ type PluginStatusIdxMapRW interface {
 
 // NewPluginStatusMap is a constructor
 func NewPluginStatusMap(owner core.PluginName) PluginStatusIdxMap {
-	return &pluginStatusMap{mapping: mem.NewNamedMapping(logroot.Logger(),
+	return &pluginStatusMap{mapping: mem.NewNamedMapping(logroot.StandardLogger(),
 		owner, "plugin status", IndexPluginStatus)}
 }
 
@@ -80,7 +80,7 @@ func (swi *pluginStatusMap) Put(pluginName string, pluginStatus *status.PluginSt
 
 // IndexPluginStatus creates indexes for Value. Index for State will be created
 func IndexPluginStatus(data interface{}) map[string][]string {
-	logroot.Logger().Debug("IndexPluginStatus ", data)
+	logroot.StandardLogger().Debug("IndexPluginStatus ", data)
 
 	indexes := map[string][]string{}
 	pluginStatus, ok := data.(*status.PluginStatus)

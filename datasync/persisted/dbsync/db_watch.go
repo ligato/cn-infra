@@ -78,8 +78,8 @@ func (keys *watchBrokerKeys) watchChanges(watchCh chan keyval.BytesWatchResp) {
 
 		ch := NewChangeWatchResp(x, prev)
 
-		logroot.Logger().Debug("dbAdapter x:", x)
-		logroot.Logger().Debug("dbAdapter ch:", *ch)
+		logroot.StandardLogger().Debug("dbAdapter x:", x)
+		logroot.StandardLogger().Debug("dbAdapter ch:", *ch)
 
 		keys.changeChan <- ch
 		// TODO NICE-to-HAVE publish the err using the transport asynchronously
@@ -92,7 +92,7 @@ func (keys *watchBrokerKeys) watchResync(resyncReg resync_types.Registration) {
 		if resyncStatus.ResyncStatus() == resync_types.Started {
 			err := keys.resync()
 			if err != nil {
-				logroot.Logger().Error("error getting resync data ", err) //we are not able to propagate it somewhere else
+				logroot.StandardLogger().Error("error getting resync data ", err) //we are not able to propagate it somewhere else
 				// TODO NICE-to-HAVE publish the err using the transport asynchronously
 			}
 		}
@@ -120,7 +120,7 @@ func (keys *watchBrokerKeys) resync() error {
 			return err
 		}
 	case <-time.After(4 * time.Second):
-		logroot.Logger().Warn("Timeout of resync callback")
+		logroot.StandardLogger().Warn("Timeout of resync callback")
 	}
 
 	return nil

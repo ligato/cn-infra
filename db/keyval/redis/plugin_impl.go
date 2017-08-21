@@ -49,7 +49,7 @@ func (p *Plugin) Init() error {
 		return err
 	}
 
-	connection, err := NewBytesConnection(client, p.Logger)
+	connection, err := NewBytesConnection(client, p.Log)
 	if err != nil {
 		return err
 	}
