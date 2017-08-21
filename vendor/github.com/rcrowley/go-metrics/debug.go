@@ -50,7 +50,7 @@ func CaptureDebugGCStatsOnce(r Registry) {
 	debugMetrics.GCStats.PauseTotal.Update(int64(gcStats.PauseTotal))
 }
 
-// put metrics for the Go garbage collector statistics exported in
+// Register metrics for the Go garbage collector statistics exported in
 // debug.GCStats.  The metrics are named by their fully-qualified Go symbols,
 // i.e. debug.GCStats.PauseTotal.
 func RegisterDebugGCStats(r Registry) {
@@ -64,7 +64,7 @@ func RegisterDebugGCStats(r Registry) {
 	r.Register("debug.GCStats.LastGC", debugMetrics.GCStats.LastGC)
 	r.Register("debug.GCStats.NumGC", debugMetrics.GCStats.NumGC)
 	r.Register("debug.GCStats.Pause", debugMetrics.GCStats.Pause)
-	//r.put("debug.GCStats.PauseQuantiles", debugMetrics.GCStats.PauseQuantiles)
+	//r.Register("debug.GCStats.PauseQuantiles", debugMetrics.GCStats.PauseQuantiles)
 	r.Register("debug.GCStats.PauseTotal", debugMetrics.GCStats.PauseTotal)
 	r.Register("debug.ReadGCStats", debugMetrics.ReadGCStats)
 }

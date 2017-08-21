@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/Shopify/sarama"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 const (
