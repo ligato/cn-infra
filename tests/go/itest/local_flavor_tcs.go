@@ -7,7 +7,7 @@ import (
 	"github.com/ligato/cn-infra/core"
 )
 
-type suiteLocalFlavor struct {
+type suiteFlavorLocal struct {
 	T *testing.T
 	AgentT
 	Given
@@ -16,7 +16,7 @@ type suiteLocalFlavor struct {
 }
 
 // TC01 asserts that injection works fine and agent starts & stops
-func (t *suiteLocalFlavor) TC01StartStop() {
+func (t *suiteFlavorLocal) TC01StartStop() {
 	flavor := &local.FlavorLocal{}
 	t.Setup(flavor, t.T)
 	defer t.Teardown()
@@ -25,19 +25,18 @@ func (t *suiteLocalFlavor) TC01StartStop() {
 }
 
 // TC02 check that logger in flavor works
-func (t *suiteLocalFlavor) TC02Logger() {
+func (t *suiteFlavorLocal) TC02Logger() {
 	flavor := &local.FlavorLocal{}
 	t.Setup(flavor, t.T)
 	defer t.Teardown()
 
-	logger, err := flavor.Logrus.NewLogger("myTest")
-	gomega.Expect(err).Should(gomega.BeNil(), "logger is not initialized")
+	logger := flavor.LogRegistry().NewLogger("myTest")
 	gomega.Expect(logger).ShouldNot(gomega.BeNil(), "logger is not initialized")
 	logger.Debug("log msg")
 }
 
 // TC03 check that status check in flavor works
-func (t *suiteLocalFlavor) TC03StatusCheck() {
+func (t *suiteFlavorLocal) TC03StatusCheck() {
 	flavor := &local.FlavorLocal{}
 	t.Setup(flavor, t.T)
 	defer t.Teardown()
