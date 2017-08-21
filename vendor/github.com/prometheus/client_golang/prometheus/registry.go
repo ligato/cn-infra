@@ -137,7 +137,7 @@ type Gatherer interface {
 
 // Register registers the provided Collector with the DefaultRegisterer.
 //
-// Register is a shortcut for DefaultRegisterer.Register(c). See there for more
+// put is a shortcut for DefaultRegisterer.put(c). See there for more
 // details.
 func Register(c Collector) error {
 	return DefaultRegisterer.Register(c)

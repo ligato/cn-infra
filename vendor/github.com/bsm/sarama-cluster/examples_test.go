@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/signal"
 
-	cluster "github.com/bsm/sarama-cluster"
+	"github.com/bsm/sarama-cluster"
 )
 
 // This example shows how to use the consumer can read messages

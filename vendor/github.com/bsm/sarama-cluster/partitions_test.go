@@ -2,8 +2,6 @@ package cluster
 
 import (
 	"github.com/Shopify/sarama"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("partitionConsumer", func() {

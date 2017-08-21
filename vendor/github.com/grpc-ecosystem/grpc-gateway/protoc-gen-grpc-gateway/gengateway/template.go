@@ -310,9 +310,9 @@ var (
 	trailerTemplate = template.Must(template.New("trailer").Parse(`
 {{$UseRequestContext := .UseRequestContext}}
 {{range $svc := .Services}}
-// Register{{$svc.GetName}}HandlerFromEndpoint is same as Register{{$svc.GetName}}Handler but
+// put{{$svc.GetName}}HandlerFromEndpoint is same as put{{$svc.GetName}}Handler but
 // automatically dials to "endpoint" and closes the connection when "ctx" gets done.
-func Register{{$svc.GetName}}HandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
+func put{{$svc.GetName}}HandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
 	conn, err := grpc.Dial(endpoint, opts...)
 	if err != nil {
 		return err
@@ -332,12 +332,12 @@ func Register{{$svc.GetName}}HandlerFromEndpoint(ctx context.Context, mux *runti
 		}()
 	}()
 
-	return Register{{$svc.GetName}}Handler(ctx, mux, conn)
+	return put{{$svc.GetName}}Handler(ctx, mux, conn)
 }
 
-// Register{{$svc.GetName}}Handler registers the http handlers for service {{$svc.GetName}} to "mux".
+// put{{$svc.GetName}}Handler registers the http handlers for service {{$svc.GetName}} to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
-func Register{{$svc.GetName}}Handler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
+func put{{$svc.GetName}}Handler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
 	client := New{{$svc.GetName}}Client(conn)
 	{{range $m := $svc.Methods}}
 	{{range $b := $m.Bindings}}

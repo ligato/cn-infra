@@ -11,49 +11,49 @@ const (
 
 	// ISOLatin1 is the MIB identifier with IANA name ISO_8859-1:1987 (MIME: ISO-8859-1).
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISOLatin1 MIB = 4
 
 	// ISOLatin2 is the MIB identifier with IANA name ISO_8859-2:1987 (MIME: ISO-8859-2).
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISOLatin2 MIB = 5
 
 	// ISOLatin3 is the MIB identifier with IANA name ISO_8859-3:1988 (MIME: ISO-8859-3).
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISOLatin3 MIB = 6
 
 	// ISOLatin4 is the MIB identifier with IANA name ISO_8859-4:1988 (MIME: ISO-8859-4).
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISOLatin4 MIB = 7
 
 	// ISOLatinCyrillic is the MIB identifier with IANA name ISO_8859-5:1988 (MIME: ISO-8859-5).
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISOLatinCyrillic MIB = 8
 
 	// ISOLatinArabic is the MIB identifier with IANA name ISO_8859-6:1987 (MIME: ISO-8859-6).
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISOLatinArabic MIB = 9
 
 	// ISOLatinGreek is the MIB identifier with IANA name ISO_8859-7:1987 (MIME: ISO-8859-7).
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1947
 	// Reference: RFC1345
@@ -61,28 +61,28 @@ const (
 
 	// ISOLatinHebrew is the MIB identifier with IANA name ISO_8859-8:1988 (MIME: ISO-8859-8).
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISOLatinHebrew MIB = 11
 
 	// ISOLatin5 is the MIB identifier with IANA name ISO_8859-9:1989 (MIME: ISO-8859-9).
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISOLatin5 MIB = 12
 
 	// ISOLatin6 is the MIB identifier with IANA name ISO-8859-10 (MIME: ISO-8859-10).
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISOLatin6 MIB = 13
 
 	// ISOTextComm is the MIB identifier with IANA name ISO_6937-2-add.
 	//
-	// ISO-IR: International Register of Escape Sequences and ISO 6937-2:1983
+	// ISO-IR: International put of Escape Sequences and ISO 6937-2:1983
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISOTextComm MIB = 14
@@ -144,49 +144,49 @@ const (
 
 	// ISO4UnitedKingdom is the MIB identifier with IANA name BS_4730.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO4UnitedKingdom MIB = 20
 
 	// ISO11SwedishForNames is the MIB identifier with IANA name SEN_850200_C.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO11SwedishForNames MIB = 21
 
 	// ISO15Italian is the MIB identifier with IANA name IT.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO15Italian MIB = 22
 
 	// ISO17Spanish is the MIB identifier with IANA name ES.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO17Spanish MIB = 23
 
 	// ISO21German is the MIB identifier with IANA name DIN_66003.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO21German MIB = 24
 
 	// ISO60Norwegian1 is the MIB identifier with IANA name NS_4551-1.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO60Norwegian1 MIB = 25
 
 	// ISO69French is the MIB identifier with IANA name NF_Z_62-010.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO69French MIB = 26
@@ -200,7 +200,7 @@ const (
 
 	// ISO646basic1983 is the MIB identifier with IANA name ISO_646.basic:1983.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO646basic1983 MIB = 28
@@ -212,49 +212,49 @@ const (
 
 	// ISO2IntlRefVersion is the MIB identifier with IANA name ISO_646.irv:1983.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO2IntlRefVersion MIB = 30
 
 	// NATSSEFI is the MIB identifier with IANA name NATS-SEFI.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	NATSSEFI MIB = 31
 
 	// NATSSEFIADD is the MIB identifier with IANA name NATS-SEFI-ADD.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	NATSSEFIADD MIB = 32
 
 	// NATSDANO is the MIB identifier with IANA name NATS-DANO.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	NATSDANO MIB = 33
 
 	// NATSDANOADD is the MIB identifier with IANA name NATS-DANO-ADD.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	NATSDANOADD MIB = 34
 
 	// ISO10Swedish is the MIB identifier with IANA name SEN_850200_B.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO10Swedish MIB = 35
 
 	// KSC56011987 is the MIB identifier with IANA name KS_C_5601-1987.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	KSC56011987 MIB = 36
@@ -285,252 +285,252 @@ const (
 
 	// ISO13JISC6220jp is the MIB identifier with IANA name JIS_C6220-1969-jp.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO13JISC6220jp MIB = 41
 
 	// ISO14JISC6220ro is the MIB identifier with IANA name JIS_C6220-1969-ro.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO14JISC6220ro MIB = 42
 
 	// ISO16Portuguese is the MIB identifier with IANA name PT.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO16Portuguese MIB = 43
 
 	// ISO18Greek7Old is the MIB identifier with IANA name greek7-old.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO18Greek7Old MIB = 44
 
 	// ISO19LatinGreek is the MIB identifier with IANA name latin-greek.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO19LatinGreek MIB = 45
 
 	// ISO25French is the MIB identifier with IANA name NF_Z_62-010_(1973).
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO25French MIB = 46
 
 	// ISO27LatinGreek1 is the MIB identifier with IANA name Latin-greek-1.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO27LatinGreek1 MIB = 47
 
 	// ISO5427Cyrillic is the MIB identifier with IANA name ISO_5427.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO5427Cyrillic MIB = 48
 
 	// ISO42JISC62261978 is the MIB identifier with IANA name JIS_C6226-1978.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO42JISC62261978 MIB = 49
 
 	// ISO47BSViewdata is the MIB identifier with IANA name BS_viewdata.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO47BSViewdata MIB = 50
 
 	// ISO49INIS is the MIB identifier with IANA name INIS.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO49INIS MIB = 51
 
 	// ISO50INIS8 is the MIB identifier with IANA name INIS-8.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO50INIS8 MIB = 52
 
 	// ISO51INISCyrillic is the MIB identifier with IANA name INIS-cyrillic.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO51INISCyrillic MIB = 53
 
 	// ISO54271981 is the MIB identifier with IANA name ISO_5427:1981.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO54271981 MIB = 54
 
 	// ISO5428Greek is the MIB identifier with IANA name ISO_5428:1980.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO5428Greek MIB = 55
 
 	// ISO57GB1988 is the MIB identifier with IANA name GB_1988-80.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO57GB1988 MIB = 56
 
 	// ISO58GB231280 is the MIB identifier with IANA name GB_2312-80.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO58GB231280 MIB = 57
 
 	// ISO61Norwegian2 is the MIB identifier with IANA name NS_4551-2.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO61Norwegian2 MIB = 58
 
 	// ISO70VideotexSupp1 is the MIB identifier with IANA name videotex-suppl.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO70VideotexSupp1 MIB = 59
 
 	// ISO84Portuguese2 is the MIB identifier with IANA name PT2.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO84Portuguese2 MIB = 60
 
 	// ISO85Spanish2 is the MIB identifier with IANA name ES2.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO85Spanish2 MIB = 61
 
 	// ISO86Hungarian is the MIB identifier with IANA name MSZ_7795.3.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO86Hungarian MIB = 62
 
 	// ISO87JISX0208 is the MIB identifier with IANA name JIS_C6226-1983.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO87JISX0208 MIB = 63
 
 	// ISO88Greek7 is the MIB identifier with IANA name greek7.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO88Greek7 MIB = 64
 
 	// ISO89ASMO449 is the MIB identifier with IANA name ASMO_449.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO89ASMO449 MIB = 65
 
 	// ISO90 is the MIB identifier with IANA name iso-ir-90.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO90 MIB = 66
 
 	// ISO91JISC62291984a is the MIB identifier with IANA name JIS_C6229-1984-a.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO91JISC62291984a MIB = 67
 
 	// ISO92JISC62991984b is the MIB identifier with IANA name JIS_C6229-1984-b.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO92JISC62991984b MIB = 68
 
 	// ISO93JIS62291984badd is the MIB identifier with IANA name JIS_C6229-1984-b-add.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO93JIS62291984badd MIB = 69
 
 	// ISO94JIS62291984hand is the MIB identifier with IANA name JIS_C6229-1984-hand.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO94JIS62291984hand MIB = 70
 
 	// ISO95JIS62291984handadd is the MIB identifier with IANA name JIS_C6229-1984-hand-add.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO95JIS62291984handadd MIB = 71
 
 	// ISO96JISC62291984kana is the MIB identifier with IANA name JIS_C6229-1984-kana.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO96JISC62291984kana MIB = 72
 
 	// ISO2033 is the MIB identifier with IANA name ISO_2033-1983.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO2033 MIB = 73
 
 	// ISO99NAPLPS is the MIB identifier with IANA name ANSI_X3.110-1983.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO99NAPLPS MIB = 74
 
 	// ISO102T617bit is the MIB identifier with IANA name T.61-7bit.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO102T617bit MIB = 75
 
 	// ISO103T618bit is the MIB identifier with IANA name T.61-8bit.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO103T618bit MIB = 76
@@ -544,21 +544,21 @@ const (
 
 	// ISO121Canadian1 is the MIB identifier with IANA name CSA_Z243.4-1985-1.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO121Canadian1 MIB = 78
 
 	// ISO122Canadian2 is the MIB identifier with IANA name CSA_Z243.4-1985-2.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO122Canadian2 MIB = 79
 
 	// ISO123CSAZ24341985gr is the MIB identifier with IANA name CSA_Z243.4-1985-gr.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO123CSAZ24341985gr MIB = 80
@@ -577,7 +577,7 @@ const (
 
 	// ISO128T101G2 is the MIB identifier with IANA name T.101-G2.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO128T101G2 MIB = 83
@@ -596,91 +596,91 @@ const (
 
 	// ISO139CSN369103 is the MIB identifier with IANA name CSN_369103.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO139CSN369103 MIB = 86
 
 	// ISO141JUSIB1002 is the MIB identifier with IANA name JUS_I.B1.002.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO141JUSIB1002 MIB = 87
 
 	// ISO143IECP271 is the MIB identifier with IANA name IEC_P27-1.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO143IECP271 MIB = 88
 
 	// ISO146Serbian is the MIB identifier with IANA name JUS_I.B1.003-serb.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO146Serbian MIB = 89
 
 	// ISO147Macedonian is the MIB identifier with IANA name JUS_I.B1.003-mac.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO147Macedonian MIB = 90
 
 	// ISO150GreekCCITT is the MIB identifier with IANA name greek-ccitt.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO150GreekCCITT MIB = 91
 
 	// ISO151Cuba is the MIB identifier with IANA name NC_NC00-10:81.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO151Cuba MIB = 92
 
 	// ISO6937Add is the MIB identifier with IANA name ISO_6937-2-25.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO6937Add MIB = 93
 
 	// ISO153GOST1976874 is the MIB identifier with IANA name GOST_19768-74.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO153GOST1976874 MIB = 94
 
 	// ISO8859Supp is the MIB identifier with IANA name ISO_8859-supp.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO8859Supp MIB = 95
 
 	// ISO10367Box is the MIB identifier with IANA name ISO_10367-box.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO10367Box MIB = 96
 
 	// ISO158Lap is the MIB identifier with IANA name latin-lap.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO158Lap MIB = 97
 
 	// ISO159JISX02121990 is the MIB identifier with IANA name JIS_X0212-1990.
 	//
-	// ISO-IR: International Register of Escape Sequences
+	// ISO-IR: International put of Escape Sequences
 	// Note: The current registration authority is IPSJ/ITSCJ, Japan.
 	// Reference: RFC1345
 	ISO159JISX02121990 MIB = 98

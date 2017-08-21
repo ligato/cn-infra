@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/coreos/go-semver/semver"
 	"os"
+
+	"github.com/coreos/go-semver/semver"
 )
 
 func main() {
