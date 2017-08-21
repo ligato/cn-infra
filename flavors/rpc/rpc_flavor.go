@@ -44,6 +44,7 @@ func (f *FlavorRPC) Inject() error {
 	f.FlavorLocal.Inject()
 
 	f.HTTP.Log = f.LoggerFor("HTTP")
+	f.LogMngRPC.Log = f.LoggerFor("LogMngRPC")
 	f.LogMngRPC.LogRegistry = f.FlavorLocal.LogRegistry()
 	f.LogMngRPC.HTTP = &f.HTTP
 	f.HealthRPC.Log = f.LoggerFor("HealthRPC")

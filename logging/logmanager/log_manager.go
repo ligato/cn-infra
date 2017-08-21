@@ -38,10 +38,10 @@ const (
 
 // Plugin allows to manage log levels of the loggers using HTTP.
 type Plugin struct {
+	Log logging.PluginLogger
+
 	LogRegistry logging.Registry
 	HTTP        *httpmux.Plugin
-
-	logging.Logger
 }
 
 // Init is called at plugin initialization. It register the following handlers:
@@ -79,7 +79,7 @@ func (lm *Plugin) listLoggers() []LoggerData {
 
 // setLoggerLogLevel modifies the log level of the all loggers in a plugin
 func (lm *Plugin) setLoggerLogLevel(name string, level string) error {
-	lm.Debugf("SetLogLevel name '%s', level '%s'", name, level)
+	lm.Log.Debugf("SetLogLevel name '%s', level '%s'", name, level)
 
 	return lm.LogRegistry.SetLevel(name, level)
 }
@@ -88,7 +88,7 @@ func (lm *Plugin) setLoggerLogLevel(name string, level string) error {
 func (lm *Plugin) logLevelHandler(formatter *render.Render) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, req *http.Request) {
-		lm.Infof("Path: %s", req.URL.Path)
+		lm.Log.Infof("Path: %s", req.URL.Path)
 		vars := mux.Vars(req)
 		if vars == nil {
 			formatter.JSON(w, http.StatusNotFound, struct{}{})
