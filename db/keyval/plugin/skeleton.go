@@ -19,7 +19,6 @@ import (
 	"github.com/ligato/cn-infra/datasync/persisted/dbsync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
-	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
 	"github.com/ligato/cn-infra/utils/safeclose"
 )
@@ -31,19 +30,17 @@ type Connection interface {
 
 // Skeleton of a KV plugin is a generic part of KV plugin.
 type Skeleton struct {
-	Logger       logging.Logger
 	serviceLabel *servicelabel.Plugin
 	name         string
-	logFactory   logging.LogFactory
 	protoWrapper *kvproto.ProtoWrapper
 	connection   Connection
 }
 
 // NewSkeleton creates a new instance of the Skeleton with the given connector.
 // The connection is established in AfterInit phase.
-func NewSkeleton(name string, factory logging.LogFactory, serviceLabel *servicelabel.Plugin,
+func NewSkeleton(name string, serviceLabel *servicelabel.Plugin,
 	connection Connection) *Skeleton {
-	return &Skeleton{serviceLabel: serviceLabel, name: name, logFactory: factory, connection: connection}
+	return &Skeleton{serviceLabel: serviceLabel, name: name, connection: connection}
 }
 
 // Init is called on plugin startup

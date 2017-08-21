@@ -59,7 +59,6 @@ type Plugin struct {
 	// Used mainly for testing purposes
 	listenAndServe ListenAndServe
 
-	logging.Logger
 	server     io.Closer
 	mx         *mux.Router
 	formatter  *render.Render
@@ -108,7 +107,7 @@ func (plugin *Plugin) AfterInit() (err error) {
 	if plugin.listenAndServe != nil {
 		plugin.server, err = plugin.listenAndServe(cfgCopy, plugin.mx)
 	} else {
-		plugin.Info("Listening on http://", cfgCopy.Endpoint)
+		plugin.Log.Info("Listening on http://", cfgCopy.Endpoint)
 		plugin.server, err = ListenAndServeHTTP(cfgCopy, plugin.mx)
 	}
 

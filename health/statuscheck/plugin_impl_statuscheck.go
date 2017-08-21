@@ -112,7 +112,7 @@ func (p *Plugin) Close() error {
 	return nil
 }
 
-// Register registers a plugin for status change reporting.
+// put registers a plugin for status change reporting.
 func (p *Plugin) Register(pluginName core.PluginName, probe PluginStateProbe) {
 	p.access.Lock()
 	defer p.access.Unlock()

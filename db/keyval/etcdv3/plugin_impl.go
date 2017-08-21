@@ -37,8 +37,7 @@ var defaultConfigFileName string
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
-	LogFactory logging.LogFactory
-	logging.Logger
+	Log logging.PluginLogger
 
 	ServiceLabel *servicelabel.Plugin
 	StatusCheck  *statuscheck.Plugin
@@ -51,11 +50,6 @@ type Plugin struct {
 // Init is called at plugin startup. The connection to etcd is established.
 func (p *Plugin) Init() error {
 	var err error
-	// Init logger
-	p.Logger, err = p.LogFactory.NewLogger(string(PluginID))
-	if err != nil {
-		return err
-	}
 
 	// Retrieve config
 	cfg, err := p.retrieveConfig()
@@ -70,13 +64,12 @@ func (p *Plugin) Init() error {
 	}
 
 	if p.skeleton == nil {
-		con, err := NewEtcdConnectionWithBytes(*etcdConfig, p.Logger)
+		con, err := NewEtcdConnectionWithBytes(*etcdConfig, p.Log)
 		if err != nil {
 			return err
 		}
 
 		p.skeleton = plugin.NewSkeleton(string(PluginID),
-			p.LogFactory,
 			p.ServiceLabel,
 			con,
 		)
@@ -96,15 +89,15 @@ func (p *Plugin) Init() error {
 			return statuscheck.Error, err
 		})
 	} else {
-		p.skeleton.Logger.Warnf("Unable to start status check for etcd")
+		p.Log.Warnf("Unable to start status check for etcd")
 	}
 
 	return nil
 }
 
 // FromExistingClient is used mainly for testing
-func FromExistingConnection(connection keyval.CoreBrokerWatcher, logF logging.LogFactory, sl *servicelabel.Plugin) *Plugin {
-	skel := plugin.NewSkeleton(string(PluginID), logF, sl, connection)
+func FromExistingConnection(connection keyval.CoreBrokerWatcher, sl *servicelabel.Plugin) *Plugin {
+	skel := plugin.NewSkeleton(string(PluginID), sl, connection)
 	return &Plugin{skeleton: skel}
 }
 

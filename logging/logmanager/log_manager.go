@@ -38,8 +38,8 @@ const (
 
 // Plugin allows to manage log levels of the loggers using HTTP.
 type Plugin struct {
-	ManagedLoggers logging.LogManagement
-	HTTP           *httpmux.Plugin
+	LogRegistry logging.Registry
+	HTTP        *httpmux.Plugin
 
 	logging.Logger
 }
@@ -50,11 +50,6 @@ type Plugin struct {
 // - Set log level for a registered logger:
 //   > curl -X PUT http://localhost:<port>/log/<logger-name>/<log-level>
 func (lm *Plugin) Init() error {
-	var err error
-	lm.Logger, err = lm.ManagedLoggers.NewLogger("LogManager")
-	if err != nil {
-		return err
-	}
 	lm.HTTP.RegisterHTTPHandler(fmt.Sprintf("/log/{%s}/{%s:debug|info|warning|error|fatal|panic}",
 		loggerVarName, levelVarName), lm.logLevelHandler, "PUT")
 	lm.HTTP.RegisterHTTPHandler("/log/list", lm.listLoggersHandler, "GET")
@@ -70,7 +65,7 @@ func (lm *Plugin) Close() error {
 func (lm *Plugin) listLoggers() []LoggerData {
 	loggers := []LoggerData{}
 
-	lgs := lm.ManagedLoggers.Registry().ListLoggers()
+	lgs := lm.LogRegistry.ListLoggers()
 	for lg, lvl := range lgs {
 		ld := LoggerData{
 			Logger: lg,
@@ -86,7 +81,7 @@ func (lm *Plugin) listLoggers() []LoggerData {
 func (lm *Plugin) setLoggerLogLevel(name string, level string) error {
 	lm.Debugf("SetLogLevel name '%s', level '%s'", name, level)
 
-	return lm.ManagedLoggers.Registry().SetLevel(name, level)
+	return lm.LogRegistry.SetLevel(name, level)
 }
 
 // logLevelHandler processes requests to set log level on loggers in a plugin

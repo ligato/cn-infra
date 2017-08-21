@@ -18,7 +18,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/datasync"
 
-	log "github.com/ligato/cn-infra/logging/logrus"
+	"github.com/ligato/cn-infra/logging/logroot"
 )
 
 // Adapter implements datasync.TransportAdapter but allows optionally implement these Watch / Put
@@ -34,7 +34,7 @@ func (adapter *Adapter) WatchData(resyncName string, changeChan chan datasync.Ch
 	if adapter.Watcher != nil {
 		return adapter.Watcher.Watch(resyncName, changeChan, resyncChan, keyPrefixes...)
 	}
-	log.Debug("Watcher is nil")
+	logroot.Logger().Debug("Watcher is nil")
 
 	return nil, nil
 }

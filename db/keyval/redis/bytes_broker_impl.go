@@ -24,6 +24,8 @@ import (
 	"strings"
 
 	"fmt"
+
+	"github.com/ligato/cn-infra/datasync"
 )
 
 // BytesConnectionRedis allows to store, read and watch values from Redis.
@@ -106,7 +108,7 @@ func (db *BytesConnectionRedis) Put(key string, data []byte, opts ...datasync.Pu
 
 	var ttl time.Duration
 	for _, o := range opts {
-		if withTTL, ok := o.(*keyval.WithTTLOpt); ok && withTTL.TTL > 0 {
+		if withTTL, ok := o.(*datasync.WithTTLOpt); ok && withTTL.TTL > 0 {
 			ttl = withTTL.TTL
 		}
 	}
@@ -164,7 +166,7 @@ func (db *BytesConnectionRedis) Delete(key string, opts ...datasync.DelOption) (
 
 	var keyIsPrefix bool
 	for _, o := range opts {
-		if _, ok := o.(*keyval.WithPrefixOpt); ok {
+		if _, ok := o.(*datasync.WithPrefixOpt); ok {
 			keyIsPrefix = true
 		}
 	}

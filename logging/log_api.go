@@ -45,6 +45,11 @@ type Logger interface {
 	WithFields(fields map[string]interface{}) LogWithLevel
 }
 
+// LogFactory is API for the plugins that want to create their own loggers.
+type LogFactory interface {
+	NewLogger(name string) Logger
+}
+
 // PluginLogger is intended for:
 // 1. small plugins (that just need one logger; name corresponds to plugin name)
 // 2. large plugins that need multiple loggers (all loggers share same name prefix)
@@ -58,16 +63,16 @@ type PluginLogger interface {
 	LogFactory
 }
 
-// NewPluginLogger is used to initialize plugin logger by name
+// ForPlugin is used to initialize plugin logger by name
 // and optionally created children (their name prefixed by plugin logger name)
 //
 // Example usage:
 //
 //    flavor.ETCD.Logger =
-// 			NewPluginLogger(PluginNameOfFlavor(&flavor.ETCD, flavor), flavor.Logrus)
+// 			ForPlugin(PluginNameOfFlavor(&flavor.ETCD, flavor), flavor.Logrus)
 //
-func NewPluginLogger(name string, factory LogFactory) PluginLogger {
-	logger, _ := factory.NewLogger(name)
+func ForPlugin(name string, factory LogFactory) PluginLogger {
+	logger := factory.NewLogger(name)
 
 	return &pluginLogger{logger,
 		&prefixedLogFactory{name, factory}}
@@ -109,6 +114,8 @@ type LogWithLevel interface {
 
 // Registry groups multiple Logger instances and allows to mange their log levels.
 type Registry interface {
+	// LogFactory allow to create new loggers
+	LogFactory
 	// List Loggers returns a map (loggerName => log level)
 	ListLoggers() map[string]string
 	// SetLevel modifies log level of selected logger in the registry
@@ -151,6 +158,6 @@ type prefixedLogFactory struct {
 	delegate LogFactory
 }
 
-func (factory *prefixedLogFactory) NewLogger(name string) (Logger, error) {
+func (factory *prefixedLogFactory) NewLogger(name string) (Logger) {
 	return factory.delegate.NewLogger(factory.prefix + name)
 }

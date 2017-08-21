@@ -37,7 +37,7 @@ func main() {
 	// Init close channel to stop the example
 	closeChannel = make(chan struct{}, 1)
 
-	flavor := generic.FlavorGeneric{}
+	flavor := rpc.FlavorRPC{}
 
 	// Example plugin (Logger)
 	examplePlugin := &core.NamedPlugin{PluginName: PluginID, Plugin: &ExamplePlugin{}}
