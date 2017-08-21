@@ -51,7 +51,7 @@ func (ta *TransportAggregator) WatchData(resyncName string, changeChan chan data
 // Put to every available transport
 func (ta *TransportAggregator) Put(key string, data proto.Message) error {
 	if len(ta.Adapters) == 0 {
-		return fmt.Errorf("No transport is availabel in aggregator")
+		return fmt.Errorf("No transport is available in aggregator")
 	}
 	var wasError error
 	for _, transport := range ta.Adapters {
