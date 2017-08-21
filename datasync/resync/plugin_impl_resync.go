@@ -46,7 +46,7 @@ type Plugin struct {
 
 // Init initializes variables
 func (plugin *Plugin) Init() (err error) {
-	plugin.registrations = make(map[string]*Registration)
+	plugin.registrations = make(map[string]Registration)
 
 	//plugin.waingForResync = make(map[core.PluginName]*PluginEvent)
 	//plugin.waingForResyncChan = make(chan *PluginEvent)
@@ -71,7 +71,7 @@ func (plugin *Plugin) Close() error {
 	//TODO close error report channel
 	plugin.access.Lock()
 	defer plugin.access.Unlock()
-	plugin.registrations = make(map[string]*Registration)
+	plugin.registrations = make(map[string]Registration)
 
 	return nil
 }
