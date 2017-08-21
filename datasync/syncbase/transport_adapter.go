@@ -28,7 +28,7 @@ type Adapter struct {
 }
 
 // Watch using Kafka Watcher Topic Watcher
-func (adapter *Adapter) WatchData(resyncName string, changeChan chan datasync.ChangeEvent,
+func (adapter *Adapter) Watch(resyncName string, changeChan chan datasync.ChangeEvent,
 	resyncChan chan datasync.ResyncEvent, keyPrefixes ...string) (datasync.WatchDataRegistration, error) {
 
 	if adapter.Watcher != nil {

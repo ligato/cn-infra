@@ -95,7 +95,7 @@ func (p *Plugin) Init() error {
 	return nil
 }
 
-// FromExistingClient is used mainly for testing
+// FromExistingConnection is used mainly for testing
 func FromExistingConnection(connection keyval.CoreBrokerWatcher, sl *servicelabel.Plugin) *Plugin {
 	skel := plugin.NewSkeleton(string(PluginID), sl, connection)
 	return &Plugin{skeleton: skel}

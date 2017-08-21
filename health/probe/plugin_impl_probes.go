@@ -50,7 +50,7 @@ func init() {
 
 // Plugin struct holds all plugin-related data
 type Plugin struct {
-	StatusCheck statuscheck.PluginAPI
+	StatusCheck statuscheck.PluginStatusWriter
 	Log         logging.PluginLogger
 
 	HTTP *httpmux.Plugin
