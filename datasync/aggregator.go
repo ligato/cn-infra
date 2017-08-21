@@ -18,29 +18,28 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
 // CompositeKVProtoWatcher is a slice of watchers
 type CompositeKVProtoWatcher struct {
-	Adapters []datasync.KeyValProtoWatcher
+	Adapters []KeyValProtoWatcher
 }
 
 // CompositeKVProtoWriter is cumulative adapter which contains all available transport types
 type CompositeKVProtoWriter struct {
-	Adapters []datasync.KeyProtoValWriter
+	Adapters []KeyProtoValWriter
 }
 
 // AggregatedRegistration is cumulative adapter which contains all available transport types
 type AggregatedRegistration struct {
-	Registrations []datasync.WatchRegistration
+	Registrations []WatchRegistration
 }
 
 // Watch subscribes to every transport available within transport aggregator
-func (ta *CompositeKVProtoWatcher) Watch(resyncName string, changeChan chan datasync.ChangeEvent, resyncChan chan datasync.ResyncEvent,
-	keyPrefixes ...string) (datasync.WatchRegistration, error) {
-	registrations := []datasync.WatchRegistration{}
+func (ta *CompositeKVProtoWatcher) Watch(resyncName string, changeChan chan ChangeEvent, resyncChan chan ResyncEvent,
+	keyPrefixes ...string) (WatchRegistration, error) {
+	registrations := []WatchRegistration{}
 	for _, transport := range ta.Adapters {
 		watcherReg, err := transport.Watch(resyncName, changeChan, resyncChan, keyPrefixes...)
 		if err != nil {

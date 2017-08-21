@@ -84,7 +84,7 @@ func (adapter *Watcher) WatchDataBase(resyncName string, changeChan chan datasyn
 	return reg, nil
 }
 
-// WatchData just appends channels
+// Watch just appends channels
 func (adapter *Watcher) Watch(resyncName string, changeChan chan datasync.ChangeEvent,
 	resyncChan chan datasync.ResyncEvent, keyPrefixes ...string) (datasync.WatchRegistration, error) {
 	return adapter.WatchDataBase(resyncName, changeChan, resyncChan, keyPrefixes...)

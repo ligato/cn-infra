@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package dbsync implements the datasync API for data stores. The datasync
+// Package kvdbsync implements the datasync API for data stores. The datasync
 // API contains the Data Broker & KeyValProtoWatcher APIs, which are basically facades
 // in front of different key-value or SQL stores.
 //

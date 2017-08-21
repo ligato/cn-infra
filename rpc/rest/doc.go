@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package httpmux provides an HTTP server to app plugins, where a plugin
+// Package rest provides an HTTP server to app plugins, where a plugin
 // can register at specified URLs one or more HTTP request handlers that
 // will handle HTTP requests at run time.
 package rest
