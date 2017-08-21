@@ -3,10 +3,13 @@
 A flavor is a reusable collection of plugins with initialized 
 [dependencies](../docs/guidelines/PLUGIN_DEPENDENCIES.md). CN-Infra provides
 the following [flavors](../docs/guidelines/PLUGIN_FLAVORS.md):
-* [generic flavor](generic) - a collection of plugins that are useful for almost
-  every micro-service
+* [local flavor](local) - a minimal set of plugins. It just initializes logging & statuchek.
+  It is useful for embedding agent plugins to different projects that use their own infrasturcure.
+* [RPC flavor](rpc) - a collection of plugins that exposes RPCs. It also register management API for:
+  * status check (RPCs probed from systems such as K8s)
+  * logging (for changing log level at runtime remotely)
 * [etcd + Kafka flavor](etcdkafka) - adds etcd & Kafka client plugin instances to 
-  the generic flavor 
+  the [RPC flavor](rpc)
   
 The following diagram shows:
 * plugins that are part of the flavor
