@@ -18,7 +18,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ligato/cn-infra/datasync/resync/resynceventimpl"
 	"github.com/ligato/cn-infra/logging"
 
 	"github.com/ligato/cn-infra/logging/logroot"
@@ -41,16 +40,16 @@ func plugin() *Plugin {
 type Plugin struct {
 	Log logging.Logger
 
-	registrations map[string]*resynceventimpl.Registration
+	registrations map[string]Registration
 	access        sync.Mutex
 }
 
 // Init initializes variables
 func (plugin *Plugin) Init() (err error) {
-	plugin.registrations = make(map[string]*resynceventimpl.Registration)
+	plugin.registrations = make(map[string]*Registration)
 
-	//plugin.waingForResync = make(map[core.PluginName]*resynceventimpl.PluginEvent)
-	//plugin.waingForResyncChan = make(chan *resynceventimpl.PluginEvent)
+	//plugin.waingForResync = make(map[core.PluginName]*PluginEvent)
+	//plugin.waingForResyncChan = make(chan *PluginEvent)
 	//go plugin.watchWaingForResync()
 
 	gPlugin = plugin
@@ -72,7 +71,7 @@ func (plugin *Plugin) Close() error {
 	//TODO close error report channel
 	plugin.access.Lock()
 	defer plugin.access.Unlock()
-	plugin.registrations = make(map[string]*resynceventimpl.Registration)
+	plugin.registrations = make(map[string]*Registration)
 
 	return nil
 }
@@ -90,7 +89,7 @@ func (plugin *Plugin) Register(resyncName string) Registration {
 		return nil
 	}
 
-	reg := resynceventimpl.NewRegistration(make(chan StatusEvent, 0)) /*Zero to have back pressure*/
+	reg := NewRegistration(make(chan StatusEvent, 0)) /*Zero to have back pressure*/
 	plugin.registrations[resyncName] = reg
 	return reg
 }
@@ -98,7 +97,7 @@ func (plugin *Plugin) Register(resyncName string) Registration {
 // call callback on plugins to create/delete/modify objects
 func (plugin *Plugin) startResync() {
 	for regName, reg := range plugin.registrations {
-		started := resynceventimpl.NewStatusEvent(Started)
+		started := newStatusEvent(Started)
 		reg.StatusChan() <- started
 
 		select {

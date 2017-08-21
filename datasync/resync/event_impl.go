@@ -18,8 +18,8 @@ import (
 	"time"
 )
 
-// NewStatusEvent is a constructor
-func NewStatusEvent(status Status) StatusEvent {
+// newStatusEvent is a constructor
+func newStatusEvent(status Status) *statusEvent {
 	return &statusEvent{status: status, ackChan: make(chan time.Time)}
 }
 
