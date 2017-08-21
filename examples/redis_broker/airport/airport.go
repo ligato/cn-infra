@@ -140,9 +140,9 @@ func setup() bool {
 
 	cleanup(false)
 
-	arrivalWatcher.Watch(arrivalChan, "")
-	departureWatcher.Watch(departureChan, "")
-	hangarWatcher.Watch(hangarChan, "")
+	arrivalWatcher.Watch(keyval.ToChanProto(arrivalChan), "")
+	departureWatcher.Watch(keyval.ToChanProto(departureChan), "")
+	hangarWatcher.Watch(keyval.ToChanProto(hangarChan), "")
 
 	return true
 }
@@ -262,9 +262,9 @@ func printHeaders() {
 		columnSep, flightIDLength*flightSlotCount, departure,
 		columnSep, hangar)
 	dash60 := "-----------------------------------------------------------"
-	waitingGuide := dash60[0: flightIDLength*flightSlotCount]
+	waitingGuide := dash60[0 : flightIDLength*flightSlotCount]
 	runwayGuide := dash60[0:runwayLength]
-	hangarGuide := dash60[0: flightIDLength*hangarSlotCount]
+	hangarGuide := dash60[0 : flightIDLength*hangarSlotCount]
 	fmt.Printf("%s%s%s%s%s%s%s\n",
 		waitingGuide, columnSep, runwayGuide, columnSep, waitingGuide, columnSep, hangarGuide)
 }
