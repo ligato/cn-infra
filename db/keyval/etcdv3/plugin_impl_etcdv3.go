@@ -63,18 +63,18 @@ func (p *Plugin) Init() error {
 		return err
 	}
 
-	if p.skeleton == nil {
+	if p.Skeleton == nil {
 		con, err := NewEtcdConnectionWithBytes(*etcdConfig, p.Log)
 		if err != nil {
 			return err
 		}
 
-		p.skeleton = plugin.NewSkeleton(string(PluginID),
+		p.Skeleton = plugin.NewSkeleton(string(PluginID),
 			p.ServiceLabel,
 			con,
 		)
 	}
-	err = p.skeleton.Init()
+	err = p.Skeleton.Init()
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func (p *Plugin) Init() error {
 	// Register for providing status reports (polling mode)
 	if p.StatusCheck != nil {
 		p.StatusCheck.Register(PluginID, func() (statuscheck.PluginState, error) {
-			_, _, err := p.skeleton.NewBroker("/").GetValue(healthCheckProbeKey, nil)
+			_, _, err := p.Skeleton.NewBroker("/").GetValue(healthCheckProbeKey, nil)
 			if err == nil {
 				return statuscheck.OK, nil
 			}
@@ -98,12 +98,12 @@ func (p *Plugin) Init() error {
 // FromExistingConnection is used mainly for testing
 func FromExistingConnection(connection keyval.CoreBrokerWatcher, sl servicelabel.ReaderAPI) *Plugin {
 	skel := plugin.NewSkeleton(string(PluginID), sl, connection)
-	return &Plugin{skeleton: skel}
+	return &Plugin{Skeleton: skel}
 }
 
 // Close resources
 func (p *Plugin) Close() error {
-	_, err := safeclose.CloseAll(p.skeleton)
+	_, err := safeclose.CloseAll(p.Skeleton)
 	return err
 }
 
