@@ -40,6 +40,6 @@ func Mock(t *testing.T) *KafkaMock {
 // KafkaMock for the tests
 type KafkaMock struct {
 	Mux      *Multiplexer
-	SyncPub  *mocks.AsyncProducer
-	AsyncPub *mocks.SyncProducer
+	AsyncPub *mocks.AsyncProducer
+	SyncPub  *mocks.SyncProducer
 }

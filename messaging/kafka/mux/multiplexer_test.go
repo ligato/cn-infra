@@ -141,7 +141,7 @@ func TestSendAsync(t *testing.T) {
 	mock.AsyncPub.ExpectInputAndSucceed()
 	c1.SendAsyncMessage("topic", sarama.ByteEncoder([]byte("key")), sarama.ByteEncoder([]byte("value")), nil, nil, nil)
 
-	publisher := c1.Newmock.AsyncPublisher("test", nil, nil)
+	publisher := c1.NewAsyncPublisher("test", nil, nil)
 	mock.AsyncPub.ExpectInputAndSucceed()
 	publisher.Publish("key", []byte("val"))
 
