@@ -23,23 +23,23 @@ import (
 
 // Adapter implements datasync.TransportAdapter but allows optionally implement these Watch / Put
 type Adapter struct {
-	Watcher   datasync.Watcher
+	Watcher   datasync.KeyValProtoWatcher
 	Publisher datasync.KeyProtoValWriter
 }
 
-// Watch using Kafka Watcher Topic Watcher
+// Watch using Kafka KeyValProtoWatcher Topic KeyValProtoWatcher
 func (adapter *Adapter) Watch(resyncName string, changeChan chan datasync.ChangeEvent,
-	resyncChan chan datasync.ResyncEvent, keyPrefixes ...string) (datasync.WatchDataRegistration, error) {
+	resyncChan chan datasync.ResyncEvent, keyPrefixes ...string) (datasync.WatchRegistration, error) {
 
 	if adapter.Watcher != nil {
 		return adapter.Watcher.Watch(resyncName, changeChan, resyncChan, keyPrefixes...)
 	}
-	logroot.StandardLogger().Debug("Watcher is nil")
+	logroot.StandardLogger().Debug("KeyValProtoWatcher is nil")
 
 	return nil, nil
 }
 
-// Put using Kafka Watcher Topic KeyProtoValWriter
+// Put using Kafka KeyValProtoWatcher Topic KeyProtoValWriter
 func (adapter *Adapter) Put(key string, data proto.Message) error {
 	if adapter.Publisher != nil {
 		return adapter.Publisher.Put(key, data)

@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package syncbase contains reusable structures in multiple datasync transports.
-// See following reusable structures:
-// - KeyValProtoWatcher that maintains the registrations/subscriptions.
-// - Registry of latest revisions of values per each key synchronized by datasync.
-// - Default implementation of Events & Iterators interfaces defined in data_api.go.
-//   Events & Iterators in this package are reused (but not in all datasync transports).
-package syncbase
+// Package grpcsync implements (in ALPHA VERSION) the datasync API for the gRPC transport.
+// See the definition of the service in ../../syncbase/msg package). This
+// implementation is special (comparing to dbsync or msgsync) because it
+// does not use any intermediate persistence between the client and the
+// server. Therefore the client does remote  calls to each individual
+// server/agent instance (and needs to know its IP address & port).
+package grpcsync

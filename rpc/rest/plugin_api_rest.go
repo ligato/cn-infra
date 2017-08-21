@@ -12,10 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package syncbase contains reusable structures in multiple datasync transports.
-// See following reusable structures:
-// - KeyValProtoWatcher that maintains the registrations/subscriptions.
-// - Registry of latest revisions of values per each key synchronized by datasync.
-// - Default implementation of Events & Iterators interfaces defined in data_api.go.
-//   Events & Iterators in this package are reused (but not in all datasync transports).
-package syncbase
+package rest
+
+import (
+	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/unrolled/render"
+)
+
+// HTTPHandlers is an interface that is useful for other plugins that need to register HTTP Handlers.
+// Use this interface as type for the field in terms of dependency injection.
+type HTTPHandlers interface {
+	// RegisterHTTPHandler propagates to Gorilla mux
+	RegisterHTTPHandler(path string,
+		handler func(formatter *render.Render) http.HandlerFunc,
+		methods ...string) *mux.Route
+}

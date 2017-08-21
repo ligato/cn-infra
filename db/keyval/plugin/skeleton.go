@@ -30,7 +30,7 @@ type Connection interface {
 
 // Skeleton of a KV plugin is a generic part of KV plugin.
 type Skeleton struct {
-	serviceLabel *servicelabel.Plugin
+	serviceLabel servicelabel.ReaderAPI
 	name         string
 	protoWrapper *kvproto.ProtoWrapper
 	connection   Connection
@@ -38,7 +38,7 @@ type Skeleton struct {
 
 // NewSkeleton creates a new instance of the Skeleton with the given connector.
 // The connection is established in AfterInit phase.
-func NewSkeleton(name string, serviceLabel *servicelabel.Plugin,
+func NewSkeleton(name string, serviceLabel servicelabel.ReaderAPI,
 	connection Connection) *Skeleton {
 	return &Skeleton{serviceLabel: serviceLabel, name: name, connection: connection}
 }

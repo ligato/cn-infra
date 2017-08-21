@@ -445,10 +445,10 @@ func consumeEvent(respChan chan keyval.BytesWatchResp, eventCount int) {
 		if ok {
 			switch r.GetChangeType() {
 			case datasync.Put:
-				log.Debugf("Watcher received %v: %s=%s (rev %d)",
+				log.Debugf("KeyValProtoWatcher received %v: %s=%s (rev %d)",
 					r.GetChangeType(), r.GetKey(), string(r.GetValue()), r.GetRevision())
 			case datasync.Delete:
-				log.Debugf("Watcher received %v: %s (rev %d)",
+				log.Debugf("KeyValProtoWatcher received %v: %s (rev %d)",
 					r.GetChangeType(), r.GetKey(), r.GetRevision())
 				r.GetValue()
 			}

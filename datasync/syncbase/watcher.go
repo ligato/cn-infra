@@ -25,12 +25,12 @@ import (
 	"github.com/ligato/cn-infra/logging/logroot"
 )
 
-// NewWatcher creates a new instance of Watcher.
+// NewWatcher creates a new instance of KeyValProtoWatcher.
 func NewWatcher() *Watcher {
 	return &Watcher{subscriptions: map[string]*Subscription{}, access: sync.Mutex{}, lastRev: NewLatestRev()}
 }
 
-// Watcher propagates events using channels.
+// KeyValProtoWatcher propagates events using channels.
 type Watcher struct {
 	subscriptions map[string]*Subscription
 	access        sync.Mutex
@@ -86,7 +86,7 @@ func (adapter *Watcher) WatchDataBase(resyncName string, changeChan chan datasyn
 
 // WatchData just appends channels
 func (adapter *Watcher) WatchData(resyncName string, changeChan chan datasync.ChangeEvent,
-	resyncChan chan datasync.ResyncEvent, keyPrefixes ...string) (datasync.WatchDataRegistration, error) {
+	resyncChan chan datasync.ResyncEvent, keyPrefixes ...string) (datasync.WatchRegistration, error) {
 	return adapter.WatchDataBase(resyncName, changeChan, resyncChan, keyPrefixes...)
 }
 

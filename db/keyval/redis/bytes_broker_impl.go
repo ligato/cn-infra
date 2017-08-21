@@ -403,7 +403,7 @@ type BytesBrokerWatcherRedis struct {
 	closeCh chan struct{}
 }
 
-// NewBrokerWatcher creates a new CRUD + Watcher proxy instance to redis using through BytesConnectionRedis.
+// NewBrokerWatcher creates a new CRUD + KeyValProtoWatcher proxy instance to redis using through BytesConnectionRedis.
 // The given prefix will be prepended to key argument in all calls.
 // Specify empty string ("") if not wanting to use prefix.
 func (db *BytesConnectionRedis) NewBrokerWatcher(prefix string) *BytesBrokerWatcherRedis {
@@ -417,7 +417,7 @@ func (db *BytesConnectionRedis) NewBroker(prefix string) keyval.BytesBroker {
 	return db.NewBrokerWatcher(prefix)
 }
 
-// NewWatcher creates a new Watcher proxy instance to redis using through BytesConnectionRedis.
+// NewWatcher creates a new KeyValProtoWatcher proxy instance to redis using through BytesConnectionRedis.
 // The given prefix will be prepended to key argument in all calls.
 // Specify empty string ("") if not wanting to use prefix.
 func (db *BytesConnectionRedis) NewWatcher(prefix string) keyval.BytesWatcher {

@@ -19,7 +19,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/ligato/cn-infra/httpmux"
+	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/unrolled/render"
 )
@@ -41,7 +41,7 @@ type Plugin struct {
 	Log logging.PluginLogger
 
 	LogRegistry logging.Registry
-	HTTP        *httpmux.Plugin
+	HTTP        *rest.Plugin
 }
 
 // Init is called at plugin initialization. It register the following handlers:

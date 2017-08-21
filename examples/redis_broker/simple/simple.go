@@ -128,9 +128,9 @@ func runSimpleExmple() {
 				if ok {
 					switch r.GetChangeType() {
 					case datasync.Put:
-						log.Infof("Watcher received %v: %s=%s", r.GetChangeType(), r.GetKey(), string(r.GetValue()))
+						log.Infof("KeyValProtoWatcher received %v: %s=%s", r.GetChangeType(), r.GetKey(), string(r.GetValue()))
 					case datasync.Delete:
-						log.Infof("Watcher received %v: %s", r.GetChangeType(), r.GetKey())
+						log.Infof("KeyValProtoWatcher received %v: %s", r.GetChangeType(), r.GetKey())
 					}
 				} else {
 					log.Error("Something wrong with respChan... bail out")

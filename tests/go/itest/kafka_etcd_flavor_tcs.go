@@ -7,7 +7,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	etcdmock "github.com/ligato/cn-infra/db/keyval/etcdv3/mocks"
 	"github.com/ligato/cn-infra/flavors/etcdkafka"
-	"github.com/ligato/cn-infra/httpmux/mock"
+	"github.com/ligato/cn-infra/rpc/rest/mock"
 	"github.com/ligato/cn-infra/messaging/kafka"
 	kafkamux "github.com/ligato/cn-infra/messaging/kafka/mux"
 	//"github.com/onsi/gomega"

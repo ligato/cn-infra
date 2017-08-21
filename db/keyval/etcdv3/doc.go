@@ -49,7 +49,7 @@
 //
 //    db := etcd.NewEtcdConnectionUsingClient(client)
 //
-// Created BytesConnectionEtcd implements Broker and Watcher interfaces. The example of use can be seen below.
+// Created BytesConnectionEtcd implements Broker and KeyValProtoWatcher interfaces. The example of use can be seen below.
 //
 // To insert single key-value pair into etcd run:
 //		db.Put(key, data)
