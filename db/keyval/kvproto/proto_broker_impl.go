@@ -132,18 +132,10 @@ func (pdb *protoBroker) Delete(key string, opts ...datasync.DelOption) (existed 
 }
 
 // Watch subscribes for changes in datastore associated with the key. respChannel is used for delivery watch events
-func (db *ProtoWrapper) Watch(resp chan keyval.ProtoWatchResp, keys ...string) error {
-	byteCh := make(chan keyval.BytesWatchResp, 0)
-	err := db.broker.Watch(byteCh, keys...)
-	if err != nil {
-		return err
-	}
-	go func() {
-		for msg := range byteCh {
-			resp <- NewWatchResp(db.serializer, msg)
-		}
-	}()
-	return nil
+func (db *ProtoWrapper) Watch(resp func(keyval.ProtoWatchResp), keys ...string) error {
+	return db.broker.Watch(func(msg keyval.BytesWatchResp) {
+		resp(NewWatchResp(db.serializer, msg))
+	}, keys...)
 }
 
 // GetValue retrieves one key-value item from the datastore. The item
