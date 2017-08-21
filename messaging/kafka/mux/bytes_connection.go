@@ -104,7 +104,7 @@ func (conn *Connection) NewSyncPublisher(topic string) BytesPublisher {
 	return &bytesSyncPublisherKafka{conn, topic}
 }
 
-// Publish publishes a message into kafka
+// Put publishes a message into kafka
 func (p *bytesSyncPublisherKafka) Publish(key string, data []byte) error {
 	_, err := p.conn.SendSyncByte(p.topic, []byte(key), data)
 	return err
@@ -115,7 +115,7 @@ func (conn *Connection) NewAsyncPublisher(topic string, successClb func(*client.
 	return &bytesAsyncPublisherKafka{conn, topic, successClb, errorClb}
 }
 
-// Publish publishes a message into kafka
+// Put publishes a message into kafka
 func (p *bytesAsyncPublisherKafka) Publish(key string, data []byte) error {
 	p.conn.SendAsyncMessage(p.topic, sarama.StringEncoder(key), sarama.ByteEncoder(data), nil, p.succCallback, p.errCallback)
 	return nil

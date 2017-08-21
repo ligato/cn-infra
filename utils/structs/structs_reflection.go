@@ -29,10 +29,18 @@ func FindField(pointerToAField interface{}, pointerToAStruct interface{}) (field
 
 	strct := reflect.Indirect(reflect.ValueOf(pointerToAStruct))
 	numField := strct.NumField()
+
 	for i := 0; i < numField; i++ {
 		sf := strct.Field(i)
 
-		if sf.CanAddr() {
+		//logroot.StandardLogger().Info("xxxxxxxxxxx ", sf.Kind().String(), " ", sf.String())
+
+		if sf.Kind() == reflect.Ptr || sf.Kind() == reflect.Interface {
+			if fieldVal.Interface() == sf {
+				field := strct.Type().Field(i)
+				return &field, true
+			}
+		} else if sf.CanAddr() {
 			if fieldVal.Pointer() == sf.Addr().Pointer() {
 				field := strct.Type().Field(i)
 				return &field, true

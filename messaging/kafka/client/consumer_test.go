@@ -22,12 +22,12 @@ import (
 	"github.com/ligato/cn-infra/logging/logroot"
 )
 
-var log = logroot.Logger()
+var log = logroot.StandardLogger()
 
 func ExampleConsumer() {
 
 	//init config
-	config := NewConfig(logroot.Logger())
+	config := NewConfig(logroot.StandardLogger())
 	config.SetBrokers("localhost:9091,localhost:9092")
 	config.SetRecvNotification(true)
 	config.SetRecvNotificationChan(make(chan *cluster.Notification))

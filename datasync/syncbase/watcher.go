@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/ligato/cn-infra/datasync"
-	log "github.com/ligato/cn-infra/logging/logrus"
+	"github.com/ligato/cn-infra/logging/logroot"
 )
 
 // NewWatcher creates a new instance of Watcher.
@@ -123,7 +123,7 @@ func (adapter *Watcher) PropagateChanges(txData map[string] /*key*/ datasync.Cha
 						func(sub *Subscription, key string, val datasync.ChangeValue) func(done chan error) {
 							return func(done chan error) {
 								sub.ChangeChan <- &ChangeEvent{key, val.GetChangeType(),
-									val, curRev, prev, NewDoneChannel(done)}
+															   val, curRev, prev, NewDoneChannel(done)}
 							}
 						}(sub, key, val))
 				}
@@ -140,7 +140,7 @@ func (adapter *Watcher) PropagateChanges(txData map[string] /*key*/ datasync.Cha
 			return err
 		}
 	case <-time.After(5 * time.Second):
-		log.Warn("Timeout of aggregated change callback")
+		logroot.StandardLogger().Warn("Timeout of aggregated change callback")
 	}
 
 	return nil

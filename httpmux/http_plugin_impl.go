@@ -15,42 +15,62 @@
 package httpmux
 
 import (
-	"fmt"
+	"io"
 	"net/http"
-	"time"
+
+	"fmt"
 
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/datasync/rpc/grpcsync"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/utils/safeclose"
+	"github.com/namsral/flag"
 	"github.com/unrolled/render"
 )
 
+// PluginID used in the Agent Core flavors
+const PluginID core.PluginName = "HTTP"
+
 const (
-	// PluginID used in the Agent Core flavors
-	PluginID core.PluginName = "HTTP"
+	// DefaultHTTPPort is used during HTTP server startup unless different port was configured
+	DefaultHTTPPort = "9191"
 )
+
+var (
+	httpPort string
+)
+
+// init is here only for parsing program arguments
+func init() {
+	flag.StringVar(&httpPort, "http-port", DefaultHTTPPort,
+		"Listen port for the Agent's HTTP server.")
+}
 
 // Plugin implements the Plugin interface.
 type Plugin struct {
-	LogFactory logging.LogFactory
-	HTTPport   *HTTPPort
-	port 		string
+	Log logging.PluginLogger
 
-	logging.Logger
-	server    *http.Server
-	mx        *mux.Router
-	formatter *render.Render
+	// Used to simplify if not whole config needs to be configured
+	HTTPport string
+	// Config is a rich alternative comparing to HTTPport
+	// TODO Config *Config
+
+	// Used mainly for testing purposes
+	listenAndServe ListenAndServe
+
+	server     io.Closer
+	mx         *mux.Router
+	formatter  *render.Render
+	grpcServer *grpcsync.Adapter
 }
 
 // Init is entry point called by Agent Core
 // - It prepares Gorilla MUX HTTP Router
 // - registers grpc transport
 func (plugin *Plugin) Init() (err error) {
-	plugin.port = plugin.HTTPport.Port
-	plugin.Logger, err = plugin.LogFactory.NewLogger(string(PluginID) + "-" + plugin.port)
-	if err != nil {
-		return err
+	if plugin.HTTPport == "" /*TODO && plugin.Config == nil*/ {
+		plugin.HTTPport = httpPort
 	}
 
 	plugin.mx = mux.NewRouter()
@@ -58,7 +78,7 @@ func (plugin *Plugin) Init() (err error) {
 		IndentJSON: true,
 	})
 
-	// todo grpc temporary disabled
+	//TODO separate plugin:
 	//plugin.grpcServer = grpcsync.NewAdapter()
 	//plugin.Debug("grpctransp: ", plugin.grpcServer)
 	//err = datasync.RegisterTransport(&syncbase.Adapter{Watcher: plugin.grpcServer})
@@ -74,40 +94,28 @@ func (plugin *Plugin) RegisterHTTPHandler(path string,
 }
 
 // AfterInit starts the HTTP server
-func (plugin *Plugin) AfterInit() error {
-	address := fmt.Sprintf("0.0.0.0:%s", plugin.port)
-	//TODO NICE-to-HAVE make this configurable
-	plugin.server = &http.Server{Addr: address, Handler: plugin.mx}
+func (plugin *Plugin) AfterInit() (err error) {
+	var cfgCopy Config
+	/*TODO if plugin.Config != nil {
+		cfgCopy = *plugin.Config
+	}*/
 
-	var errCh chan error
-	go func() {
-		plugin.Info("Listening on http://", address)
-
-		if err := plugin.server.ListenAndServe(); err != nil {
-			errCh <- err
-		} else {
-			errCh <- nil
-		}
-	}()
-
-	select {
-	case err := <-errCh:
-		return err
-		// Wait 100ms to create a new stream, so it doesn't bring too much
-		// overhead when retry.
-	case <-time.After(100 * time.Millisecond):
-		//everything is probably fine
-		return nil
+	if cfgCopy.Endpoint == "" {
+		cfgCopy.Endpoint = fmt.Sprintf("0.0.0.0:%s", plugin.HTTPport)
 	}
+
+	if plugin.listenAndServe != nil {
+		plugin.server, err = plugin.listenAndServe(cfgCopy, plugin.mx)
+	} else {
+		plugin.Log.Info("Listening on http://", cfgCopy.Endpoint)
+		plugin.server, err = ListenAndServeHTTP(cfgCopy, plugin.mx)
+	}
+
+	return err
 }
 
 // Close cleans up the resources
 func (plugin *Plugin) Close() error {
-	err := safeclose.Close(plugin.server)
+	_, err := safeclose.CloseAll(plugin.grpcServer, plugin.server)
 	return err
-}
-
-// HTTPPort contains port value as string
-type HTTPPort struct {
-	Port string
 }

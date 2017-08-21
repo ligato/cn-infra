@@ -52,7 +52,7 @@
 //
 // Create connection from configuration
 //   client, err := redis.CreateClient(cfg)
-//   db, err := redis.NewBytesConnection(client, logroot.Logger())
+//   db, err := redis.NewBytesConnection(client, logroot.StandardLogger())
 //
 // Create Brokers / Watchers from connection
 //   // create broker/watcher that share the same connection pools.
@@ -69,7 +69,7 @@
 //   // put
 //   err = db.Put("some-key", []byte("some-value"))
 //   err = db.Put("some-temp-key", []byte("valid for 20 seconds"),
-//                keyval.WithTTL(20*time.Second))
+//                datasync.WithTTL(20*time.Second))
 //
 //   // get
 //   value, found, revision, err := db.GetValue("some-key")
@@ -102,7 +102,7 @@
 //   // delete
 //   found, err := db.Delete("some-key")
 //   // or, delete all keys matching the prefix "some-key".
-//   found, err := db.Delete("some-key", keyval.WithPrefix())
+//   found, err := db.Delete("some-key", datasync.WithPrefix())
 //
 //   // transaction
 //   var txn keyval.BytesTxn = db.NewTxn()

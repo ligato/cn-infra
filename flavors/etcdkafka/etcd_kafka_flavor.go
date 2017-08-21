@@ -16,19 +16,22 @@ package etcdkafka
 
 import (
 	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/datasync/persisted/dbsync"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
-	"github.com/ligato/cn-infra/flavors/generic"
+	"github.com/ligato/cn-infra/flavors/rpc"
 	"github.com/ligato/cn-infra/messaging/kafka"
 )
 
-// FlavorGeneric glues together generic.FlavorGeneric plugins with:
+// FlavorRPC glues together generic.FlavorRPC plugins with:
 // - ETCD (useful for watching config.)
 // - Kafka plugins (useful for publishing events)
 type Flavor struct {
-	Generic generic.FlavorGeneric
-	Etcd    etcdv3.Plugin
-	Kafka   kafka.Plugin
+	rpc.FlavorRPC
 
+	ETCD         etcdv3.Plugin
+	EtcdDataSync dbsync.Adapter
+
+	Kafka kafka.Plugin
 
 	injected bool
 }
@@ -39,15 +42,17 @@ func (f *Flavor) Inject() error {
 		return nil
 	}
 
-	f.Generic.Inject()
+	f.FlavorRPC.Inject()
 
-	f.Etcd.LogFactory = &f.Generic.Logrus
-	f.Etcd.ServiceLabel = &f.Generic.ServiceLabel
-	f.Etcd.StatusCheck = &f.Generic.StatusCheck
+	f.ETCD.Log = f.LoggerFor("ETCD")
+	f.ETCD.ServiceLabel = &f.ServiceLabel
+	f.ETCD.StatusCheck = &f.StatusCheck
+	//TODO f.EtcdDataSync = &f.
+	//TODO f.Generic.HealthRPC.Transport = &f.EtcdDataSync
 
-	f.Kafka.LogFactory = &f.Generic.Logrus
-	f.Kafka.ServiceLabel = &f.Generic.ServiceLabel
-	f.Kafka.StatusCheck = &f.Generic.StatusCheck
+	f.Kafka.Log = f.LoggerFor("Kafka")
+	f.Kafka.ServiceLabel = &f.ServiceLabel
+	f.Kafka.StatusCheck = &f.StatusCheck
 
 	f.injected = true
 

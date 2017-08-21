@@ -28,7 +28,7 @@ const DefaultNotifTimeout = 2 * time.Second
 func ToChan(ch chan NamedMappingGenericEvent, opts ...interface{}) func(dto NamedMappingGenericEvent) {
 
 	timeout := DefaultNotifTimeout
-	logger := logroot.Logger()
+	logger := logroot.StandardLogger()
 
 	for _, opt := range opts {
 		switch opt.(type) {

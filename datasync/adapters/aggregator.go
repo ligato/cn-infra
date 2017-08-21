@@ -31,12 +31,12 @@ type AggregatedRegistration struct {
 	Registrations []datasync.WatchDataRegistration
 }
 
-// WatchData subscribes to every transport available within transport aggregator
-func (ta *TransportAggregator) WatchData(resyncName string, changeChan chan datasync.ChangeEvent, resyncChan chan datasync.ResyncEvent,
+// Watch subscribes to every transport available within transport aggregator
+func (ta *TransportAggregator) Watch(resyncName string, changeChan chan datasync.ChangeEvent, resyncChan chan datasync.ResyncEvent,
 	keyPrefixes ...string) (datasync.WatchDataRegistration, error) {
 	registrations := []datasync.WatchDataRegistration{}
 	for _, transport := range ta.Adapters {
-		watcherReg, err := transport.WatchData(resyncName, changeChan, resyncChan, keyPrefixes...)
+		watcherReg, err := transport.Watch(resyncName, changeChan, resyncChan, keyPrefixes...)
 		if err != nil {
 			return nil, err
 		}
@@ -48,14 +48,14 @@ func (ta *TransportAggregator) WatchData(resyncName string, changeChan chan data
 	}, nil
 }
 
-// PublishData to every available transport
-func (ta *TransportAggregator) PublishData(key string, data proto.Message) error {
+// Put to every available transport
+func (ta *TransportAggregator) Put(key string, data proto.Message) error {
 	if len(ta.Adapters) == 0 {
-		return fmt.Errorf("No transport is availabel in aggregator")
+		return fmt.Errorf("No transport is available in aggregator")
 	}
 	var wasError error
 	for _, transport := range ta.Adapters {
-		err := transport.PublishData(key, data)
+		err := transport.Put(key, data)
 		if err != nil {
 			wasError = err
 		}

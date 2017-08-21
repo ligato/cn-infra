@@ -18,12 +18,12 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/messaging"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/messaging/kafka/mux"
 	"github.com/ligato/cn-infra/servicelabel"
-	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
 )
@@ -39,7 +39,7 @@ func init() {
 
 // Plugin provides API for interaction with kafka brokers.
 type Plugin struct {
-	LogFactory   logging.LogFactory
+	Log          logging.PluginLogger
 	ServiceLabel *servicelabel.Plugin
 	StatusCheck  *statuscheck.Plugin
 	subscription chan (*client.ConsumerMessage)
@@ -53,11 +53,7 @@ func FromExistingMux(mux *mux.Multiplexer) *Plugin {
 }
 
 // Init is called at plugin initialization.
-func (p *Plugin) Init() error {
-	logger, err := p.LogFactory.NewLogger(string(PluginID))
-	if err != nil {
-		return err
-	}
+func (p *Plugin) Init() (err error) {
 	// Prepare topic and  subscription for status check client
 	topic := "status-check"
 	p.subscription = make(chan *client.ConsumerMessage)
@@ -70,7 +66,7 @@ func (p *Plugin) Init() error {
 			return err
 		}
 	}
-	clientConfig := p.getClientConfig(config, logger, topic)
+	clientConfig := p.getClientConfig(config, p.Log, topic)
 
 	// Init consumer
 	p.consumer, err = client.NewConsumer(clientConfig, nil)
@@ -86,15 +82,15 @@ func (p *Plugin) Init() error {
 			if err == nil {
 				return statuscheck.OK, nil
 			}
-			logger.Errorf("Kafka server unavailable")
+			p.Log.Errorf("Kafka server unavailable")
 			return statuscheck.Error, err
 		})
 	} else {
-		logger.Warnf("Unable to start status check for kafka")
+		p.Log.Warnf("Unable to start status check for kafka")
 	}
 
 	if p.mx == nil {
-		p.mx, err = mux.InitMultiplexer(configFile, p.ServiceLabel.GetAgentLabel(), logger)
+		p.mx, err = mux.InitMultiplexer(configFile, p.ServiceLabel.GetAgentLabel(), p.Log)
 	}
 
 	return err

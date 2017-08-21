@@ -50,7 +50,7 @@ var keyValues = map[string]string{
 }
 
 func TestMain(m *testing.M) {
-	log = logroot.Logger()
+	log = logroot.StandardLogger()
 
 	var err error
 	miniRedis, err = miniredis.Run()
@@ -130,7 +130,7 @@ func createMiniRedisConnection() {
 		MaxRetryBackoff: 0,
 	})
 	// client = &MockGoredisClient{}
-	bytesConn, _ = NewBytesConnection(client, logroot.Logger())
+	bytesConn, _ = NewBytesConnection(client, logroot.StandardLogger())
 	bytesBrokerWatcher = bytesConn.NewBrokerWatcher("unit_test-")
 
 	for k, v := range keyValues {
@@ -249,7 +249,7 @@ func TestPut(t *testing.T) {
 	err := bytesBrokerWatcher.Put("abc", []byte("123"))
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	err = bytesBrokerWatcher.Put("abcWithTTL", []byte("123"), keyval.WithTTL(ttl))
+	err = bytesBrokerWatcher.Put("abcWithTTL", []byte("123"), datasync.WithTTL(ttl))
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
@@ -404,7 +404,7 @@ func TestDel(t *testing.T) {
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	gomega.Expect(found).Should(gomega.BeTrue())
 
-	found, err = bytesBrokerWatcher.Delete("key", keyval.WithPrefix())
+	found, err = bytesBrokerWatcher.Delete("key", datasync.WithPrefix())
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	gomega.Expect(found).Should(gomega.BeTrue())
 }

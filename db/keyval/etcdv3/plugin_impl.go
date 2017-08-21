@@ -18,9 +18,9 @@ import (
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/plugin"
+	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
-	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/utils/config"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
@@ -37,25 +37,19 @@ var defaultConfigFileName string
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
-	LogFactory logging.LogFactory
-	logging.Logger
+	Log logging.PluginLogger
 
 	ServiceLabel *servicelabel.Plugin
 	StatusCheck  *statuscheck.Plugin
-	Skeleton     *plugin.Skeleton
 
-	Connection     keyval.KvBytesPlugin
+	skeleton *plugin.Skeleton
+
 	ConfigFileName string
 }
 
 // Init is called at plugin startup. The connection to etcd is established.
 func (p *Plugin) Init() error {
 	var err error
-	// Init logger
-	p.Logger, err = p.LogFactory.NewLogger(string(PluginID))
-	if err != nil {
-		return err
-	}
 
 	// Retrieve config
 	cfg, err := p.retrieveConfig()
@@ -68,45 +62,48 @@ func (p *Plugin) Init() error {
 	if err != nil {
 		return err
 	}
-	connection, err := NewEtcdConnectionWithBytes(*etcdConfig, p.Logger)
+
+	if p.skeleton == nil {
+		con, err := NewEtcdConnectionWithBytes(*etcdConfig, p.Log)
+		if err != nil {
+			return err
+		}
+
+		p.skeleton = plugin.NewSkeleton(string(PluginID),
+			p.ServiceLabel,
+			con,
+		)
+	}
+	err = p.skeleton.Init()
 	if err != nil {
 		return err
 	}
-
-	// Init skeleton
-	skeleton := plugin.NewSkeleton(string(PluginID),
-		p.LogFactory,
-		p.ServiceLabel,
-		connection,
-	)
-	p.Skeleton = skeleton
-	err = p.Skeleton.Init()
-	if err != nil {
-		return err
-	}
-
-	// Connection is passed to DbSync plugin to register transport
-	p.Connection = connection
 
 	// Register for providing status reports (polling mode)
 	if p.StatusCheck != nil {
 		p.StatusCheck.Register(PluginID, func() (statuscheck.PluginState, error) {
-			_, _, err := p.Skeleton.NewBroker("/").GetValue(healthCheckProbeKey, nil)
+			_, _, err := p.skeleton.NewBroker("/").GetValue(healthCheckProbeKey, nil)
 			if err == nil {
 				return statuscheck.OK, nil
 			}
 			return statuscheck.Error, err
 		})
 	} else {
-		p.Skeleton.Logger.Warnf("Unable to start status check for etcd")
+		p.Log.Warnf("Unable to start status check for etcd")
 	}
 
 	return nil
 }
 
+// FromExistingConnection is used mainly for testing
+func FromExistingConnection(connection keyval.CoreBrokerWatcher, sl *servicelabel.Plugin) *Plugin {
+	skel := plugin.NewSkeleton(string(PluginID), sl, connection)
+	return &Plugin{skeleton: skel}
+}
+
 // Close resources
 func (p *Plugin) Close() error {
-	_, err := safeclose.CloseAll(p.Skeleton, p.Connection)
+	_, err := safeclose.CloseAll(p.skeleton)
 	return err
 }
 
