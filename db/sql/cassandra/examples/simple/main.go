@@ -32,7 +32,7 @@ var UserTable = &User{}
 
 // User is simple structure used in automated tests
 type User struct {
-	ID        gocql.UUID `cql:"userid"`
+	ID        gocql.UUID `cql:"userid" pk:"userid"`
 	FirstName string     `cql:"first_name"`
 	LastName  string     `cql:"last_name"`
 	//NetIP      net.IP //mapped to native cassandra type
@@ -50,32 +50,40 @@ func (entity *User) SchemaName() string {
 func main() {
 	cfg, err := loadConfig()
 	if err != nil {
-		fmt.Println("failed - configuration ", err)
+		fmt.Errorf("Failed to load configuration %v", err)
 		os.Exit(1)
 	}
 
-	session, err := cassandra.CreateSessionFromConfig(cfg)
+	clientConfig, err := cassandra.ConfigToClientConfig(&cfg)
+	if err != nil {
+		fmt.Errorf("Error in creating client configuration %v", err)
+	}
+	session, err := cassandra.CreateSessionFromConfig(clientConfig)
 	defer session.Close()
 	if err != nil {
-		fmt.Println("failed - session1 ", err)
+		fmt.Errorf("Failed to create session %v", err)
 		os.Exit(1)
 	}
 
 	err = exampleKeyspace(session)
 	if err != nil {
-		fmt.Println("failed - keyspace ", err)
+		fmt.Errorf("Error in creating keyspace %v", err)
 		os.Exit(1)
 	}
 
-	sessionWithKeyspace, err := cassandra.CreateSessionFromConfig(cfg)
+	clientConfig, err = cassandra.ConfigToClientConfig(&cfg)
+	if err != nil {
+		fmt.Errorf("Error in creating client configuration %v", err)
+	}
+	sessionWithKeyspace, err := cassandra.CreateSessionFromConfig(clientConfig)
 	defer sessionWithKeyspace.Close()
 	if err != nil {
-		fmt.Println("failed - session2 ", err)
+		fmt.Errorf("Failed to create session %v", err)
 		os.Exit(1)
 	}
 	err = example(sessionWithKeyspace)
 	if err != nil {
-		fmt.Println("failed - example ", err)
+		fmt.Errorf("Error in DDL or DML example %v", err)
 		os.Exit(1)
 	}
 }
@@ -83,7 +91,7 @@ func main() {
 func loadConfig() (cassandra.Config, error) {
 	var cfg cassandra.Config
 	if len(os.Args) < 2 {
-		return cfg, errors.New("Configuration filename argument not specified")
+		return cfg, errors.New("Please provide yaml configuration file path")
 	}
 
 	configFileName := os.Args[1]
