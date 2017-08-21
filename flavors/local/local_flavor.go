@@ -20,13 +20,14 @@ import (
 	"github.com/ligato/cn-infra/servicelabel"
 
 	"github.com/ligato/cn-infra/health/statuscheck"
+	"github.com/ligato/cn-infra/logging"
 )
 
 // FlavorLocal glues together very minimal subset of cn-infra plugins
 // that can be embeddable inside different project without running
 // any agent specific server.
 type FlavorLocal struct {
-	Logrus       logrus.Plugin
+	logRegistry  logging.Registry
 	ServiceLabel servicelabel.Plugin
 	StatusCheck  statuscheck.Plugin
 
@@ -39,9 +40,11 @@ type FlavorLocal struct {
 func (f *FlavorLocal) Inject() error {
 	if f.injected {
 		return nil
+	} else {
+		f.injected = true
 	}
 
-	f.injected = true
+	f.StatusCheck.Log = f.LoggerFor("StatusCheck")
 
 	return nil
 }
@@ -50,4 +53,20 @@ func (f *FlavorLocal) Inject() error {
 func (f *FlavorLocal) Plugins() []*core.NamedPlugin {
 	f.Inject()
 	return core.ListPluginsInFlavor(f)
+}
+
+// LoggerFor for getting Logging Registry instance
+// (not thread safe)
+func (f *FlavorLocal) LogRegistry() logging.Registry {
+	if f.logRegistry == nil {
+		f.logRegistry = logrus.NewLogRegistry()
+	}
+
+	return f.logRegistry
+}
+
+// LoggerFor for getting PlugginLogger instance.
+// This method is just convenient shortcut for Flavor.Inject()
+func (f *FlavorLocal) LoggerFor(pluginName string) logging.PluginLogger {
+	return logging.ForPlugin(pluginName, f.LogRegistry())
 }

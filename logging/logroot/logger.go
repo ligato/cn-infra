@@ -20,14 +20,8 @@ import (
 	"github.com/ligato/cn-infra/logging/logrus"
 )
 
-var defaultLogger logging.Logger
-
-func init() {
-	defaultLogger = logrus.StandardLogger()
-}
-
-// Logger returns global logger. Please notice that recommended
+// Logger returns a global logger. Please notice, that recommended
 // approach is to create a custom logger.
 func Logger() logging.Logger {
-	return defaultLogger
+	return logrus.DefaultLogger()
 }

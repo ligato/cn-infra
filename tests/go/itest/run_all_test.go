@@ -6,8 +6,6 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-
-	log "github.com/ligato/cn-infra/logging/logrus"
 )
 
 // Test runs all TC methods of multiple test suites in sequence
@@ -15,9 +13,9 @@ func Test(t *testing.T) {
 	doneChan := make(chan struct{}, 1)
 
 	go func() {
-		RunTestSuite(&suiteLocalFlavor{T: t}, t)
-		RunTestSuite(&suiteGenericFlavor{T: t}, t)
-		RunTestSuite(&suiteKafkaEtcdFlavor{T: t}, t)
+		RunTestSuite(&suiteFlavorLocal{T: t}, t)
+		RunTestSuite(&suiteFlavorRPC{T: t}, t)
+		RunTestSuite(&suiteFlavorKafkaEtcd{T: t}, t)
 
 		doneChan <- struct{}{}
 	}()
@@ -26,9 +24,9 @@ func Test(t *testing.T) {
 	signal.Notify(sigChan, os.Interrupt)
 	select {
 	case <-doneChan:
-		log.Info("Tests finished")
+		t.Log("Tests finished")
 	case <-sigChan:
-		log.Info("Interrupt received, returning.")
+		t.Log("Interrupt received, returning.")
 		t.Fatal("Interrupted by user")
 		t.SkipNow()
 		os.Exit(1) //TODO avoid this workaround
@@ -42,7 +40,7 @@ func RunTestSuite(testSuite interface{}, t *testing.T, teardowns ...func()) {
 	suite := reflect.ValueOf(testSuite)
 
 	suiteName := reflect.TypeOf(testSuite).Elem().Name()
-	log.Info("suiteName '", suiteName, "'")
+	t.Log("suiteName '", suiteName, "'")
 	t.Run(suiteName, func(t *testing.T) {
 		for i := 0; i < suite.NumMethod(); i++ {
 			tc := suite.Method(i)
@@ -55,7 +53,7 @@ func RunTestSuite(testSuite interface{}, t *testing.T, teardowns ...func()) {
 				//os.Setenv(servicelabel.MicroserviceLabelEnvVar, fmt.Sprintf(
 				//	"TEST_VPP_%d", vppInstanceCounter))
 
-				log.Info("tcName ", tcName)
+				t.Log("tcName ", tcName)
 				ok := t.Run(tcName, func(t *testing.T) {
 					tc.Call([]reflect.Value{})
 

@@ -17,7 +17,7 @@ package syncbase
 import (
 	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/datasync"
-	log "github.com/ligato/cn-infra/logging/logrus"
+	"github.com/ligato/cn-infra/logging/logroot"
 )
 
 // ChangeEvent is a simple structure that implements interface datasync.ChangeEvent
@@ -63,6 +63,6 @@ func (ev *ChangeEvent) Done(err error) {
 	if ev.delegate != nil {
 		ev.delegate.Done(err)
 	} else if err != nil {
-		log.Error(err)
+		logroot.Logger().Error(err)
 	}
 }

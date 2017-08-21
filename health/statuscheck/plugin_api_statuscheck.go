@@ -28,7 +28,7 @@ type PluginState string
 type PluginStateProbe func() (PluginState, error)
 
 type PluginAPI interface {
-	// Register registers a plugin for status change reporting.
+	// put registers a plugin for status change reporting.
 	Register(pluginName core.PluginName, probe PluginStateProbe)
 	// ReportStateChange can be used to report a change in the status of a previously registered plugin.
 	ReportStateChange(pluginName core.PluginName, state PluginState, lastError error)
