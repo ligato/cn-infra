@@ -66,6 +66,4 @@ func ListenAndServeHTTP(config Config, handler http.Handler) (httpServer io.Clos
 		//everything is probably fine
 		return server, nil
 	}
-
-	return server, nil
 }

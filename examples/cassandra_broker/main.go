@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package cassandra_broker
 
 import (
 	"errors"
@@ -50,20 +50,26 @@ func (entity *User) SchemaName() string {
 func main() {
 	cfg, err := loadConfig()
 	if err != nil {
-		fmt.Errorf("Failed to load configuration %v", err)
+		fmt.Println(fmt.Errorf("Failed to load configuration %v", err))
 		os.Exit(1)
 	}
 
-	session, err := cassandra.CreateSessionFromConfig(cfg)
+	clientCfg, err := cassandra.ConfigToClientConfig(&cfg)
+	if err != nil {
+		fmt.Println(fmt.Errorf("Failed to load configuration %v", err))
+		os.Exit(1)
+	}
+
+	session, err := cassandra.CreateSessionFromConfig(clientCfg)
 	defer session.Close()
 	if err != nil {
-		fmt.Errorf("Failed to create session %v", err)
+		fmt.Println(fmt.Errorf("Failed to create session %v", err))
 		os.Exit(1)
 	}
 
 	err = exampleKeyspace(session)
 	if err != nil {
-		fmt.Errorf("Error in creating keyspace %v", err)
+		fmt.Println(fmt.Errorf("Error in creating keyspace %v", err))
 		os.Exit(1)
 	}
 }
