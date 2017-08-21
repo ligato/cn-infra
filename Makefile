@@ -89,7 +89,7 @@ define build_examples_only
     @cd examples/etcdv3_broker && make build
     @cd examples/redis_broker && make build
     @cd examples/cassandra_broker && go build
-    @cd examples/log_logrus && make build
+    @cd examples/logs_logrus && make build
     @cd examples/kafka_broker && make build
     @echo "# done"
 endef
@@ -100,7 +100,7 @@ define clean_examples_only
     @cd examples/etcdv3_broker && make clean
     @cd examples/redis_broker && make clean
     @cd examples/cassandra_broker && rm -f simple
-    @cd examples/log_logrus && make clean
+    @cd examples/logs_logrus && make clean
     @cd examples/kafka_broker && make clean
     @echo "# done"
 endef
