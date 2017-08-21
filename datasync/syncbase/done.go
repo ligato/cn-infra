@@ -36,10 +36,10 @@ func (ev *DoneChannel) Done(err error) {
 		case ev.DoneChan <- err:
 			//sent successfully
 		default:
-			logroot.Logger().Debug("Nobody is listening anymore")
+			logroot.StandardLogger().Debug("Nobody is listening anymore")
 		}
 	} else if err != nil {
-		logroot.Logger().Error(err)
+		logroot.StandardLogger().Error(err)
 	}
 }
 
@@ -54,7 +54,7 @@ func (ev *DoneCallback) Done(err error) {
 	if ev.Callback != nil {
 		ev.Callback(err)
 	} else if err != nil {
-		logroot.Logger().Error(err)
+		logroot.StandardLogger().Error(err)
 	}
 }
 
@@ -80,7 +80,7 @@ func collectDoneEvents(partialDone, done chan error, evCount int) {
 				lastError = doneEv
 			}
 			if numDone >= evCount {
-				logroot.Logger().Debug("TX Done - all events callbacks received")
+				logroot.StandardLogger().Debug("TX Done - all events callbacks received")
 				break
 			}
 		}

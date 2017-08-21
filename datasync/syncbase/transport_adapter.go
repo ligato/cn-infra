@@ -34,7 +34,7 @@ func (adapter *Adapter) Watch(resyncName string, changeChan chan datasync.Change
 	if adapter.Watcher != nil {
 		return adapter.Watcher.Watch(resyncName, changeChan, resyncChan, keyPrefixes...)
 	}
-	logroot.Logger().Debug("Watcher is nil")
+	logroot.StandardLogger().Debug("Watcher is nil")
 
 	return nil, nil
 }

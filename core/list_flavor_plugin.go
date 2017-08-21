@@ -89,7 +89,7 @@ func fieldPlugin(field reflect.StructField, fieldVal reflect.Value, pluginType r
 		}
 	case reflect.Ptr, reflect.Interface:
 		if fieldVal.IsNil() {
-			logroot.Logger().WithField("fieldName", field.Name).Debug("Field is nil ", pluginType)
+			logroot.StandardLogger().WithField("fieldName", field.Name).Debug("Field is nil ", pluginType)
 		} else if plug, ok := fieldVal.Interface().(Plugin); ok {
 			return plug
 		}

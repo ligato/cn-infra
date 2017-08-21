@@ -20,7 +20,7 @@ import (
 	"github.com/namsral/flag"
 )
 
-var log = logroot.Logger()
+var log = logroot.StandardLogger()
 
 var redisConn *redis.BytesConnectionRedis
 var broker keyval.BytesBroker

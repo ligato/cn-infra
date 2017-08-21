@@ -4,9 +4,10 @@ import (
 	"time"
 
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/flavors/generic"
+	"github.com/ligato/cn-infra/flavors/rpc"
 	"github.com/ligato/cn-infra/logging"
-	log "github.com/ligato/cn-infra/logging/logrus"
+	log "github.com/ligato/cn-infra/logging/logroot"
+	"github.com/ligato/cn-infra/logging/logrus"
 )
 
 // *************************************************************************
@@ -39,7 +40,7 @@ func main() {
 
 	flavor := rpc.FlavorRPC{}
 
-	// Example plugin (Logger)
+	// Example plugin (StandardLogger)
 	examplePlugin := &core.NamedPlugin{PluginName: PluginID, Plugin: &ExamplePlugin{}}
 
 	// Create new agent
@@ -54,7 +55,7 @@ func main() {
 // Stop the agent with desired info message
 func closeExample(message string, closeChannel chan struct{}) {
 	time.Sleep(6 * time.Second)
-	log.Info(message)
+	log.StandardLogger().Info(message)
 	closeChannel <- struct{}{}
 }
 
@@ -79,47 +80,40 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	exampleNum := 15
 
 	// Basic logger options
-	log.Print("----------- Log examples -----------")
-	log.Printf("Print with format specifier. String: %s, Digit: %d, Value: %v", exampleString, exampleNum, plugin)
+	log.StandardLogger().Print("----------- Log examples -----------")
+	log.StandardLogger().Printf("Print with format specifier. String: %s, Digit: %d, Value: %v", exampleString, exampleNum, plugin)
 
 	// Format also available for all 6 levels of log levels
-	log.Debug("Debug log example: Debugging information")
-	log.Info("Info log example: Something informative")
-	log.Warn("Warn log example: Something unexpected, warning")
-	log.Error("Error log example: Failure without exit")
+	log.StandardLogger().Debug("Debug log example: Debugging information")
+	log.StandardLogger().Info("Info log example: Something informative")
+	log.StandardLogger().Warn("Warn log example: Something unexpected, warning")
+	log.StandardLogger().Error("Error log example: Failure without exit")
 
 	//log.Panic("Panic log") calls panic() after logging
 	//log.Fatal("Bye") calls os.Exit(1) after logging
 
 	// Log with field - automatically adds timestamp
-	log.WithField("Ex. string: ", exampleString).Info("Info log with field example")
+	log.StandardLogger().WithField("Ex. string: ", exampleString).Info("Info log with field example")
 
 	// For multiple fields
-	log.WithFields(log.Fields{"Ex. string": exampleString, "Ex. num": exampleNum}).Info("Info log with field example string and num")
+	log.StandardLogger().WithFields(log.Fields{"Ex. string": exampleString, "Ex. num": exampleNum}).Info("Info log with field example string and num")
 
 	// Log with error
-	log.WithError(err).Error("Example log with error")
+	log.StandardLogger().WithError(err).Error("Example log with error")
 
 	// Set log level which logs only entries with current severity or above
-	log.SetLevel(logging.DebugLevel) // everything
-	log.SetLevel(logging.InfoLevel)  // info, warn, error, panic, fatal - default log level
-	log.SetLevel(logging.WarnLevel)  // warn, error, panic, fatal
+	log.StandardLogger().SetLevel(logging.DebugLevel) // everything
+	log.StandardLogger().SetLevel(logging.InfoLevel)  // info, warn, error, panic, fatal - default log level
+	log.StandardLogger().SetLevel(logging.WarnLevel)  // warn, error, panic, fatal
 	// etc
 
-	// Custom logger with generated name
-	generatedLogger := log.New()
 	// Custom logger with name
-	namedLogger, err := log.NewNamed("myLogger")
-	if err != nil {
-		return err
-	}
+	namedLogger := logrus.NewLogger("myLogger")
 
 	// Usage of custom loggers
-	generatedLogger.Infof("Log using logger with generated name: %v ", generatedLogger.GetName())
 	namedLogger.Infof("Log using named logger with name: %v", namedLogger.GetName())
 
 	// End the example
-	log.SetLevel(logging.InfoLevel)
 
 	return nil
 }

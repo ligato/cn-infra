@@ -140,7 +140,7 @@ func (adapter *Watcher) PropagateChanges(txData map[string] /*key*/ datasync.Cha
 			return err
 		}
 	case <-time.After(5 * time.Second):
-		logroot.Logger().Warn("Timeout of aggregated change callback")
+		logroot.StandardLogger().Warn("Timeout of aggregated change callback")
 	}
 
 	return nil

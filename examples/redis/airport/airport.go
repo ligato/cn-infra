@@ -20,11 +20,12 @@ import (
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/db/keyval/redis"
-	"github.com/ligato/cn-infra/db/keyval/redis/examples/airport/model"
+	"github.com/ligato/cn-infra/examples/examplest/model"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
+	"github.com/ligato/cn-infra/examples/redis/airport/model"
 )
 
 var diagram = `
@@ -51,7 +52,7 @@ var diagram = `
 
 `
 
-var log = logroot.Logger()
+var log = logroot.StandardLogger()
 
 const (
 	arrival            = "Arrival"

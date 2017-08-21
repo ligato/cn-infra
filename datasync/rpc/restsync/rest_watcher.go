@@ -21,7 +21,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/datasync/syncbase"
-	log "github.com/ligato/cn-infra/logging/logrus"
+	log "github.com/ligato/cn-infra/logging/logroot"
 	"github.com/unrolled/render"
 )
 

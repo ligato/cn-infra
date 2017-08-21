@@ -53,7 +53,7 @@ func (s *DataMsgServiceServer) DataChanges(stream msg.DataMsgService_DataChanges
 						err = stream.Send(&msg.DataChangeReply{Key: chng.Key, OperationType: chng.OperationType,
 							Result:                                 0 /*TODO VPP Result*/ })
 						if err != nil {
-							logroot.Logger().Error(err) //Not able to propagate it somewhere else
+							logroot.StandardLogger().Error(err) //Not able to propagate it somewhere else
 						}
 					})
 				}

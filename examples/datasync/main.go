@@ -42,7 +42,7 @@ var log logging.Logger
 // required for the example are initialized. Agent is instantiated with generic plugins (ETCD, Kafka, Status check,
 // HTTP and Log), resync plugin and example plugin which demonstrates ETCD functionality.
 func main() {
-	log = logroot.Logger()
+	log = logroot.StandardLogger()
 	// Init close channel to stop the example
 	closeChannel := make(chan struct{}, 1)
 
@@ -50,7 +50,7 @@ func main() {
 	// Resync plugin
 	resyncPlugin := &core.NamedPlugin{PluginName: resync.PluginID, Plugin: &resync.Plugin{}}
 	// Example plugin (ETCD)
-	examplePlugin := &core.NamedPlugin{PluginName: PluginID, Plugin: &ExamplePlugin{ServiceLabel: &flavor.Generic.ServiceLabel}}
+	examplePlugin := &core.NamedPlugin{PluginName: PluginID, Plugin: &ExamplePlugin{ServiceLabel: &flavor.ServiceLabel}}
 
 	// Create new agent
 	agent := core.NewAgent(log, 15*time.Second, append(flavor.Plugins(), resyncPlugin, examplePlugin)...)

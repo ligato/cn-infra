@@ -50,7 +50,7 @@ var keyValues = map[string]string{
 }
 
 func TestMain(m *testing.M) {
-	log = logroot.Logger()
+	log = logroot.StandardLogger()
 
 	var err error
 	miniRedis, err = miniredis.Run()
@@ -130,7 +130,7 @@ func createMiniRedisConnection() {
 		MaxRetryBackoff: 0,
 	})
 	// client = &MockGoredisClient{}
-	bytesConn, _ = NewBytesConnection(client, logroot.Logger())
+	bytesConn, _ = NewBytesConnection(client, logroot.StandardLogger())
 	bytesBrokerWatcher = bytesConn.NewBrokerWatcher("unit_test-")
 
 	for k, v := range keyValues {

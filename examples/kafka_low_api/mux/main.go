@@ -21,14 +21,14 @@ import (
 
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
-	log "github.com/ligato/cn-infra/logging/logrus"
+	log "github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/messaging/kafka/mux"
 )
 
 func main() {
-	log.SetLevel(logging.DebugLevel)
-	mx, err := mux.InitMultiplexer("", "default", logroot.Logger())
+	log.StandardLogger().SetLevel(logging.DebugLevel)
+	mx, err := mux.InitMultiplexer("", "default", logroot.StandardLogger())
 	if err != nil {
 		os.Exit(1)
 	}

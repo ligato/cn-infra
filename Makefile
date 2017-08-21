@@ -74,7 +74,7 @@ endef
 # build plugin example only
 define build_plugin_examples_only
     @echo "# building plugin examples"
-    @cd examples/etcd && go build -v ${LDFLAGS}
+    @cd examples/datasync && go build -v ${LDFLAGS}
     @cd examples/flags && go build -v ${LDFLAGS}
     @cd examples/kafka && go build -v ${LDFLAGS}
     @cd examples/logs && go build -v ${LDFLAGS}

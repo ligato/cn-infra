@@ -16,11 +16,11 @@ import (
 )
 
 func main() {
-	logroot.Logger().SetLevel(logging.DebugLevel)
+	logroot.StandardLogger().SetLevel(logging.DebugLevel)
 
 	f := etcdkafka.Flavor{}
 	//TODO inject ExamplePlugin
-	agent := core.NewAgent(logroot.Logger(), 15*time.Second, f.Plugins()...)
+	agent := core.NewAgent(logroot.StandardLogger(), 15*time.Second, f.Plugins()...)
 
 	err := core.EventLoopWithInterrupt(agent, nil)
 	if err != nil {

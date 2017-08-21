@@ -39,7 +39,7 @@ func NewAdapter() *Adapter {
 		//TODO Close the tcp listening
 		lis, err := net.Listen("tcp", fmt.Sprintf(":%d", 9192))
 		if err != nil {
-			logroot.Logger().Error(err) //TODO
+			logroot.StandardLogger().Error(err) //TODO
 		}
 		grpcServer.Serve(lis)
 	}()
@@ -56,7 +56,7 @@ type Adapter struct {
 func (adapter *Adapter) WatchData(resyncName string, changeChan chan datasync.ChangeEvent,
 	resyncChan chan datasync.ResyncEvent, keyPrefixes ...string) (datasync.WatchDataRegistration, error) {
 
-	logroot.Logger().Debug("GRPC Watcher WatchData ", resyncName, " ", keyPrefixes)
+	logroot.StandardLogger().Debug("GRPC Watcher WatchData ", resyncName, " ", keyPrefixes)
 
 	return adapter.base.WatchData(resyncName, changeChan, resyncChan, keyPrefixes...)
 }

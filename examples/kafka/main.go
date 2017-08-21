@@ -6,7 +6,7 @@ import (
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/examples/model"
 	"github.com/ligato/cn-infra/flavors/etcdkafka"
-	log "github.com/ligato/cn-infra/logging/logrus"
+	log "github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/messaging"
 	"github.com/ligato/cn-infra/utils/safeclose"
 )
@@ -45,7 +45,7 @@ func main() {
 // Stop the agent with desired info message
 func closeExample(message string, closeChannel chan struct{}) {
 	time.Sleep(10 * time.Second)
-	log.Info(message)
+	log.StandardLogger().Info(message)
 	closeChannel <- struct{}{}
 }
 
@@ -94,10 +94,10 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	plugin.subscription = make(chan messaging.ProtoMessage)
 	err = plugin.kafkaWatcher.Watch(messaging.ToProtoMsgChan(plugin.subscription), topic)
 	if err != nil {
-		log.Error(err)
+		log.StandardLogger().Error(err)
 	}
 
-	log.Info("Initialization of the custom plugin for the Kafka example is completed")
+	log.StandardLogger().Info("Initialization of the custom plugin for the Kafka example is completed")
 
 	// Run sync and async kafka consumers
 	go plugin.syncEventHandler()
@@ -132,18 +132,18 @@ func (plugin *ExamplePlugin) producer() {
 		Uint32Val: uint32(0),
 		BoolVal:   true,
 	}
-	log.Info("Sending Kafka notification (protobuf)")
+	log.StandardLogger().Info("Sending Kafka notification (protobuf)")
 	err := plugin.kafkaSyncPublisher.Put("proto-key", enc)
 	if err != nil {
-		log.Errorf("Failed to sync-send a proto message, error %v", err)
+		log.StandardLogger().Errorf("Failed to sync-send a proto message, error %v", err)
 	} else {
-		log.Debugf("Sent sync proto message.")
+		log.StandardLogger().Debugf("Sent sync proto message.")
 	}
 
 	// Asynchronous message with protobuf encoded message. A success event is sent to the app asynchronously
 	// on an event channel when the message has been successfully sent to Kafka. An error message is sent to
 	// the app asynchronously if the message could not be sent.
-	log.Info("Sending async Kafka notification (protobuf)")
+	log.StandardLogger().Info("Sending async Kafka notification (protobuf)")
 	plugin.kafkaAsyncPublisher.Put("async-proto-key", enc)
 }
 
@@ -154,23 +154,23 @@ func (plugin *ExamplePlugin) producer() {
 // Kafka consumer is subscribed to channel with specific topic. If producer sends a message with the topic, consumer will
 // receive it
 func (plugin *ExamplePlugin) syncEventHandler() {
-	log.Info("Started Kafka event handler...")
+	log.StandardLogger().Info("Started Kafka event handler...")
 
 	// Watch on message channel for sync kafka events
 	for message := range plugin.subscription {
-		log.Infof("Received Kafka Message, topic '%s', key: '%s', ", message.GetTopic(), message.GetKey())
+		log.StandardLogger().Infof("Received Kafka Message, topic '%s', key: '%s', ", message.GetTopic(), message.GetKey())
 	}
 }
 
 // asyncEventHandler shows handling of asynchronous events coming from the Kafka client
 func (plugin *ExamplePlugin) asyncEventHandler() {
-	log.Info("Started Kafka async event handler...")
+	log.StandardLogger().Info("Started Kafka async event handler...")
 	for {
 		select {
 		case message := <-plugin.asyncMessageChannel:
-			log.Infof("Received async Kafka Message, topic '%s', key: '%s', ", message.GetTopic(), message.GetKey())
+			log.StandardLogger().Infof("Received async Kafka Message, topic '%s', key: '%s', ", message.GetTopic(), message.GetKey())
 		case err := <-plugin.asyncErrorChannel:
-			log.Errorf("Failed to publish async message, %v", err)
+			log.StandardLogger().Errorf("Failed to publish async message, %v", err)
 		}
 	}
 }

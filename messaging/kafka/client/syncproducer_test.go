@@ -24,7 +24,7 @@ import (
 
 func ExampleSyncProducer() {
 	// init config
-	config := NewConfig(logroot.Logger())
+	config := NewConfig(logroot.StandardLogger())
 	config.ProducerConfig().Producer.RequiredAcks = sarama.WaitForAll
 	config.SetBrokers("localhost:9091", "localhost:9092")
 

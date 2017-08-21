@@ -55,7 +55,7 @@ func ToProtoMsgErrChan(ch chan ProtoMessageErr, opts ...interface{}) func(ProtoM
 // ParseOpts returns timeout and logger to be used based on the given options.
 func ParseOpts(opts ...interface{}) (time.Duration, logging.Logger) {
 	timeout := DefaultMsgTimeout
-	logger := logroot.Logger()
+	logger := logroot.StandardLogger()
 
 	for _, opt := range opts {
 		switch opt.(type) {
