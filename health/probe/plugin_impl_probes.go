@@ -56,9 +56,9 @@ type Plugin struct {
 // Deps is here to group injected dependencies of plugin
 // to not mix with other plugin fields.
 type Deps struct {
-	localdeps.PluginLogDeps                   //inject
-	HTTP        *rest.Plugin                  //inject optionally
-	StatusCheck statuscheck.AgentStatusReader //inject
+	localdeps.PluginLogDeps                               //inject
+	HTTP                    *rest.Plugin                  //inject optionally
+	StatusCheck             statuscheck.AgentStatusReader //inject
 }
 
 // Init is the plugin entry point called by the Agent Core

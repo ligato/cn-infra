@@ -92,5 +92,5 @@ func (f *FlavorLocal) InfraDeps(pluginName string) *localdeps.PluginInfraDeps {
 	return &localdeps.PluginInfraDeps{
 		*f.LogDeps(pluginName),
 		&f.StatusCheck,
-		&f.ServiceLabel, }
+		&f.ServiceLabel}
 }

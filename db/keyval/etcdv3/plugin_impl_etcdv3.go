@@ -42,8 +42,8 @@ type Plugin struct {
 // Deps is here to group injected dependencies of plugin
 // to not mix with other plugin fields.
 type Deps struct {
-	localdeps.PluginInfraDeps // inject
-	ConfigFileName string     // inject optionally
+	localdeps.PluginInfraDeps        // inject
+	ConfigFileName            string // inject optionally
 }
 
 // Init is called at plugin startup. The connection to etcd is established.
