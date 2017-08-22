@@ -16,7 +16,7 @@ import (
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/servicelabel"
-	"github.com/ligato/cn-infra/utils/config"
+	"github.com/ligato/cn-infra/config"
 )
 
 // *************************************************************************
