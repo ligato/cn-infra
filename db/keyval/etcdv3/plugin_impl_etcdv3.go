@@ -42,8 +42,8 @@ type Plugin struct {
 // Deps is here to group injected dependencies of plugin
 // to not mix with other plugin fields.
 type Deps struct {
-	localdeps.PluginInfraDeps        // inject
-	ConfigFileName            string // inject optionally
+	localdeps.PluginInfraDeps // inject
+	ConfigFileName string     // inject optionally
 }
 
 // Init is called at plugin startup. The connection to etcd is established.
@@ -78,6 +78,11 @@ func (p *Plugin) Init() error {
 		return err
 	}
 
+	return nil
+}
+
+// AfterInit is called by the Agent Core after all plugins have been initialized.
+func (p *Plugin) AfterInit() error {
 	// Register for providing status reports (polling mode)
 	if p.StatusCheck != nil {
 		p.StatusCheck.Register(core.PluginName(p.String()), func() (statuscheck.PluginState, error) {
@@ -90,7 +95,6 @@ func (p *Plugin) Init() error {
 	} else {
 		p.Log.Warnf("Unable to start status check for etcd")
 	}
-
 	return nil
 }
 
