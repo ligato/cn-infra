@@ -15,6 +15,8 @@
 package etcdkafka
 
 import (
+	"flag"
+
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync/kvdbsync"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
@@ -22,7 +24,18 @@ import (
 	"github.com/ligato/cn-infra/messaging/kafka"
 )
 
-// Flavor glues together generic.FlavorRPC plugins with:
+// flags for location of configuration files
+var (
+	etcdv3DefaultConfig string
+	kafkaDefaultConfig  string
+)
+
+func init() {
+	flag.StringVar(&etcdv3DefaultConfig, "etcdv3-config", "", "Location of the Etcd configuration file; also set via 'ETCDV3_CONFIG' env variable.")
+	flag.StringVar(&kafkaDefaultConfig, "kafka-config", "", "Location of the Kafka configuration file; also set via 'KAFKA_CONFIG' env variable.")
+}
+
+// FlavorRPC glues together generic.FlavorRPC plugins with:
 // - ETCD (useful for watching config.)
 // - Kafka plugins (useful for publishing events)
 type Flavor struct {
@@ -40,20 +53,21 @@ type Flavor struct {
 func (f *Flavor) Inject() error {
 	if f.injected {
 		return nil
+	} else {
+		f.injected = true
 	}
-	f.injected = true
 
 	f.FlavorRPC.Inject()
 
-	f.ETCD.Deps.PluginInfraDeps = *f.InfraDeps("ETCD")
-	f.ETCDDataSync.Deps.PluginLogDeps = *f.LogDeps("ETCDDataSync")
+	f.ETCD.Deps.PluginInfraDeps = *f.InfraDeps("etcdv3")
+	f.ETCDDataSync.Deps.PluginLogDeps = *f.LogDeps("etcdv3-datasync")
 	f.ETCDDataSync.KvPlugin = &f.ETCD
 	f.ETCDDataSync.ResyncOrch = &f.ResyncOrch
 	f.ETCDDataSync.ServiceLabel = &f.ServiceLabel
 
 	f.StatusCheck.Transport = &f.ETCDDataSync
 
-	f.Kafka.Deps.PluginInfraDeps = *f.InfraDeps("Kafka")
+	f.Kafka.Deps.PluginInfraDeps = *f.InfraDeps("kafka")
 
 	return nil
 }

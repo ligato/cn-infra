@@ -44,13 +44,13 @@ func (f *FlavorRPC) Inject() error {
 
 	f.FlavorLocal.Inject()
 
-	f.HTTP.Deps.PluginLogDeps = *f.LogDeps("HTTP")
+	f.HTTP.Deps.PluginLogDeps = *f.LogDeps("http")
 
-	f.LogMngRPC.Deps.PluginLogDeps = *f.LogDeps("LogMngRPC")
+	f.LogMngRPC.Deps.PluginLogDeps = *f.LogDeps("log-mng-rpc")
 	f.LogMngRPC.LogRegistry = f.FlavorLocal.LogRegistry()
 	f.LogMngRPC.HTTP = &f.HTTP
 
-	f.HealthRPC.Deps.PluginLogDeps = *f.LogDeps("HealthRPC")
+	f.HealthRPC.Deps.PluginLogDeps = *f.LogDeps("health-rpc")
 	f.HealthRPC.HTTP = &f.HTTP
 	//TODO f.HealthRPC.Transport inject restsync
 
