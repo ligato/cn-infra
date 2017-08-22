@@ -61,8 +61,6 @@ type Deps struct {
 
 // Init is the plugin entry point called by the Agent Core.
 func (p *Plugin) Init() error {
-	p.Log.SetLevel(logging.DebugLevel)
-
 	// write initial status data into ETCD
 	p.agentStat = &status.AgentStatus{
 		BuildVersion: core.BuildVersion,
@@ -162,7 +160,7 @@ func (p *Plugin) ReportStateChange(pluginName core.PluginName, state PluginState
 		return
 	}
 
-	p.Log.WithFields(map[string]interface{}{"plugin": pluginName, "state": state, "lastErr": lastError}).Debug(
+	p.Log.WithFields(map[string]interface{}{"plugin": pluginName, "state": state, "lastErr": lastError}).Info(
 		"Agent plugin state update.")
 
 	// update plugin state
