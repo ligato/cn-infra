@@ -18,7 +18,7 @@ import (
 	"github.com/ligato/cn-infra/core"
 )
 
-// Reporter is an API for other plugins that needs to receive notifications
+// Subscriber is an API for other plugins that needs to receive notifications
 // from RESYNC Orcherstrator
 type Subscriber interface {
 	// Register function is supposed to be called in Init() by all VPP Agent plugins.

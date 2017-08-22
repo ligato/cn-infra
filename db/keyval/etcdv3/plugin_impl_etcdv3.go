@@ -129,7 +129,7 @@ func (p *Plugin) retrieveConfig() (*Config, error) {
 }
 
 // String returns if set Deps.PluginName or "kvdbsync" otherwise
-func (plugin *Plugin) String() string {
+func (p *Plugin) String() string {
 	if len(plugin.PluginName) == 0 {
 		return "kvdbsync"
 	}
