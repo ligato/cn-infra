@@ -18,21 +18,20 @@ import (
 	"github.com/ligato/cn-infra/core"
 )
 
-// PluginID used in the Agent Core flavors
-const PluginID core.PluginName = "RESYNC_ORCH"
-
-//TODO move this API under datasync package
-//FIXME avoid global API
-
-// Register function is supposed to be called in Init() by all VPP Agent plugins.
-// Those plugins will use Registration.StatusChan() to listen
-// The plugins are supposed to load current state of their objects when newResync() is called.
-func Register(resyncName string) Registration {
-	return plugin().Register(resyncName)
+// Reporter is an API for other plugins that needs to receive notifications
+// from RESYNC Orcherstrator
+type Subscriber interface {
+	// Register function is supposed to be called in Init() by all VPP Agent plugins.
+	// Those plugins will use Registration.StatusChan() to listen
+	// The plugins are supposed to load current state of their objects when newResync() is called.
+	Register(resyncName string) Registration
 }
 
-// ReportError is called by the Plugins when the binary api call was not successful.
-// Based on that the Resync Orchestrator starts the Resync.
-func ReportError(name core.PluginName, err error) {
-	//TODO plugin().ReportError(name, err)
+// Reporter is an API for other plugins that needs to report to RESYNC Orchestrator.
+// Intent of this API is to have a chance to react on error by triggering
+// RESYNC among registered plugins.
+type Reporter interface {
+	// ReportError is called by the Plugins when the binary api call was not successful.
+	// Based on that the Resync Orchestrator starts the Resync.
+	ReportError(name core.PluginName, err error)
 }

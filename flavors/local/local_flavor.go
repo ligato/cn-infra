@@ -19,6 +19,8 @@ import (
 	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/servicelabel"
 
+	"github.com/ligato/cn-infra/datasync/resync"
+	"github.com/ligato/cn-infra/flavors/localdeps"
 	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/logging"
 )
@@ -30,6 +32,7 @@ type FlavorLocal struct {
 	logRegistry  logging.Registry
 	ServiceLabel servicelabel.Plugin
 	StatusCheck  statuscheck.Plugin
+	ResyncOrch   resync.Plugin
 
 	injected bool
 }
@@ -44,7 +47,9 @@ func (f *FlavorLocal) Inject() error {
 		f.injected = true
 	}
 
-	f.StatusCheck.Log = f.LoggerFor("StatusCheck")
+	f.StatusCheck.Deps.Log = f.LoggerFor("StatusCheck")
+	f.StatusCheck.Deps.PluginName = core.PluginName("StatusCheck")
+	f.ResyncOrch.Deps.PluginLogDeps = *f.LogDeps("ResyncOrch")
 
 	return nil
 }
@@ -55,7 +60,7 @@ func (f *FlavorLocal) Plugins() []*core.NamedPlugin {
 	return core.ListPluginsInFlavor(f)
 }
 
-// LoggerFor for getting Logging Registry instance
+// LogRegistry for getting Logging Registry instance
 // (not thread safe)
 func (f *FlavorLocal) LogRegistry() logging.Registry {
 	if f.logRegistry == nil {
@@ -65,8 +70,27 @@ func (f *FlavorLocal) LogRegistry() logging.Registry {
 	return f.logRegistry
 }
 
-// LoggerFor for getting PlugginLogger instance.
+// LogDeps for getting PlugginLogger instance.
 // This method is just convenient shortcut for Flavor.Inject()
 func (f *FlavorLocal) LoggerFor(pluginName string) logging.PluginLogger {
 	return logging.ForPlugin(pluginName, f.LogRegistry())
+}
+
+// LogDeps for getting PlugginLogger instance.
+// This method is just convenient shortcut for Flavor.Inject()
+func (f *FlavorLocal) LogDeps(pluginName string) *localdeps.PluginLogDeps {
+	return &localdeps.PluginLogDeps{
+		logging.ForPlugin(pluginName, f.LogRegistry()),
+		core.PluginName(pluginName)}
+
+}
+
+// LogDeps for getting PlugginLogger instance.
+// This method is just convenient shortcut for Flavor.Inject()
+func (f *FlavorLocal) InfraDeps(pluginName string) *localdeps.PluginInfraDeps {
+
+	return &localdeps.PluginInfraDeps{
+		*f.LogDeps(pluginName),
+		&f.StatusCheck,
+		&f.ServiceLabel, }
 }

@@ -45,13 +45,15 @@ func (f *FlavorRPC) Inject() error {
 
 	f.FlavorLocal.Inject()
 
-	f.HTTP.Log = f.LoggerFor("HTTP")
-	f.LogMngRPC.Log = f.LoggerFor("LogMngRPC")
+	f.HTTP.Deps.PluginLogDeps = *f.LogDeps("HTTP")
+
+	f.LogMngRPC.Deps.PluginLogDeps = *f.LogDeps("LogMngRPC")
 	f.LogMngRPC.LogRegistry = f.FlavorLocal.LogRegistry()
 	f.LogMngRPC.HTTP = &f.HTTP
-	f.HealthRPC.Log = f.LoggerFor("HealthRPC")
+
+	f.HealthRPC.Deps.PluginLogDeps = *f.LogDeps("HealthRPC")
 	f.HealthRPC.HTTP = &f.HTTP
-	//f.HealthRPC.Transport todo inject local transport
+	//TODO f.HealthRPC.Transport inject restsync
 
 	return nil
 }

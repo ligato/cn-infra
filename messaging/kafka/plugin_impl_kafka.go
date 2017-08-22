@@ -16,20 +16,16 @@ package kafka
 
 import (
 	"github.com/Shopify/sarama"
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ligato/cn-infra/flavors/localdeps"
 	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/messaging"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/messaging/kafka/mux"
-	"github.com/ligato/cn-infra/servicelabel"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
 )
-
-// PluginID used in the Agent Core flavors
-const PluginID core.PluginName = "KafkaClient"
 
 var configFile string
 
@@ -39,12 +35,16 @@ func init() {
 
 // Plugin provides API for interaction with kafka brokers.
 type Plugin struct {
-	Log          logging.PluginLogger
-	ServiceLabel servicelabel.ReaderAPI
-	StatusCheck  *statuscheck.Plugin
+	Deps // inject
 	subscription chan (*client.ConsumerMessage)
 	mx           *mux.Multiplexer
 	consumer     *client.Consumer
+}
+
+// Deps is here to group injected dependencies of plugin
+// to not mix with other plugin fields.
+type Deps struct {
+	localdeps.PluginInfraDeps //inject
 }
 
 // FromExistingMux is used mainly for testing purposes.
@@ -76,7 +76,7 @@ func (p *Plugin) Init() (err error) {
 
 	// Register for providing status reports (polling mode)
 	if p.StatusCheck != nil {
-		p.StatusCheck.Register(PluginID, func() (statuscheck.PluginState, error) {
+		p.StatusCheck.Register(p.PluginName, func() (statuscheck.PluginState, error) {
 			// Method 'RefreshMetadata()' returns error if kafka server is unavailable
 			err := p.consumer.Client.RefreshMetadata(topic)
 			if err == nil {

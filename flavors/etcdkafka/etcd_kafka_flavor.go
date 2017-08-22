@@ -46,16 +46,15 @@ func (f *Flavor) Inject() error {
 
 	f.FlavorRPC.Inject()
 
-	f.ETCD.Log = f.LoggerFor("ETCD")
-	f.ETCD.ServiceLabel = &f.ServiceLabel
-	f.ETCD.StatusCheck = &f.StatusCheck
+	f.ETCD.Deps.PluginInfraDeps = *f.InfraDeps("ETCD")
+	f.ETCDDataSync.Deps.PluginLogDeps = *f.LogDeps("ETCDDataSync")
 	f.ETCDDataSync.KvPlugin = &f.ETCD
+	f.ETCDDataSync.ResyncOrch = &f.ResyncOrch
 	f.ETCDDataSync.ServiceLabel = &f.ServiceLabel
+
 	f.StatusCheck.Transport = &f.ETCDDataSync
 
-	f.Kafka.Log = f.LoggerFor("Kafka")
-	f.Kafka.ServiceLabel = &f.ServiceLabel
-	f.Kafka.StatusCheck = &f.StatusCheck
+	f.Kafka.Deps.PluginInfraDeps = *f.InfraDeps("Kafka")
 
 	return nil
 }

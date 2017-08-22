@@ -14,8 +14,11 @@
 
 package resync
 
+import "fmt"
+
 // Registration in an interface that is returned by the Register() call
 type Registration interface {
 	StatusChan() chan StatusEvent
-	//TODO Close()
+	fmt.Stringer
+	//TODO io.Closer
 }
