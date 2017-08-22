@@ -35,10 +35,10 @@ func init() {
 	flag.StringVar(&kafkaDefaultConfig, "kafka-config", "", "Location of the Kafka configuration file; also set via 'KAFKA_CONFIG' env variable.")
 }
 
-// FlavorRPC glues together generic.FlavorRPC plugins with:
+// FlavorEtcdKafka glues together FlavorRPC plugins with:
 // - ETCD (useful for watching config.)
 // - Kafka plugins (useful for publishing events)
-type Flavor struct {
+type FlavorEtcdKafka struct {
 	rpc.FlavorRPC
 
 	ETCD         etcdv3.Plugin
@@ -50,12 +50,11 @@ type Flavor struct {
 }
 
 // Inject sets object references
-func (f *Flavor) Inject() error {
+func (f *FlavorEtcdKafka) Inject() error {
 	if f.injected {
 		return nil
-	} else {
-		f.injected = true
 	}
+	f.injected = true
 
 	f.FlavorRPC.Inject()
 
@@ -73,7 +72,7 @@ func (f *Flavor) Inject() error {
 }
 
 // Plugins combines all Plugins in flavor to the list
-func (f *Flavor) Plugins() []*core.NamedPlugin {
+func (f *FlavorEtcdKafka) Plugins() []*core.NamedPlugin {
 	f.Inject()
 	return core.ListPluginsInFlavor(f)
 }
