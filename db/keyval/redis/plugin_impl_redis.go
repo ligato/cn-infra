@@ -15,27 +15,25 @@
 package redis
 
 import (
-	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/plugin"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/servicelabel"
+	"github.com/ligato/cn-infra/flavors/localdeps"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
 )
-
-// PluginID used in the Agent Core flavors
-const PluginID core.PluginName = "RedisClient"
 
 var defaultConfigFileName string
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
-	Log            logging.PluginLogger
-	ServiceLabel   servicelabel.ReaderAPI
-	Connection     keyval.KvBytesPlugin
-	ConfigFileName string
+	Deps
 	*plugin.Skeleton
+}
+
+// Deps is here to group injected dependencies of plugin
+// to not mix with other plugin fields.
+type Deps struct {
+	localdeps.PluginInfraDeps //inject
+	ConfigFileName string     // inject optionally
 }
 
 // Init is called on plugin startup. It establishes the connection to redis.
@@ -54,14 +52,13 @@ func (p *Plugin) Init() error {
 		return err
 	}
 
-	skeleton := plugin.NewSkeleton(string(PluginID), p.ServiceLabel, connection)
-	p.Skeleton = skeleton
+	p.Skeleton = plugin.NewSkeleton(string(p.PluginName), p.ServiceLabel, connection)
 	return p.Skeleton.Init()
 }
 
 // Close resources
 func (p *Plugin) Close() error {
-	_, err := safeclose.CloseAll(p.Skeleton, p.Connection)
+	_, err := safeclose.CloseAll(p.Skeleton)
 	return err
 }
 

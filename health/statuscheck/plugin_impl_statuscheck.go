@@ -25,9 +25,6 @@ import (
 	"github.com/ligato/cn-infra/logging"
 )
 
-// PluginID uniquely identifies the plugin.
-const PluginID core.PluginName = "StatusCheck"
-
 const (
 	// Init state means that the initialization of the plugin is in progress.
 	Init PluginState = "init"
@@ -42,7 +39,7 @@ const (
 
 // Plugin struct holds all plugin-related data.
 type Plugin struct {
-	Log logging.PluginLogger
+	Deps
 
 	access sync.Mutex // lock for the Plugin data
 
@@ -52,8 +49,14 @@ type Plugin struct {
 
 	cancel context.CancelFunc // cancel can be used to cancel all goroutines and their jobs inside of the plugin
 	wg     sync.WaitGroup     // wait group that allows to wait until all goroutines of the plugin have finished
+}
 
-	Transport datasync.KeyProtoValWriter
+// Deps is here to group injected dependencies of plugin
+// to not mix with other plugin fields.
+type Deps struct {
+	Log        logging.PluginLogger       //inject
+	PluginName core.PluginName            //inject
+	Transport  datasync.KeyProtoValWriter //inject optional
 }
 
 // Init is the plugin entry point called by the Agent Core.

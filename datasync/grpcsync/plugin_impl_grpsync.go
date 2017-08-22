@@ -15,14 +15,10 @@
 package grpcsync
 
 import (
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/syncbase"
 	"github.com/ligato/cn-infra/servicelabel"
 )
-
-// PluginID used in the Agent Core flavors
-const PluginID core.PluginName = "grpc-sync"
 
 // Plugin grpcsync implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {

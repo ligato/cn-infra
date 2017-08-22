@@ -26,7 +26,7 @@ import (
 
 // WatchBrokerKeys implements go routines on top of Change & Resync channels
 type watchBrokerKeys struct {
-	resyncName string
+	resyncReg  resync.Registration
 	changeChan chan datasync.ChangeEvent
 	resyncChan chan datasync.ResyncEvent
 	prefixes   []string
@@ -39,16 +39,15 @@ type watcher struct {
 	base *syncbase.Watcher
 }
 
-// WatchAndResyncBrokerKeys calls etcdmux.Watch() & resync.Register()
+// WatchAndResyncBrokerKeys calls keyval watcher Watch() & resync Register()
 // This creates go routines for each tuple changeChan+resyncChan.
-func watchAndResyncBrokerKeys(resyncName string, changeChan chan datasync.ChangeEvent, resyncChan chan datasync.ResyncEvent,
+func watchAndResyncBrokerKeys(resyncReg resync.Registration, changeChan chan datasync.ChangeEvent, resyncChan chan datasync.ResyncEvent,
 	adapter *watcher, keyPrefixes ...string) (*watchBrokerKeys, error) {
 
 	var wasError error
-	resyncReg := resync.Register(resyncName)
 
 	keys := &watchBrokerKeys{
-		resyncName: resyncName,
+		resyncReg:  resyncReg,
 		changeChan: changeChan,
 		resyncChan: resyncChan,
 		adapter:    adapter,
@@ -126,5 +125,5 @@ func (keys *watchBrokerKeys) resync() error {
 
 // String returns resyncName
 func (keys *watchBrokerKeys) String() string {
-	return keys.resyncName
+	return keys.resyncReg.String()
 }

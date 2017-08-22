@@ -18,30 +18,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ligato/cn-infra/logging"
-
-	"github.com/ligato/cn-infra/logging/logroot"
+	"github.com/ligato/cn-infra/flavors/localdeps"
 )
-
-var (
-	gPlugin *Plugin
-)
-
-// plugin function is used in api to access the plugin instance. It panics if the plugin instance is no
-func plugin() *Plugin {
-	if gPlugin == nil {
-		logroot.StandardLogger().Panic("Resync Orchestration is not yet initialized but you are trying to use that")
-	}
-
-	return gPlugin
-}
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
-	Log logging.Logger
+	Deps
 
 	registrations map[string]Registration
 	access        sync.Mutex
+}
+
+// Deps is here to group injected dependencies of plugin
+// to not mix with other plugin fields.
+type Deps struct {
+	localdeps.PluginLogDeps // inject
 }
 
 // Init initializes variables
@@ -51,8 +42,6 @@ func (plugin *Plugin) Init() (err error) {
 	//plugin.waingForResync = make(map[core.PluginName]*PluginEvent)
 	//plugin.waingForResyncChan = make(chan *PluginEvent)
 	//go plugin.watchWaingForResync()
-
-	gPlugin = plugin
 
 	return nil
 }
@@ -89,7 +78,7 @@ func (plugin *Plugin) Register(resyncName string) Registration {
 		return nil
 	}
 
-	reg := NewRegistration(make(chan StatusEvent, 0)) /*Zero to have back pressure*/
+	reg := NewRegistration(resyncName, make(chan StatusEvent, 0)) /*Zero to have back pressure*/
 	plugin.registrations[resyncName] = reg
 	return reg
 }

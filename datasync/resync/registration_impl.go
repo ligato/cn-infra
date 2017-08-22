@@ -21,21 +21,26 @@ import (
 
 // registration for Resync (implementation of Resync interface)
 type registration struct {
-	rwlock    sync.RWMutex
-	waitStamp time.Time // last timestamp of WaitUntilReconciliationFinishes
-
+	resyncName string
 	statusChan chan StatusEvent
 
+	rwlock    sync.RWMutex
+	waitStamp time.Time // last timestamp of WaitUntilReconciliationFinishes
 	//waingForReconciliationChan chan *PluginEvent
 	reconciliationFinishedChan chan time.Time
 }
 
 // NewRegistration is a constructor
-func NewRegistration(statusChan chan StatusEvent) Registration {
-	return &registration{statusChan: statusChan}
+func NewRegistration(resyncName string, statusChan chan StatusEvent) Registration {
+	return &registration{resyncName: resyncName, statusChan: statusChan}
 }
 
 // StatusChan is here for Plugins to get channel for notifications about Resync status
 func (reg *registration) StatusChan() chan StatusEvent {
 	return reg.statusChan
+}
+
+// String returns name of the registration
+func (reg *registration) String() string {
+	return reg.resyncName
 }

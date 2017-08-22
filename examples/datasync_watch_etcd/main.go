@@ -8,7 +8,6 @@ import (
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
@@ -47,13 +46,11 @@ func main() {
 	closeChannel := make(chan struct{}, 1)
 
 	flavor := etcdkafka.Flavor{}
-	// Resync plugin
-	resyncPlugin := &core.NamedPlugin{PluginName: resync.PluginID, Plugin: &resync.Plugin{}}
-	// Example plugin (ETCD)
+	// Example plugin that shows watching ETCD using datasync API
 	examplePlugin := &core.NamedPlugin{PluginName: PluginID, Plugin: &ExamplePlugin{ServiceLabel: &flavor.ServiceLabel}}
 
 	// Create new agent
-	agent := core.NewAgent(log, 15*time.Second, append(flavor.Plugins(), resyncPlugin, examplePlugin)...)
+	agent := core.NewAgent(log, 15*time.Second, append(flavor.Plugins(), examplePlugin)...)
 
 	// End when the ETCD example is finished
 	go closeExample("etcd txn example finished", closeChannel)
@@ -82,11 +79,11 @@ const PluginID core.PluginName = "example-plugin"
 // ExamplePlugin implements Plugin interface which is used to pass custom plugin instances to the agent
 type ExamplePlugin struct {
 	ServiceLabel        servicelabel.ReaderAPI
-	exampleConfigurator *ExampleConfigurator       // Plugin configurator
-	transport           datasync.KeyValProtoWatcher  // To access ETCD data
-	changeChannel       chan datasync.ChangeEvent  // Channel used by the watcher for change events
-	resyncChannel       chan datasync.ResyncEvent  // Channel used by the watcher for resync events
-	watchDataReg        datasync.WatchRegistration // To subscribe on data change/resync events
+	exampleConfigurator *ExampleConfigurator        // Plugin configurator
+	transport           datasync.KeyValProtoWatcher // To access ETCD data
+	changeChannel       chan datasync.ChangeEvent   // Channel used by the watcher for change events
+	resyncChannel       chan datasync.ResyncEvent   // Channel used by the watcher for resync events
+	watchDataReg        datasync.WatchRegistration  // To subscribe on data change/resync events
 }
 
 // Init is the entry point into the plugin that is called by Agent Core when the Agent is coming up.

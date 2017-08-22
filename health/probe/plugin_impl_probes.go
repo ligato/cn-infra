@@ -19,10 +19,11 @@ import (
 	"net/http"
 
 	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/flavors/localdeps"
 	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/health/statuscheck/model/status"
-	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
 	"github.com/unrolled/render"
@@ -34,9 +35,6 @@ const (
 	livenessProbePath  string = "/liveness"  // liveness probe URL
 	readinessProbePath string = "/readiness" // readiness probe URL
 )
-
-// PluginID used in the Agent Core flavors
-const PluginID core.PluginName = "Probe"
 
 var (
 	httpPort string
@@ -50,12 +48,17 @@ func init() {
 
 // Plugin struct holds all plugin-related data
 type Plugin struct {
-	StatusCheck statuscheck.AgentStatusReader
-	Log         logging.PluginLogger
-
-	HTTP *rest.Plugin
+	Deps
 
 	customProbe bool
+}
+
+// Deps is here to group injected dependencies of plugin
+// to not mix with other plugin fields.
+type Deps struct {
+	localdeps.PluginLogDeps                   //inject
+	HTTP        *rest.Plugin                  //inject optionally
+	StatusCheck statuscheck.AgentStatusReader //inject
 }
 
 // Init is the plugin entry point called by the Agent Core
@@ -64,9 +67,16 @@ func (p *Plugin) Init() (err error) {
 
 	if p.HTTP.HTTPport != httpPort {
 		p.Log.Warnf("Custom port: %v", httpPort)
+
+		childPlugNameHTTP := p.String() + "_HTTP"
 		p.HTTP = &rest.Plugin{
-			Log:      p.Log,
-			HTTPport: httpPort,
+			Deps: rest.Deps{
+				PluginLogDeps: localdeps.PluginLogDeps{
+					Log:        logging.ForPlugin(childPlugNameHTTP, p.Log),
+					PluginName: core.PluginName(childPlugNameHTTP),
+				},
+				HTTPport: httpPort,
+			},
 		}
 		err := p.HTTP.Init()
 		if err != nil {
@@ -134,4 +144,12 @@ func (p *Plugin) livenessProbeHandler(formatter *render.Render) http.HandlerFunc
 			w.Write(statJSON)
 		}
 	}
+}
+
+// String returns plugin name if it is set
+func (p *Plugin) String() string {
+	if len(string(p.PluginName)) > 0 {
+		return string(p.PluginName)
+	}
+	return "HEALTH_RPC_PROBES"
 }

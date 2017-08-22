@@ -16,22 +16,25 @@ package kvdbsync
 
 import (
 	"github.com/golang/protobuf/proto"
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
+	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/datasync/syncbase"
 	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/servicelabel"
+	"github.com/ligato/cn-infra/flavors/localdeps"
 )
-
-// PluginID used in the Agent Core flavors
-const PluginID core.PluginName = "db-sync"
 
 // Plugin dbsync implements Plugin interface
 type Plugin struct {
-	KvPlugin     keyval.KvProtoPlugin   // inject
-	ServiceLabel servicelabel.ReaderAPI // inject
-	PluginName   core.PluginName        // inject optionally
-	adapter      *watcher
+	Deps // inject
+	adapter *watcher
+}
+
+// Deps is here to group injected dependencies of plugin
+// to not mix with other plugin fields.
+type Deps struct {
+	localdeps.PluginInfraDeps       // inject
+	ResyncOrch resync.Subscriber    // inject
+	KvPlugin   keyval.KvProtoPlugin // inject
 }
 
 // Init uses provided connection to build new transport watcher
@@ -55,7 +58,8 @@ func (plugin *Plugin) Watch(resyncName string, changeChan chan datasync.ChangeEv
 		return nil, err
 	}
 
-	_, err = watchAndResyncBrokerKeys(resyncName, changeChan, resyncChan, plugin.adapter, keyPrefixes...)
+	resyncReg := plugin.ResyncOrch.Register(plugin.String())
+	_, err = watchAndResyncBrokerKeys(resyncReg, changeChan, resyncChan, plugin.adapter, keyPrefixes...)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +77,7 @@ func (plugin *Plugin) Close() error {
 	return nil
 }
 
-// String return resyncName
+// String returns if set Deps.PluginName or "kvdbsync" otherwise
 func (plugin *Plugin) String() string {
 	if len(plugin.PluginName) == 0 {
 		return "kvdbsync"

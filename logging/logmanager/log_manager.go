@@ -19,8 +19,9 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/ligato/cn-infra/rpc/rest"
+	"github.com/ligato/cn-infra/flavors/localdeps"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/unrolled/render"
 )
 
@@ -38,10 +39,15 @@ const (
 
 // Plugin allows to manage log levels of the loggers using HTTP.
 type Plugin struct {
-	Log logging.PluginLogger
+	Deps
+}
 
-	LogRegistry logging.Registry
-	HTTP        *rest.Plugin
+// Deps is here to group injected dependencies of plugin
+// to not mix with other plugin fields.
+type Deps struct {
+	localdeps.PluginLogDeps      // inject
+	LogRegistry logging.Registry // inject
+	HTTP        *rest.Plugin     // inject
 }
 
 // Init is called at plugin initialization. It register the following handlers:

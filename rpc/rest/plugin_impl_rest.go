@@ -21,16 +21,12 @@ import (
 	"fmt"
 
 	"github.com/gorilla/mux"
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync/grpcsync"
-	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/flavors/localdeps"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
 	"github.com/unrolled/render"
 )
-
-// PluginID used in the Agent Core flavors
-const PluginID core.PluginName = "HTTP"
 
 const (
 	// DefaultHTTPPort is used during HTTP server startup unless different port was configured
@@ -49,12 +45,7 @@ func init() {
 
 // Plugin implements the Plugin interface.
 type Plugin struct {
-	Log logging.PluginLogger
-
-	// Used to simplify if not whole config needs to be configured
-	HTTPport string
-	// Config is a rich alternative comparing to HTTPport
-	// TODO Config *Config
+	Deps
 
 	// Used mainly for testing purposes
 	listenAndServe ListenAndServe
@@ -63,6 +54,17 @@ type Plugin struct {
 	mx         *mux.Router
 	formatter  *render.Render
 	grpcServer *grpcsync.Adapter
+}
+
+// Deps is here to group injected dependencies of plugin
+// to not mix with other plugin fields.
+type Deps struct {
+	localdeps.PluginLogDeps // inject
+
+	// Used to simplify if not whole config needs to be configured
+	HTTPport string //inject optionally
+	// Config is a rich alternative comparing to HTTPport
+	// TODO Config *Config
 }
 
 // Init is entry point called by Agent Core
