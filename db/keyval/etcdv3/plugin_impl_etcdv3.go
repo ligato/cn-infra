@@ -130,8 +130,8 @@ func (p *Plugin) retrieveConfig() (*Config, error) {
 
 // String returns if set Deps.PluginName or "kvdbsync" otherwise
 func (p *Plugin) String() string {
-	if len(plugin.PluginName) == 0 {
+	if len(p.Deps.PluginName) == 0 {
 		return "kvdbsync"
 	}
-	return string(plugin.PluginName)
+	return string(p.Deps.PluginName)
 }
