@@ -44,9 +44,8 @@ type FlavorLocal struct {
 func (f *FlavorLocal) Inject() error {
 	if f.injected {
 		return nil
-	} else {
-		f.injected = true
 	}
+	f.injected = true
 
 	f.StatusCheck.Deps.Log = f.LoggerFor("status-check")
 	f.StatusCheck.Deps.PluginName = core.PluginName("status-check")
