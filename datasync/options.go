@@ -20,14 +20,14 @@ import (
 
 // PutOption defines options for Put operation. The particular options can be found below.
 type PutOption interface {
-	//PutOptionMarker is just for marking implementation that it implements this interface
-	PutOptionMarker()
+	//PutOptionMark is just for marking implementation that it implements this interface
+	PutOptionMark()
 }
 
 // DelOption defines options for Del operation. The particular options can be found below.
 type DelOption interface {
-	//DelOptionMarker is just for marking implementation that it implements this interface
-	DelOptionMarker()
+	//DelOptionMark is just for marking implementation that it implements this interface
+	DelOptionMark()
 }
 
 // WithTTLOpt defines a TTL for data being put. Once TTL elapses the data is removed from data store.
@@ -55,11 +55,11 @@ func WithPrefix() *WithPrefixOpt {
 // PutOptionMarker is meant for anonymous composition in With*Opt structs
 type PutOptionMarker struct{}
 
-//DelOptionMarker is just for marking implementation that it implements this interface
-func (marker *PutOptionMarker) PutOptionMarker() {}
+//DelOptionMark is just for marking implementation that it implements this interface
+func (marker *PutOptionMarker) PutOptionMark() {}
 
 // DelOptionMarker is meant for anonymous composition in With*Opt structs
 type DelOptionMarker struct{}
 
-//DelOptionMarker is just for marking implementation that it implements this interface
-func (marker *DelOptionMarker) DelOptionMarker() {}
+//DelOptionMark is just for marking implementation that it implements this interface
+func (marker *DelOptionMarker) DelOptionMark() {}
