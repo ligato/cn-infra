@@ -4,7 +4,7 @@ import (
 	"flag"
 )
 
-// Config is API for plugins to access configuration.
+// PluginConfig is API for plugins to access configuration.
 //
 // Aim of this API is to let a particular plugin to bind it's configuration
 // without knowing a particular key name. The key name is injected in flavor (Plugin Name).
