@@ -20,8 +20,8 @@ import (
 	"github.com/ligato/cn-infra/logging"
 )
 
-// CoreOption defines the maximum time that is attempted to deliver notification.
-type CoreOption interface {
+// Option defines the maximum time that is attempted to deliver notification.
+type Option interface {
 	//OptionMarkCore is just for marking implementation that it implements this interface
 	OptionMarkCore()
 }
@@ -51,5 +51,5 @@ func WithLogger(logger logging.Logger) *WithLoggerOpt {
 // OptionMarkerCore is meant for anonymous composition in With*Opt structs
 type OptionMarkerCore struct{}
 
-//OptionMarkerCore is just for marking implementation that it implements this interface
-func (marker *OptionMarkerCore) CoreOptionMark() {}
+// OptionMarkerCore is just for marking implementation that it implements this interface
+func (marker *OptionMarkerCore) OptionMarkerCore() {}

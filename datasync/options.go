@@ -55,11 +55,11 @@ func WithPrefix() *WithPrefixOpt {
 // PutOptionMarker is meant for anonymous composition in With*Opt structs
 type PutOptionMarker struct{}
 
-//DelOptionMark is just for marking implementation that it implements this interface
+// PutOptionMark  is just for marking implementation that it implements this interface
 func (marker *PutOptionMarker) PutOptionMark() {}
 
 // DelOptionMarker is meant for anonymous composition in With*Opt structs
 type DelOptionMarker struct{}
 
-//DelOptionMark is just for marking implementation that it implements this interface
+// DelOptionMark is just for marking implementation that it implements this interface
 func (marker *DelOptionMarker) DelOptionMark() {}
