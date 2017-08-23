@@ -61,5 +61,5 @@ func (marker *PutOptionMarker) DelOptionMarker() {}
 // DelOptionMarker is meant for anonymous composition in With*Opt structs
 type DelOptionMarker struct{}
 
-//PutOptionMarker is just for marking implementation that it implements this interface
-func (marker *PutOptionMarker) PutOptionMarker() {}
+//DelOptionMarker is just for marking implementation that it implements this interface
+func (marker *DelOptionMarker) DelOptionMarker() {}
