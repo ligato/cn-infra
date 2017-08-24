@@ -42,6 +42,9 @@ func (p *Plugin) Init() error {
 	if err != nil {
 		return err
 	}
+	if cfg == nil {
+		p.Log.Info("Redis.conf is not set, default configuration will be used")
+	}
 	client, err := CreateClient(cfg)
 	if err != nil {
 		return err
