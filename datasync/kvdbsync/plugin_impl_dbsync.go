@@ -58,7 +58,7 @@ func (plugin *Plugin) Watch(resyncName string, changeChan chan datasync.ChangeEv
 		return nil, err
 	}
 
-	resyncReg := plugin.ResyncOrch.Register(plugin.String())
+	resyncReg := plugin.ResyncOrch.Register(resyncName)
 	_, err = watchAndResyncBrokerKeys(resyncReg, changeChan, resyncChan, plugin.adapter, keyPrefixes...)
 	if err != nil {
 		return nil, err
