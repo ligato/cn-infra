@@ -193,6 +193,12 @@ func TestConfig(t *testing.T) {
 	os.Remove(yamlFile)
 }
 
+func TestMissingConfig(t *testing.T) {
+	client, err := CreateClient(nil)
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+	gomega.Expect(client).ShouldNot(gomega.BeNil())
+}
+
 func TestBadConfig(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
@@ -206,9 +212,6 @@ func TestBadConfig(t *testing.T) {
 
 	var cfg *NodeConfig
 	client, err := CreateClient(cfg)
-	gomega.Expect(err).Should(gomega.HaveOccurred())
-	gomega.Expect(client).Should(gomega.BeNil())
-	client, err = CreateClient(nil)
 	gomega.Expect(err).Should(gomega.HaveOccurred())
 	gomega.Expect(client).Should(gomega.BeNil())
 
