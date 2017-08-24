@@ -15,7 +15,7 @@
 package etcdkafka
 
 import (
-	"flag"
+	"github.com/namsral/flag"
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync/kvdbsync"
@@ -31,8 +31,10 @@ var (
 )
 
 func init() {
-	flag.StringVar(&etcdv3DefaultConfig, "etcdv3-config", "", "Location of the Etcd configuration file; also set via 'ETCDV3_CONFIG' env variable.")
-	flag.StringVar(&kafkaDefaultConfig, "kafka-config", "", "Location of the Kafka configuration file; also set via 'KAFKA_CONFIG' env variable.")
+	flag.StringVar(&etcdv3DefaultConfig, "etcdv3-config", "etcd.conf",
+		"Location of the Etcd configuration file; also set via 'ETCDV3_CONFIG' env variable.")
+	flag.StringVar(&kafkaDefaultConfig, "kafka-config", "kafka.conf",
+		"Location of the Kafka configuration file; also set via 'KAFKA_CONFIG' env variable.")
 }
 
 // FlavorEtcdKafka glues together FlavorRPC plugins with:

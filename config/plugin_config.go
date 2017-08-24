@@ -1,7 +1,7 @@
 package config
 
 import (
-	"flag"
+	"github.com/namsral/flag"
 )
 
 // PluginConfig is API for plugins to access configuration.
