@@ -24,16 +24,11 @@ import (
 	"github.com/ligato/cn-infra/messaging/kafka"
 )
 
-// flags for location of configuration files
-var (
-	etcdv3DefaultConfig string
-	kafkaDefaultConfig  string
-)
-
+// defines etcd & kafka flags // TODO switch to viper to avoid global configuration
 func init() {
-	flag.StringVar(&etcdv3DefaultConfig, "etcdv3-config", "etcd.conf",
+	flag.String("etcdv3-config", "etcd.conf",
 		"Location of the Etcd configuration file; also set via 'ETCDV3_CONFIG' env variable.")
-	flag.StringVar(&kafkaDefaultConfig, "kafka-config", "kafka.conf",
+	flag.String("kafka-config", "kafka.conf",
 		"Location of the Kafka configuration file; also set via 'KAFKA_CONFIG' env variable.")
 }
 
