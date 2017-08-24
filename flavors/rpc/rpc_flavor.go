@@ -51,6 +51,7 @@ func (f *FlavorRPC) Inject() error {
 	f.LogMngRPC.HTTP = &f.HTTP
 
 	f.HealthRPC.Deps.PluginLogDeps = *f.LogDeps("HealthRPC")
+	f.HealthRPC.StatusCheck = &f.StatusCheck
 	f.HealthRPC.HTTP = &f.HTTP
 	//TODO f.HealthRPC.Transport inject restsync
 
