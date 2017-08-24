@@ -12,27 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package etcdv3
+package cassandra
 
 import (
-	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/db/keyval/plugin"
+	"github.com/ligato/cn-infra/db/sql"
 	"github.com/ligato/cn-infra/flavors/localdeps"
-	"github.com/ligato/cn-infra/health/statuscheck"
-	"github.com/ligato/cn-infra/servicelabel"
 	"github.com/ligato/cn-infra/utils/safeclose"
-)
-
-const (
-	// healthCheckProbeKey is a key used to probe Etcd state
-	healthCheckProbeKey string = "/probe-etcd-connection"
+	"github.com/willfaught/gockle"
 )
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
 	Deps // inject
-	*plugin.Skeleton
+
+	clientConfig *ClientConfig
+	session      gockle.Session
 }
 
 // Deps is here to group injected dependencies of plugin
@@ -41,38 +35,27 @@ type Deps struct {
 	localdeps.PluginInfraDeps // inject
 }
 
-// Init is called at plugin startup. The connection to etcd is established.
+// Init is called at plugin startup. The session to etcd is established.
 func (p *Plugin) Init() (err error) {
+	if p.session != nil {
+		return nil // skip initialization
+	}
+
 	// Retrieve config
 	var cfg Config
-	_, err = p.PluginConfig.GetValue(&cfg)
+	found, err := p.PluginConfig.GetValue(&cfg)
 	// need to be strict about config presence for ETCD
-	//if !found {
-	//	p.Log.Info("etcd config not found ", p.PluginConfig.GetConfigName(), " - skip loading this plugin")
-	//	return nil
-	//}
+	if !found {
+		p.Log.Info("cassandra client config not found ", p.PluginConfig.GetConfigName(),
+			" - skip loading this plugin")
+		return nil
+	}
 	if err != nil {
 		return err
 	}
 
-	// Init connection
-	etcdConfig, err := ConfigToClientv3(&cfg)
-	if err != nil {
-		return err
-	}
-
-	if p.Skeleton == nil {
-		con, err := NewEtcdConnectionWithBytes(*etcdConfig, p.Log)
-		if err != nil {
-			return err
-		}
-
-		p.Skeleton = plugin.NewSkeleton(p.String(),
-			p.ServiceLabel,
-			con,
-		)
-	}
-	err = p.Skeleton.Init()
+	// Init session
+	p.clientConfig, err = ConfigToClientConfig(&cfg)
 	if err != nil {
 		return err
 	}
@@ -82,7 +65,16 @@ func (p *Plugin) Init() (err error) {
 
 // AfterInit is called by the Agent Core after all plugins have been initialized.
 func (p *Plugin) AfterInit() error {
-	// Register for providing status reports (polling mode)
+	if p.session != nil {
+		session, err := CreateSessionFromConfig(p.clientConfig)
+		if err != nil {
+			return err
+		}
+
+		p.session = gockle.NewSession(session)
+	}
+
+	/* TODO Register for providing status reports (polling mode)
 	if p.StatusCheck != nil {
 		p.StatusCheck.Register(core.PluginName(p.String()), func() (statuscheck.PluginState, error) {
 			_, _, err := p.Skeleton.NewBroker("/").GetValue(healthCheckProbeKey, nil)
@@ -93,27 +85,31 @@ func (p *Plugin) AfterInit() error {
 		})
 	} else {
 		p.Log.Warnf("Unable to start status check for etcd")
-	}
+	}*/
 
 	return nil
 }
 
-// FromExistingConnection is used mainly for testing
-func FromExistingConnection(connection keyval.CoreBrokerWatcher, sl servicelabel.ReaderAPI) *Plugin {
-	skel := plugin.NewSkeleton("testing", sl, connection)
-	return &Plugin{Skeleton: skel}
+// FromExistingSession is used mainly for testing
+func FromExistingSession(session gockle.Session) *Plugin {
+	return &Plugin{session: session}
+}
+
+// NewBroker returns a Broker instance to work with Cassandra Data Base
+func (p *Plugin) NewBroker() sql.Broker {
+	return NewBrokerUsingSession(p.session)
 }
 
 // Close resources
 func (p *Plugin) Close() error {
-	_, err := safeclose.CloseAll(p.Skeleton)
+	_, err := safeclose.CloseAll(p.session)
 	return err
 }
 
-// String returns if set Deps.PluginName or "kvdbsync" otherwise
+// String returns if set Deps.PluginName or "cassa-client" otherwise
 func (p *Plugin) String() string {
 	if len(p.Deps.PluginName) == 0 {
-		return "kvdbsync"
+		return "cassa-client"
 	}
 	return string(p.Deps.PluginName)
 }
