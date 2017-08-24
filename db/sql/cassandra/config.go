@@ -23,7 +23,6 @@ import (
 
 // Config Configuration for Cassandra clients loaded from a configuration file
 type Config struct {
-
 	// A list of host addresses of cluster nodes.
 	Endpoints []string `json:"endpoints"`
 
