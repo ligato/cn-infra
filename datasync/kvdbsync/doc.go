@@ -27,7 +27,7 @@
 // The Data KeyValProtoWatcher is used during regular operation to efficiently
 // propagate data/configuration changes from the key & value store to the
 // agents (servers). Upon receiving a data change event, the watcher makes
-// an incremental update to VPP. When data resynchronization (RESYNC) is
+// an incremental update to its data. When data resynchronization (RESYNC) is
 // triggered, then the Data Broker is used to read all particular keys &
 // values from the key-value store. Reading all particular keys & values is
 // a more reliable but less efficient data synchronization method.
