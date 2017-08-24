@@ -43,7 +43,7 @@ IFS="
 
 function startEtcd {
     docker run -p 2379:2379 --name etcd -d -e ETCDCTL_API=3 \
-        quay.io/coreos/etcd:v3.0.16 /usr/local/bin/etcd \
+        quay.io/coreos/etcd:v3.1.0 /usr/local/bin/etcd \
              -advertise-client-urls http://0.0.0.0:2379 \
                  -listen-client-urls http://0.0.0.0:2379 > /dev/null
     sleep 1
@@ -52,6 +52,17 @@ function startEtcd {
 function stopEtcd {
     docker stop etcd > /dev/null
     docker rm etcd > /dev/null
+}
+
+function startKafka {
+    docker run -p 2181:2181 -p 9092:9092 --name kafka -d \
+ --env ADVERTISED_HOST=127.0.0.1 --env ADVERTISED_PORT=9092 spotify/kafka > /dev/null
+    sleep 2
+}
+
+function stopKafka {
+    docker stop kafka > /dev/null
+    docker rm kafka > /dev/null
 }
 
 #### Logging #############################################################
@@ -74,6 +85,19 @@ testOutput "${cmd}" "${expected}"
 
 stopEtcd
 
-#################################################################
+#### Kafka #############################################################
+startKafka
+
+expected=("Kafka connecting
+Consuming started
+Sync published
+Message is stored in topic(test)/partition(0)/offset(1)
+")
+
+testOutput examples/kafka_broker/mux/mux "${expected}"
+
+stopKafka
+
+########################################################################
 
 exit $exitCode
