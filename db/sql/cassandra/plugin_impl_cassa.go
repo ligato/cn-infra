@@ -26,7 +26,7 @@ type Plugin struct {
 	Deps // inject
 
 	clientConfig *ClientConfig
-	connection   gockle.Session
+	session      gockle.Session
 }
 
 // Deps is here to group injected dependencies of plugin
@@ -35,10 +35,10 @@ type Deps struct {
 	localdeps.PluginInfraDeps // inject
 }
 
-// Init is called at plugin startup. The connection to etcd is established.
+// Init is called at plugin startup. The session to etcd is established.
 func (p *Plugin) Init() (err error) {
 	if p.session != nil {
-		return nil // skip initializaiton
+		return nil // skip initialization
 	}
 
 	// Retrieve config
@@ -46,14 +46,15 @@ func (p *Plugin) Init() (err error) {
 	found, err := p.PluginConfig.GetValue(&cfg)
 	// need to be strict about config presence for ETCD
 	if !found {
-		p.Log.Info("etcd config not found ", p.PluginConfig.GetConfigName(), " - skip loading this plugin")
+		p.Log.Info("cassandra client config not found ", p.PluginConfig.GetConfigName(),
+			" - skip loading this plugin")
 		return nil
 	}
 	if err != nil {
 		return err
 	}
 
-	// Init connection
+	// Init session
 	p.clientConfig, err = ConfigToClientConfig(&cfg)
 	if err != nil {
 		return err
@@ -70,7 +71,7 @@ func (p *Plugin) AfterInit() error {
 			return err
 		}
 
-		p.connection = gockle.NewSession(session)
+		p.session = gockle.NewSession(session)
 	}
 
 	/* TODO Register for providing status reports (polling mode)
@@ -89,19 +90,19 @@ func (p *Plugin) AfterInit() error {
 	return nil
 }
 
-// FromExistingConnection is used mainly for testing
+// FromExistingSession is used mainly for testing
 func FromExistingSession(session gockle.Session) *Plugin {
-	return &Plugin{connection: session}
+	return &Plugin{session: session}
 }
 
 // NewBroker returns a Broker instance to work with Cassandra Data Base
 func (p *Plugin) NewBroker() sql.Broker {
-	return NewBrokerUsingSession(p.connection)
+	return NewBrokerUsingSession(p.session)
 }
 
 // Close resources
 func (p *Plugin) Close() error {
-	_, err := safeclose.CloseAll(p.connection)
+	_, err := safeclose.CloseAll(p.session)
 	return err
 }
 

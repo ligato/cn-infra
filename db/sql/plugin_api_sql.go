@@ -14,8 +14,8 @@
 
 package sql
 
-// SqlBrokerPlugin provides unifying interface for different SQL like datastore implementations.
-type SqlBrokerPlugin interface {
+// BrokerPlugin provides unifying interface for different SQL like datastore implementations.
+type BrokerPlugin interface {
 	// NewBroker returns a Broker instance that work with Data Base
 	NewBroker() Broker
 }
