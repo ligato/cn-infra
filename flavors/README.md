@@ -16,7 +16,7 @@ There are following individual connector flavors:
 * [Cassandra flavor](cassandra) - adds Cassadnra client plugin related instances to the [local flavor](local)
 * [etcd flavor](etcd) - adds etcd client plugin related instances to the [local flavor](local) 
   the [local flavor](local)
-* [Redis flavor](Redis) - adds Redis client plugin related instances to the [local flavor](local)
+* [Redis flavor](redis) - adds Redis client plugin related instances to the [local flavor](local)
 * [Kafka flavor](kafka) - adds Kafka client plugin related instances to the [local flavor](local)
 
   
