@@ -18,6 +18,8 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/flavors/localdeps"
 	"github.com/ligato/cn-infra/utils/safeclose"
+	"github.com/ligato/cn-infra/config"
+	"github.com/ligato/cn-infra/servicelabel"
 )
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
@@ -30,7 +32,9 @@ type Plugin struct {
 // Deps is here to group injected dependencies of plugin
 // to not mix with other plugin fields.
 type Deps struct {
-	localdeps.PluginInfraDeps //inject
+	localdeps.PluginLogDeps //inject
+	config.PluginConfig
+	ServiceLabel servicelabel.ReaderAPI
 }
 
 // Init is called on plugin startup. It establishes the connection to redis.
@@ -53,7 +57,7 @@ func (p *Plugin) Init() error {
 		return err
 	}
 
-	p.Skeleton = plugin.NewSkeleton(string(p.PluginName), p.ServiceLabel, connection)
+	p.Skeleton = plugin.NewSkeleton(string(p.PluginName), p.Deps.ServiceLabel, connection)
 	return p.Skeleton.Init()
 }
 
