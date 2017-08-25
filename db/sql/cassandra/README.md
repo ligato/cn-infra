@@ -25,14 +25,14 @@ Also, the client can configure following timeouts:
 - Example
 ```go
     config := &cassandra.Config{
-        Endpoints:      endpoints,
-        Port:           port,
-        DialTimeout:    600000000,
-        OpTimeout:      60,
-        RedialInterval: 60000000000,
+        Endpoints:      127.0.0.1,
+        Port:           9042,
+        DialTimeout:    600 * time.Millisecond,
+        OpTimeout:      600 * time.Millisecond,
+        RedialInterval: 60 * time.Second,
     }
 
-    clientConfig, err2 := cassandra.ConfigToClientConfig(config)
+    clientConfig, err := cassandra.ConfigToClientConfig(config)
 ```
 
 The timeout parameters are defined here [config.go](config.go)
