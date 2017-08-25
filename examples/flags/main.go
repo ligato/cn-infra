@@ -4,9 +4,10 @@ import (
 	"time"
 
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/flavors/rpc"
 	log "github.com/ligato/cn-infra/logging/logroot"
 	"github.com/namsral/flag"
+	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/flavors/localdeps"
 )
 
 // *************************************************************************
@@ -25,12 +26,10 @@ func main() {
 	// Init close channel to stop the example
 	closeChannel := make(chan struct{}, 1)
 
-	flavor := rpc.FlavorRPC{}
+	flavor := ExampleFlavor{}
 
-	// Example plugin (flags)
-	examplePlugin := &core.NamedPlugin{PluginName: PluginID, Plugin: &ExamplePlugin{}}
 	// Create new agent
-	agent := core.NewAgent(log.StandardLogger(), 15*time.Second, append(flavor.Plugins(), examplePlugin)...)
+	agent := core.NewAgent(log.StandardLogger(), 15*time.Second, flavor.Plugins()...)
 
 	// End when the flag example is finished
 	go closeExample("Flags example finished", closeChannel)
@@ -45,6 +44,43 @@ func closeExample(message string, closeChannel chan struct{}) {
 	closeChannel <- struct{}{}
 }
 
+/**********
+ * Flavor *
+ **********/
+
+// ETCD flag to load config
+func init() {
+	flag.String("etcdv3-config", "etcd.conf",
+		"Location of the Etcd configuration file")
+}
+
+// ExampleFlavor is a set of plugins required for the datasync example.
+type ExampleFlavor struct {
+	// Local flavor to access to Infra (logger, service label, status check)
+	Local local.FlavorLocal
+	// Example plugin
+	FlagsExample ExamplePlugin
+
+	injected bool
+}
+
+// Inject sets object references
+func (ef *ExampleFlavor) Inject() (allReadyInjected bool) {
+	// Init local flavor
+	ef.Local.Inject()
+	// Inject infra to example plugin
+	ef.FlagsExample.InfraDeps = *ef.Local.InfraDeps("flags-example")
+
+	return true
+}
+
+
+// Plugins combines all Plugins in flavor to the list
+func (ef *ExampleFlavor) Plugins() []*core.NamedPlugin {
+	ef.Inject()
+	return core.ListPluginsInFlavor(ef)
+}
+
 /**********************
  * Example plugin API *
  **********************/
@@ -57,7 +93,9 @@ const PluginID core.PluginName = "example-plugin"
  ******************/
 
 // ExamplePlugin implements Plugin interface which is used to pass custom plugin instances to the agent
-type ExamplePlugin struct{}
+type ExamplePlugin struct{
+	Deps
+}
 
 // Init is the entry point into the plugin that is called by Agent Core when the Agent is coming up.
 // The Go native plugin mechanism that was introduced in Go 1.8
@@ -74,6 +112,10 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	}()
 
 	return err
+}
+
+type Deps struct {
+	InfraDeps localdeps.PluginInfraDeps   // injected
 }
 
 // Close is called by Agent Core when the Agent is shutting down. It is supposed to clean up resources that were
