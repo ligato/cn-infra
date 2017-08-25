@@ -12,28 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package etcdkafka
+package redis
 
 import (
+	"github.com/namsral/flag"
+
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/flavors/etcd"
-	"github.com/ligato/cn-infra/flavors/kafka"
+	"github.com/ligato/cn-infra/datasync/kvdbsync"
+	"github.com/ligato/cn-infra/db/keyval/redis"
 	"github.com/ligato/cn-infra/flavors/local"
 )
 
-// FlavorEtcdKafka glues together FlavorLocal plugins with:
-// - ETCD (useful for watching northbound config.)
+// defines redis flags // TODO switch to viper to avoid global configuration
+func init() {
+	flag.String("redis-config", "",
+		"Location of Redis configuration file; Can also be set via environment variable REDIS_CONFIG")
+}
+
+// FlavorRedis glues together FlavorRPC plugins with:
+// - ETCD (useful for watching config.)
 // - Kafka plugins (useful for publishing events)
-type FlavorEtcdKafka struct {
+type FlavorRedis struct {
 	*local.FlavorLocal
-	*etcd.FlavorEtcd
-	*kafka.FlavorKafka
+
+	Redis         redis.Plugin
+	RedisDataSync kvdbsync.Plugin
 
 	injected bool
 }
 
 // Inject sets object references
-func (f *FlavorEtcdKafka) Inject() bool {
+func (f *FlavorRedis) Inject() (allReadyInjected bool) {
 	if f.injected {
 		return false
 	}
@@ -44,21 +53,21 @@ func (f *FlavorEtcdKafka) Inject() bool {
 	}
 	f.FlavorLocal.Inject()
 
-	if f.FlavorEtcd == nil {
-		f.FlavorEtcd = &etcd.FlavorEtcd{FlavorLocal: f.FlavorLocal}
-	}
-	f.FlavorEtcd.Inject()
+	f.Redis.Deps.PluginInfraDeps = *f.InfraDeps("redis")
+	f.RedisDataSync.Deps.PluginLogDeps = *f.LogDeps("redis-datasync")
+	f.RedisDataSync.KvPlugin = &f.Redis
+	f.RedisDataSync.ResyncOrch = &f.ResyncOrch
+	f.RedisDataSync.ServiceLabel = &f.ServiceLabel
 
-	if f.FlavorKafka == nil {
-		f.FlavorKafka = &kafka.FlavorKafka{FlavorLocal: f.FlavorLocal}
+	if f.StatusCheck.Transport == nil {
+		f.StatusCheck.Transport = &f.RedisDataSync
 	}
-	f.FlavorKafka.Inject()
 
 	return true
 }
 
 // Plugins combines all Plugins in flavor to the list
-func (f *FlavorEtcdKafka) Plugins() []*core.NamedPlugin {
+func (f *FlavorRedis) Plugins() []*core.NamedPlugin {
 	f.Inject()
 	return core.ListPluginsInFlavor(f)
 }

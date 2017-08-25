@@ -17,7 +17,7 @@ package cassandra
 import (
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/sql/cassandra"
-	"github.com/ligato/cn-infra/flavors/rpc"
+	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/namsral/flag"
 )
 
@@ -30,14 +30,21 @@ func init() {
 // FlavorCassandra glues together FlavorRPC plugins with:
 // - Cassandra (for using with API to interact with Cassandra database)
 type FlavorCassandra struct {
-	rpc.FlavorRPC
+	*local.FlavorLocal
 	Cassandra cassandra.Plugin
+
+	injected bool
 }
 
 // Inject sets object references
-func (f *FlavorCassandra) Inject() (allReadyInjected bool) {
-	if !f.FlavorRPC.Inject() {
+func (f *FlavorCassandra) Inject() bool {
+	if f.injected {
 		return false
+	}
+	f.injected = true
+
+	if f.FlavorLocal == nil {
+		f.FlavorLocal = &local.FlavorLocal{}
 	}
 
 	f.Cassandra.Deps.PluginInfraDeps = *f.InfraDeps("cassandra")

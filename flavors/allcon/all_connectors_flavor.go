@@ -12,28 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package etcdkafka
+package allcon
 
 import (
 	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/flavors/cassandra"
 	"github.com/ligato/cn-infra/flavors/etcd"
 	"github.com/ligato/cn-infra/flavors/kafka"
 	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/flavors/redis"
+	"github.com/ligato/cn-infra/flavors/rpc"
 )
 
-// FlavorEtcdKafka glues together FlavorLocal plugins with:
-// - ETCD (useful for watching northbound config.)
-// - Kafka plugins (useful for publishing events)
-type FlavorEtcdKafka struct {
+// AllConnectorsFlavor is combination of RPC, ETCD, Kafka, Redis, Cassandra flavors
+// User can enable those connectors by providing configs for them.
+type AllConnectorsFlavor struct {
 	*local.FlavorLocal
 	*etcd.FlavorEtcd
 	*kafka.FlavorKafka
+	*redis.FlavorRedis
+	*cassandra.FlavorCassandra
+	*rpc.FlavorRPC
 
 	injected bool
 }
 
 // Inject sets object references
-func (f *FlavorEtcdKafka) Inject() bool {
+func (f *AllConnectorsFlavor) Inject() bool {
 	if f.injected {
 		return false
 	}
@@ -54,11 +59,26 @@ func (f *FlavorEtcdKafka) Inject() bool {
 	}
 	f.FlavorKafka.Inject()
 
+	if f.FlavorRedis == nil {
+		f.FlavorRedis = &redis.FlavorRedis{FlavorLocal: f.FlavorLocal}
+	}
+	f.FlavorRedis.Inject()
+
+	if f.FlavorCassandra == nil {
+		f.FlavorCassandra = &cassandra.FlavorCassandra{FlavorLocal: f.FlavorLocal}
+	}
+	f.FlavorCassandra.Inject()
+
+	if f.FlavorRPC == nil {
+		f.FlavorRPC = &rpc.FlavorRPC{FlavorLocal: f.FlavorLocal}
+	}
+	f.FlavorRPC.Inject()
+
 	return true
 }
 
 // Plugins combines all Plugins in flavor to the list
-func (f *FlavorEtcdKafka) Plugins() []*core.NamedPlugin {
+func (f *AllConnectorsFlavor) Plugins() []*core.NamedPlugin {
 	f.Inject()
 	return core.ListPluginsInFlavor(f)
 }

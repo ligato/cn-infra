@@ -12,31 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rpc
+package etcd
 
 import (
+	"github.com/namsral/flag"
+
 	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/datasync/kvdbsync"
+	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/flavors/local"
-	"github.com/ligato/cn-infra/health/probe"
-	"github.com/ligato/cn-infra/logging/logmanager"
-	"github.com/ligato/cn-infra/rpc/rest"
 )
 
-// FlavorRPC glues together multiple plugins that are useful for almost every micro-service
-type FlavorRPC struct {
+// defines etcd & kafka flags // TODO switch to viper to avoid global configuration
+func init() {
+	flag.String("etcdv3-config", "etcd.conf",
+		"Location of the Etcd configuration file; also set via 'ETCDV3_CONFIG' env variable.")
+}
+
+// FlavorEtcd glues together FlavorLocal plugins with ETCD & datasync plugin
+// (which is useful for watching config.)
+type FlavorEtcd struct {
 	*local.FlavorLocal
 
-	HTTP rest.Plugin
-	//TODO GRPC (& enable/disable using config)
-
-	HealthRPC probe.Plugin
-	LogMngRPC logmanager.Plugin
+	ETCD         etcdv3.Plugin
+	ETCDDataSync kvdbsync.Plugin
 
 	injected bool
 }
 
 // Inject sets object references
-func (f *FlavorRPC) Inject() bool {
+func (f *FlavorEtcd) Inject() bool {
 	if f.injected {
 		return false
 	}
@@ -47,22 +52,21 @@ func (f *FlavorRPC) Inject() bool {
 	}
 	f.FlavorLocal.Inject()
 
-	f.HTTP.Deps.PluginLogDeps = *f.LogDeps("http")
+	f.ETCD.Deps.PluginInfraDeps = *f.InfraDeps("etcdv3")
+	f.ETCDDataSync.Deps.PluginLogDeps = *f.LogDeps("etcdv3-datasync")
+	f.ETCDDataSync.KvPlugin = &f.ETCD
+	f.ETCDDataSync.ResyncOrch = &f.ResyncOrch
+	f.ETCDDataSync.ServiceLabel = &f.ServiceLabel
 
-	f.LogMngRPC.Deps.PluginLogDeps = *f.LogDeps("log-mng-rpc")
-	f.LogMngRPC.LogRegistry = f.FlavorLocal.LogRegistry()
-	f.LogMngRPC.HTTP = &f.HTTP
-
-	f.HealthRPC.Deps.PluginLogDeps = *f.LogDeps("health-rpc")
-	f.HealthRPC.Deps.HTTP = &f.HTTP
-	f.HealthRPC.Deps.StatusCheck = &f.StatusCheck
-	//TODO f.HealthRPC.Transport inject restsync
+	if f.StatusCheck.Transport != nil {
+		f.StatusCheck.Transport = &f.ETCDDataSync
+	}
 
 	return true
 }
 
 // Plugins combines all Plugins in flavor to the list
-func (f *FlavorRPC) Plugins() []*core.NamedPlugin {
+func (f *FlavorEtcd) Plugins() []*core.NamedPlugin {
 	f.Inject()
 	return core.ListPluginsInFlavor(f)
 }

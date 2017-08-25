@@ -12,31 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rpc
+package kafka
 
 import (
+	"github.com/namsral/flag"
+
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/flavors/local"
-	"github.com/ligato/cn-infra/health/probe"
-	"github.com/ligato/cn-infra/logging/logmanager"
-	"github.com/ligato/cn-infra/rpc/rest"
+	"github.com/ligato/cn-infra/messaging/kafka"
 )
 
-// FlavorRPC glues together multiple plugins that are useful for almost every micro-service
-type FlavorRPC struct {
+// defines kafka flags // TODO switch to viper to avoid global configuration
+func init() {
+	flag.String("kafka-config", "kafka.conf",
+		"Location of the Kafka configuration file; also set via 'KAFKA_CONFIG' env variable.")
+}
+
+// FlavorKafka glues together FlavorLocal plugins with: Kafka plugins (useful for publishing events)
+type FlavorKafka struct {
 	*local.FlavorLocal
 
-	HTTP rest.Plugin
-	//TODO GRPC (& enable/disable using config)
-
-	HealthRPC probe.Plugin
-	LogMngRPC logmanager.Plugin
+	Kafka kafka.Plugin
 
 	injected bool
 }
 
 // Inject sets object references
-func (f *FlavorRPC) Inject() bool {
+func (f *FlavorKafka) Inject() bool {
 	if f.injected {
 		return false
 	}
@@ -47,22 +49,13 @@ func (f *FlavorRPC) Inject() bool {
 	}
 	f.FlavorLocal.Inject()
 
-	f.HTTP.Deps.PluginLogDeps = *f.LogDeps("http")
-
-	f.LogMngRPC.Deps.PluginLogDeps = *f.LogDeps("log-mng-rpc")
-	f.LogMngRPC.LogRegistry = f.FlavorLocal.LogRegistry()
-	f.LogMngRPC.HTTP = &f.HTTP
-
-	f.HealthRPC.Deps.PluginLogDeps = *f.LogDeps("health-rpc")
-	f.HealthRPC.Deps.HTTP = &f.HTTP
-	f.HealthRPC.Deps.StatusCheck = &f.StatusCheck
-	//TODO f.HealthRPC.Transport inject restsync
+	f.Kafka.Deps.PluginInfraDeps = *f.InfraDeps("kafka")
 
 	return true
 }
 
 // Plugins combines all Plugins in flavor to the list
-func (f *FlavorRPC) Plugins() []*core.NamedPlugin {
+func (f *FlavorKafka) Plugins() []*core.NamedPlugin {
 	f.Inject()
 	return core.ListPluginsInFlavor(f)
 }
