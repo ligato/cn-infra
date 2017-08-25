@@ -55,7 +55,7 @@ func (lm *Plugin) Init() error {
 	return nil
 }
 
-// Init is called at plugin initialization. It register the following handlers:
+// AfterInit is called at plugin initialization. It register the following handlers:
 // - List all registered loggers:
 //   > curl -X GET http://localhost:<port>/log/list
 // - Set log level for a registered logger:
