@@ -21,6 +21,7 @@ import (
 	"github.com/ligato/cn-infra/datasync/kvdbsync"
 	"github.com/ligato/cn-infra/db/keyval/redis"
 	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/config"
 )
 
 // defines redis flags // TODO switch to viper to avoid global configuration
@@ -53,7 +54,9 @@ func (f *FlavorRedis) Inject() (allReadyInjected bool) {
 	}
 	f.FlavorLocal.Inject()
 
-	f.Redis.Deps.PluginInfraDeps = *f.InfraDeps("redis")
+	f.Redis.Deps.PluginLogDeps = *f.LogDeps("redis")
+	f.Redis.Deps.PluginConfig = config.ForPlugin("redis")
+	f.Redis.Deps.ServiceLabel = &f.ServiceLabel
 	f.RedisDataSync.Deps.PluginLogDeps = *f.LogDeps("redis-datasync")
 	f.RedisDataSync.KvPlugin = &f.Redis
 	f.RedisDataSync.ResyncOrch = &f.ResyncOrch
