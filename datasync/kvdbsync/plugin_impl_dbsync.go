@@ -64,7 +64,7 @@ func (plugin *Plugin) Watch(resyncName string, changeChan chan datasync.ChangeEv
 	}
 
 	if plugin.adapter == nil {
-		return errors.New("Transport adapter is not ready yet")
+		return nil, errors.New("Transport adapter is not ready yet")
 	}
 	
 	reg, err := plugin.adapter.base.Watch(resyncName, changeChan, resyncChan, keyPrefixes...)
