@@ -65,7 +65,7 @@ func (p *Plugin) Init() (err error) {
 
 // AfterInit is called by the Agent Core after all plugins have been initialized.
 func (p *Plugin) AfterInit() error {
-	if p.session != nil {
+	if p.session == nil {
 		session, err := CreateSessionFromConfig(p.clientConfig)
 		if err != nil {
 			return err
