@@ -6,16 +6,16 @@ import (
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
+	"github.com/ligato/cn-infra/datasync/kvdbsync"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/examples/model"
+	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/flavors/localdeps"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
-	"golang.org/x/net/context"
-	"github.com/ligato/cn-infra/flavors/localdeps"
-	"github.com/ligato/cn-infra/datasync/kvdbsync"
-	"github.com/ligato/cn-infra/flavors/local"
-	"github.com/namsral/flag"
 	"github.com/ligato/cn-infra/utils/safeclose"
+	"github.com/namsral/flag"
+	"golang.org/x/net/context"
 )
 
 // *************************************************************************
@@ -72,7 +72,7 @@ type ExampleFlavor struct {
 	// Local flavor to access to Infra (logger, service label, status check)
 	Local local.FlavorLocal
 	// Etcd plugin
-	ETCD         etcdv3.Plugin
+	ETCD etcdv3.Plugin
 	// Etcd sync which manages and injects connection
 	ETCDDataSync kvdbsync.Plugin
 	// Example plugin
@@ -113,16 +113,17 @@ func (ef *ExampleFlavor) Plugins() []*core.NamedPlugin {
 type ExamplePlugin struct {
 	Deps
 
-	Publisher           datasync.KeyProtoValWriter  // To write ETCD data
-	Watcher             datasync.KeyValProtoWatcher // To watch ETCD data
-	changeChannel       chan datasync.ChangeEvent   // Channel used by the watcher for change events
-	resyncChannel       chan datasync.ResyncEvent   // Channel used by the watcher for resync events
-	context             context.Context             // Used to cancel watching
-	watchDataReg        datasync.WatchRegistration  // To subscribe on data change/resync events
+	changeChannel chan datasync.ChangeEvent  // Channel used by the watcher for change events
+	resyncChannel chan datasync.ResyncEvent  // Channel used by the watcher for resync events
+	context       context.Context            // Used to cancel watching
+	watchDataReg  datasync.WatchRegistration // To subscribe on data change/resync events
 }
 
+// Deps is here to group injected dependencies of plugin to not mix with other plugin fields
 type Deps struct {
-	InfraDeps localdeps.PluginInfraDeps
+	InfraDeps localdeps.PluginInfraDeps   // injected
+	Publisher datasync.KeyProtoValWriter  // injected - To write ETCD data
+	Watcher   datasync.KeyValProtoWatcher // injected - To watch ETCD data
 }
 
 // Init is the entry point into the plugin that is called by Agent Core when the Agent is coming up.
