@@ -27,7 +27,7 @@ func init() {
 		"Location of the Cassandra Client configuration file; also set via 'CASSANDRA_CONFIG' env variable.")
 }
 
-// FlavorCassandraRest glues together FlavorRPC plugins with:
+// FlavorCassandraRPC glues together FlavorRPC plugins with:
 // - CASSANDRA (for using with API to interact with Cassandra database)
 type FlavorCassandraRPC struct {
 	rpc.FlavorRPC
