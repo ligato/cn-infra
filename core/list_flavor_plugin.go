@@ -31,13 +31,20 @@ type Flavor interface {
 // ListPluginsInFlavor uses reflection to traverse top level fields of Flavor structure.
 // It extracts all plugins and returns them as a slice of NamedPlugins.
 func ListPluginsInFlavor(flavor Flavor) (plugins []*NamedPlugin) {
-	return listPluginsInFlavor(reflect.ValueOf(flavor))
+	pluginMap := map[PluginName]Plugin{}
+	listPluginsInFlavor(reflect.ValueOf(flavor), pluginMap)
+
+	plugins = []*NamedPlugin{}
+	for plugName, plug := range pluginMap {
+		if plug != nil {
+			plugins = append(plugins, &NamedPlugin{PluginName: plugName, Plugin: plug})
+		}
+	}
+	return plugins
 }
 
 // listPluginsInFlavor checks every field and tries to cast it to Plugin or inspect its type recursively.
-func listPluginsInFlavor(flavorValue reflect.Value) []*NamedPlugin {
-	var res []*NamedPlugin
-
+func listPluginsInFlavor(flavorValue reflect.Value, pluginMap map[PluginName]Plugin) {
 	flavorType := flavorValue.Type()
 
 	if flavorType.Kind() == reflect.Ptr {
@@ -49,7 +56,7 @@ func listPluginsInFlavor(flavorValue reflect.Value) []*NamedPlugin {
 	}
 
 	if !flavorValue.IsValid() {
-		return res
+		return
 	}
 
 	pluginType := reflect.TypeOf((*Plugin)(nil)).Elem()
@@ -67,14 +74,13 @@ func listPluginsInFlavor(flavorValue reflect.Value) []*NamedPlugin {
 			fieldVal := flavorValue.Field(i)
 			plug := fieldPlugin(field, fieldVal, pluginType)
 			if plug != nil {
-				res = append(res, &NamedPlugin{PluginName: PluginName(field.Name), Plugin: plug})
+				pluginMap[PluginName(field.Name)] = plug
 			} else {
 				// try to inspect flavor structure recursively
-				res = append(res, listPluginsInFlavor(fieldVal)...)
+				listPluginsInFlavor(fieldVal, pluginMap)
 			}
 		}
 	}
-	return res
 }
 
 // fieldPlugin tries to cast given field to Plugin

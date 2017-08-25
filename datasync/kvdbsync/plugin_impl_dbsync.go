@@ -37,8 +37,13 @@ type Deps struct {
 	KvPlugin                  keyval.KvProtoPlugin // inject
 }
 
-// Init uses provided connection to build new transport watcher
+// Init does nothing
 func (plugin *Plugin) Init() error {
+	return nil
+}
+
+// AfterInit uses provided connection to build new transport watcher
+func (plugin *Plugin) AfterInit() error {
 	if plugin.KvPlugin != nil && !plugin.KvPlugin.Disabled() {
 		db := plugin.KvPlugin.NewBroker(plugin.ServiceLabel.GetAgentPrefix())
 		dbW := plugin.KvPlugin.NewWatcher(plugin.ServiceLabel.GetAgentPrefix())
