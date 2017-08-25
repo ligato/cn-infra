@@ -15,6 +15,7 @@
 package kvdbsync
 
 import (
+	"errors"
 	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/resync"
@@ -62,6 +63,10 @@ func (plugin *Plugin) Watch(resyncName string, changeChan chan datasync.ChangeEv
 		return nil/*TODO*/, nil
 	}
 
+	if plugin.adapter == nil {
+		return nil, errors.New("Transport adapter is not ready yet")
+	}
+	
 	reg, err := plugin.adapter.base.Watch(resyncName, changeChan, resyncChan, keyPrefixes...)
 	if err != nil {
 		return nil, err
@@ -81,8 +86,12 @@ func (plugin *Plugin) Put(key string, data proto.Message, opts ...datasync.PutOp
 	if plugin.KvPlugin.Disabled() {
 		return nil
 	}
-
-	return plugin.adapter.db.Put(key, data, opts...)
+	
+	if plugin.adapter != nil {
+ 		return plugin.adapter.db.Put(key, data, opts...)
+ 	}
+	
+	return errors.New("Transport adapter is not ready yet")
 }
 
 // Close resources
