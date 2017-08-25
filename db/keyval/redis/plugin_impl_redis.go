@@ -64,7 +64,7 @@ func (p *Plugin) Close() error {
 }
 
 func (p *Plugin) retrieveConfig() (cfg interface{}, err error) {
-	found, _ := p.PluginConfig.GetValue(struct{}{})
+	found, _ := p.PluginConfig.GetValue(&struct{}{})
 	if !found {
 		p.Log.Info("redis config not found ", p.PluginConfig.GetConfigName(), " - skip loading this plugin")
 		p.disabled = true
