@@ -4,10 +4,10 @@ import (
 	"time"
 
 	"github.com/ligato/cn-infra/core"
-	log "github.com/ligato/cn-infra/logging/logroot"
-	"github.com/namsral/flag"
 	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/ligato/cn-infra/flavors/localdeps"
+	log "github.com/ligato/cn-infra/logging/logroot"
+	"github.com/namsral/flag"
 )
 
 // *************************************************************************
@@ -74,7 +74,6 @@ func (ef *ExampleFlavor) Inject() (allReadyInjected bool) {
 	return true
 }
 
-
 // Plugins combines all Plugins in flavor to the list
 func (ef *ExampleFlavor) Plugins() []*core.NamedPlugin {
 	ef.Inject()
@@ -93,7 +92,7 @@ const PluginID core.PluginName = "example-plugin"
  ******************/
 
 // ExamplePlugin implements Plugin interface which is used to pass custom plugin instances to the agent
-type ExamplePlugin struct{
+type ExamplePlugin struct {
 	Deps
 }
 
@@ -116,7 +115,7 @@ func (plugin *ExamplePlugin) Init() (err error) {
 
 // Deps is here to group injected dependencies of plugin to not mix with other plugin fields
 type Deps struct {
-	InfraDeps localdeps.PluginInfraDeps   // injected
+	InfraDeps localdeps.PluginInfraDeps // injected
 }
 
 // Close is called by Agent Core when the Agent is shutting down. It is supposed to clean up resources that were
