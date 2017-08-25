@@ -82,7 +82,12 @@ func (plugin *Plugin) Put(key string, data proto.Message, opts ...datasync.PutOp
 		return nil
 	}
 
-	return plugin.adapter.db.Put(key, data, opts...)
+	if plugin.adapter != nil {
+		return plugin.adapter.db.Put(key, data, opts...)
+	}
+
+	plugin.Log.Info("Transport adapter is not ready yet")
+	return nil
 }
 
 // Close resources
