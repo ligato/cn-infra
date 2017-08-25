@@ -26,7 +26,7 @@ import (
 // HTTP and Log) and example plugin which demonstrates Kafka functionality.
 func main() {
 	// Init close channel to stop the example
-	closeChannel := make(chan struct{}, 1)
+	exampleFinished := make(chan struct{}, 1)
 
 	flavor := etcdkafka.FlavorEtcdKafka{}
 
@@ -37,9 +37,9 @@ func main() {
 	agent := core.NewAgent(log.StandardLogger(), 15*time.Second, append(flavor.Plugins(), examplePlugin)...)
 
 	// End when the kafka example is finished
-	go closeExample("kafka example finished", closeChannel)
+	go closeExample("kafka example finished", exampleFinished)
 
-	core.EventLoopWithInterrupt(agent, closeChannel)
+	core.EventLoopWithInterrupt(agent, exampleFinished)
 }
 
 // Stop the agent with desired info message

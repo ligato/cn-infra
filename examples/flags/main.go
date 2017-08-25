@@ -24,7 +24,7 @@ import (
 // HTTP and Log) and example plugin which demonstrates usage of flags
 func main() {
 	// Init close channel to stop the example
-	closeChannel := make(chan struct{}, 1)
+	exampleFinished := make(chan struct{}, 1)
 
 	flavor := ExampleFlavor{}
 
@@ -32,9 +32,9 @@ func main() {
 	agent := core.NewAgent(log.StandardLogger(), 15*time.Second, flavor.Plugins()...)
 
 	// End when the flag example is finished
-	go closeExample("Flags example finished", closeChannel)
+	go closeExample("Flags example finished", exampleFinished)
 
-	core.EventLoopWithInterrupt(agent, closeChannel)
+	core.EventLoopWithInterrupt(agent, exampleFinished)
 }
 
 // Stop the agent with desired info message
@@ -114,6 +114,7 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	return err
 }
 
+// Deps is here to group injected dependencies of plugin to not mix with other plugin fields
 type Deps struct {
 	InfraDeps localdeps.PluginInfraDeps   // injected
 }

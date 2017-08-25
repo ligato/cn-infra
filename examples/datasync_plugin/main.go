@@ -37,7 +37,7 @@ var log logging.Logger
 func main() {
 	log = logroot.StandardLogger()
 	// Init close channel to stop the example
-	closeChannel := make(chan struct{}, 1)
+	exampleFinished := make(chan struct{}, 1)
 
 	flavor := ExampleFlavor{}
 
@@ -45,9 +45,9 @@ func main() {
 	agent := core.NewAgent(log, 15*time.Second, append(flavor.Plugins())...)
 
 	// End when the ETCD example is finished
-	go closeExample("etcd txn example finished", closeChannel)
+	go closeExample("etcd txn example finished", exampleFinished)
 
-	core.EventLoopWithInterrupt(agent, closeChannel)
+	core.EventLoopWithInterrupt(agent, exampleFinished)
 }
 
 // Stop the agent with desired info message
