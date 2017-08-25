@@ -1,37 +1,28 @@
 package main
 
 import (
-	"os"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
-	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/examples/model"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
-	"github.com/ligato/cn-infra/servicelabel"
-	"github.com/ligato/cn-infra/config"
 	"golang.org/x/net/context"
 	"github.com/ligato/cn-infra/flavors/localdeps"
 	"github.com/ligato/cn-infra/datasync/kvdbsync"
 	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/namsral/flag"
+	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
 // *************************************************************************
-// This file contains examples of simple Data Broker CRUD operations
-// (APIs) including an event handler (watcher). The CRUD operations
-// supported by the publisher (data broker) are as follows:
-// - Create/Update: publisher.Put()
-// - Read:          publisher.Get()
-// - Delete:        publisher.Delete()
+// This file contains examples of simple publisher operations
+// (APIs) including an event handler (watcher).
 //
-// These functions are called from the REST API. CRUD operations are
+// These functions are called from the REST API. Put() operations are
 // done as single operations and as a part of the transaction
 // ************************************************************************/
 
@@ -42,8 +33,7 @@ import (
 var log logging.Logger
 
 // Main allows running Example Plugin as a statically linked binary with Agent Core Plugins. Close channel and plugins
-// required for the example are initialized. Agent is instantiated with generic plugins (ETCD, Kafka, Status check,
-// HTTP and Log), resync plugin and example plugin which demonstrates ETCD functionality.
+// required for the example are initialized. Agent is instantiated with ExampleFlavor
 func main() {
 	log = logroot.StandardLogger()
 	// Init close channel to stop the example
@@ -71,12 +61,13 @@ func closeExample(message string, closeChannel chan struct{}) {
  * Flavor *
  **********/
 
-// define ETCD flag to load config
+// ETCD flag to load config
 func init() {
 	flag.String("etcdv3-config", "etcd.conf",
 		"Location of the Etcd configuration file")
 }
 
+// ExampleFlavor is a set of plugins required for the datasync example.
 type ExampleFlavor struct {
 	// Local flavor to access to Infra (logger, service label, status check)
 	Local local.FlavorLocal
@@ -114,13 +105,6 @@ func (ef *ExampleFlavor) Plugins() []*core.NamedPlugin {
 	return core.ListPluginsInFlavor(ef)
 }
 
-/**********************
- * Example plugin API *
- **********************/
-
-// PluginID of the custom ETCD plugin
-const PluginID core.PluginName = "example-plugin"
-
 /******************
  * Example plugin *
  ******************/
@@ -129,7 +113,6 @@ const PluginID core.PluginName = "example-plugin"
 type ExamplePlugin struct {
 	Deps
 
-	exampleConfigurator *ExampleConfigurator        // Plugin configurator
 	Publisher           datasync.KeyProtoValWriter  // To write ETCD data
 	Watcher             datasync.KeyValProtoWatcher // To watch ETCD data
 	changeChannel       chan datasync.ChangeEvent   // Channel used by the watcher for change events
@@ -146,7 +129,6 @@ type Deps struct {
 // The Go native plugin mechanism that was introduced in Go 1.8
 func (plugin *ExamplePlugin) Init() error {
 	// Initialize plugin fields
-	plugin.exampleConfigurator = &ExampleConfigurator{plugin.InfraDeps.ServiceLabel}
 	plugin.resyncChannel = make(chan datasync.ResyncEvent)
 	plugin.changeChannel = make(chan datasync.ChangeEvent)
 	plugin.context = context.Background()
@@ -154,14 +136,8 @@ func (plugin *ExamplePlugin) Init() error {
 	// Start the consumer (ETCD watcher) before the custom plugin configurator is initialized
 	go plugin.consumer()
 
-	// Now initialize the plugin configurator
-	plugin.exampleConfigurator.Init()
-
 	go func() {
-		// Show simple ETCD CRUD
 		plugin.etcdPublisher()
-		// Show transactions
-		plugin.etcdTxnPublisher()
 	}()
 
 	// Subscribe watcher to be able to watch on data changes and resync events
@@ -175,35 +151,9 @@ func (plugin *ExamplePlugin) Init() error {
 // Close is called by Agent Core when the Agent is shutting down. It is supposed to clean up resources that were
 // allocated by the plugin during its lifetime
 func (plugin *ExamplePlugin) Close() error {
-	plugin.exampleConfigurator.Close()
-	plugin.watchDataReg.Close()
+	safeclose.CloseAll(plugin.Publisher, plugin.Watcher, plugin.resyncChannel, plugin.changeChannel)
 	return nil
 }
-
-/*************************
- * Example plugin config *
- *************************/
-
-// ExampleConfigurator usually initializes configuration-specific fields or other tasks (e.g. defines GOVPP channels
-// if they are used, checks VPP message compatibility etc.)
-type ExampleConfigurator struct {
-	ServiceLabel servicelabel.ReaderAPI
-}
-
-// Init members of configurator
-func (configurator *ExampleConfigurator) Init() (err error) {
-	// There is nothing to init in the example
-	log.Info("Custom plugin configurator initialized")
-
-	// Now the configurator is initialized and the watcher is already running (started in plugin initialization),
-	// so publisher is used to put data to ETCD
-
-
-	return err
-}
-
-// Close function for example plugin (just for representation, there is nothing to close in the example)
-func (configurator *ExampleConfigurator) Close() {}
 
 /*************
  * ETCD call *
@@ -228,79 +178,6 @@ func (plugin *ExamplePlugin) etcdPublisher() {
 	// UPDATE: Put() performs both create operations (if index does not exist) and update operations
 	// (if the index exists)
 	plugin.Publisher.Put(etcdKeyPrefixLabel(plugin.InfraDeps.ServiceLabel.GetAgentLabel(), etcdIndex), exampleData)
-
-	//todo // GET: exampleGet demonstrates how to use the Data Broker Get() API to read a simple data structure from ETCD
-	//result := etcd_example.EtcdExample{}
-	//found, _, err := plugin.Publisher.GetValue(etcdKeyPrefixLabel(plugin.ServiceLabel.GetAgentLabel(), etcdIndex), &result)
-	//if err != nil {
-	//	log.Error(err)
-	//}
-	//if found {
-	//	log.Infof("Data read from ETCD data store. Values: %v, %v, %v",
-	//		result.StringVal, result.Uint32Val, result.BoolVal)
-	//} else {
-	//	log.Error("Data not found")
-	//}
-
-	// DELETE: demonstrates how to use the Data Broker Delete() API to delete a simple data structure from ETCD
-	//todo plugin.Publisher.Delete(etcdKeyPrefixLabel(plugin.ServiceLabel.GetAgentLabel(), etcdIndex))
-}
-
-// KeyProtoValWriter creates a simple data, then demonstrates transaction operations with ETCD
-func (plugin *ExamplePlugin) etcdTxnPublisher() {
-	log.Info("Preparing bridge domain data")
-	// Get data broker to communicate with ETCD
-	cfg := &etcdv3.Config{}
-
-	configFile := os.Getenv("ETCDV3_CONFIG")
-	if configFile != "" {
-		err := config.ParseConfigFromYamlFile(configFile, cfg)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-	etcdConfig, err := etcdv3.ConfigToClientv3(cfg)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	bDB, _ := etcdv3.NewEtcdConnectionWithBytes(*etcdConfig, log)
-	publisher := kvproto.NewProtoWrapperWithSerializer(bDB, &keyval.SerializerJSON{}).
-		NewBroker(plugin.InfraDeps.ServiceLabel.GetAgentPrefix())
-
-	time.Sleep(3 * time.Second)
-
-	// This is how to use the Data Broker Txn API to create a new transaction. It is called from the HTTP handler
-	// when a user triggers the creation of a new transaction via REST
-	putTxn := publisher.NewTxn()
-	for i := 1; i <= 3; i++ {
-		exampleData1 := plugin.buildData("string", uint32(i), true)
-		// putTxn.Put demonstrates how to use the Data Broker Txn Put() API. It is called from the HTTP handler
-		// when a user invokes the REST API to add a new Put() operation to the transaction
-		putTxn = putTxn.Put(etcdKeyPrefixLabel(plugin.InfraDeps.ServiceLabel.GetAgentLabel(), etcdIndex+strconv.Itoa(i)), exampleData1)
-	}
-	// putTxn.Commit() demonstrates how to use the Data Broker Txn Commit() API. It is called from the HTTP handler
-	// when a user invokes the REST API to commit a transaction.
-	err = putTxn.Commit()
-	if err != nil {
-		log.Error(err)
-	}
-	// Another transaction chain to demonstrate delete operations. Put and Delete operations can be used together
-	// within one transaction
-	deleteTxn := publisher.NewTxn()
-	for i := 1; i <= 3; i++ {
-		// deleteTxn.Delete demonstrates how to use the Data Broker Txn Delete() API. It is called from the
-		// HTTP handler when a user invokes the REST API to add a new Delete() operation to the transaction.
-		// Put and Delete operations can be combined in the same transaction chain
-		deleteTxn = deleteTxn.Delete(etcdKeyPrefixLabel(plugin.InfraDeps.ServiceLabel.GetAgentLabel(), etcdIndex+strconv.Itoa(i)))
-	}
-
-	// Commit transactions to data store. Transaction executes multiple operations in a more efficient way in
-	// contrast to executing them one by one.
-	err = deleteTxn.Commit()
-	if err != nil {
-		log.Error(err)
-	}
 }
 
 // The ETCD key prefix used for this example
@@ -345,7 +222,6 @@ func (plugin *ExamplePlugin) consumer() {
 		case <-plugin.context.Done():
 			log.Warnf("Stop watching events")
 		}
-
 	}
 }
 
