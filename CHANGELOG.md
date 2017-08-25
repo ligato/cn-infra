@@ -10,10 +10,7 @@ The major themes for Release v1.0.1 are as follows:
     * [etcd](db/keyval/etcdv3)
     * [Redis](db/keyval/redis)
     * [Kafka](db/)
-* [Data Synchronization](datasync) plugin (for watching and putting data asynchronously) 
-    currently implemented only on top of [db/keyval API](db/keyval) helps:
-    * loading reading all actual data during startup or reconnection (to a data store)
-    * and then propagating incremental changes in the data store
+* [Data Synchronization](datasync) plugin for watching and writing data asynchronously; it is currently implemented only for the [db/keyval API](db/keyval) API. It facilitates reading of data during startup or after reconnection to a data store and then watching incremental changes.
 * Agent [Core](core) that provides plugin lifecycle management 
 (initialization and graceful shutdown of plugins) is able to run
 different [flavors](flavors) (reusable collection of plugins):
@@ -36,8 +33,8 @@ different [flavors](flavors) (reusable collection of plugins):
   * [IDX Map](idxmap) is a reusable thread-safe in memory data structure.
       This map is designed for sharing key value based data
       (lookup by primary & secondary indexes, plus watching individual changes).
-      It is useful:
-      - while implementing backend for plugin specific API shared by multiple plugins;
+      It is useful for:
+      - implementing backend for plugin specific API shared by multiple plugins;
       - caching of a remote data store.
   * [Config](config): helpers for loading plugin specific configuration.
   * [Service Label](servicelabel): retrieval of a unique identifier for a CN-Infra based app.
