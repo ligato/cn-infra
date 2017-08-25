@@ -20,7 +20,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/db/keyval/redis"
-	"github.com/ligato/cn-infra/examples/redis_broker/airport/model"
+	"github.com/ligato/cn-infra/examples/redis_lib/airportdel"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/utils/safeclose"

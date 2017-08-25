@@ -21,7 +21,7 @@ import (
 
 	"strings"
 
-	"github.com/ligato/cn-infra/examples/kafka_broker/utils"
+	"github.com/ligato/cn-infra/examples/kafka_lib/utils"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 )
