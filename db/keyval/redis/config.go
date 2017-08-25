@@ -166,7 +166,13 @@ func CreateClient(config interface{}) (Client, error) {
 	case SentinelConfig:
 		return CreateSentinelClient(cfg)
 	case nil:
-		return nil, fmt.Errorf("Configuration cannot be nil")
+		// Use default
+		def := NodeConfig{
+			Endpoint: "172.17.0.1:6379",
+			DB: 0,
+			EnableReadQueryOnSlave: false,
+		}
+		return CreateNodeClient(def)
 	}
 	return nil, fmt.Errorf("Unknown configureation type %T", config)
 }
