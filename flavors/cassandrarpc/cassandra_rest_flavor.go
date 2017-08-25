@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cassandrarest
+package cassandrarpc
 
 import (
 	"github.com/ligato/cn-infra/core"
@@ -29,24 +29,24 @@ func init() {
 
 // FlavorCassandraRest glues together FlavorRPC plugins with:
 // - CASSANDRA (for using with API to interact with Cassandra database)
-type FlavorCassandraRest struct {
+type FlavorCassandraRPC struct {
 	rpc.FlavorRPC
-	CASSANDRA cassandra.Plugin
+	Cassandra cassandra.Plugin
 }
 
 // Inject sets object references
-func (f *FlavorCassandraRest) Inject() (allReadyInjected bool) {
+func (f *FlavorCassandraRPC) Inject() (allReadyInjected bool) {
 	if !f.FlavorRPC.Inject() {
 		return false
 	}
 
-	f.CASSANDRA.Deps.PluginInfraDeps = *f.InfraDeps("cassandra")
+	f.Cassandra.Deps.PluginInfraDeps = *f.InfraDeps("cassandra")
 
 	return true
 }
 
 // Plugins combines all Plugins in flavor to the list
-func (f *FlavorCassandraRest) Plugins() []*core.NamedPlugin {
+func (f *FlavorCassandraRPC) Plugins() []*core.NamedPlugin {
 	f.Inject()
 	return core.ListPluginsInFlavor(f)
 }
