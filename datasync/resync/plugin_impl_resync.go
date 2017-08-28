@@ -48,7 +48,6 @@ func (plugin *Plugin) Init() (err error) {
 
 // AfterInit method starts the resync
 func (plugin *Plugin) AfterInit() (err error) {
-	//plugin.startingResync()
 	plugin.startResync()
 
 	return nil
@@ -86,15 +85,17 @@ func (plugin *Plugin) Register(resyncName string) Registration {
 // call callback on plugins to create/delete/modify objects
 func (plugin *Plugin) startResync() {
 	for regName, reg := range plugin.registrations {
-		started := newStatusEvent(Started)
-		reg.StatusChan() <- started
-
-		select {
-		case <-started.ReceiveAck():
-		case <-time.After(5 * time.Second):
-			plugin.Log.WithField("regName", regName).Warn("Timeout of ACK")
-		}
+		plugin.startSingleResync(regName, reg)
 	}
 
 	// TODO check if there ReportError (if not than report) if error occurred even during Resync
+}
+func (plugin *Plugin) startSingleResync(resyncName string, reg Registration) {
+	started := newStatusEvent(Started)
+	reg.StatusChan() <- started
+	select {
+	case <-started.ReceiveAck():
+	case <-time.After(5 * time.Second):
+		plugin.Log.WithField("regName", resyncName).Warn("Timeout of ACK")
+	}
 }

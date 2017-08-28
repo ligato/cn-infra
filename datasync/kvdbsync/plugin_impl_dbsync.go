@@ -72,10 +72,12 @@ func (plugin *Plugin) Watch(resyncName string, changeChan chan datasync.ChangeEv
 		return nil, err
 	}
 
-	resyncReg := plugin.ResyncOrch.Register(resyncName)
-	_, err = watchAndResyncBrokerKeys(resyncReg, changeChan, resyncChan, plugin.adapter, keyPrefixes...)
-	if err != nil {
-		return nil, err
+	if plugin.ResyncOrch != nil {
+		resyncReg := plugin.ResyncOrch.Register(resyncName)
+		_, err = watchAndResyncBrokerKeys(resyncReg, changeChan, resyncChan, plugin.adapter, keyPrefixes...)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return reg, err
