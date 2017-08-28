@@ -7,6 +7,7 @@ import (
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/kvdbsync"
+	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/examples/model"
 	"github.com/ligato/cn-infra/flavors/local"
@@ -16,7 +17,6 @@ import (
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
 	"golang.org/x/net/context"
-	"github.com/ligato/cn-infra/datasync/resync"
 )
 
 // *************************************************************************

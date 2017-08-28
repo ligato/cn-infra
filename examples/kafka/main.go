@@ -5,12 +5,12 @@ import (
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/examples/model"
+	"github.com/ligato/cn-infra/flavors/local"
 	log "github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/messaging"
+	"github.com/ligato/cn-infra/messaging/kafka"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
-	"github.com/ligato/cn-infra/flavors/local"
-	"github.com/ligato/cn-infra/messaging/kafka"
 )
 
 //********************************************************************
