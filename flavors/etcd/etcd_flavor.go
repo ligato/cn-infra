@@ -19,9 +19,9 @@ import (
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync/kvdbsync"
+	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/flavors/local"
-	"github.com/ligato/cn-infra/datasync/resync"
 )
 
 // defines etcd & kafka flags // TODO switch to viper to avoid global configuration
@@ -59,7 +59,7 @@ func (f *FlavorEtcd) Inject(resyncOrch *resync.Plugin) bool {
 	f.ETCDDataSync.ResyncOrch = resyncOrch
 	f.ETCDDataSync.ServiceLabel = &f.ServiceLabel
 
-	if f.StatusCheck.Transport != nil {
+	if f.StatusCheck.Transport == nil {
 		f.StatusCheck.Transport = &f.ETCDDataSync
 	}
 
