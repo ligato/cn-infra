@@ -1,9 +1,9 @@
 .idea/
 glide.lock
-examples/etcd/etcd
+examples/datasync_pluign/datasync_plugin
 examples/flags/flags
 examples/kafka/kafka
-examples/logs/logs
+examples/logs_in_plugin/logs_in_plugin
 examples/simple-agent/simple-agent
 db/keyval/etcdv3/examples/phonebook/editor/editor
 db/keyval/etcdv3/examples/phonebook/view/view
