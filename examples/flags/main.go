@@ -26,33 +26,17 @@ func main() {
 	// Init close channel to stop the example
 	exampleFinished := make(chan struct{}, 1)
 
-	flavor := ExampleFlavor{}
+	flavor := ExampleFlavor{closeChan: &exampleFinished}
 
 	// Create new agent
 	agent := core.NewAgent(log.StandardLogger(), 15*time.Second, flavor.Plugins()...)
 
-	// End when the flag example is finished
-	go closeExample("Flags example finished", exampleFinished)
-
 	core.EventLoopWithInterrupt(agent, exampleFinished)
-}
-
-// Stop the agent with desired info message
-func closeExample(message string, closeChannel chan struct{}) {
-	time.Sleep(8 * time.Second)
-	log.StandardLogger().Info(message)
-	closeChannel <- struct{}{}
 }
 
 /**********
  * Flavor *
  **********/
-
-// ETCD flag to load config
-func init() {
-	flag.String("etcdv3-config", "etcd.conf",
-		"Location of the Etcd configuration file")
-}
 
 // ExampleFlavor is a set of plugins required for the datasync example.
 type ExampleFlavor struct {
@@ -60,8 +44,8 @@ type ExampleFlavor struct {
 	Local local.FlavorLocal
 	// Example plugin
 	FlagsExample ExamplePlugin
-
-	injected bool
+	// For example purposes, use channel when the example is finished
+	closeChan *chan struct{}
 }
 
 // Inject sets object references
@@ -69,7 +53,8 @@ func (ef *ExampleFlavor) Inject() (allReadyInjected bool) {
 	// Init local flavor
 	ef.Local.Inject()
 	// Inject infra to example plugin
-	ef.FlagsExample.InfraDeps = *ef.Local.InfraDeps("flags-example")
+	ef.FlagsExample.LogDeps = *ef.Local.LogDeps("flags-example")
+	ef.FlagsExample.closeChannel = ef.closeChan
 
 	return true
 }
@@ -80,13 +65,6 @@ func (ef *ExampleFlavor) Plugins() []*core.NamedPlugin {
 	return core.ListPluginsInFlavor(ef)
 }
 
-/**********************
- * Example plugin API *
- **********************/
-
-// PluginID of the custom flags plugin
-const PluginID core.PluginName = "example-plugin"
-
 /******************
  * Example plugin *
  ******************/
@@ -94,6 +72,15 @@ const PluginID core.PluginName = "example-plugin"
 // ExamplePlugin implements Plugin interface which is used to pass custom plugin instances to the agent
 type ExamplePlugin struct {
 	Deps
+
+	// Fields below are used to properly finish the example
+	done         bool
+	closeChannel *chan struct{}
+}
+
+// Deps is here to group injected dependencies of plugin to not mix with other plugin fields
+type Deps struct {
+	LogDeps localdeps.PluginLogDeps // injected
 }
 
 // Init is the entry point into the plugin that is called by Agent Core when the Agent is coming up.
@@ -101,21 +88,26 @@ type ExamplePlugin struct {
 func (plugin *ExamplePlugin) Init() (err error) {
 	// RegisterFlags contains examples of how register flags of various types. Has to be called from plugin Init()
 	// function.
-	registerFlags()
+	plugin.registerFlags()
 
-	log.StandardLogger().Info("Initialization of the custom plugin for the flags example is completed")
+	plugin.LogDeps.Log.Info("Initialization of the custom plugin for the flags example is completed")
 
-	go func() {
-		// logFlags shows the runtime values of CLI flags registered in RegisterFlags()
-		logFlags()
-	}()
+	// logFlags shows the runtime values of CLI flags registered in RegisterFlags()
+	plugin.logFlags()
+
+	go plugin.closeExample()
 
 	return err
 }
 
-// Deps is here to group injected dependencies of plugin to not mix with other plugin fields
-type Deps struct {
-	InfraDeps localdeps.PluginInfraDeps // injected
+func (plugin *ExamplePlugin) closeExample() {
+	for {
+		if plugin.done {
+			plugin.LogDeps.Log.Info("flags example finished, sending shutdown ...")
+			*plugin.closeChannel <- struct{}{}
+			break
+		}
+	}
 }
 
 // Close is called by Agent Core when the Agent is shutting down. It is supposed to clean up resources that were
@@ -140,8 +132,8 @@ var (
 )
 
 // RegisterFlags contains examples of how to register flags of various types
-func registerFlags() {
-	log.StandardLogger().Info("Registering flags")
+func (plugin *ExamplePlugin) registerFlags() {
+	plugin.LogDeps.Log.Info("Registering flags")
 	flag.StringVar(&testFlagString, "ep-string", "my-value",
 		"Example of a string flag.")
 	flag.IntVar(&testFlagInt, "ep-int", 1122,
@@ -159,14 +151,14 @@ func registerFlags() {
 }
 
 // LogFlags shows the runtime values of CLI flags
-func logFlags() {
-	time.Sleep(3 * time.Second)
-	log.StandardLogger().Info("Logging flags")
-	log.StandardLogger().Infof("testFlagString:'%s'", testFlagString)
-	log.StandardLogger().Infof("testFlagInt:'%d'", testFlagInt)
-	log.StandardLogger().Infof("testFlagInt64:'%d'", testFlagInt64)
-	log.StandardLogger().Infof("testFlagUint:'%d'", testFlagUint)
-	log.StandardLogger().Infof("testFlagUint64:'%d'", testFlagUint64)
-	log.StandardLogger().Infof("testFlagBool:'%v'", testFlagBool)
-	log.StandardLogger().Infof("testFlagDur:'%v'", testFlagDur)
+func (plugin *ExamplePlugin) logFlags() {
+	plugin.LogDeps.Log.Info("Logging flags")
+	plugin.LogDeps.Log.Infof("testFlagString:'%s'", testFlagString)
+	plugin.LogDeps.Log.Infof("testFlagInt:'%d'", testFlagInt)
+	plugin.LogDeps.Log.Infof("testFlagInt64:'%d'", testFlagInt64)
+	plugin.LogDeps.Log.Infof("testFlagUint:'%d'", testFlagUint)
+	plugin.LogDeps.Log.Infof("testFlagUint64:'%d'", testFlagUint64)
+	plugin.LogDeps.Log.Infof("testFlagBool:'%v'", testFlagBool)
+	plugin.LogDeps.Log.Infof("testFlagDur:'%v'", testFlagDur)
+	plugin.done = true
 }

@@ -69,8 +69,6 @@ type ExampleFlavor struct {
 	DatasyncExample ExamplePlugin
 	// For example purposes, use channel when the example is finished
 	closeChan *chan struct{}
-
-	injected bool
 }
 
 // Inject sets object references
