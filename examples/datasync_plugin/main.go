@@ -86,7 +86,7 @@ func (ef *ExampleFlavor) Inject() (allReadyInjected bool) {
 	ef.ETCDDataSync.ResyncOrch = &ef.ResyncOrch
 	ef.ETCDDataSync.ServiceLabel = &ef.FlavorLocal.ServiceLabel
 	// Inject infra + transport (publisher, watcher) to example plugin
-	ef.DatasyncExample.InfraDeps = *ef.FlavorLocal.InfraDeps("datasync-example")
+	ef.DatasyncExample.PluginInfraDeps = *ef.FlavorLocal.InfraDeps("datasync-example")
 	ef.DatasyncExample.Publisher = &ef.ETCDDataSync
 	ef.DatasyncExample.Watcher = &ef.ETCDDataSync
 	ef.DatasyncExample.closeChannel = ef.closeChan
@@ -119,7 +119,7 @@ type ExamplePlugin struct {
 
 // Deps is a helper struct which is grouping all dependencies injected to the plugin
 type Deps struct {
-	InfraDeps localdeps.PluginInfraDeps   // injected
+	localdeps.PluginInfraDeps   // injected
 	Publisher datasync.KeyProtoValWriter  // injected - To write ETCD data
 	Watcher   datasync.KeyValProtoWatcher // injected - To watch ETCD data
 }
@@ -132,7 +132,7 @@ func (plugin *ExamplePlugin) Init() error {
 	plugin.changeChannel = make(chan datasync.ChangeEvent)
 	plugin.context = context.Background()
 
-	plugin.InfraDeps.Log.Info("Initialization of the custom plugin for the ETCD example is completed")
+	plugin.Log.Info("Initialization of the custom plugin for the ETCD example is completed")
 
 	return nil
 }
@@ -161,7 +161,7 @@ func (plugin *ExamplePlugin) closeExample() {
 		if plugin.eventCounter == 2 {
 			// Close the watcher
 			plugin.context.Done()
-			plugin.InfraDeps.Log.Infof("etcd/datasync example finished, sending shutdown ...")
+			plugin.Log.Infof("etcd/datasync example finished, sending shutdown ...")
 			// Close the example
 			*plugin.closeChannel <- struct{}{}
 			break
@@ -186,19 +186,19 @@ const etcdIndex string = "index"
 func (plugin *ExamplePlugin) etcdPublisher() {
 	// Wait for the consumer to initialize
 	time.Sleep(3 * time.Second)
-	plugin.InfraDeps.Log.Print("KeyValPublisher started")
+	plugin.Log.Print("KeyValPublisher started")
 
 	// Convert data to the generated proto format
 	exampleData := plugin.buildData("string1", 0, true)
 
 	// PUT: examplePut demonstrates how to use the Data Broker Put() API to create (or update) a simple data
 	// structure into ETCD
-	label := etcdKeyPrefixLabel(plugin.InfraDeps.ServiceLabel.GetAgentLabel(), etcdIndex)
-	plugin.InfraDeps.Log.Infof("Write data to %v", label)
+	label := etcdKeyPrefixLabel(plugin.ServiceLabel.GetAgentLabel(), etcdIndex)
+	plugin.Log.Infof("Write data to %v", label)
 	plugin.Publisher.Put(label, exampleData)
 
 	// Prepare different set of data
-	plugin.InfraDeps.Log.Infof("Update data at %v", label)
+	plugin.Log.Infof("Update data at %v", label)
 	exampleData = plugin.buildData("string2", 1, false)
 
 	// UPDATE: Put() performs both create operations (if index does not exist) and update operations
@@ -223,47 +223,47 @@ func etcdKeyPrefixLabel(agentLabel string, index string) string {
 // Consumer (watcher) is subscribed to watch on data store changes. Change arrives via data change channel and
 // its key is parsed
 func (plugin *ExamplePlugin) consumer() {
-	plugin.InfraDeps.Log.Print("KeyValProtoWatcher started")
+	plugin.Log.Print("KeyValProtoWatcher started")
 	for {
 		select {
 		case dataChng := <-plugin.changeChannel:
 			// If event arrives, the key is extracted and used together with the expected prefix to
 			// identify item
 			key := dataChng.GetKey()
-			if strings.HasPrefix(key, etcdKeyPrefix(plugin.InfraDeps.ServiceLabel.GetAgentLabel())) {
+			if strings.HasPrefix(key, etcdKeyPrefix(plugin.ServiceLabel.GetAgentLabel())) {
 				var value, previousValue etcd_example.EtcdExample
 				// The first return value is diff - boolean flag whether previous value exists or not
 				err := dataChng.GetValue(&value)
 				if err != nil {
-					plugin.InfraDeps.Log.Error(err)
+					plugin.Log.Error(err)
 				}
 				diff, err := dataChng.GetPrevValue(&previousValue)
 				if err != nil {
-					plugin.InfraDeps.Log.Error(err)
+					plugin.Log.Error(err)
 				}
-				plugin.InfraDeps.Log.Infof("Event arrived to etcd eventHandler, key %v, update: %v, change type: %v,",
+				plugin.Log.Infof("Event arrived to etcd eventHandler, key %v, update: %v, change type: %v,",
 					dataChng.GetKey(), diff, dataChng.GetChangeType())
 				// Increase event counter (expecting two events)
 				plugin.eventCounter++
 			}
 			// Another strings.HasPrefix(key, etcd prefix) ...
 		case <-plugin.context.Done():
-			plugin.InfraDeps.Log.Warnf("Stop watching events")
+			plugin.Log.Warnf("Stop watching events")
 		}
 	}
 }
 
 // KeyValProtoWatcher is subscribed to data change channel and resync channel. ETCD watcher adapter is used for this purpose
 func (plugin *ExamplePlugin) subscribeWatcher() (err error) {
-	prefix := etcdKeyPrefix(plugin.InfraDeps.ServiceLabel.GetAgentLabel())
-	plugin.InfraDeps.Log.Infof("Prefix: %v", prefix)
+	prefix := etcdKeyPrefix(plugin.ServiceLabel.GetAgentLabel())
+	plugin.Log.Infof("Prefix: %v", prefix)
 	plugin.watchDataReg, err = plugin.Watcher.
 		Watch("Example etcd plugin", plugin.changeChannel, plugin.resyncChannel, prefix)
 	if err != nil {
 		return err
 	}
 
-	plugin.InfraDeps.Log.Info("KeyValProtoWatcher subscribed")
+	plugin.Log.Info("KeyValProtoWatcher subscribed")
 
 	return nil
 }

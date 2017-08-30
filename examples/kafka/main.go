@@ -72,7 +72,7 @@ func (ef *ExampleFlavor) Inject() (allReadyInjected bool) {
 	// Init kafka
 	ef.Kafka.Deps.PluginInfraDeps = *ef.FlavorLocal.InfraDeps("kafka")
 	// Inject kafka to example plugin
-	ef.KafkaExample.Deps.LogDeps = *ef.FlavorLocal.LogDeps("kafka-example")
+	ef.KafkaExample.Deps.PluginLogDeps = *ef.FlavorLocal.LogDeps("kafka-example")
 	ef.KafkaExample.Kafka = &ef.Kafka
 	ef.KafkaExample.closeChannel = ef.closeChan
 
@@ -111,7 +111,7 @@ type ExamplePlugin struct {
 
 // Deps is a helper struct which is grouping all dependencies injected to the plugin
 type Deps struct {
-	LogDeps localdeps.PluginLogDeps	// injected
+	localdeps.PluginLogDeps	// injected
 }
 
 // Init is the entry point into the plugin that is called by Agent Core when the Agent is coming up.
@@ -135,10 +135,10 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	plugin.subscription = make(chan messaging.ProtoMessage)
 	err = plugin.kafkaWatcher.Watch(messaging.ToProtoMsgChan(plugin.subscription), topic)
 	if err != nil {
-		plugin.LogDeps.Log.Error(err)
+		plugin.Log.Error(err)
 	}
 
-	plugin.LogDeps.Log.Info("Initialization of the custom plugin for the Kafka example is completed")
+	plugin.Log.Info("Initialization of the custom plugin for the Kafka example is completed")
 
 	// Run sync and async kafka consumers
 	go plugin.syncEventHandler()
@@ -156,7 +156,7 @@ func (plugin *ExamplePlugin) Init() (err error) {
 func (plugin *ExamplePlugin) closeExample() {
 	for {
 		if plugin.syncCaseDone && plugin.asyncCaseDone {
-			plugin.LogDeps.Log.Info("kafka example finished, sending shutdown ...")
+			plugin.Log.Info("kafka example finished, sending shutdown ...")
 			*plugin.closeChannel <- struct{}{}
 			break
 		}
@@ -187,18 +187,18 @@ func (plugin *ExamplePlugin) producer() {
 		Uint32Val: uint32(0),
 		BoolVal:   true,
 	}
-	plugin.LogDeps.Log.Info("Sending Kafka notification (protobuf)")
+	plugin.Log.Info("Sending Kafka notification (protobuf)")
 	err := plugin.kafkaSyncPublisher.Put("proto-key", enc)
 	if err != nil {
-		plugin.LogDeps.Log.Errorf("Failed to sync-send a proto message, error %v", err)
+		plugin.Log.Errorf("Failed to sync-send a proto message, error %v", err)
 	} else {
-		plugin.LogDeps.Log.Debugf("Sent sync proto message.")
+		plugin.Log.Debugf("Sent sync proto message.")
 	}
 
 	// Asynchronous message with protobuf encoded message. A success event is sent to the app asynchronously
 	// on an event channel when the message has been successfully sent to Kafka. An error message is sent to
 	// the app asynchronously if the message could not be sent.
-	plugin.LogDeps.Log.Info("Sending async Kafka notification (protobuf)")
+	plugin.Log.Info("Sending async Kafka notification (protobuf)")
 	plugin.kafkaAsyncPublisher.Put("async-proto-key", enc)
 }
 
@@ -209,11 +209,11 @@ func (plugin *ExamplePlugin) producer() {
 // Kafka consumer is subscribed to channel with specific topic. If producer sends a message with the topic, consumer will
 // receive it
 func (plugin *ExamplePlugin) syncEventHandler() {
-	plugin.LogDeps.Log.Info("Started Kafka event handler...")
+	plugin.Log.Info("Started Kafka event handler...")
 
 	// Watch on message channel for sync kafka events
 	for message := range plugin.subscription {
-		plugin.LogDeps.Log.Infof("Received Kafka Message, topic '%s', key: '%s', ", message.GetTopic(), message.GetKey())
+		plugin.Log.Infof("Received Kafka Message, topic '%s', key: '%s', ", message.GetTopic(), message.GetKey())
 		// Let it know that this part of the example is done
 		plugin.syncCaseDone = true
 	}
@@ -221,15 +221,15 @@ func (plugin *ExamplePlugin) syncEventHandler() {
 
 // asyncEventHandler shows handling of asynchronous events coming from the Kafka client
 func (plugin *ExamplePlugin) asyncEventHandler() {
-	plugin.LogDeps.Log.Info("Started Kafka async event handler...")
+	plugin.Log.Info("Started Kafka async event handler...")
 	for {
 		select {
 		case message := <-plugin.asyncMessageChannel:
-			plugin.LogDeps.Log.Infof("Received async Kafka Message, topic '%s', key: '%s', ", message.GetTopic(), message.GetKey())
+			plugin.Log.Infof("Received async Kafka Message, topic '%s', key: '%s', ", message.GetTopic(), message.GetKey())
 			// Let it know that this part of the example is done
 			plugin.asyncCaseDone = true
 		case err := <-plugin.asyncErrorChannel:
-			plugin.LogDeps.Log.Errorf("Failed to publish async message, %v", err)
+			plugin.Log.Errorf("Failed to publish async message, %v", err)
 		}
 	}
 }

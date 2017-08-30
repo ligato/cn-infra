@@ -53,7 +53,7 @@ func (ef *ExampleFlavor) Inject() (allReadyInjected bool) {
 	// Init local flavor
 	ef.Local.Inject()
 	// Inject infra to example plugin
-	ef.FlagsExample.LogDeps = *ef.Local.LogDeps("flags-example")
+	ef.FlagsExample.PluginLogDeps = *ef.Local.LogDeps("flags-example")
 	ef.FlagsExample.closeChannel = ef.closeChan
 
 	return true
@@ -80,7 +80,7 @@ type ExamplePlugin struct {
 
 // Deps is here to group injected dependencies of plugin to not mix with other plugin fields
 type Deps struct {
-	LogDeps localdeps.PluginLogDeps // injected
+	localdeps.PluginLogDeps // injected
 }
 
 // Init is the entry point into the plugin that is called by Agent Core when the Agent is coming up.
@@ -90,7 +90,7 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	// function.
 	plugin.registerFlags()
 
-	plugin.LogDeps.Log.Info("Initialization of the custom plugin for the flags example is completed")
+	plugin.Log.Info("Initialization of the custom plugin for the flags example is completed")
 
 	// logFlags shows the runtime values of CLI flags registered in RegisterFlags()
 	plugin.logFlags()
@@ -103,17 +103,11 @@ func (plugin *ExamplePlugin) Init() (err error) {
 func (plugin *ExamplePlugin) closeExample() {
 	for {
 		if plugin.done {
-			plugin.LogDeps.Log.Info("flags example finished, sending shutdown ...")
+			plugin.Log.Info("flags example finished, sending shutdown ...")
 			*plugin.closeChannel <- struct{}{}
 			break
 		}
 	}
-}
-
-// Close is called by Agent Core when the Agent is shutting down. It is supposed to clean up resources that were
-// allocated by the plugin during its lifetime (just for reference, nothing needs to be cleaned up here)
-func (plugin *ExamplePlugin) Close() error {
-	return nil
 }
 
 /*********
@@ -133,7 +127,7 @@ var (
 
 // RegisterFlags contains examples of how to register flags of various types
 func (plugin *ExamplePlugin) registerFlags() {
-	plugin.LogDeps.Log.Info("Registering flags")
+	plugin.Log.Info("Registering flags")
 	flag.StringVar(&testFlagString, "ep-string", "my-value",
 		"Example of a string flag.")
 	flag.IntVar(&testFlagInt, "ep-int", 1122,
@@ -152,13 +146,13 @@ func (plugin *ExamplePlugin) registerFlags() {
 
 // LogFlags shows the runtime values of CLI flags
 func (plugin *ExamplePlugin) logFlags() {
-	plugin.LogDeps.Log.Info("Logging flags")
-	plugin.LogDeps.Log.Infof("testFlagString:'%s'", testFlagString)
-	plugin.LogDeps.Log.Infof("testFlagInt:'%d'", testFlagInt)
-	plugin.LogDeps.Log.Infof("testFlagInt64:'%d'", testFlagInt64)
-	plugin.LogDeps.Log.Infof("testFlagUint:'%d'", testFlagUint)
-	plugin.LogDeps.Log.Infof("testFlagUint64:'%d'", testFlagUint64)
-	plugin.LogDeps.Log.Infof("testFlagBool:'%v'", testFlagBool)
-	plugin.LogDeps.Log.Infof("testFlagDur:'%v'", testFlagDur)
+	plugin.Log.Info("Logging flags")
+	plugin.Log.Infof("testFlagString:'%s'", testFlagString)
+	plugin.Log.Infof("testFlagInt:'%d'", testFlagInt)
+	plugin.Log.Infof("testFlagInt64:'%d'", testFlagInt64)
+	plugin.Log.Infof("testFlagUint:'%d'", testFlagUint)
+	plugin.Log.Infof("testFlagUint64:'%d'", testFlagUint64)
+	plugin.Log.Infof("testFlagBool:'%v'", testFlagBool)
+	plugin.Log.Infof("testFlagDur:'%v'", testFlagDur)
 	plugin.done = true
 }
