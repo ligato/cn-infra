@@ -24,6 +24,10 @@ import (
 // or remotely using REST (but different flavor must be used: rpc.RpcFlavor).
 // ************************************************************************/
 
+/********
+ * Main *
+ ********/
+
 // Main allows running Example Plugin as a statically linked binary with Agent Core Plugins. Close channel and plugins
 // required for the example are initialized. Agent is instantiated with generic plugins (ETCD, Kafka, Status check,
 // HTTP and Log) and example plugin which demonstrates Logs functionality.
@@ -37,10 +41,33 @@ func main() {
 	core.EventLoopWithInterrupt(agent, exampleFinished)
 }
 
+/**********
+ * Flavor *
+ **********/
+
+// ExampleFlavor is composition of ExamplePlugin and existing flavor
+type ExampleFlavor struct {
+	local.FlavorLocal
+	ExamplePlugin
+}
+
+// Plugins combines all Plugins in flavor to the list
+func (f *ExampleFlavor) Plugins() []*core.NamedPlugin {
+	if f.FlavorLocal.Inject() {
+		f.ExamplePlugin.PluginLogDeps = *f.LogDeps("logs-example")
+	}
+
+	return core.ListPluginsInFlavor(f)
+}
+
+/******************
+ * Example plugin *
+ ******************/
+
 // ExamplePlugin implements Plugin interface which is used to pass custom plugin instances to the agent
 type ExamplePlugin struct {
-	localdeps.PluginLogDeps
-	exampleFinished chan struct{}
+	localdeps.PluginLogDeps // this field is usually injected in flavor
+	exampleFinished         chan struct{}
 }
 
 // Init is the entry point into the plugin that is called by Agent Core when the Agent is coming up.
@@ -63,7 +90,7 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	plugin.Log.Info("Info log example: Something informative")
 	plugin.Log.Warn("Warn log example: Something unexpected, warning")
 	plugin.Log.Error("Error log example: Failure without exit")
-	//log.Panic("Panic log") calls panic() after logging
+	plugin.showPanicLog()
 	//log.Fatal("Bye") calls os.Exit(1) after logging
 
 	// Log with field - automatically adds timestamp
@@ -77,22 +104,18 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	childLogger.Infof("Log using named logger with name: %v", childLogger.GetName())
 
 	// End the example
+	plugin.Log.Info("logs in plugin example finished, sending shutdown ...")
 	plugin.exampleFinished <- struct{}{}
 
 	return nil
 }
 
-// ExampleFlavor is composition of ExamplePlugin and existing flavor
-type ExampleFlavor struct {
-	local.FlavorLocal
-	ExamplePlugin
-}
-
-// Plugins combines all Plugins in flavor to the list
-func (f *ExampleFlavor) Plugins() []*core.NamedPlugin {
-	if f.FlavorLocal.Inject() {
-		f.ExamplePlugin.PluginLogDeps = *f.LogDeps("example-plugin")
-	}
-
-	return core.ListPluginsInFlavor(f)
+// Demostrates panic log + recovering
+func (plugin *ExamplePlugin) showPanicLog() {
+	defer func() {
+		if err := recover(); err != nil {
+			plugin.Log.Info("Recovered from panic")
+		}
+	}()
+	plugin.Log.Panic("Panic log: calls panic() after log, will be recovered") //calls panic() after logging
 }
