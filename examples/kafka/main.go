@@ -132,7 +132,7 @@ func (plugin *ExamplePlugin) Init() (err error) {
 
 	plugin.kafkaWatcher = plugin.Kafka.NewWatcher("example-plugin")
 
-	// ConsumePartition is called to start consuming a topic/partition.
+	// kafkaWatcher.Watch is called to start consuming a topic.
 	plugin.subscription = make(chan messaging.ProtoMessage)
 	err = plugin.kafkaWatcher.Watch(messaging.ToProtoMsgChan(plugin.subscription), topic)
 	if err != nil {
