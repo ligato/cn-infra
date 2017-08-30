@@ -31,12 +31,9 @@ func main() {
 	// Init close channel used to stop the example
 	exampleFinished := make(chan struct{}, 1)
 
-	// Define example flavor. Channel used to finish is passed to the example plugin
+	// Start Agent with ExampleFlavor (combination of ExamplePlugin & reused cn-infra plugins)
 	flavor := ExampleFlavor{closeChan: &exampleFinished}
-
-	// Create new agent
 	agent := core.NewAgent(log.StandardLogger(), 15*time.Second, append(flavor.Plugins())...)
-
 	core.EventLoopWithInterrupt(agent, exampleFinished)
 }
 

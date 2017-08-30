@@ -37,11 +37,9 @@ func main() {
 	// Init close channel to stop the example
 	exampleFinished := make(chan struct{}, 1)
 
+	// Start Agent with ExampleFlavor (combination of ExamplePlugin & reused cn-infra plugins)
 	flavor := ExampleFlavor{closeChan: &exampleFinished}
-
-	// Create new agent
 	agent := core.NewAgent(log, 15*time.Second, append(flavor.Plugins())...)
-
 	core.EventLoopWithInterrupt(agent, exampleFinished)
 }
 
@@ -180,8 +178,6 @@ func (plugin *ExamplePlugin) Close() error {
  * ETCD call *
  *************/
 
-const etcdIndex string = "index"
-
 // KeyProtoValWriter creates a simple data, then demonstrates CRUD operations with ETCD
 func (plugin *ExamplePlugin) etcdPublisher() {
 	// Wait for the consumer to initialize
@@ -193,7 +189,7 @@ func (plugin *ExamplePlugin) etcdPublisher() {
 
 	// PUT: examplePut demonstrates how to use the Data Broker Put() API to create (or update) a simple data
 	// structure into ETCD
-	label := etcdKeyPrefixLabel(plugin.ServiceLabel.GetAgentLabel(), etcdIndex)
+	label := etcdKeyPrefixLabel(plugin.ServiceLabel.GetAgentLabel(), "index")
 	plugin.Log.Infof("Write data to %v", label)
 	plugin.Publisher.Put(label, exampleData)
 
