@@ -14,9 +14,9 @@ Current examples:
   to write data into ETCD and catch this change as an event by the watcher,
 * **[flags plugin](flags_plugin/main.go)** registers flags and shows their 
   runtime values in an example plugin,
-* **[kafka lib](kafka_lib/main.go)** shows how to use the Kafka messaging library
+* **[kafka lib](kafka_lib)** shows how to use the Kafka messaging library
   on set of individual tools (producer, sync and async consumer),
-* **[kafka plugin](kafka/main.go)** contains a simple plugin which registers a 
+* **[kafka plugin](kafka_plugin/main.go)** contains a simple plugin which registers a 
   Kafka consumer and sends a test notification,
 * **[logs lib](logs_lib)** shows how to use the logger library and switch between 
   the log levels,
