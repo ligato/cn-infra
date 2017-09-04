@@ -6,14 +6,28 @@ real ETCD and/or Kafka plugins, so for specific examples, they have to be
 started first.
 
 Current examples:
-* **[etcd](etcdv3_lib)** uses the ETCD data broker to write data into 
-  ETCD, which are then caught by the watcher
-* **[flags](flags/main.go)** example registers flags and shows their 
-  runtime values
-* **[kafka](kafka/main.go)** creates a simple plugin which registers a 
-  Kafka consumer and sends a test notification
-* **[logs](logs_logrus)** shows how to use the logger and wotk wiht 
-  log levels
+* **[cassandra lib](cassandra_lib)** shows how to use the Cassandra data broker API
+  to access the Cassandra database,
+* **[datasync plugin](datasync_plugin)** showcases the data synchronization APIs of
+  the datasync package on an example plugin,
+* **[etcdv3 lib](etcdv3_lib)** shows how to use the ETCD data broker API 
+  to write data into ETCD and catch this change as an event by the watcher,
+* **[flags plugin](flags_plugin/main.go)** registers flags and shows their 
+  runtime values in an example plugin,
+* **[kafka lib](kafka_lib)** shows how to use the Kafka messaging library
+  on set of individual tools (producer, sync and async consumer),
+* **[kafka plugin](kafka_plugin/main.go)** contains a simple plugin which registers a 
+  Kafka consumer and sends a test notification,
+* **[logs lib](logs_lib)** shows how to use the logger library and switch between 
+  the log levels,
+* **[logs plugin](logs_plugin)** showcases how to ue the logger library in a 
+  simple plugin,
+* **[redis lib](redis_lib)** contains several examples that use the Redis data 
+  broker API,
+* **[model](model)** show how to define a custom data model using Protocol Buffers
+  and how to integrate it into the application,
+* **[simple-agent](simple-agent)** showcases an approach how a set of plugins can 
+  be turned to an application.
 
 ## How to run an example
 
