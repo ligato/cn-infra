@@ -19,7 +19,6 @@ import (
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync/kvdbsync"
-	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval/redis"
 	"github.com/ligato/cn-infra/flavors/local"
 )
@@ -43,7 +42,7 @@ type FlavorRedis struct {
 }
 
 // Inject sets object references
-func (f *FlavorRedis) Inject(resyncOrch *resync.Plugin) (allReadyInjected bool) {
+func (f *FlavorRedis) Inject() (allReadyInjected bool) {
 	if f.injected {
 		return false
 	}
@@ -57,7 +56,7 @@ func (f *FlavorRedis) Inject(resyncOrch *resync.Plugin) (allReadyInjected bool) 
 	f.Redis.Deps.PluginInfraDeps = *f.InfraDeps("redis")
 	f.RedisDataSync.Deps.PluginLogDeps = *f.LogDeps("redis-datasync")
 	f.RedisDataSync.KvPlugin = &f.Redis
-	f.RedisDataSync.ResyncOrch = resyncOrch
+	//Note, not injecting f.RedisDataSync.ResyncOrch here
 	f.RedisDataSync.ServiceLabel = &f.ServiceLabel
 
 	if f.StatusCheck.Transport == nil {
@@ -69,6 +68,6 @@ func (f *FlavorRedis) Inject(resyncOrch *resync.Plugin) (allReadyInjected bool) 
 
 // Plugins combines all Plugins in flavor to the list
 func (f *FlavorRedis) Plugins() []*core.NamedPlugin {
-	f.Inject(nil)
+	f.Inject()
 	return core.ListPluginsInFlavor(f)
 }

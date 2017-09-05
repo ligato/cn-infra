@@ -19,7 +19,6 @@ import (
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync/kvdbsync"
-	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/flavors/local"
 )
@@ -42,7 +41,7 @@ type FlavorEtcd struct {
 }
 
 // Inject sets object references
-func (f *FlavorEtcd) Inject(resyncOrch *resync.Plugin) bool {
+func (f *FlavorEtcd) Inject() bool {
 	if f.injected {
 		return false
 	}
@@ -56,7 +55,7 @@ func (f *FlavorEtcd) Inject(resyncOrch *resync.Plugin) bool {
 	f.ETCD.Deps.PluginInfraDeps = *f.InfraDeps("etcdv3")
 	f.ETCDDataSync.Deps.PluginLogDeps = *f.LogDeps("etcdv3-datasync")
 	f.ETCDDataSync.KvPlugin = &f.ETCD
-	f.ETCDDataSync.ResyncOrch = resyncOrch
+	//Note, not injecting f.ETCDDataSync.ResyncOrch here
 	f.ETCDDataSync.ServiceLabel = &f.ServiceLabel
 
 	if f.StatusCheck.Transport == nil {
@@ -68,6 +67,6 @@ func (f *FlavorEtcd) Inject(resyncOrch *resync.Plugin) bool {
 
 // Plugins combines all Plugins in flavor to the list
 func (f *FlavorEtcd) Plugins() []*core.NamedPlugin {
-	f.Inject(nil)
+	f.Inject()
 	return core.ListPluginsInFlavor(f)
 }

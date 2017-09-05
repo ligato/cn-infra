@@ -16,6 +16,7 @@ package connectors
 
 import (
 	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/flavors/local"
 )
 
@@ -32,6 +33,7 @@ type AllConnectorsFlavor struct {
 	*FlavorKafka
 	*FlavorRedis
 	*FlavorCassandra
+	ResyncOrch resync.Plugin  // the order is important because of AfterInit()
 
 	injected bool
 }
@@ -50,8 +52,9 @@ func (f *AllConnectorsFlavor) Inject() bool {
 
 	if f.FlavorEtcd == nil {
 		f.FlavorEtcd = &FlavorEtcd{FlavorLocal: f.FlavorLocal}
+		f.ETCDDataSync.ResyncOrch = &f.ResyncOrch
 	}
-	f.FlavorEtcd.Inject(nil)
+	f.FlavorEtcd.Inject()
 
 	if f.FlavorKafka == nil {
 		f.FlavorKafka = &FlavorKafka{FlavorLocal: f.FlavorLocal}
@@ -60,8 +63,9 @@ func (f *AllConnectorsFlavor) Inject() bool {
 
 	if f.FlavorRedis == nil {
 		f.FlavorRedis = &FlavorRedis{FlavorLocal: f.FlavorLocal}
+		f.RedisDataSync.ResyncOrch = &f.ResyncOrch
 	}
-	f.FlavorRedis.Inject(nil)
+	f.FlavorRedis.Inject()
 
 	if f.FlavorCassandra == nil {
 		f.FlavorCassandra = &FlavorCassandra{FlavorLocal: f.FlavorLocal}
