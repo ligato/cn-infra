@@ -25,13 +25,15 @@ type ProtoConnection struct {
 }
 
 type protoSyncPublisherKafka struct {
-	conn  *ProtoConnection
-	topic string
+	conn      *ProtoConnection
+	topic     string
+	partition int32
 }
 
 type protoAsyncPublisherKafka struct {
 	conn         *ProtoConnection
 	topic        string
+	partition    int32
 	succCallback func(messaging.ProtoMessage)
 	errCallback  func(messaging.ProtoMessageErr)
 }
@@ -110,6 +112,14 @@ func (conn *ProtoConnection) ConsumeTopic(msgClb func(messaging.ProtoMessage), t
 	return nil
 }
 
+// ConsumePartition is called to start consuming given topic on given partition and offset.
+// Function can be called until the multiplexer is started, it returns an error otherwise.
+// The provided channel should be buffered, otherwise messages might be lost.
+func (conn *ProtoConnection) ConsumePartition(msgClb func(messaging.ProtoMessage), topic string, partition int32, offset int64) error {
+	// todo implement
+	return nil
+}
+
 // StopConsuming cancels the previously created subscription for consuming the topic.
 func (conn *ProtoConnection) StopConsuming(topic string) error {
 	return conn.multiplexer.stopConsuming(topic, conn.name)
@@ -127,7 +137,12 @@ func (conn *ProtoConnection) StopWatch(topic string) error {
 
 // NewSyncPublisher creates a new instance of protoSyncPublisherKafka that allows to publish sync kafka messages using common messaging API
 func (conn *ProtoConnection) NewSyncPublisher(topic string) messaging.ProtoPublisher {
-	return &protoSyncPublisherKafka{conn, topic}
+	return &protoSyncPublisherKafka{conn, topic, DefPartition}
+}
+
+// NewSyncPublisherToPartition creates a new instance of protoSyncPublisherKafka that allows to publish sync kafka messages using common messaging API
+func (conn *ProtoConnection) NewSyncPublisherToPartition(topic string, partition int32) messaging.ProtoPublisher {
+	return &protoSyncPublisherKafka{conn, topic, partition}
 }
 
 // Put publishes a message into kafka
@@ -138,7 +153,12 @@ func (p *protoSyncPublisherKafka) Put(key string, message proto.Message, opts ..
 
 // NewAsyncPublisher creates a new instance of protoAsyncPublisherKafka that allows to publish sync kafka messages using common messaging API
 func (conn *ProtoConnection) NewAsyncPublisher(topic string, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) messaging.ProtoPublisher {
-	return &protoAsyncPublisherKafka{conn, topic, successClb, errorClb}
+	return &protoAsyncPublisherKafka{conn, topic, DefPartition, successClb, errorClb}
+}
+
+// NewAsyncPublisherToPartition creates a new instance of protoAsyncPublisherKafka that allows to publish sync kafka messages using common messaging API
+func (conn *ProtoConnection) NewAsyncPublisherToPartition(topic string, partition int32, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) messaging.ProtoPublisher {
+	return &protoAsyncPublisherKafka{conn, topic, partition, successClb, errorClb}
 }
 
 // Put publishes a message into kafka

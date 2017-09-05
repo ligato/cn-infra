@@ -22,13 +22,15 @@ type BytesPublisher interface {
 }
 
 type bytesSyncPublisherKafka struct {
-	conn  *Connection
-	topic string
+	conn      *Connection
+	topic     string
+	partition int32
 }
 
 type bytesAsyncPublisherKafka struct {
 	conn         *Connection
 	topic        string
+	partition    int32
 	succCallback func(*client.ProducerMessage)
 	errCallback  func(*client.ProducerError)
 }
@@ -101,7 +103,12 @@ func (conn *Connection) SendAsyncMessage(topic string, key client.Encoder, value
 
 // NewSyncPublisher creates a new instance of bytesSyncPublisherKafka that allows to publish sync kafka messages using common messaging API
 func (conn *Connection) NewSyncPublisher(topic string) BytesPublisher {
-	return &bytesSyncPublisherKafka{conn, topic}
+	return &bytesSyncPublisherKafka{conn, topic, DefPartition}
+}
+
+// NewSyncPublisherToPartition creates a new instance of bytesSyncPublisherKafka that allows to publish sync kafka messages using common messaging API
+func (conn *Connection) NewSyncPublisherToPartition(topic string, partition int32) BytesPublisher {
+	return &bytesSyncPublisherKafka{conn, topic, partition}
 }
 
 // Put publishes a message into kafka
@@ -112,7 +119,12 @@ func (p *bytesSyncPublisherKafka) Publish(key string, data []byte) error {
 
 // NewAsyncPublisher creates a new instance of bytesAsyncPublisherKafka that allows to publish async kafka messages using common messaging API
 func (conn *Connection) NewAsyncPublisher(topic string, successClb func(*client.ProducerMessage), errorClb func(err *client.ProducerError)) BytesPublisher {
-	return &bytesAsyncPublisherKafka{conn, topic, successClb, errorClb}
+	return &bytesAsyncPublisherKafka{conn, topic, DefPartition, successClb, errorClb}
+}
+
+// NewAsyncPublisherToPartition creates a new instance of bytesAsyncPublisherKafka that allows to publish async kafka messages using common messaging API
+func (conn *Connection) NewAsyncPublisherToPartition(topic string, partition int32, successClb func(*client.ProducerMessage), errorClb func(err *client.ProducerError)) BytesPublisher {
+	return &bytesAsyncPublisherKafka{conn, topic, partition, successClb, errorClb}
 }
 
 // Put publishes a message into kafka
