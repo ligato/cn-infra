@@ -21,7 +21,7 @@ import (
 	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/datasync/syncbase"
 	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/flavors/localdeps"
+	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/ligato/cn-infra/servicelabel"
 )
 
@@ -33,7 +33,7 @@ type Plugin struct {
 
 type infraDeps interface {
 	// InfraDeps for getting PlugginInfraDeps instance (logger, config, plugin name, statuscheck)
-	InfraDeps(pluginName string) *localdeps.PluginInfraDeps
+	InfraDeps(pluginName string) *local.PluginInfraDeps
 }
 
 // OfDifferentAgent allows access DB of different agent (with a particular microservice label).
@@ -57,7 +57,7 @@ func (plugin /*intentionally without pointer receiver*/ Plugin) OfDifferentAgent
 // Deps is here to group injected dependencies of plugin
 // to not mix with other plugin fields.
 type Deps struct {
-	localdeps.PluginInfraDeps                      // inject
+	local.PluginInfraDeps                      // inject
 	ResyncOrch                resync.Subscriber    // inject
 	KvPlugin                  keyval.KvProtoPlugin // inject
 }

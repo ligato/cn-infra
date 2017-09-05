@@ -12,37 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package etcd
+package connectors
 
 import (
 	"github.com/namsral/flag"
 
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/datasync/kvdbsync"
-	"github.com/ligato/cn-infra/datasync/resync"
-	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/messaging/kafka"
 )
 
-// defines etcd & kafka flags // TODO switch to viper to avoid global configuration
+// defines kafka flags // TODO switch to viper to avoid global configuration
 func init() {
-	flag.String("etcdv3-config", "etcd.conf",
-		"Location of the Etcd configuration file; also set via 'ETCDV3_CONFIG' env variable.")
+	flag.String("kafka-config", "kafka.conf",
+		"Location of the Kafka configuration file; also set via 'KAFKA_CONFIG' env variable.")
 }
 
-// FlavorEtcd glues together FlavorLocal plugins with ETCD & datasync plugin
-// (which is useful for watching config.)
-type FlavorEtcd struct {
+// FlavorKafka glues together FlavorLocal plugins with: Kafka plugins (useful for publishing events)
+type FlavorKafka struct {
 	*local.FlavorLocal
 
-	ETCD         etcdv3.Plugin
-	ETCDDataSync kvdbsync.Plugin
+	Kafka kafka.Plugin
 
 	injected bool
 }
 
 // Inject sets object references
-func (f *FlavorEtcd) Inject(resyncOrch *resync.Plugin) bool {
+func (f *FlavorKafka) Inject() bool {
 	if f.injected {
 		return false
 	}
@@ -53,21 +49,13 @@ func (f *FlavorEtcd) Inject(resyncOrch *resync.Plugin) bool {
 	}
 	f.FlavorLocal.Inject()
 
-	f.ETCD.Deps.PluginInfraDeps = *f.InfraDeps("etcdv3")
-	f.ETCDDataSync.Deps.PluginLogDeps = *f.LogDeps("etcdv3-datasync")
-	f.ETCDDataSync.KvPlugin = &f.ETCD
-	f.ETCDDataSync.ResyncOrch = resyncOrch
-	f.ETCDDataSync.ServiceLabel = &f.ServiceLabel
-
-	if f.StatusCheck.Transport == nil {
-		f.StatusCheck.Transport = &f.ETCDDataSync
-	}
+	f.Kafka.Deps.PluginInfraDeps = *f.InfraDeps("kafka")
 
 	return true
 }
 
 // Plugins combines all Plugins in flavor to the list
-func (f *FlavorEtcd) Plugins() []*core.NamedPlugin {
-	f.Inject(nil)
+func (f *FlavorKafka) Plugins() []*core.NamedPlugin {
+	f.Inject()
 	return core.ListPluginsInFlavor(f)
 }

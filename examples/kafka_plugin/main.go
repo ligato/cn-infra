@@ -11,7 +11,6 @@ import (
 	"github.com/ligato/cn-infra/messaging/kafka"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
-	"github.com/ligato/cn-infra/flavors/localdeps"
 )
 
 //********************************************************************
@@ -108,7 +107,7 @@ type ExamplePlugin struct {
 
 // Deps is a helper struct which is grouping all dependencies injected to the plugin
 type Deps struct {
-	localdeps.PluginLogDeps	// injected
+	local.PluginLogDeps	// injected
 }
 
 // Init is the entry point into the plugin that is called by Agent Core when the Agent is coming up.

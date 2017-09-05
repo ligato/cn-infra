@@ -20,7 +20,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/ligato/cn-infra.bak20170821c/logging/logroot"
+	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/datasync/syncbase"
 	"github.com/unrolled/render"
 )

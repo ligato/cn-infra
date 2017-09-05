@@ -12,29 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package etcdkafka
+package connectors
 
 import (
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/datasync/resync"
-	"github.com/ligato/cn-infra/flavors/etcd"
-	"github.com/ligato/cn-infra/flavors/kafka"
+	"github.com/ligato/cn-infra/db/sql/cassandra"
 	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/namsral/flag"
 )
 
-// FlavorEtcdKafka glues together FlavorLocal plugins with:
-// - ETCD (useful for watching northbound config.)
-// - Kafka plugins (useful for publishing events)
-type FlavorEtcdKafka struct {
+//init defines cassandra flags // TODO switch to viper to avoid global configuration
+func init() {
+	flag.String("cassandra-config", "cassandra.conf",
+		"Location of the Cassandra Client configuration file; also set via 'CASSANDRA_CONFIG' env variable.")
+}
+
+// FlavorCassandra glues together FlavorRPC plugins with:
+// - Cassandra (for using with API to interact with Cassandra database)
+type FlavorCassandra struct {
 	*local.FlavorLocal
-	*etcd.FlavorEtcd
-	*kafka.FlavorKafka
+	Cassandra cassandra.Plugin
 
 	injected bool
 }
 
 // Inject sets object references
-func (f *FlavorEtcdKafka) Inject(resyncOrch *resync.Plugin) bool {
+func (f *FlavorCassandra) Inject() bool {
 	if f.injected {
 		return false
 	}
@@ -43,23 +46,14 @@ func (f *FlavorEtcdKafka) Inject(resyncOrch *resync.Plugin) bool {
 	if f.FlavorLocal == nil {
 		f.FlavorLocal = &local.FlavorLocal{}
 	}
-	f.FlavorLocal.Inject()
 
-	if f.FlavorEtcd == nil {
-		f.FlavorEtcd = &etcd.FlavorEtcd{FlavorLocal: f.FlavorLocal}
-	}
-	f.FlavorEtcd.Inject(resyncOrch)
-
-	if f.FlavorKafka == nil {
-		f.FlavorKafka = &kafka.FlavorKafka{FlavorLocal: f.FlavorLocal}
-	}
-	f.FlavorKafka.Inject()
+	f.Cassandra.Deps.PluginInfraDeps = *f.InfraDeps("cassandra")
 
 	return true
 }
 
 // Plugins combines all Plugins in flavor to the list
-func (f *FlavorEtcdKafka) Plugins() []*core.NamedPlugin {
-	f.Inject(nil)
+func (f *FlavorCassandra) Plugins() []*core.NamedPlugin {
+	f.Inject()
 	return core.ListPluginsInFlavor(f)
 }

@@ -12,32 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cassandra
+package connectors
 
 import (
-	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/db/sql/cassandra"
-	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/namsral/flag"
+
+	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/datasync/kvdbsync"
+	"github.com/ligato/cn-infra/db/keyval/etcdv3"
+	"github.com/ligato/cn-infra/flavors/local"
 )
 
-//init defines cassandra flags // TODO switch to viper to avoid global configuration
+// defines etcd & kafka flags // TODO switch to viper to avoid global configuration
 func init() {
-	flag.String("cassandra-config", "cassandra.conf",
-		"Location of the Cassandra Client configuration file; also set via 'CASSANDRA_CONFIG' env variable.")
+	flag.String("etcdv3-config", "etcd.conf",
+		"Location of the Etcd configuration file; also set via 'ETCDV3_CONFIG' env variable.")
 }
 
-// FlavorCassandra glues together FlavorRPC plugins with:
-// - Cassandra (for using with API to interact with Cassandra database)
-type FlavorCassandra struct {
+// FlavorEtcd glues together FlavorLocal plugins with ETCD & datasync plugin
+// (which is useful for watching config.)
+type FlavorEtcd struct {
 	*local.FlavorLocal
-	Cassandra cassandra.Plugin
+
+	ETCD         etcdv3.Plugin
+	ETCDDataSync kvdbsync.Plugin
 
 	injected bool
 }
 
 // Inject sets object references
-func (f *FlavorCassandra) Inject() bool {
+func (f *FlavorEtcd) Inject() bool {
 	if f.injected {
 		return false
 	}
@@ -46,14 +50,23 @@ func (f *FlavorCassandra) Inject() bool {
 	if f.FlavorLocal == nil {
 		f.FlavorLocal = &local.FlavorLocal{}
 	}
+	f.FlavorLocal.Inject()
 
-	f.Cassandra.Deps.PluginInfraDeps = *f.InfraDeps("cassandra")
+	f.ETCD.Deps.PluginInfraDeps = *f.InfraDeps("etcdv3")
+	f.ETCDDataSync.Deps.PluginLogDeps = *f.LogDeps("etcdv3-datasync")
+	f.ETCDDataSync.KvPlugin = &f.ETCD
+	//Note, not injecting f.ETCDDataSync.ResyncOrch here
+	f.ETCDDataSync.ServiceLabel = &f.ServiceLabel
+
+	if f.StatusCheck.Transport == nil {
+		f.StatusCheck.Transport = &f.ETCDDataSync
+	}
 
 	return true
 }
 
 // Plugins combines all Plugins in flavor to the list
-func (f *FlavorCassandra) Plugins() []*core.NamedPlugin {
+func (f *FlavorEtcd) Plugins() []*core.NamedPlugin {
 	f.Inject()
 	return core.ListPluginsInFlavor(f)
 }
