@@ -9,21 +9,14 @@ Most importatnt CN-Infra flavors:
 * [RPC flavor](rpc) - a collection of plugins that exposes RPCs. It also register management API for:
   * status check (RPCs probed from systems such as K8s)
   * logging (for changing log level at runtime remotely)
-* [etcd + Kafka flavor](etcdkafka) - is combination of Kafka & etcd flavor (reused in many examples)
-* [all connectors flavor](allcon) - is combination of all following flavors with local and RPC flavor.
-
-There are following individual connector flavors:
-* [Cassandra flavor](cassandra) - adds Cassadnra client plugin related instances to the [local flavor](local)
-* [etcd flavor](etcd) - adds etcd client plugin related instances to the [local flavor](local) 
-  the [local flavor](local)
-* [Redis flavor](redis) - adds Redis client plugin related instances to the [local flavor](local)
-* [Kafka flavor](kafka) - adds Kafka client plugin related instances to the [local flavor](local)
-
+* [all connectors flavor](allcon) - is combination of ETCD, Cassandra, Redis & Kafka related plugins.
   
-The following diagram shows:
-* plugins that are part of the flavor
+The following diagram depicts:
+* plugins that are part of a specific flavor
 * initialized (injected) [statuscheck](../health/statuscheck) dependency 
   inside [etcd client plugin](../db/keyval/etcdv3) and [Kafka client plugin](../messaging/kafka)
-* [etcd + Kafka flavor](etcdkafka) extends [local flavor](local) 
+* embedded [local flavor](local) in:
+    * [all connectors flavor](connectors) 
+    * [RPC flavor](rpc)
 
 ![flavors](../docs/imgs/flavors.png)

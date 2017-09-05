@@ -12,27 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package allcon
+package connectors
 
 import (
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/flavors/cassandra"
-	"github.com/ligato/cn-infra/flavors/etcd"
-	"github.com/ligato/cn-infra/flavors/kafka"
 	"github.com/ligato/cn-infra/flavors/local"
-	"github.com/ligato/cn-infra/flavors/redis"
-	"github.com/ligato/cn-infra/flavors/rpc"
 )
 
-// AllConnectorsFlavor is combination of RPC, ETCD, Kafka, Redis, Cassandra flavors
-// User can enable those connectors by providing configs for them.
+// AllConnectorsFlavor is combination of all plugins that allow
+// connectivity to external database/messaging...
+// Effectively it is combination of ETCD, Kafka, Redis, Cassandra
+// plugins.
+//
+// User/admin can enable those plugins/connectors by providing
+// configs (at least endpoints) for them.
 type AllConnectorsFlavor struct {
 	*local.FlavorLocal
-	*etcd.FlavorEtcd
-	*kafka.FlavorKafka
-	*redis.FlavorRedis
-	*cassandra.FlavorCassandra
-	*rpc.FlavorRPC
+	*FlavorEtcd
+	*FlavorKafka
+	*FlavorRedis
+	*FlavorCassandra
 
 	injected bool
 }
@@ -50,29 +49,24 @@ func (f *AllConnectorsFlavor) Inject() bool {
 	f.FlavorLocal.Inject()
 
 	if f.FlavorEtcd == nil {
-		f.FlavorEtcd = &etcd.FlavorEtcd{FlavorLocal: f.FlavorLocal}
+		f.FlavorEtcd = &FlavorEtcd{FlavorLocal: f.FlavorLocal}
 	}
 	f.FlavorEtcd.Inject(nil)
 
 	if f.FlavorKafka == nil {
-		f.FlavorKafka = &kafka.FlavorKafka{FlavorLocal: f.FlavorLocal}
+		f.FlavorKafka = &FlavorKafka{FlavorLocal: f.FlavorLocal}
 	}
 	f.FlavorKafka.Inject()
 
 	if f.FlavorRedis == nil {
-		f.FlavorRedis = &redis.FlavorRedis{FlavorLocal: f.FlavorLocal}
+		f.FlavorRedis = &FlavorRedis{FlavorLocal: f.FlavorLocal}
 	}
 	f.FlavorRedis.Inject(nil)
 
 	if f.FlavorCassandra == nil {
-		f.FlavorCassandra = &cassandra.FlavorCassandra{FlavorLocal: f.FlavorLocal}
+		f.FlavorCassandra = &FlavorCassandra{FlavorLocal: f.FlavorLocal}
 	}
 	f.FlavorCassandra.Inject()
-
-	if f.FlavorRPC == nil {
-		f.FlavorRPC = &rpc.FlavorRPC{FlavorLocal: f.FlavorLocal}
-	}
-	f.FlavorRPC.Inject()
 
 	return true
 }

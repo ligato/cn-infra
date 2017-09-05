@@ -12,29 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package etcdkafka
+package connectors
 
 import (
+	"github.com/namsral/flag"
+
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/datasync/resync"
-	"github.com/ligato/cn-infra/flavors/etcd"
-	"github.com/ligato/cn-infra/flavors/kafka"
 	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/messaging/kafka"
 )
 
-// FlavorEtcdKafka glues together FlavorLocal plugins with:
-// - ETCD (useful for watching northbound config.)
-// - Kafka plugins (useful for publishing events)
-type FlavorEtcdKafka struct {
+// defines kafka flags // TODO switch to viper to avoid global configuration
+func init() {
+	flag.String("kafka-config", "kafka.conf",
+		"Location of the Kafka configuration file; also set via 'KAFKA_CONFIG' env variable.")
+}
+
+// FlavorKafka glues together FlavorLocal plugins with: Kafka plugins (useful for publishing events)
+type FlavorKafka struct {
 	*local.FlavorLocal
-	*etcd.FlavorEtcd
-	*kafka.FlavorKafka
+
+	Kafka kafka.Plugin
 
 	injected bool
 }
 
 // Inject sets object references
-func (f *FlavorEtcdKafka) Inject(resyncOrch *resync.Plugin) bool {
+func (f *FlavorKafka) Inject() bool {
 	if f.injected {
 		return false
 	}
@@ -45,21 +49,13 @@ func (f *FlavorEtcdKafka) Inject(resyncOrch *resync.Plugin) bool {
 	}
 	f.FlavorLocal.Inject()
 
-	if f.FlavorEtcd == nil {
-		f.FlavorEtcd = &etcd.FlavorEtcd{FlavorLocal: f.FlavorLocal}
-	}
-	f.FlavorEtcd.Inject(resyncOrch)
-
-	if f.FlavorKafka == nil {
-		f.FlavorKafka = &kafka.FlavorKafka{FlavorLocal: f.FlavorLocal}
-	}
-	f.FlavorKafka.Inject()
+	f.Kafka.Deps.PluginInfraDeps = *f.InfraDeps("kafka")
 
 	return true
 }
 
 // Plugins combines all Plugins in flavor to the list
-func (f *FlavorEtcdKafka) Plugins() []*core.NamedPlugin {
-	f.Inject(nil)
+func (f *FlavorKafka) Plugins() []*core.NamedPlugin {
+	f.Inject()
 	return core.ListPluginsInFlavor(f)
 }

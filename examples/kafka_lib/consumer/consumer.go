@@ -16,10 +16,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/namsral/flag"
 	"os"
 	"os/signal"
 	"time"
+
+	"github.com/namsral/flag"
 
 	"github.com/Shopify/sarama"
 	"github.com/bsm/sarama-cluster"

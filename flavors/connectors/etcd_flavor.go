@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package etcd
+package connectors
 
 import (
 	"github.com/namsral/flag"

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/flavors/allcon"
+	"github.com/ligato/cn-infra/flavors/connectors"
 	"github.com/onsi/gomega"
 )
 
@@ -23,7 +23,7 @@ func (t *suiteFlavorAllConnectors) Setup(flavor core.Flavor, golangT *testing.T)
 
 // TC01 asserts that injection works fine and agent starts & stops
 func (t *suiteFlavorAllConnectors) TC01StartStop() {
-	t.Setup(&allcon.AllConnectorsFlavor{}, t.T)
+	t.Setup(&connectors.AllConnectorsFlavor{}, t.T)
 	defer t.Teardown()
 
 	gomega.Expect(t.agent).ShouldNot(gomega.BeNil(), "agent is not initialized")

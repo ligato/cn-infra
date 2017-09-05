@@ -1,4 +1,4 @@
-package localdeps
+package local
 
 import (
 	"github.com/ligato/cn-infra/config"

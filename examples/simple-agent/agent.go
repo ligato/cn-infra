@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/flavors/etcdkafka"
+	"github.com/ligato/cn-infra/flavors/connectors"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 )
@@ -27,7 +27,7 @@ import (
 func main() {
 	logroot.StandardLogger().SetLevel(logging.DebugLevel)
 
-	f := etcdkafka.FlavorEtcdKafka{}
+	f := connectors.AllConnectorsFlavor{}
 	agent := core.NewAgent(logroot.StandardLogger(), 15*time.Second, f.Plugins()...)
 
 	err := core.EventLoopWithInterrupt(agent, nil)

@@ -5,7 +5,6 @@ import (
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/flavors/local"
-	"github.com/ligato/cn-infra/flavors/localdeps"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 )
@@ -66,7 +65,7 @@ func (f *ExampleFlavor) Plugins() []*core.NamedPlugin {
 
 // ExamplePlugin implements Plugin interface which is used to pass custom plugin instances to the agent
 type ExamplePlugin struct {
-	localdeps.PluginLogDeps // this field is usually injected in flavor
+	local.PluginLogDeps // this field is usually injected in flavor
 	exampleFinished         chan struct{}
 }
 

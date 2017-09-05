@@ -5,7 +5,6 @@ import (
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/flavors/local"
-	"github.com/ligato/cn-infra/flavors/localdeps"
 	log "github.com/ligato/cn-infra/logging/logroot"
 	"github.com/namsral/flag"
 )
@@ -78,7 +77,7 @@ type ExamplePlugin struct {
 
 // Deps is here to group injected dependencies of plugin to not mix with other plugin fields
 type Deps struct {
-	localdeps.PluginLogDeps // injected
+	local.PluginLogDeps // injected
 }
 
 // Init is the entry point into the plugin that is called by Agent Core when the Agent is coming up.

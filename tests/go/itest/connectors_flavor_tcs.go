@@ -6,14 +6,10 @@ import (
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	etcdmock "github.com/ligato/cn-infra/db/keyval/etcdv3/mocks"
-	"github.com/ligato/cn-infra/flavors/etcdkafka"
+	"github.com/ligato/cn-infra/flavors/connectors"
 	"github.com/ligato/cn-infra/messaging/kafka"
 	kafkamux "github.com/ligato/cn-infra/messaging/kafka/mux"
 	"github.com/ligato/cn-infra/rpc/rest/mock"
-
-	//"github.com/onsi/gomega"
-	"github.com/ligato/cn-infra/flavors/etcd"
-	kafka2 "github.com/ligato/cn-infra/flavors/kafka"
 )
 
 type suiteFlavorKafkaEtcd struct {
@@ -35,7 +31,7 @@ func (t *suiteFlavorKafkaEtcd) Setup(flavor core.Flavor, golangT *testing.T) {
 //
 //     kafkamock, _, _ := kafkamux.Mock(t)
 //     MockEtcdKafkaFlavor(T)
-func MockEtcdKafkaFlavor(t *testing.T) (*etcdkafka.FlavorEtcdKafka, *KafkaEtcdFlavorMocks) {
+func MockEtcdKafkaFlavor(t *testing.T) (*connectors.AllConnectorsFlavor, *KafkaEtcdFlavorMocks) {
 	flavorRPC, httpMock := MockFlavorRPC()
 	kafkaMock := kafkamux.Mock(t)
 
@@ -49,11 +45,11 @@ func MockEtcdKafkaFlavor(t *testing.T) (*etcdkafka.FlavorEtcdKafka, *KafkaEtcdFl
 		panic(err)
 	}
 
-	return &etcdkafka.FlavorEtcdKafka{
-		FlavorEtcd: &etcd.FlavorEtcd{
+	return &connectors.AllConnectorsFlavor{
+		FlavorEtcd: &connectors.FlavorEtcd{
 			ETCD: *etcdv3.FromExistingConnection(etcdBytesCon, &flavorRPC.ServiceLabel),
 		},
-		FlavorKafka: &kafka2.FlavorKafka{
+		FlavorKafka: &connectors.FlavorKafka{
 			Kafka: *kafka.FromExistingMux(kafkaMock.Mux),
 		},
 	}, &KafkaEtcdFlavorMocks{httpMock, kafkaMock}
