@@ -10,7 +10,7 @@ examples/kafka_lib/asyncproducer/asyncproducer
 examples/kafka_lib/consumer/consumer
 examples/kafka_lib/mux/mux
 examples/kafka_lib/syncproducer/syncproducer
-examples/kafka_plugin/kafka_plugin
+examples/kafka_plugin/non_clustered/non_clustered
 examples/logs_lib/basic/basic
 examples/logs_lib/custom/custom
 examples/logs_lib/http/http
