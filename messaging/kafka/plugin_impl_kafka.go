@@ -126,7 +126,7 @@ func (p *Plugin) NewSyncPublisher(topic string) messaging.ProtoPublisher {
 
 // NewSyncPublisherToPartition creates a publisher that allows to publish messages to selected topic/partition using synchronous API .
 func (p *Plugin) NewSyncPublisherToPartition(topic string, partition int32) messaging.ProtoPublisher {
-	p.Log.Warn("Publishing to a partition not implemented yet")
+	p.Log.Warn("Publishing to selected partition not implemented yet - fallback to NewSyncPublisher()")
 	return p.NewProtoConnection("").NewSyncPublisher(topic)
 }
 
@@ -137,7 +137,7 @@ func (p *Plugin) NewAsyncPublisher(topic string, successClb func(messaging.Proto
 
 // NewAsyncPublisherToPartition creates a publisher that allows to publish messages to selected topic/partition using asynchronous API.
 func (p *Plugin) NewAsyncPublisherToPartition(topic string, partition int32, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) messaging.ProtoPublisher {
-	p.Log.Warn("Publishing to a partition not implemented yet")
+	p.Log.Warn("Publishing to selected partition not implemented yet - fallback to NewAsyncPublisher()")
 	return p.NewProtoConnection("").NewAsyncPublisher(topic, successClb, errorClb)
 }
 

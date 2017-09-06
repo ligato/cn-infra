@@ -131,11 +131,9 @@ func (ref *AsyncProducer) SendMsg(topic string, partition int32, key Encoder, ms
 		Metadata: metadata,
 	}
 
-	ref.Warnf("message: %s", message)
-
 	ref.Producer.Input() <- message
 
-	ref.Warnf("message sent: %s", message)
+	ref.Debugf("message sent: %s", message)
 
 	return
 }

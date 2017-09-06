@@ -159,8 +159,6 @@ func (ref *SyncProducer) SendMsg(topic string, partition int32, key sarama.Encod
 		Key:   key,
 	}
 
-	ref.Warnf("message: %s", message)
-
 	partition, offset, err := ref.Producer.SendMessage(message)
 	pmsg := &ProducerMessage{
 		Topic:     message.Topic,
@@ -175,7 +173,7 @@ func (ref *SyncProducer) SendMsg(topic string, partition int32, key sarama.Encod
 		return pmsg, err
 	}
 
-	ref.Warnf("message sent: %s", pmsg)
+	ref.Debugf("message sent: %s", pmsg)
 	return pmsg, nil
 }
 

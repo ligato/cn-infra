@@ -214,8 +214,8 @@ func (plugin *ExamplePlugin) syncEventHandler() {
 
 	// Watch on message channel for sync kafka events
 	for message := range plugin.subscription {
-		plugin.Log.Infof("Received Kafka Message, topic '%s', partition '%v', key: '%s', ",
-			message.GetTopic(), message.GetPartition(), message.GetKey())
+		plugin.Log.Infof("Received Kafka Message, topic '%s', partition '%v', offset '%v', key: '%s', ",
+			message.GetTopic(), message.GetPartition(), message.GetOffset(), message.GetKey())
 		// Let it know that this part of the example is done
 		plugin.syncCaseDone = true
 	}
@@ -227,8 +227,8 @@ func (plugin *ExamplePlugin) asyncEventHandler() {
 	for {
 		select {
 		case message := <-plugin.asyncMessageChannel:
-			plugin.Log.Infof("Received async Kafka Message, topic '%s', partition '%v', key: '%s', ",
-				message.GetTopic(), message.GetPartition(), message.GetKey())
+			plugin.Log.Infof("Received async Kafka Message, topic '%s', partition '%v', offset '%v', key: '%s', ",
+				message.GetTopic(), message.GetPartition(), message.GetOffset(), message.GetKey())
 			// Let it know that this part of the example is done
 			plugin.asyncCaseDone = true
 		case err := <-plugin.asyncErrorChannel:

@@ -104,7 +104,7 @@ func (mux *Multiplexer) Start() error {
 	var err error
 
 	if mux.started {
-		return fmt.Errorf("Multiplexer has been started already")
+		return fmt.Errorf("multiplexer has been started already")
 	}
 
 	// block further consumer consumers
@@ -121,7 +121,7 @@ func (mux *Multiplexer) Start() error {
 		return nil
 	}
 
-	mux.WithFields(logging.Fields{"topics": topics}).Warnf("Consuming started")
+	mux.WithFields(logging.Fields{"topics": topics}).Debugf("Consuming started")
 
 	mux.consumer, err = mux.consumerFactory(topics, mux.name)
 	if err != nil {
@@ -202,8 +202,10 @@ func (mux *Multiplexer) stopConsuming(topic string, name string) error {
 	defer mux.rwlock.Unlock()
 
 	var wasError error
+	var topicFound bool
 	for assignment, subs := range mux.mapping {
 		if assignment.topic == topic {
+			topicFound = true
 			_, found := (*subs)[name]
 			if !found {
 				wasError = fmt.Errorf("topic %s was not consumed by '%s'", topic, name)
@@ -212,6 +214,8 @@ func (mux *Multiplexer) stopConsuming(topic string, name string) error {
 			}
 		}
 	}
-
+	if !topicFound {
+		wasError = fmt.Errorf("topic %s was not consumed by '%s'", topic, name)
+	}
 	return wasError
 }

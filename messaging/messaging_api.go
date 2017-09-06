@@ -46,6 +46,7 @@ type ProtoMessage interface {
 	keyval.ProtoKvPair
 	GetTopic() string
 	GetPartition() int32
+	GetOffset() int64
 }
 
 // ProtoMessageErr represents a message that was not published successfully to a messaging system.
