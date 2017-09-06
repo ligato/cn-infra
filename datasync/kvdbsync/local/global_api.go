@@ -31,7 +31,7 @@ func Get() *syncbase.Registry {
 	defer gTransportAccess.Unlock()
 
 	if gTransport == nil {
-		gTransport = syncbase.NewWatcher()
+		gTransport = syncbase.NewRegistry()
 	}
 
 	return gTransport

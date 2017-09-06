@@ -31,7 +31,7 @@ import (
 func NewAdapter() *Adapter {
 	grpcServer := grpc.NewServer()
 	//TODO grpcServer.RegisterCodec(json.NewCodec(), "application/json")
-	adapter := &Adapter{syncbase.NewWatcher(), grpcServer}
+	adapter := &Adapter{syncbase.NewRegistry(), grpcServer}
 	msg.RegisterDataMsgServiceServer(grpcServer, &DataMsgServiceServer{adapter})
 	//registerHTTPHandler(grpcServer)
 

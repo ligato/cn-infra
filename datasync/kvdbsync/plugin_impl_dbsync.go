@@ -26,7 +26,9 @@ import (
 	"github.com/ligato/cn-infra/servicelabel"
 )
 
-// Plugin dbsync implements Plugin interface
+// Plugin dbsync implements synchronization between local memory and db.
+// Other plugins can be notified when DB changes occur or resync is needed.
+// This plugin reads/pulls the data from db when resync is needed.
 type Plugin struct {
 	Deps // inject
 
@@ -64,18 +66,20 @@ type Deps struct {
 	KvPlugin   keyval.KvProtoPlugin // inject
 }
 
-// Init does nothing
+// Init just initializes plugin.registry.
 func (plugin *Plugin) Init() error {
-	plugin.registry = syncbase.NewWatcher()
+	plugin.registry = syncbase.NewRegistry()
 
 	return nil
 }
 
 // AfterInit uses provided connection to build new transport watcher.
 //
-// Important thing is that this method calls ResyncOrch.Register (if ResyncOrch was injected)
-// for each entry in plugin.registry. By doing this all other plugins can register in Init()
-// hence it is not important the order of plugin in flavor.
+// Plugin.registry subscriptions (registered by Watch method) are used for resync.
+// Resync is called only if ResyncOrch was injected (is not nil).
+// The order of plugins in flavor is not important to resync
+// since Watch() is called in Plugin.Init() but Resync.Register()
+// is called in Plugin.AfterInit().
 func (plugin *Plugin) AfterInit() error {
 	if plugin.KvPlugin != nil && !plugin.KvPlugin.Disabled() {
 		db := plugin.KvPlugin.NewBroker(plugin.ServiceLabel.GetAgentPrefix())
@@ -97,16 +101,21 @@ func (plugin *Plugin) AfterInit() error {
 	return nil
 }
 
-// Watch adds entry to the plugin.registry. Other plugins are supposed to call this in Init().
-// Then this plugin iterates once over all entries in plugin.registry in AfterInit().
+// Watch adds entry to the plugin.registry. By doing this other plugins will receive notifications
+// about data changes and data resynchronization.
+//
+// This method is supposed to be called in Plugin.Init().
+// Calling this method later than Plugin.AfterInit() will have no effect
+// (no notifications will be received).
 func (plugin *Plugin) Watch(resyncName string, changeChan chan datasync.ChangeEvent,
 	resyncChan chan datasync.ResyncEvent, keyPrefixes ...string) (datasync.WatchRegistration, error) {
 
 	return plugin.registry.Watch(resyncName, changeChan, resyncChan)
 }
 
-// Put to ETCD or any other data transport (from other Agent Plugins).
-// Do not call this earlier then AfterInit(). During Init() phase adapter is nil.
+// Put propagates this call to a particular kvdb.Plugin unless the kvdb.Plugin is Disabled().
+//
+// This method is supposed to be called in Plugin.AfterInit() or later (even from different go routine).
 func (plugin *Plugin) Put(key string, data proto.Message, opts ...datasync.PutOption) error {
 	if plugin.KvPlugin.Disabled() {
 		return nil

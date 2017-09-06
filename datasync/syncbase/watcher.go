@@ -25,12 +25,14 @@ import (
 	"github.com/ligato/cn-infra/logging/logroot"
 )
 
-// NewWatcher creates a new instance of KeyValProtoWatcher.
-func NewWatcher() *Registry {
+// NewRegistry creates reusable registry of subscriptions for a particular datasync plugin.
+func NewRegistry() *Registry {
 	return &Registry{subscriptions: map[string]*Subscription{}, access: sync.Mutex{}, lastRev: NewLatestRev()}
 }
 
-// Registry propagates events using channels.
+// Registry of subscriptions and latest revisions.
+// This structure contains extracted reusable code among various datasync implementations.
+// By having this code datasync plugins do not need to repeat code related management of subscriptions.
 type Registry struct {
 	subscriptions map[string]*Subscription
 	access        sync.Mutex
@@ -90,7 +92,7 @@ func (adapter *Registry) Watch(resyncName string, changeChan chan datasync.Chang
 	return adapter.WatchDataBase(resyncName, changeChan, resyncChan, keyPrefixes...)
 }
 
-// Registry returns the current subscriptions.
+// Subscriptions returns the current subscriptions.
 func (adapter *Registry) Subscriptions() map[string]*Subscription {
 	return adapter.subscriptions
 }
