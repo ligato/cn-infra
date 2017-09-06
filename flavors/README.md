@@ -11,7 +11,7 @@ The most importatnt CN-Infra flavors are:
   management APIs for:
   * status check (RPCs probed from systems such as K8s)
   * logging (for changing log level at runtime remotely)
-* [all connectors flavor](allcon) - is combination of ETCD, Cassandra, Redis & 
+* [connectors flavor](connectors) - is combination of ETCD, Cassandra, Redis & 
   Kafka related plugins.
   
 The following diagram depicts:
