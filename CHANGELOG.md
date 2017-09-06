@@ -23,10 +23,10 @@ different [flavors](flavors) (reusable collection of plugins):
       * [statuscheck](health/statuscheck) (RPCs probed from systems such as K8s)
       * [logging](logging/logmanager) (for changing log level at runtime remotely)
     * connector flavors: 
-      * [Cassandra flavor](flavors/cassandra)
-      * [etcdv3 flavor](flavors/etcd)
-      * [Redis flavor](flavors/redis)
-      * [Kafka flavor](flavors/kafka)
+      * [Cassandra flavor](flavors/connectors/cassandra_flavor.go)
+      * [etcdv3 flavor](flavors/connectors/etcd_flavor.go)
+      * [Redis flavor](flavors/connectors/redis_flavor.go)
+      * [Kafka flavor](flavors/connectors/kafka_flavor.go)
 * [Examples](examples)
 * [Docker](docker) container-based development environment 
 * Helpers:
