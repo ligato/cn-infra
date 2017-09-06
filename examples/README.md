@@ -5,6 +5,15 @@ functionality. Most of the examples show a very simple use case using the
 real ETCD and/or Kafka plugins, so for specific examples, they have to be
 started first.
 
+Examples with suffix `_lib` showcase the *building blocks* that can be
+used independently of the plugins/agent concept. These examples might be useful
+if you want to use only a part of the repository.
+
+Examples with suffix `_plugin` demonstrates the usage of a plugin, that is usually
+built on the corresponding library. The aim of these examples is to showcase
+the API exposed by the plugins. These are the examples you should primarily look at
+if you are developing plugin-based application.
+
 Current examples:
 * **[cassandra lib](cassandra_lib)** shows how to use the Cassandra data broker API
   to access the Cassandra database,
