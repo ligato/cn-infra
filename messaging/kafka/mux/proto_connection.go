@@ -39,12 +39,12 @@ type protoAsyncPublisherKafka struct {
 }
 
 // SendSyncMessage sends a message using the sync API
-func (conn *ProtoConnection) SendSyncMessage(topic string, key string, value proto.Message) (offset int64, err error) {
+func (conn *ProtoConnection) SendSyncMessage(topic string, partition int32, key string, value proto.Message) (offset int64, err error) {
 	data, err := conn.serializer.Marshal(value)
 	if err != nil {
 		return 0, err
 	}
-	msg, err := conn.multiplexer.syncProducer.SendMsg(topic, sarama.StringEncoder(key), sarama.ByteEncoder(data))
+	msg, err := conn.multiplexer.syncProducer.SendMsg(topic, partition, sarama.StringEncoder(key), sarama.ByteEncoder(data))
 	if err != nil {
 		return 0, err
 	}
@@ -52,7 +52,7 @@ func (conn *ProtoConnection) SendSyncMessage(topic string, key string, value pro
 }
 
 // SendAsyncMessage sends a message using the async API
-func (conn *ProtoConnection) SendAsyncMessage(topic string, key string, value proto.Message, meta interface{}, successClb func(messaging.ProtoMessage), errClb func(messaging.ProtoMessageErr)) error {
+func (conn *ProtoConnection) SendAsyncMessage(topic string, partition int32, key string, value proto.Message, meta interface{}, successClb func(messaging.ProtoMessage), errClb func(messaging.ProtoMessageErr)) error {
 	data, err := conn.serializer.Marshal(value)
 	if err != nil {
 		return err
@@ -77,7 +77,7 @@ func (conn *ProtoConnection) SendAsyncMessage(topic string, key string, value pr
 	}
 
 	auxMeta := &asyncMeta{successClb: succByteClb, errorClb: errByteClb, usersMeta: meta}
-	conn.multiplexer.asyncProducer.SendMsg(topic, sarama.StringEncoder(key), sarama.ByteEncoder(data), auxMeta)
+	conn.multiplexer.asyncProducer.SendMsg(topic, partition, sarama.StringEncoder(key), sarama.ByteEncoder(data), auxMeta)
 	return nil
 }
 
@@ -115,9 +115,9 @@ func (conn *ProtoConnection) ConsumeTopic(msgClb func(messaging.ProtoMessage), t
 // ConsumePartition is called to start consuming given topic on given partition and offset.
 // Function can be called until the multiplexer is started, it returns an error otherwise.
 // The provided channel should be buffered, otherwise messages might be lost.
-func (conn *ProtoConnection) ConsumePartition(msgClb func(messaging.ProtoMessage), topic string, partition int32, offset int64) error {
-	// todo implement
-	return nil
+func (conn *ProtoConnection) ConsumePartition(msgClb func(messaging.ProtoMessage), topic string, partition int32) error {
+	conn.multiplexer.Warn("Partition selection not supported yet")
+	return conn.ConsumeTopic(msgClb, topic)
 }
 
 // StopConsuming cancels the previously created subscription for consuming the topic.
@@ -147,7 +147,7 @@ func (conn *ProtoConnection) NewSyncPublisherToPartition(topic string, partition
 
 // Put publishes a message into kafka
 func (p *protoSyncPublisherKafka) Put(key string, message proto.Message, opts ...datasync.PutOption) error {
-	_, err := p.conn.SendSyncMessage(p.topic, key, message)
+	_, err := p.conn.SendSyncMessage(p.topic, p.partition, key, message)
 	return err
 }
 
@@ -163,5 +163,5 @@ func (conn *ProtoConnection) NewAsyncPublisherToPartition(topic string, partitio
 
 // Put publishes a message into kafka
 func (p *protoAsyncPublisherKafka) Put(key string, message proto.Message, opts ...datasync.PutOption) error {
-	return p.conn.SendAsyncMessage(p.topic, key, message, nil, p.succCallback, p.errCallback)
+	return p.conn.SendAsyncMessage(p.topic, p.partition, key, message, nil, p.succCallback, p.errCallback)
 }

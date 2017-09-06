@@ -6,7 +6,6 @@ import (
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/examples/model"
 	"github.com/ligato/cn-infra/flavors/local"
-	"github.com/ligato/cn-infra/flavors/localdeps"
 	log "github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/messaging"
 	"github.com/ligato/cn-infra/messaging/kafka"
@@ -110,42 +109,34 @@ type ExamplePlugin struct {
 // Deps is a helper struct which is grouping all dependencies injected to the plugin
 type Deps struct {
 	Kafka                   *kafka.Plugin // injected
-	localdeps.PluginLogDeps               // injected
+	local.PluginLogDeps              	  // injected
 }
 
 // Init is the entry point into the plugin that is called by Agent Core when the Agent is coming up.
 // The Go native plugin mechanism that was introduced in Go 1.8
 func (plugin *ExamplePlugin) Init() (err error) {
-	topic := "example-topic"
+	topic := "example-clustered-topic"
 	// Init channels required for async handler
 	plugin.asyncMessageChannel = make(chan messaging.ProtoMessage, 0)
 	plugin.asyncErrorChannel = make(chan messaging.ProtoMessageErr, 0)
 
 	connection := plugin.Kafka.NewProtoConnection("example-proto-connection")
 
-	// Create a synchronous publisher for the selected topic.
-	plugin.kafkaSyncPublisher = connection.NewSyncPublisher(topic)
+	// Create a synchronous publisher for the selected topic and partition
+	plugin.kafkaSyncPublisher = connection.NewSyncPublisherToPartition(topic, 0)
 
-	// Create an asynchronous publisher for the selected topic.
-	plugin.kafkaAsyncPublisher = connection.NewAsyncPublisher(topic, messaging.ToProtoMsgChan(plugin.asyncMessageChannel),
+	// Create an asynchronous publisher for the selected topic and partition
+	plugin.kafkaAsyncPublisher = connection.NewAsyncPublisherToPartition(topic, 0, messaging.ToProtoMsgChan(plugin.asyncMessageChannel),
 		messaging.ToProtoMsgErrChan(plugin.asyncErrorChannel))
 
-	plugin.kafkaWatcher = plugin.Kafka.NewWatcher("example-plugin")
+	plugin.kafkaWatcher = plugin.Kafka.NewWatcher("kafka-cluster-plugin")
 
 	// kafkaWatcher.Watch is called to start consuming a topic.
 	plugin.subscription = make(chan messaging.ProtoMessage)
-	err = plugin.kafkaWatcher.Watch(messaging.ToProtoMsgChan(plugin.subscription), topic)
+	err = plugin.kafkaWatcher.ConsumePartition(messaging.ToProtoMsgChan(plugin.subscription), topic, 0)
 	if err != nil {
 		plugin.Log.Error(err)
 	}
-
-	// todo add to example
-	//var partition int32 = 0
-	//manualSyncPublisher := connection.NewSyncPublisherToPartition(topic, partition)
-	//manualAsyncPublisher := connection.NewAsyncPublisherToPartition(topic, partition, messaging.ToProtoMsgChan(plugin.asyncMessageChannel),
-	//	messaging.ToProtoMsgErrChan(plugin.asyncErrorChannel))
-
-	//connection.ConsumePartition(messaging.ToProtoMsgChan(plugin.subscription), topic, partition)
 
 	plugin.Log.Info("Initialization of the custom plugin for the Kafka example is completed")
 

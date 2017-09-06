@@ -182,7 +182,7 @@ type ProtoProducerMessage struct {
 	Serializer keyval.Serializer
 }
 
-// GetTopic returns topic associated with the message.
+// GetTopic returns a topic associated with the message.
 func (ppm *ProtoProducerMessage) GetTopic() string {
 	return ppm.Topic
 }
