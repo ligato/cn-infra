@@ -129,6 +129,16 @@ func (plugin *ExamplePlugin) Init() error {
 	plugin.changeChannel = make(chan datasync.ChangeEvent)
 	plugin.context = context.Background()
 
+
+	// Start the consumer (ETCD watcher) before the custom plugin configurator is initialized
+	go plugin.consumer()
+	// Subscribe watcher to be able to watch on data changes and resync events
+	err := plugin.subscribeWatcher()
+	if err != nil {
+		return err
+	}
+
+
 	plugin.Log.Info("Initialization of the custom plugin for the ETCD example is completed")
 
 	return nil
@@ -136,16 +146,8 @@ func (plugin *ExamplePlugin) Init() error {
 
 // AfterInit is called after every plugin is initialized
 func (plugin *ExamplePlugin) AfterInit() error {
-	// Start the consumer (ETCD watcher) before the custom plugin configurator is initialized
-	go plugin.consumer()
 
 	go plugin.etcdPublisher()
-
-	// Subscribe watcher to be able to watch on data changes and resync events
-	err := plugin.subscribeWatcher()
-	if err != nil {
-		return err
-	}
 
 	go plugin.closeExample()
 

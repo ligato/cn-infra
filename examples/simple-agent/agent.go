@@ -20,6 +20,7 @@ import (
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/flavors/connectors"
+	"github.com/ligato/cn-infra/flavors/rpc"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logroot"
 )
@@ -27,8 +28,10 @@ import (
 func main() {
 	logroot.StandardLogger().SetLevel(logging.DebugLevel)
 
-	f := connectors.AllConnectorsFlavor{}
-	agent := core.NewAgent(logroot.StandardLogger(), 15*time.Second, f.Plugins()...)
+	connectors := connectors.AllConnectorsFlavor{}
+	rpcs := rpc.FlavorRPC{}
+	agent := core.NewAgent(logroot.StandardLogger(), 15*time.Second, append(
+		connectors.Plugins(), rpcs.Plugins()...)...)
 
 	err := core.EventLoopWithInterrupt(agent, nil)
 	if err != nil {
