@@ -123,10 +123,10 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	connection := plugin.Kafka.NewProtoConnection("example-proto-connection")
 
 	// Create a synchronous publisher for the selected topic and partition
-	plugin.kafkaSyncPublisher = connection.NewSyncPublisherToPartition(topic, 0)
+	plugin.kafkaSyncPublisher = connection.NewSyncPublisherToPartition(topic, 10)
 
 	// Create an asynchronous publisher for the selected topic and partition
-	plugin.kafkaAsyncPublisher = connection.NewAsyncPublisherToPartition(topic, 0, messaging.ToProtoMsgChan(plugin.asyncMessageChannel),
+	plugin.kafkaAsyncPublisher = connection.NewAsyncPublisherToPartition(topic, 30, messaging.ToProtoMsgChan(plugin.asyncMessageChannel),
 		messaging.ToProtoMsgErrChan(plugin.asyncErrorChannel))
 
 	plugin.kafkaWatcher = plugin.Kafka.NewWatcher("kafka-cluster-plugin")
@@ -192,14 +192,19 @@ func (plugin *ExamplePlugin) producer() {
 	if err != nil {
 		plugin.Log.Errorf("Failed to sync-send a proto message, error %v", err)
 	} else {
-		plugin.Log.Debugf("Sent sync proto message.")
+		plugin.Log.Info("Sync proto message sent")
 	}
 
 	// Asynchronous message with protobuf encoded message. A success event is sent to the app asynchronously
 	// on an event channel when the message has been successfully sent to Kafka. An error message is sent to
 	// the app asynchronously if the message could not be sent.
 	plugin.Log.Info("Sending async Kafka notification (protobuf)")
-	plugin.kafkaAsyncPublisher.Put("async-proto-key", enc)
+	err = plugin.kafkaAsyncPublisher.Put("async-proto-key", enc)
+	if err != nil {
+		plugin.Log.Errorf("Failed to async-send a proto message, error %v", err)
+	} else {
+		plugin.Log.Info("Async proto message sent")
+	}
 }
 
 /*************
