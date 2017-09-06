@@ -21,12 +21,12 @@ import (
 )
 
 var (
-	gTransport       *syncbase.Watcher
+	gTransport       *syncbase.Registry
 	gTransportAccess sync.Mutex
 )
 
 // Get returns global singleton instance
-func Get() *syncbase.Watcher {
+func Get() *syncbase.Registry {
 	gTransportAccess.Lock()
 	defer gTransportAccess.Unlock()
 

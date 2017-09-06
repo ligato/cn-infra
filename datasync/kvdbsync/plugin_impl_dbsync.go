@@ -16,6 +16,7 @@ package kvdbsync
 
 import (
 	"errors"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/resync"
@@ -27,8 +28,10 @@ import (
 
 // Plugin dbsync implements Plugin interface
 type Plugin struct {
-	Deps    // inject
-	adapter *watcher
+	Deps // inject
+
+	adapter  *watcher
+	registry *syncbase.Registry
 }
 
 type infraDeps interface {
@@ -53,61 +56,57 @@ func (plugin /*intentionally without pointer receiver*/ Plugin) OfDifferentAgent
 	return &plugin // copy (no pointer receiver)
 }
 
-
 // Deps is here to group injected dependencies of plugin
 // to not mix with other plugin fields.
 type Deps struct {
-	local.PluginInfraDeps                      // inject
-	ResyncOrch                resync.Subscriber    // inject
-	KvPlugin                  keyval.KvProtoPlugin // inject
+	local.PluginInfraDeps           // inject
+	ResyncOrch resync.Subscriber    // inject
+	KvPlugin   keyval.KvProtoPlugin // inject
 }
 
 // Init does nothing
 func (plugin *Plugin) Init() error {
+	plugin.registry = syncbase.NewWatcher()
+
 	return nil
 }
 
-// AfterInit uses provided connection to build new transport watcher
+// AfterInit uses provided connection to build new transport watcher.
+//
+// Important thing is that this method calls ResyncOrch.Register (if ResyncOrch was injected)
+// for each entry in plugin.registry. By doing this all other plugins can register in Init()
+// hence it is not important the order of plugin in flavor.
 func (plugin *Plugin) AfterInit() error {
 	if plugin.KvPlugin != nil && !plugin.KvPlugin.Disabled() {
 		db := plugin.KvPlugin.NewBroker(plugin.ServiceLabel.GetAgentPrefix())
 		dbW := plugin.KvPlugin.NewWatcher(plugin.ServiceLabel.GetAgentPrefix())
+		plugin.adapter = &watcher{db, dbW, plugin.registry}
 
-		plugin.adapter = &watcher{db, dbW, syncbase.NewWatcher()}
+		if plugin.ResyncOrch != nil {
+			for resyncName, sub := range plugin.registry.Subscriptions() {
+				resyncReg := plugin.ResyncOrch.Register(resyncName)
+				_, err := watchAndResyncBrokerKeys(resyncReg, sub.ChangeChan, sub.ResyncChan,
+					plugin.adapter, sub.KeyPrefixes...)
+				if err != nil {
+					return err
+				}
+			}
+		}
 	}
 
 	return nil
 }
 
-// Watch using ETCD or any other Key Val data store.
+// Watch adds entry to the plugin.registry. Other plugins are supposed to call this in Init().
+// Then this plugin iterates once over all entries in plugin.registry in AfterInit().
 func (plugin *Plugin) Watch(resyncName string, changeChan chan datasync.ChangeEvent,
 	resyncChan chan datasync.ResyncEvent, keyPrefixes ...string) (datasync.WatchRegistration, error) {
 
-	if plugin.KvPlugin.Disabled() {
-		return nil /*TODO*/, nil
-	}
-
-	if plugin.adapter == nil {
-		return nil, errors.New("Transport adapter is not ready yet")
-	}
-
-	reg, err := plugin.adapter.base.Watch(resyncName, changeChan, resyncChan, keyPrefixes...)
-	if err != nil {
-		return nil, err
-	}
-
-	if plugin.ResyncOrch != nil {
-		resyncReg := plugin.ResyncOrch.Register(resyncName)
-		_, err = watchAndResyncBrokerKeys(resyncReg, changeChan, resyncChan, plugin.adapter, keyPrefixes...)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return reg, err
+	return plugin.registry.Watch(resyncName, changeChan, resyncChan)
 }
 
-// Put to ETCD or any other data transport (from other Agent Plugins)
+// Put to ETCD or any other data transport (from other Agent Plugins).
+// Do not call this earlier then AfterInit(). During Init() phase adapter is nil.
 func (plugin *Plugin) Put(key string, data proto.Message, opts ...datasync.PutOption) error {
 	if plugin.KvPlugin.Disabled() {
 		return nil
@@ -117,7 +116,7 @@ func (plugin *Plugin) Put(key string, data proto.Message, opts ...datasync.PutOp
 		return plugin.adapter.db.Put(key, data, opts...)
 	}
 
-	return errors.New("Transport adapter is not ready yet")
+	return errors.New("Transport adapter is not ready yet. (Probably called before AfterInit)")
 }
 
 // Close resources

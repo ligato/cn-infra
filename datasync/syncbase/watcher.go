@@ -26,12 +26,12 @@ import (
 )
 
 // NewWatcher creates a new instance of KeyValProtoWatcher.
-func NewWatcher() *Watcher {
-	return &Watcher{subscriptions: map[string]*Subscription{}, access: sync.Mutex{}, lastRev: NewLatestRev()}
+func NewWatcher() *Registry {
+	return &Registry{subscriptions: map[string]*Subscription{}, access: sync.Mutex{}, lastRev: NewLatestRev()}
 }
 
-// Watcher propagates events using channels.
-type Watcher struct {
+// Registry propagates events using channels.
+type Registry struct {
 	subscriptions map[string]*Subscription
 	access        sync.Mutex
 	lastRev       *PrevRevisions
@@ -40,7 +40,7 @@ type Watcher struct {
 // WatchDataReg implements interface datasync.WatchDataRegistration
 type WatchDataReg struct {
 	ResyncName string
-	adapter    *Watcher
+	adapter    *Registry
 	CloseChan  chan interface{}
 }
 
@@ -65,7 +65,7 @@ type Subscription struct {
 }
 
 // WatchDataBase just appends channels
-func (adapter *Watcher) WatchDataBase(resyncName string, changeChan chan datasync.ChangeEvent,
+func (adapter *Registry) WatchDataBase(resyncName string, changeChan chan datasync.ChangeEvent,
 	resyncChan chan datasync.ResyncEvent, keyPrefixes ...string) (*WatchDataReg, error) {
 
 	adapter.access.Lock()
@@ -85,23 +85,23 @@ func (adapter *Watcher) WatchDataBase(resyncName string, changeChan chan datasyn
 }
 
 // Watch just appends channels
-func (adapter *Watcher) Watch(resyncName string, changeChan chan datasync.ChangeEvent,
+func (adapter *Registry) Watch(resyncName string, changeChan chan datasync.ChangeEvent,
 	resyncChan chan datasync.ResyncEvent, keyPrefixes ...string) (datasync.WatchRegistration, error) {
 	return adapter.WatchDataBase(resyncName, changeChan, resyncChan, keyPrefixes...)
 }
 
-// Subscriptions returns the current subscriptions.
-func (adapter *Watcher) Subscriptions() map[string]*Subscription {
+// Registry returns the current subscriptions.
+func (adapter *Registry) Subscriptions() map[string]*Subscription {
 	return adapter.subscriptions
 }
 
 // LastRev is just getter
-func (adapter *Watcher) LastRev() *PrevRevisions {
+func (adapter *Registry) LastRev() *PrevRevisions {
 	return adapter.lastRev
 }
 
 // PropagateChanges fills registered channels with the data
-func (adapter *Watcher) PropagateChanges(txData map[string] /*key*/ datasync.ChangeValue) error {
+func (adapter *Registry) PropagateChanges(txData map[string] /*key*/ datasync.ChangeValue) error {
 	events := []func(done chan error){}
 
 	for _, sub := range adapter.subscriptions {
@@ -147,7 +147,7 @@ func (adapter *Watcher) PropagateChanges(txData map[string] /*key*/ datasync.Cha
 }
 
 // PropagateResync fills registered channels with the data
-func (adapter *Watcher) PropagateResync(txData map[ /*key*/ string]datasync.ChangeValue) error {
+func (adapter *Registry) PropagateResync(txData map[ /*key*/ string]datasync.ChangeValue) error {
 	for _, sub := range adapter.subscriptions {
 		resyncEv := NewResyncEventDB(map[string] /*keyPrefix*/ datasync.KeyValIterator{})
 		for _, prefix := range sub.KeyPrefixes {

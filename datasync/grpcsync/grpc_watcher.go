@@ -48,7 +48,7 @@ func NewAdapter() *Adapter {
 
 // Adapter is a GRPC transport adapter in front of Agent Plugins
 type Adapter struct {
-	base   *syncbase.Watcher
+	base   *syncbase.Registry
 	server *grpc.Server
 }
 
