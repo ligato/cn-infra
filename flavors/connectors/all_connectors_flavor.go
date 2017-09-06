@@ -16,8 +16,13 @@ package connectors
 
 import (
 	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/datasync/kvdbsync"
 	"github.com/ligato/cn-infra/datasync/resync"
+	"github.com/ligato/cn-infra/db/keyval/etcdv3"
+	"github.com/ligato/cn-infra/db/keyval/redis"
+	"github.com/ligato/cn-infra/db/sql/cassandra"
 	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/messaging/kafka"
 )
 
 // AllConnectorsFlavor is combination of all plugins that allow
@@ -29,11 +34,18 @@ import (
 // configs (at least endpoints) for them.
 type AllConnectorsFlavor struct {
 	*local.FlavorLocal
-	*FlavorEtcd
-	*FlavorKafka
-	*FlavorRedis
-	*FlavorCassandra
-	ResyncOrch resync.Plugin  // the order is important because of AfterInit()
+
+	ETCD         etcdv3.Plugin
+	ETCDDataSync kvdbsync.Plugin
+
+	Kafka kafka.Plugin
+
+	Redis         redis.Plugin
+	RedisDataSync kvdbsync.Plugin
+
+	Cassandra cassandra.Plugin
+
+	ResyncOrch resync.Plugin // the order is important because of AfterInit()
 
 	injected bool
 }
@@ -45,32 +57,22 @@ func (f *AllConnectorsFlavor) Inject() bool {
 	}
 	f.injected = true
 
+	declareFlags()
+
 	if f.FlavorLocal == nil {
 		f.FlavorLocal = &local.FlavorLocal{}
 	}
 	f.FlavorLocal.Inject()
 
-	if f.FlavorEtcd == nil {
-		f.FlavorEtcd = &FlavorEtcd{FlavorLocal: f.FlavorLocal}
-		f.ETCDDataSync.ResyncOrch = &f.ResyncOrch
-	}
-	f.FlavorEtcd.Inject()
+	f.ETCD.Deps.PluginInfraDeps = *f.InfraDeps("etcdv3")
+	InjectKVDBSync(&f.ETCDDataSync, &f.ETCD, f.ETCD.PluginName, f.FlavorLocal)
 
-	if f.FlavorKafka == nil {
-		f.FlavorKafka = &FlavorKafka{FlavorLocal: f.FlavorLocal}
-	}
-	f.FlavorKafka.Inject()
+	f.Redis.Deps.PluginInfraDeps = *f.InfraDeps("redis")
+	InjectKVDBSync(&f.RedisDataSync, &f.Redis, f.Redis.PluginName, f.FlavorLocal)
 
-	if f.FlavorRedis == nil {
-		f.FlavorRedis = &FlavorRedis{FlavorLocal: f.FlavorLocal}
-		f.RedisDataSync.ResyncOrch = &f.ResyncOrch
-	}
-	f.FlavorRedis.Inject()
+	f.Kafka.Deps.PluginInfraDeps = *f.InfraDeps("kafka")
 
-	if f.FlavorCassandra == nil {
-		f.FlavorCassandra = &FlavorCassandra{FlavorLocal: f.FlavorLocal}
-	}
-	f.FlavorCassandra.Inject()
+	f.Cassandra.Deps.PluginInfraDeps = *f.InfraDeps("cassandra")
 
 	return true
 }
