@@ -28,7 +28,7 @@ import (
 const CassaConfFlag = "cassandra-config"
 // CassaConf is default (flag value) - filename for the configuration.
 const CassaConf = "cassandra.conf"
-// CassaConfFlag used as flag usage (see implementation in declareFlags())
+// CassaConfUsage used as flag usage (see implementation in declareFlags())
 const CassaConfUsage = "Location of the Cassandra Client configuration file; also set via 'CASSANDRA_CONFIG' env variable."
 // RedisConfFlag used as flag name (see implementation in declareFlags())
 // It is used to load configuration of Redis client plugin.
@@ -36,7 +36,7 @@ const CassaConfUsage = "Location of the Cassandra Client configuration file; als
 const RedisConfFlag = "redis-config"
 // RedisConf is default (flag value) - filename for the configuration.
 const RedisConf = "redis.conf"
-// RedisConfFlag used as flag usage (see implementation in declareFlags())
+// RedisConfUsage used as flag usage (see implementation in declareFlags())
 const RedisConfUsage = "Location of Redis configuration file; Can also be set via environment variable REDIS_CONFIG"
 // ETCDConfFlag used as flag name (see implementation in declareFlags())
 // It is used to load configuration of ETCD client plugin.
@@ -44,7 +44,7 @@ const RedisConfUsage = "Location of Redis configuration file; Can also be set vi
 const ETCDConfFlag = "etcdv3-config"
 // ETCDConf is default (flag value) - filename for the configuration.
 const ETCDConf = "etcd.conf"
-// ETCDConfFlag used as flag usage (see implementation in declareFlags())
+// ETCDConfUsage used as flag usage (see implementation in declareFlags())
 const ETCDConfUsage = "Location of the Etcd configuration file; also set via 'ETCDV3_CONFIG' env variable."
 // KafkaConfFlag used as flag name (see implementation in declareFlags())
 // It is used to load configuration of Kafka client plugin.
