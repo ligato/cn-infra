@@ -99,26 +99,55 @@ func (conn *ProtoConnection) ConsumeTopic(msgClb func(messaging.ProtoMessage), t
 
 	for _, topic := range topics {
 		// check if we have already consumed the topic and partition
-		subs, found := conn.multiplexer.mapping[topic]
+		assignment := topicToPartition{topic: topic, partition: DefPartition}
+		subs, found := conn.multiplexer.mapping[assignment]
 
 		if !found {
 			subs = &map[string]func(*client.ConsumerMessage){}
-			conn.multiplexer.mapping[topic] = subs
+			conn.multiplexer.mapping[assignment] = subs
 		}
 		// add subscription to consumerList
 		(*subs)[conn.name] = byteClb
-		conn.multiplexer.mapping[topic] = subs
+		conn.multiplexer.mapping[assignment] = subs
 	}
+	return nil
+}
+
+func (conn *ProtoConnection) ConsumeTopicOnPartition(msgClb func(messaging.ProtoMessage), topic string, partition int32) error {
+	conn.multiplexer.rwlock.Lock()
+	defer conn.multiplexer.rwlock.Unlock()
+
+	if conn.multiplexer.started {
+		return fmt.Errorf("ConsumeTopicOnPartition can be called only if the multiplexer has not been started yet")
+	}
+
+	byteClb := func(bm *client.ConsumerMessage) {
+		pm := client.NewProtoConsumerMessage(bm, conn.serializer)
+		msgClb(pm)
+	}
+
+	// prepare assignment
+	assignment := topicToPartition{topic: topic, partition: partition}
+
+	// check if we have already consumed the topic and partition
+	subs, found := conn.multiplexer.mapping[assignment]
+
+	if !found {
+		subs = &map[string]func(*client.ConsumerMessage){}
+		conn.multiplexer.mapping[assignment] = subs
+	}
+	// add subscription to consumerList
+	(*subs)[conn.name] = byteClb
+	conn.multiplexer.mapping[assignment] = subs
+
 	return nil
 }
 
 // ConsumePartition is called to start consuming given topic on given partition and offset.
 // Function can be called until the multiplexer is started, it returns an error otherwise.
 // The provided channel should be buffered, otherwise messages might be lost.
-func (conn *ProtoConnection) ConsumePartition(msgClb func(messaging.ProtoMessage), topic string,
-	partition int32, offset int64) error {
-	conn.multiplexer.Warn("Partition selection not supported yet")
-	return conn.ConsumeTopic(msgClb, topic)
+func (conn *ProtoConnection) ConsumePartition(msgClb func(messaging.ProtoMessage), topic string, partition int32, offset int64) error {
+	return conn.ConsumeTopicOnPartition(msgClb, topic, partition)
 }
 
 // StopConsuming cancels the previously created subscription for consuming the topic.

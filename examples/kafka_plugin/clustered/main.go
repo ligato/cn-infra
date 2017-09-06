@@ -123,10 +123,10 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	connection := plugin.Kafka.NewProtoConnection("example-proto-connection")
 
 	// Create a synchronous publisher for the selected topic and partition
-	plugin.kafkaSyncPublisher = connection.NewSyncPublisherToPartition(topic, 10)
+	plugin.kafkaSyncPublisher = connection.NewSyncPublisherToPartition(topic, 0)
 
 	// Create an asynchronous publisher for the selected topic and partition
-	plugin.kafkaAsyncPublisher = connection.NewAsyncPublisherToPartition(topic, 30, messaging.ToProtoMsgChan(plugin.asyncMessageChannel),
+	plugin.kafkaAsyncPublisher = connection.NewAsyncPublisherToPartition(topic, 0, messaging.ToProtoMsgChan(plugin.asyncMessageChannel),
 		messaging.ToProtoMsgErrChan(plugin.asyncErrorChannel))
 
 	plugin.kafkaWatcher = plugin.Kafka.NewWatcher("kafka-cluster-plugin")

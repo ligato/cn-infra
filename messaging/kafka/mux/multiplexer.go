@@ -36,13 +36,18 @@ type Multiplexer struct {
 	// consume a topic. Once the multiplexer is started, new subscription can not be added.
 	started bool
 
-	// Mapping provides the mapping of subscribed consumers organized by topics(key of the first map)
+	// Mapping provides the mapping of subscribed consumers organized by topics/partitions(key of the first map)
 	// name of the consumer(key of the second map)
-	mapping map[string]*map[string]func(*client.ConsumerMessage)
+	mapping map[topicToPartition]*map[string]func(*client.ConsumerMessage)
 
 	// factory that crates consumer used in the Multiplexer
 	consumerFactory func(topics []string, groupId string) (*client.Consumer, error)
 	closeCh         chan struct{}
+}
+
+type topicToPartition struct {
+	topic string
+	partition int32
 }
 
 // asyncMeta is auxiliary structure used by Multiplexer to distribute consumer messages
@@ -59,7 +64,7 @@ func NewMultiplexer(consumerFactory ConsumerFactory, syncP *client.SyncProducer,
 		syncProducer:  syncP,
 		asyncProducer: asyncP,
 		name:          name,
-		mapping:       map[string]*map[string]func(*client.ConsumerMessage){},
+		mapping:       map[topicToPartition]*map[string]func(*client.ConsumerMessage){},
 		closeCh:       make(chan struct{}),
 	}
 
@@ -107,8 +112,8 @@ func (mux *Multiplexer) Start() error {
 
 	var topics []string
 
-	for topic := range mux.mapping {
-		topics = append(topics, topic)
+	for assignment := range mux.mapping {
+		topics = append(topics, assignment.topic)
 	}
 
 	if len(topics) == 0 {
@@ -116,7 +121,7 @@ func (mux *Multiplexer) Start() error {
 		return nil
 	}
 
-	mux.WithFields(logging.Fields{"topics": topics}).Debug("Consuming started")
+	mux.WithFields(logging.Fields{"topics": topics}).Warnf("Consuming started")
 
 	mux.consumer, err = mux.consumerFactory(topics, mux.name)
 	if err != nil {
@@ -154,7 +159,10 @@ func (mux *Multiplexer) propagateMessage(msg *client.ConsumerMessage) {
 	if msg == nil {
 		return
 	}
-	cons, found := mux.mapping[msg.Topic]
+
+	assignment := topicToPartition{topic: msg.Topic, partition: msg.Partition}
+
+	cons, found := mux.mapping[assignment]
 
 	// notify consumers
 	if found {
@@ -193,14 +201,17 @@ func (mux *Multiplexer) stopConsuming(topic string, name string) error {
 	mux.rwlock.Lock()
 	defer mux.rwlock.Unlock()
 
-	subs, found := mux.mapping[topic]
-	if !found {
-		return fmt.Errorf("Topic %s was not consumed by '%s'", topic, name)
+	var wasError error
+	for assignment, subs := range mux.mapping {
+		if assignment.topic == topic {
+			_, found := (*subs)[name]
+			if !found {
+				wasError = fmt.Errorf("topic %s was not consumed by '%s'", topic, name)
+			} else {
+				delete(*subs, name)
+			}
+		}
 	}
-	_, found = (*subs)[name]
-	if !found {
-		return fmt.Errorf("Topic %s was not consumed by '%s'", topic, name)
-	}
-	delete(*subs, name)
-	return nil
+
+	return wasError
 }

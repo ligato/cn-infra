@@ -48,15 +48,16 @@ func (conn *Connection) ConsumeTopic(msgClb func(message *client.ConsumerMessage
 
 	for _, topic := range topics {
 		// check if we have already consumed the topic and partition
-		subs, found := conn.multiplexer.mapping[topic]
+		assignment := topicToPartition{topic: topic, partition: DefPartition}
+		subs, found := conn.multiplexer.mapping[assignment]
 
 		if !found {
 			subs = &map[string]func(*client.ConsumerMessage){}
-			conn.multiplexer.mapping[topic] = subs
+			conn.multiplexer.mapping[assignment] = subs
 		}
 		// add subscription to consumerList
 		(*subs)[conn.name] = msgClb
-		conn.multiplexer.mapping[topic] = subs
+		conn.multiplexer.mapping[assignment] = subs
 	}
 	return nil
 }
