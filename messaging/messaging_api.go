@@ -24,7 +24,8 @@ type Mux interface {
 	NewSyncPublisher(topic string) ProtoPublisher
 	NewSyncPublisherToPartition(topic string, partition int32) ProtoPublisher
 	NewAsyncPublisher(topic string, successClb func(ProtoMessage), errorClb func(err ProtoMessageErr)) ProtoPublisher
-	NewAsyncPublisherToPartition(topic string, partition int32, successClb func(ProtoMessage), errorClb func(err ProtoMessageErr)) ProtoPublisher
+	NewAsyncPublisherToPartition(topic string, partition int32,
+		successClb func(ProtoMessage), errorClb func(err ProtoMessageErr)) ProtoPublisher
 	NewWatcher(subscriberName string) ProtoWatcher
 }
 
@@ -36,7 +37,7 @@ type ProtoPublisher interface {
 // ProtoWatcher allows to subscribe for receiving of messages published to given topics.
 type ProtoWatcher interface {
 	Watch(msgCallback func(ProtoMessage), topics ...string) error
-	ConsumePartition(msgCallback func(ProtoMessage), topic string, partition int32) error
+	WatchPartition(msgCallback func(ProtoMessage), topic string, partition int32, offset int64) error
 	StopWatch(topic string) error
 }
 
