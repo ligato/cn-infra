@@ -38,15 +38,19 @@ const KafkaConfUsage = "Location of the Kafka configuration file; also set via '
 // InjectKVDBSync sets kvdbsync.Plugin dependencies.
 // The intent of this method is just extract code that would be copy&pasted otherwise.
 func InjectKVDBSync(dbsync *kvdbsync.Plugin,
-	db keyval.KvProtoPlugin, dbPlugName core.PluginName, f *local.FlavorLocal) {
+	db keyval.KvProtoPlugin, dbPlugName core.PluginName, local *local.FlavorLocal) {
 
-	dbsync.Deps.PluginLogDeps = *f.LogDeps(string(dbPlugName) + "-datasync")
+	dbsync.Deps.PluginLogDeps = *local.LogDeps(string(dbPlugName) + "-datasync")
 	dbsync.KvPlugin = db
-	//Note, not injecting f.ETCDDataSync.ResyncOrch here
-	dbsync.ServiceLabel = &f.ServiceLabel
 
-	if f.StatusCheck.Transport == nil {
-		f.StatusCheck.Transport = dbsync
+	if local != nil {
+		//Note, not injecting local.ETCDDataSync.ResyncOrch here
+
+		dbsync.ServiceLabel = &local.ServiceLabel
+
+		if local.StatusCheck.Transport == nil {
+			local.StatusCheck.Transport = dbsync
+		}
 	}
 }
 
