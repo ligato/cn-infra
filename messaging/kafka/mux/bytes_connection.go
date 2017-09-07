@@ -81,9 +81,60 @@ func (conn *Connection) ConsumeTopic(msgClb func(message *client.ConsumerMessage
 	return nil
 }
 
+// ConsumeTopicOnPartition is called to start consuming given topic on partition with offset
+// Function can be called until the multiplexer is started, it returns an error otherwise.
+// The provided channel should be buffered, otherwise messages might be lost.
+func (conn *Connection) ConsumeTopicOnPartition(msgClb func(message *client.ConsumerMessage), topic string, partition int32, offset int64) error {
+	conn.multiplexer.rwlock.Lock()
+	defer conn.multiplexer.rwlock.Unlock()
+
+	if conn.multiplexer.started {
+		return fmt.Errorf("ConsumeTopicOnPartition can be called only if the multiplexer has not been started yet")
+	}
+
+	// check if we have already consumed the topic on partition and offset
+	var found bool
+	var subs *consumerSubscription
+
+	for _, subscription := range conn.multiplexer.mapping {
+		if subscription.clustered == false {
+			// do not mix dynamic and manual mode
+			continue
+		}
+		if subscription.topic == topic && subscription.partition == partition && subscription.offset == offset {
+			found = true
+			subs = subscription
+			break
+		}
+	}
+
+	if !found {
+		subs = &consumerSubscription{
+			clustered:      true, // clustered example
+			topic:          topic,
+			partition:      partition,
+			offset:         offset,
+			connectionName: conn.name,
+			byteConsMsg:    msgClb,
+		}
+		// subscribe new topic on partition
+		conn.multiplexer.mapping = append(conn.multiplexer.mapping, subs)
+	}
+
+	// add subscription to consumerList
+	subs.byteConsMsg = msgClb
+
+	return nil
+}
+
 // StopConsuming cancels the previously created subscription for consuming the topic.
 func (conn *Connection) StopConsuming(topic string) error {
 	return conn.multiplexer.stopConsuming(topic, conn.name)
+}
+
+// StopConsumingPartition cancels the previously created subscription for consuming the topic, partition and offset
+func (conn *Connection) StopConsumingPartition(topic string, partition int32, offset int64) error {
+	return conn.multiplexer.stopConsumingPartition(topic, partition, offset, conn.name)
 }
 
 // SendSyncByte sends a message that uses byte encoder using the sync API
