@@ -240,7 +240,7 @@ func (ref *Config) SetPartitioner(val string) {
 	case "manual":
 		ref.Partitioner = sarama.NewManualPartitioner
 		if ref.Partition < 0 {
-			ref.Errorf("Invalid partition %d - defaulting to 0", ref.Partition)
+			ref.Infof("Invalid partition %d - defaulting to 0", ref.Partition)
 			ref.Partition = 0
 		}
 	}

@@ -85,6 +85,8 @@ func InitMultiplexerWithConfig(muxConfig *Config, name string, log logging.Logge
 	config.SetSendError(true)
 	config.SetErrorChan(make(chan *client.ProducerError))
 	config.Brokers = muxConfig.Addrs
+	// todo added
+	config.SetPartitioner("manual")
 
 	syncProducer, err := client.NewSyncProducer(config, nil)
 	if err != nil {

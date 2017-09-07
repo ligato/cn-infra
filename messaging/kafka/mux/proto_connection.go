@@ -132,7 +132,7 @@ func (conn *ProtoConnection) ConsumeTopicOnPartition(msgClb func(messaging.Proto
 	// prepare assignment
 	assignment := topicToPartition{topic: topic, partition: partition}
 
-	// check if we have already consumed the topic and partition
+	// check if we have already consumed the topic on given partition
 	subs, found := conn.multiplexer.mapping[assignment]
 
 	if !found {

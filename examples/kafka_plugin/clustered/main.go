@@ -94,12 +94,13 @@ type ExamplePlugin struct {
 	Deps // plugin dependencies are injected
 
 	subscription        chan (messaging.ProtoMessage)
-	subscriptionPart        chan (messaging.ProtoMessage)
 	kafkaSyncPublisher  messaging.ProtoPublisher
 	kafkaAsyncPublisher messaging.ProtoPublisher
 	kafkaWatcher        messaging.ProtoWatcher
+	kafkaAsyncWatcher        messaging.ProtoWatcher
 	// Successfully published kafka message is sent through the message channel, error channel otherwise
-	asyncMessageChannel chan (messaging.ProtoMessage)
+	asyncSubscription   chan (messaging.ProtoMessage)
+	asyncSuccessChannel chan (messaging.ProtoMessage)
 	asyncErrorChannel   chan (messaging.ProtoMessageErr)
 	// Fields below are used to properly finish the example
 	syncCaseDone  bool
@@ -116,37 +117,42 @@ type Deps struct {
 // Init is the entry point into the plugin that is called by Agent Core when the Agent is coming up.
 // The Go native plugin mechanism that was introduced in Go 1.8
 func (plugin *ExamplePlugin) Init() (err error) {
-	topic := "example-clustered-topic"
+	topicSync := "example-sync-clustered-topic"
+	topicAsync := "example-async-clustered-topic"
 	// Init channels required for async handler
-	plugin.asyncMessageChannel = make(chan messaging.ProtoMessage, 0)
+	plugin.asyncSuccessChannel = make(chan messaging.ProtoMessage, 0)
 	plugin.asyncErrorChannel = make(chan messaging.ProtoMessageErr, 0)
 
 	connection := plugin.Kafka.NewProtoConnection("example-proto-connection")
 
 	// Create a synchronous publisher for the selected topic and partition
-	plugin.kafkaSyncPublisher = connection.NewSyncPublisherToPartition(topic, 0)
+	plugin.kafkaSyncPublisher = connection.NewSyncPublisherToPartition(topicSync, 0)
 
 	// Create an asynchronous publisher for the selected topic and partition
-	plugin.kafkaAsyncPublisher = connection.NewAsyncPublisherToPartition(topic, 0, messaging.ToProtoMsgChan(plugin.asyncMessageChannel),
+	// todo success callback will return always from any partition. Watching on in causes that the callback is returned twice
+	plugin.kafkaAsyncPublisher = connection.NewAsyncPublisherToPartition(topicAsync, 2, messaging.ToProtoMsgChan(plugin.asyncSuccessChannel),
 		messaging.ToProtoMsgErrChan(plugin.asyncErrorChannel))
 
-	plugin.kafkaWatcher = plugin.Kafka.NewWatcher("kafka-cluster-plugin")
+	plugin.kafkaWatcher = plugin.Kafka.NewWatcher("kafka-sync-cluster-plugin")
+	plugin.kafkaAsyncWatcher = plugin.Kafka.NewWatcher("kafka-async-cluster-plugin")
 
 	// kafkaWatcher.Watch is called to start consuming a topic.
 	plugin.subscription = make(chan messaging.ProtoMessage)
 	// the watcher is consuming messages on default partition and offset, so it will receive them
-	err = plugin.kafkaWatcher.WatchPartition(messaging.ToProtoMsgChan(plugin.subscription), topic, 0, 0)
+	err = plugin.kafkaWatcher.WatchPartition(messaging.ToProtoMsgChan(plugin.subscription), topicSync, 1, 0)
 	if err != nil {
 		plugin.Log.Error(err)
 	}
 
 	// kafkaWatcher.Watch is called to start consuming a topic.
-	plugin.subscriptionPart = make(chan messaging.ProtoMessage)
+	plugin.asyncSubscription = make(chan messaging.ProtoMessage)
 	// the watcher is consuming messages on custom partition, so it should not receive any message
-	err = plugin.kafkaWatcher.WatchPartition(messaging.ToProtoMsgChan(plugin.subscriptionPart), topic, 10, 0)
+	err = plugin.kafkaAsyncWatcher.WatchPartition(messaging.ToProtoMsgChan(plugin.asyncSubscription), topicAsync, 2, 0)
 	if err != nil {
 		plugin.Log.Error(err)
 	}
+
+
 
 	plugin.Log.Info("Initialization of the custom plugin for the Kafka example is completed")
 
@@ -159,6 +165,11 @@ func (plugin *ExamplePlugin) Init() (err error) {
 
 	// Verify results and close the example
 	go plugin.closeExample()
+
+	//go func() {
+	//	time.Sleep(20 * time.Second) // todo remove
+	//	*plugin.closeChannel <- struct{}{}
+	//}()
 
 	return err
 }
@@ -178,7 +189,7 @@ func (plugin *ExamplePlugin) closeExample() {
 func (plugin *ExamplePlugin) Close() error {
 	safeclose.Close(plugin.subscription)
 	safeclose.Close(plugin.asyncErrorChannel)
-	safeclose.Close(plugin.asyncMessageChannel)
+	safeclose.Close(plugin.asyncSuccessChannel)
 	return nil
 }
 
@@ -229,16 +240,10 @@ func (plugin *ExamplePlugin) syncEventHandler() {
 	// Watch on message channel for sync kafka events
 	go func() {
 		for message := range plugin.subscription {
-			plugin.Log.Infof("Received Kafka Message, topic '%s', partition '%v', offset '%v', key: '%s', ",
+			plugin.Log.Infof("Received sync Kafka Message, topic '%s', partition '%v', offset '%v', key: '%s', ",
 				message.GetTopic(), message.GetPartition(), message.GetOffset(), message.GetKey())
 			// Let it know that this part of the example is done
 			plugin.syncCaseDone = true
-		}
-	}()
-	// Watch on message channel for sync kafka events
-	go func() {
-		for message := range plugin.subscriptionPart {
-			plugin.Log.Errorf("There should be no event (Received: %v)", message.GetTopic())
 		}
 	}()
 }
@@ -248,15 +253,14 @@ func (plugin *ExamplePlugin) asyncEventHandler() {
 	plugin.Log.Info("Started Kafka async event handler...")
 	for {
 		select {
-		case message := <-plugin.asyncMessageChannel:
+		case message := <-plugin.asyncSubscription:
 			plugin.Log.Infof("Received async Kafka Message, topic '%s', partition '%v', offset '%v', key: '%s', ",
 				message.GetTopic(), message.GetPartition(), message.GetOffset(), message.GetKey())
-			if message.GetPartition() != 0 {
-				plugin.Log.Errorf("Received message from incorrect partition: %v", message.GetPartition())
-			} else {
-				// Let it know that this part of the example is done
-				plugin.asyncCaseDone = true
-			}
+			// Let it know that this part of the example is done
+			plugin.asyncCaseDone = true
+		case message := <-plugin.asyncSuccessChannel:
+			plugin.Log.Infof("Async message successfully delivered, topic '%s', partition '%v', offset '%v', key: '%s', ",
+				message.GetTopic(), message.GetPartition(), message.GetOffset(), message.GetKey())
 		case err := <-plugin.asyncErrorChannel:
 			plugin.Log.Errorf("Failed to publish async message, %v", err)
 		}
