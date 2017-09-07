@@ -36,17 +36,35 @@ type Multiplexer struct {
 	// consume a topic. Once the multiplexer is started, new subscription can not be added.
 	started bool
 
-	// Mapping provides the mapping of subscribed consumers organized by topics/partitions(key of the first map)
-	// name of the consumer(key of the second map)
-	mapping map[topicToPartition]*map[string]func(*client.ConsumerMessage)
+	// Mapping provides the mapping of subscribed consumers. Subscription contains topic, partition and offset to consume,
+	// as well as dynamic/manual mode flag
+	mapping []*consumerSubscription
+	//mapping map[topicToPartition]*map[string]func(*client.ConsumerMessage)
 
 	// factory that crates consumer used in the Multiplexer
 	consumerFactory func(topics []string, groupId string) (*client.Consumer, error)
 	closeCh         chan struct{}
 }
 
-type topicToPartition struct {
+// ConsumerSubscription contains all information about subscribed kafka consumer/watcher
+type consumerSubscription struct {
+	// in clustered mode, multiplexer is distributing messages according to topic, partition and offset. If clustered
+	// mode is off, messages are distributed using topic only
+	clustered bool
+	// topic to watch on
 	topic string
+	// partition to watch on in clustered mode
+	partition int32
+	// offset to watch on in clustered mode
+	offset int64
+	// name identifies the connection
+	connectionName string
+	// sends message to subscribed channel
+	byteConsMsg func(*client.ConsumerMessage)
+}
+
+type topicToPartition struct {
+	topic     string
 	partition int32
 }
 
@@ -64,7 +82,7 @@ func NewMultiplexer(consumerFactory ConsumerFactory, syncP *client.SyncProducer,
 		syncProducer:  syncP,
 		asyncProducer: asyncP,
 		name:          name,
-		mapping:       map[topicToPartition]*map[string]func(*client.ConsumerMessage){},
+		mapping:       []*consumerSubscription{},
 		closeCh:       make(chan struct{}),
 	}
 
@@ -112,8 +130,8 @@ func (mux *Multiplexer) Start() error {
 
 	var topics []string
 
-	for assignment := range mux.mapping {
-		topics = append(topics, assignment.topic)
+	for _, subscription := range mux.mapping {
+		topics = append(topics, subscription.topic)
 	}
 
 	if len(topics) == 0 {
@@ -160,18 +178,22 @@ func (mux *Multiplexer) propagateMessage(msg *client.ConsumerMessage) {
 		return
 	}
 
-	assignment := topicToPartition{topic: msg.Topic, partition: msg.Partition}
-
-	cons, found := mux.mapping[assignment]
-
-	// notify consumers
-	if found {
-		for _, clb := range *cons {
-			// if we are not able to write into the channel we should skip the receiver
-			// and report an error to avoid deadlock
-			mux.Debug("offset ", msg.Offset, string(msg.Value), string(msg.Key), msg.Partition)
-
-			clb(msg)
+	// Find subscribed topics. Note: topic can be subscribed for both dynamic and manual consuming
+	for _, subscription := range mux.mapping {
+		if msg.Topic == subscription.topic {
+			// Clustered mode - message is consumed only on right partition and offset
+			if subscription.clustered {
+				if msg.Partition == subscription.partition && msg.Offset >= subscription.offset {
+					mux.Debug("offset ", msg.Offset, string(msg.Value), string(msg.Key), msg.Partition)
+					subscription.byteConsMsg(msg)
+				}
+			} else {
+				// Non-clustered mode
+				// if we are not able to write into the channel we should skip the receiver
+				// and report an error to avoid deadlock
+				mux.Debug("offset ", msg.Offset, string(msg.Value), string(msg.Key), msg.Partition)
+				subscription.byteConsMsg(msg)
+			}
 		}
 	}
 }
@@ -203,19 +225,33 @@ func (mux *Multiplexer) stopConsuming(topic string, name string) error {
 
 	var wasError error
 	var topicFound bool
-	for assignment, subs := range mux.mapping {
-		if assignment.topic == topic {
+	for index, subs := range mux.mapping {
+		if !subs.clustered && subs.topic == topic && subs.connectionName == name{
 			topicFound = true
-			_, found := (*subs)[name]
-			if !found {
-				wasError = fmt.Errorf("topic %s was not consumed by '%s'", topic, name)
-			} else {
-				delete(*subs, name)
-			}
+			mux.mapping = append(mux.mapping[:index], mux.mapping[index+1:]...)
 		}
 	}
 	if !topicFound {
 		wasError = fmt.Errorf("topic %s was not consumed by '%s'", topic, name)
+	}
+	return wasError
+}
+
+func (mux *Multiplexer) stopConsumingPartition(topic string, partition int32, offset int64, name string) error {
+	mux.rwlock.Lock()
+	defer mux.rwlock.Unlock()
+
+	var wasError error
+	var topicFound bool
+	for index, subs := range mux.mapping {
+		if subs.clustered && subs.topic == topic && subs.partition == partition && subs.offset == offset && subs.connectionName == name{
+			topicFound = true
+			mux.mapping = append(mux.mapping[:index], mux.mapping[index+1:]...)
+		}
+	}
+	if !topicFound {
+		wasError = fmt.Errorf("topic %s, partition %v and offset %v was not consumed by '%s'",
+			topic, partition, offset, name)
 	}
 	return wasError
 }

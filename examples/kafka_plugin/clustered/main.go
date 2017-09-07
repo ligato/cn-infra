@@ -130,7 +130,7 @@ func (plugin *ExamplePlugin) Init() (err error) {
 
 	// Create an asynchronous publisher for the selected topic and partition
 	// todo success callback will return always from any partition. Watching on in causes that the callback is returned twice
-	plugin.kafkaAsyncPublisher = connection.NewAsyncPublisherToPartition(topicAsync, 2, messaging.ToProtoMsgChan(plugin.asyncSuccessChannel),
+	plugin.kafkaAsyncPublisher = connection.NewAsyncPublisherToPartition(topicAsync, 0, messaging.ToProtoMsgChan(plugin.asyncSuccessChannel),
 		messaging.ToProtoMsgErrChan(plugin.asyncErrorChannel))
 
 	plugin.kafkaWatcher = plugin.Kafka.NewWatcher("kafka-sync-cluster-plugin")
@@ -139,7 +139,7 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	// kafkaWatcher.Watch is called to start consuming a topic.
 	plugin.subscription = make(chan messaging.ProtoMessage)
 	// the watcher is consuming messages on default partition and offset, so it will receive them
-	err = plugin.kafkaWatcher.WatchPartition(messaging.ToProtoMsgChan(plugin.subscription), topicSync, 1, 0)
+	err = plugin.kafkaWatcher.WatchPartition(messaging.ToProtoMsgChan(plugin.subscription), topicSync, 0, 0)
 	if err != nil {
 		plugin.Log.Error(err)
 	}
@@ -147,12 +147,10 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	// kafkaWatcher.Watch is called to start consuming a topic.
 	plugin.asyncSubscription = make(chan messaging.ProtoMessage)
 	// the watcher is consuming messages on custom partition, so it should not receive any message
-	err = plugin.kafkaAsyncWatcher.WatchPartition(messaging.ToProtoMsgChan(plugin.asyncSubscription), topicAsync, 2, 0)
+	err = plugin.kafkaAsyncWatcher.WatchPartition(messaging.ToProtoMsgChan(plugin.asyncSubscription), topicAsync, 0, 0)
 	if err != nil {
 		plugin.Log.Error(err)
 	}
-
-
 
 	plugin.Log.Info("Initialization of the custom plugin for the Kafka example is completed")
 
@@ -165,11 +163,6 @@ func (plugin *ExamplePlugin) Init() (err error) {
 
 	// Verify results and close the example
 	go plugin.closeExample()
-
-	//go func() {
-	//	time.Sleep(20 * time.Second) // todo remove
-	//	*plugin.closeChannel <- struct{}{}
-	//}()
 
 	return err
 }

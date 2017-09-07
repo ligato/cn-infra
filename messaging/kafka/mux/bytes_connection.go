@@ -47,18 +47,37 @@ func (conn *Connection) ConsumeTopic(msgClb func(message *client.ConsumerMessage
 	}
 
 	for _, topic := range topics {
-		// check if we have already consumed the topic and partition
-		assignment := topicToPartition{topic: topic, partition: DefPartition}
-		subs, found := conn.multiplexer.mapping[assignment]
+		// check if we have already consumed the topic
+		var found bool
+		var subs *consumerSubscription
+	LoopSubs:
+		for _, subscription := range conn.multiplexer.mapping {
+			if subscription.clustered == true {
+				// do not mix dynamic and manual mode
+				continue
+			}
+			if subscription.topic == topic {
+				found = true
+				subs = subscription
+				break LoopSubs
+			}
+		}
 
 		if !found {
-			subs = &map[string]func(*client.ConsumerMessage){}
-			conn.multiplexer.mapping[assignment] = subs
+			subs = &consumerSubscription{
+				clustered: false, // non-clustered example
+				topic: topic,
+				connectionName: conn.name,
+				byteConsMsg: msgClb,
+			}
+			// subscribe new topic
+			conn.multiplexer.mapping = append(conn.multiplexer.mapping, subs)
 		}
+
 		// add subscription to consumerList
-		(*subs)[conn.name] = msgClb
-		conn.multiplexer.mapping[assignment] = subs
+		subs.byteConsMsg = msgClb
 	}
+
 	return nil
 }
 

@@ -39,6 +39,7 @@ type ProtoWatcher interface {
 	Watch(msgCallback func(ProtoMessage), topics ...string) error
 	WatchPartition(msgCallback func(ProtoMessage), topic string, partition int32, offset int64) error
 	StopWatch(topic string) error
+	StopWatchPartition(topic string, partition int32, offset int64) error
 }
 
 // ProtoMessage defines functions for inspection of a message receive from messaging system.

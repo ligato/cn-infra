@@ -98,18 +98,37 @@ func (conn *ProtoConnection) ConsumeTopic(msgClb func(messaging.ProtoMessage), t
 	}
 
 	for _, topic := range topics {
-		// check if we have already consumed the topic and partition
-		assignment := topicToPartition{topic: topic, partition: DefPartition}
-		subs, found := conn.multiplexer.mapping[assignment]
+		// check if we have already consumed the topic
+		var found bool
+		var subs *consumerSubscription
+	LoopSubs:
+		for _, subscription := range conn.multiplexer.mapping {
+			if subscription.clustered == true {
+				// do not mix dynamic and manual mode
+				continue
+			}
+			if subscription.topic == topic {
+				found = true
+				subs = subscription
+				break LoopSubs
+			}
+		}
 
 		if !found {
-			subs = &map[string]func(*client.ConsumerMessage){}
-			conn.multiplexer.mapping[assignment] = subs
+			subs = &consumerSubscription{
+				clustered:      false, // non-clustered example
+				topic:          topic,
+				connectionName: conn.name,
+				byteConsMsg:    byteClb,
+			}
+			// subscribe new topic
+			conn.multiplexer.mapping = append(conn.multiplexer.mapping, subs)
 		}
+
 		// add subscription to consumerList
-		(*subs)[conn.name] = byteClb
-		conn.multiplexer.mapping[assignment] = subs
+		subs.byteConsMsg = byteClb
 	}
+
 	return nil
 }
 
@@ -129,19 +148,37 @@ func (conn *ProtoConnection) ConsumeTopicOnPartition(msgClb func(messaging.Proto
 		msgClb(pm)
 	}
 
-	// prepare assignment
-	assignment := topicToPartition{topic: topic, partition: partition}
+	// check if we have already consumed the topic on partition and offset
+	var found bool
+	var subs *consumerSubscription
 
-	// check if we have already consumed the topic on given partition
-	subs, found := conn.multiplexer.mapping[assignment]
+	for _, subscription := range conn.multiplexer.mapping {
+		if subscription.clustered == false {
+			// do not mix dynamic and manual mode
+			continue
+		}
+		if subscription.topic == topic && subscription.partition == partition && subscription.offset == offset {
+			found = true
+			subs = subscription
+			break
+		}
+	}
 
 	if !found {
-		subs = &map[string]func(*client.ConsumerMessage){}
-		conn.multiplexer.mapping[assignment] = subs
+		subs = &consumerSubscription{
+			clustered:      true, // clustered example
+			topic:          topic,
+			partition:      partition,
+			offset:         offset,
+			connectionName: conn.name,
+			byteConsMsg:    byteClb,
+		}
+		// subscribe new topic on partition
+		conn.multiplexer.mapping = append(conn.multiplexer.mapping, subs)
 	}
+
 	// add subscription to consumerList
-	(*subs)[conn.name] = byteClb
-	conn.multiplexer.mapping[assignment] = subs
+	subs.byteConsMsg = byteClb
 
 	return nil
 }
@@ -164,6 +201,11 @@ func (conn *ProtoConnection) StopConsuming(topic string) error {
 	return conn.multiplexer.stopConsuming(topic, conn.name)
 }
 
+// StopConsumingPartition cancels the previously created subscription for consuming the topic, partition and offset
+func (conn *ProtoConnection) StopConsumingPartition(topic string, partition int32, offset int64) error {
+	return conn.multiplexer.stopConsumingPartition(topic, partition, offset, conn.name)
+}
+
 // Watch is an alias for ConsumeTopic method. The alias was added in order to conform to messaging.Mux interface.
 func (conn *ProtoConnection) Watch(msgClb func(messaging.ProtoMessage), topics ...string) error {
 	return conn.ConsumeTopic(msgClb, topics...)
@@ -172,6 +214,11 @@ func (conn *ProtoConnection) Watch(msgClb func(messaging.ProtoMessage), topics .
 // StopWatch is an alias for StopConsuming method. The alias was added in order to conform to messaging.Mux interface.
 func (conn *ProtoConnection) StopWatch(topic string) error {
 	return conn.StopConsuming(topic)
+}
+
+// StopWatchPartition is an alias for StopConsumingPartition method. The alias was added in order to conform to messaging.Mux interface.
+func (conn *ProtoConnection) StopWatchPartition(topic string, partition int32, offset int64) error {
+	return conn.StopConsumingPartition(topic, partition, offset)
 }
 
 // NewSyncPublisher creates a new instance of protoSyncPublisherKafka that allows to publish sync kafka messages using common messaging API
