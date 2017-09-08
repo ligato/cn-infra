@@ -257,7 +257,8 @@ func (conn *ProtoConnection) NewAsyncPublisher(topic string, successClb func(mes
 	return &protoAsyncPublisherKafka{conn, topic, DefPartition, successClb, errorClb}, nil
 }
 
-// NewAsyncPublisherToPartition creates a new instance of protoAsyncPublisherKafka that allows to publish sync kafka messages using common messaging API
+// NewAsyncPublisherToPartition creates a new instance of protoAsyncPublisherKafka that allows to publish sync kafka
+// messages using common messaging API.
 func (conn *ProtoConnection) NewAsyncPublisherToPartition(topic string, partition int32, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) (messaging.ProtoPublisher, error) {
 	if conn.multiplexer.partitioner != client.Manual {
 		return nil, fmt.Errorf("async publisher to partition can be used only with 'manual' partitioner")
