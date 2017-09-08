@@ -15,10 +15,19 @@
 package cassandra
 
 import (
+	"github.com/gocql/gocql"
+	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/sql"
 	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/willfaught/gockle"
 )
+
+// HealthCheck is a structure used to represent table to help verify health status
+type HealthCheck struct {
+	ID           gocql.UUID `cql:"id" pk:"id"`
+	HealthStatus bool       `cql:"healthStatus"`
+}
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
@@ -73,18 +82,28 @@ func (p *Plugin) AfterInit() error {
 		p.session = gockle.NewSession(session)
 	}
 
-	/* TODO Register for providing status reports (polling mode)
+	// Register for providing status reports (polling mode)
 	if p.StatusCheck != nil && p.session != nil {
 		p.StatusCheck.Register(core.PluginName(p.String()), func() (statuscheck.PluginState, error) {
-			_, _, err := p.Skeleton.NewBroker("/").GetValue(healthCheckProbeKey, nil)
+			broker := p.NewBroker()
+			err := createKeyspace(p, broker)
 			if err == nil {
-				return statuscheck.OK, nil
+				err = createTable(p, broker)
+				if err == nil {
+					err = insertHealthCheckItem(p, broker)
+					if err == nil {
+						err = getHealthCheckItem(p, broker)
+						if err == nil {
+							return statuscheck.OK, nil
+						}
+					}
+				}
 			}
 			return statuscheck.Error, err
 		})
 	} else {
-		p.Log.Warnf("Unable to start status check for etcd")
-	}*/
+		p.Log.Warnf("Unable to start status check for Cassandra")
+	}
 
 	return nil
 }
@@ -111,4 +130,62 @@ func (p *Plugin) String() string {
 		return "cassa-client"
 	}
 	return string(p.Deps.PluginName)
+}
+
+// SchemaName returns the schema name for HealthCheck table
+func (entity *HealthCheck) SchemaName() string {
+	return "healthStatusCheck"
+}
+
+// createKeyspace used to create keyspace for health check to verify health status
+func createKeyspace(p *Plugin, broker sql.Broker) (err error) {
+	err = broker.Exec(`CREATE KEYSPACE IF NOT EXISTS healthStatusCheck with replication = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };`)
+	if err != nil {
+		p.Log.Errorf("Unable to create keyspace in Cassandra")
+		return err
+	}
+	return nil
+}
+
+// createTable used to create table for health check to verify health status
+func createTable(p *Plugin, broker sql.Broker) (err error) {
+	err = broker.Exec(`CREATE TABLE IF NOT EXISTS healthStatusCheck.healthCheck (
+		id uuid PRIMARY KEY,
+		healthStatus boolean
+	);`)
+	if err != nil {
+		p.Log.Errorf("Unable to create table in Cassandra")
+		return err
+	}
+	return nil
+}
+
+// insertHealthCheckItem used to insert an item in the health check table to verify health status
+func insertHealthCheckItem(p *Plugin, broker sql.Broker) (err error) {
+	healthCheckItem := &HealthCheck{HealthStatus: true}
+	err = broker.Put(sql.Exp("id=c37d661d-7e61-49ea-96a5-68c34e83db3a"), healthCheckItem)
+	if err != nil {
+		p.Log.Errorf("Unable to insert data in Cassandra")
+		return err
+	}
+	return nil
+}
+
+// getHealthCheckItem used to retrieve an item from the health check table to verify health status
+func getHealthCheckItem(p *Plugin, broker sql.Broker) (err error) {
+	healthCheckTable := &HealthCheck{}
+	healthStatus := &[]HealthCheck{}
+	err = sql.SliceIt(healthStatus, broker.ListValues(sql.FROM(healthCheckTable,
+		sql.WHERE(sql.Field(&healthCheckTable.ID, sql.EQ("c37d661d-7e61-49ea-96a5-68c34e83db3a"))))))
+	if err != nil {
+		p.Log.Errorf("Unable to retrieve data from Cassandra")
+		return err
+	}
+
+	if len(*healthStatus) <= 0 && !(*healthStatus)[0].HealthStatus {
+		p.Log.Errorf("Record not found in Cassandra")
+		return err
+	}
+
+	return nil
 }
