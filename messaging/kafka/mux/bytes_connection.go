@@ -52,7 +52,7 @@ func (conn *Connection) ConsumeTopic(msgClb func(message *client.ConsumerMessage
 		var subs *consumerSubscription
 	LoopSubs:
 		for _, subscription := range conn.multiplexer.mapping {
-			if subscription.clustered == true {
+			if subscription.manual == true {
 				// do not mix dynamic and manual mode
 				continue
 			}
@@ -65,10 +65,10 @@ func (conn *Connection) ConsumeTopic(msgClb func(message *client.ConsumerMessage
 
 		if !found {
 			subs = &consumerSubscription{
-				clustered: false, // non-clustered example
-				topic: topic,
+				manual:         false, // non-manual example
+				topic:          topic,
 				connectionName: conn.name,
-				byteConsMsg: msgClb,
+				byteConsMsg:    msgClb,
 			}
 			// subscribe new topic
 			conn.multiplexer.mapping = append(conn.multiplexer.mapping, subs)
@@ -97,7 +97,7 @@ func (conn *Connection) ConsumeTopicOnPartition(msgClb func(message *client.Cons
 	var subs *consumerSubscription
 
 	for _, subscription := range conn.multiplexer.mapping {
-		if subscription.clustered == false {
+		if subscription.manual == false {
 			// do not mix dynamic and manual mode
 			continue
 		}
@@ -110,7 +110,7 @@ func (conn *Connection) ConsumeTopicOnPartition(msgClb func(message *client.Cons
 
 	if !found {
 		subs = &consumerSubscription{
-			clustered:      true, // clustered example
+			manual:         true, // manual example
 			topic:          topic,
 			partition:      partition,
 			offset:         offset,

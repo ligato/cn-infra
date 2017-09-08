@@ -95,7 +95,6 @@ type ExamplePlugin struct {
 	kafkaSyncPublisher  messaging.ProtoPublisher
 	kafkaAsyncPublisher messaging.ProtoPublisher
 	kafkaWatcher        messaging.ProtoWatcher
-	kafkaAsyncWatcher        messaging.ProtoWatcher
 	// Successfully published kafka message is sent through the message channel, error channel otherwise
 	asyncSubscription   chan (messaging.ProtoMessage)
 	asyncSuccessChannel chan (messaging.ProtoMessage)
@@ -108,8 +107,8 @@ type ExamplePlugin struct {
 
 // Deps is a helper struct which is grouping all dependencies injected to the plugin
 type Deps struct {
-	Kafka                   *kafka.Plugin // injected
-	local.PluginLogDeps              	  // injected
+	Kafka               *kafka.Plugin // injected
+	local.PluginLogDeps               // injected
 }
 
 const (
@@ -125,13 +124,15 @@ const (
 	asyncMessageOffset = 0
 )
 
+// Topics
+const (
+	topic1 = "example-sync-clustered-topic"
+	topic2 = "example-async-clustered-topic"
+)
+
 // Init is the entry point into the plugin that is called by Agent Core when the Agent is coming up.
 // The Go native plugin mechanism that was introduced in Go 1.8
 func (plugin *ExamplePlugin) Init() (err error) {
-	// Prepare two topics for sync and async scenario
-	topic1 := "example-sync-clustered-topic"
-	topic2 := "example-async-clustered-topic"
-
 	// Create connection
 	connection := plugin.Kafka.NewProtoConnectionToPartition("example-proto-connection")
 
@@ -151,7 +152,8 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	}
 
 	// Initialize sync watcher
-	plugin.kafkaWatcher = plugin.Kafka.NewWatcher("sync-watcher")
+	plugin.kafkaWatcher = plugin.Kafka.NewWatcher("example-watcher")
+
 	// Prepare subscription channel. Relevant kafka messages are send to this channel so watcher can read it
 	plugin.subscription = make(chan messaging.ProtoMessage)
 	// The watcher is consuming messages on custom partition and offset. If there is a producer who stores message to
@@ -162,13 +164,11 @@ func (plugin *ExamplePlugin) Init() (err error) {
 		plugin.Log.Error(err)
 	}
 
-	// Initialize async watcher
-	plugin.kafkaAsyncWatcher = plugin.Kafka.NewWatcher("async-watcher")
 	// Prepare subscription channel. Relevant kafka messages are send to this channel so watcher can read it
 	plugin.asyncSubscription = make(chan messaging.ProtoMessage)
 	// The watcher is consuming messages on custom partition and offset. If there is a producer who stores message to
 	// the partition and offset which is the same or newer, the message will be consumed
-	err = plugin.kafkaAsyncWatcher.WatchPartition(messaging.ToProtoMsgChan(plugin.asyncSubscription), topic2,
+	err = plugin.kafkaWatcher.WatchPartition(messaging.ToProtoMsgChan(plugin.asyncSubscription), topic2,
 		asyncMessagePartition, asyncMessageOffset)
 	if err != nil {
 		plugin.Log.Error(err)
@@ -225,7 +225,7 @@ func (plugin *ExamplePlugin) producer() {
 	}
 	// Send several sync messages with offset 0,1,...
 	plugin.Log.Info("Sending %v Kafka notifications (protobuf) ...", syncMessageCount)
-	for i := 0; i < syncMessageCount; i++{
+	for i := 0; i < syncMessageCount; i++ {
 		err := plugin.kafkaSyncPublisher.Put("proto-key", enc)
 		if err != nil {
 			plugin.Log.Errorf("Failed to sync-send a proto message, error %v", err)

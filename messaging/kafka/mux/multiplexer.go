@@ -50,14 +50,14 @@ type Multiplexer struct {
 
 // ConsumerSubscription contains all information about subscribed kafka consumer/watcher
 type consumerSubscription struct {
-	// in clustered mode, multiplexer is distributing messages according to topic, partition and offset. If clustered
+	// in manual mode, multiplexer is distributing messages according to topic, partition and offset. If manual
 	// mode is off, messages are distributed using topic only
-	clustered bool
+	manual bool
 	// topic to watch on
 	topic string
-	// partition to watch on in clustered mode
+	// partition to watch on in manual mode
 	partition int32
-	// offset to watch on in clustered mode
+	// offset to watch on in manual mode
 	offset int64
 	// name identifies the connection
 	connectionName string
@@ -186,13 +186,13 @@ func (mux *Multiplexer) propagateMessage(msg *client.ConsumerMessage) {
 	for _, subscription := range mux.mapping {
 		if msg.Topic == subscription.topic {
 			// Clustered mode - message is consumed only on right partition and offset
-			if subscription.clustered {
+			if subscription.manual {
 				if msg.Partition == subscription.partition && msg.Offset >= subscription.offset {
 					mux.Debug("offset ", msg.Offset, string(msg.Value), string(msg.Key), msg.Partition)
 					subscription.byteConsMsg(msg)
 				}
 			} else {
-				// Non-clustered mode
+				// Non-manual mode
 				// if we are not able to write into the channel we should skip the receiver
 				// and report an error to avoid deadlock
 				mux.Debug("offset ", msg.Offset, string(msg.Value), string(msg.Key), msg.Partition)
@@ -230,7 +230,7 @@ func (mux *Multiplexer) stopConsuming(topic string, name string) error {
 	var wasError error
 	var topicFound bool
 	for index, subs := range mux.mapping {
-		if !subs.clustered && subs.topic == topic && subs.connectionName == name{
+		if !subs.manual && subs.topic == topic && subs.connectionName == name{
 			topicFound = true
 			mux.mapping = append(mux.mapping[:index], mux.mapping[index+1:]...)
 		}
@@ -248,7 +248,7 @@ func (mux *Multiplexer) stopConsumingPartition(topic string, partition int32, of
 	var wasError error
 	var topicFound bool
 	for index, subs := range mux.mapping {
-		if subs.clustered && subs.topic == topic && subs.partition == partition && subs.offset == offset && subs.connectionName == name{
+		if subs.manual && subs.topic == topic && subs.partition == partition && subs.offset == offset && subs.connectionName == name{
 			topicFound = true
 			mux.mapping = append(mux.mapping[:index], mux.mapping[index+1:]...)
 		}
