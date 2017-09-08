@@ -185,18 +185,12 @@ func (conn *ProtoConnection) ConsumeTopicOnPartition(msgClb func(messaging.Proto
 
 // Watch is an alias for ConsumeTopic method. The alias was added in order to conform to messaging.Mux interface.
 func (conn *ProtoConnection) Watch(msgClb func(messaging.ProtoMessage), topics ...string) error {
-	if conn.multiplexer.partitioner == client.Manual {
-		return fmt.Errorf("unable to create default watcher with 'manual' partitioner set")
-	}
 	return conn.ConsumeTopic(msgClb, topics...)
 }
 
 // WatchPartition is an alias for ConsumePartition method. The alias was added in order to conform to
 // messaging.Mux interface.
 func (conn *ProtoConnection) WatchPartition(msgClb func(messaging.ProtoMessage), topic string, partition int32, offset int64) error {
-	if conn.multiplexer.partitioner != client.Manual {
-		return fmt.Errorf("unable to watch partition without 'manual' partitioner")
-	}
 	return conn.ConsumePartition(msgClb, topic, partition, offset)
 }
 

@@ -11,9 +11,6 @@ import (
 	"github.com/ligato/cn-infra/messaging/kafka"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
-	"github.com/ligato/cn-infra/messaging/kafka/mux"
-	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/messaging/kafka/client"
 )
 
 //********************************************************************
@@ -135,17 +132,8 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	topic1 := "example-sync-clustered-topic"
 	topic2 := "example-async-clustered-topic"
 
-	// Init custom multiplexer. Multiplexer in kafka works in hash mode, to be able to publish/consume custom partitions
-	// and offsets, multiplexer with manual mode on has to be used. Creating a multiplexer is established a new connection
-	// to kafka
-	multiplexer, err := mux.InitMultiplexerWithConfig(plugin.Kafka.Config, plugin.Kafka.ServiceLabel.GetAgentLabel() + "-cluster",
-		client.Manual, plugin.Log)
-	if err != nil {
-		return err
-	}
-
-	// Create a common connection on multiplexer. Every publisher/consumer initialized on this connection uses the multiplexer
-	connection := multiplexer.NewProtoConnection("example-proto-connection", &keyval.SerializerJSON{})
+	// Create connection
+	connection := plugin.Kafka.NewProtoConnectionToPartition("example-proto-connection")
 
 	// Create a synchronous and asynchronous publisher. In manual mode, every publisher has defined partition, where
 	// the messages for given partition will be stored
