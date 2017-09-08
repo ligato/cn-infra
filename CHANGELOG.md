@@ -1,5 +1,6 @@
 # Release v1.0.3 (2017-09-08)
-* [FlavorAllConnectors](flavors/connectors) - Inlined plugins: ETCD, Kafka, Redis, Cassandra 
+* [FlavorAllConnectors](flavors/connectors)
+    * Inlined plugins: ETCD, Kafka, Redis, Cassandra 
 * [Kafka Partitions](messaging/kafka) 
     * Implemented new methods that allow to specificy partitions & offset parameters:
       * publish: Mux.NewSyncPublisherToPartition() & Mux.NewAsyncPublisherToPartition()
