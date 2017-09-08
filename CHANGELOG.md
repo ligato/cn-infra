@@ -1,5 +1,6 @@
-# Release v1.0.3 (NOT RELEASED)
+# Release v1.0.3 (2017-09-08)
 - [FlavorAllConnectors](flavors/connectors) - Inlined plugins: ETCD, Kafka, Redis, Cassandra 
+- Kafka API - implemented new methods that allow to specificy partitions & offset parameters. Minimalistic examples & documentation for Kafka API & examples will be improved in later release.
 
 # Release v1.0.2 (2017-08-28)
 
