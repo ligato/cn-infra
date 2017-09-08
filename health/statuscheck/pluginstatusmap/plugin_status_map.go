@@ -16,7 +16,7 @@ package pluginstatusmap
 
 import (
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/health/statuscheck/model/status"
+	status "github.com/ligato/cn-infra/health/statuscheck/model"
 	"github.com/ligato/cn-infra/idxmap"
 	"github.com/ligato/cn-infra/idxmap/mem"
 	"github.com/ligato/cn-infra/logging/logroot"

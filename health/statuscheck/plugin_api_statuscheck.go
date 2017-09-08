@@ -16,10 +16,10 @@ package statuscheck
 
 import (
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/health/statuscheck/model/status"
+	status "github.com/ligato/cn-infra/health/statuscheck/model"
 )
 
-//go:generate protoc --proto_path=model/status --gogo_out=model/status model/status/status.proto
+//go:generate protoc --proto_path=model --gogo_out=model model/status.proto
 
 // PluginState is a data type used to describe the current operational state of a plugin.
 type PluginState string
