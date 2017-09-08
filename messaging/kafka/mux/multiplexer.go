@@ -24,6 +24,8 @@ type Multiplexer struct {
 	syncProducer *client.SyncProducer
 	// asyncProducer used by the Multiplexer
 	asyncProducer *client.AsyncProducer
+	// partitioner used in this multiplexer
+	partitioner string
 
 	// name is used for identification of stored last consumed offset in kafka. This allows
 	// to follow up messages after restart.
@@ -76,11 +78,13 @@ type asyncMeta struct {
 }
 
 // NewMultiplexer creates new instance of Kafka Multiplexer
-func NewMultiplexer(consumerFactory ConsumerFactory, syncP *client.SyncProducer, asyncP *client.AsyncProducer, name string, log logging.Logger) *Multiplexer {
+func NewMultiplexer(consumerFactory ConsumerFactory, syncP *client.SyncProducer, asyncP *client.AsyncProducer,
+	partitioner string, name string, log logging.Logger) *Multiplexer {
 	cl := &Multiplexer{consumerFactory: consumerFactory,
 		Logger:        log,
 		syncProducer:  syncP,
 		asyncProducer: asyncP,
+		partitioner:   partitioner,
 		name:          name,
 		mapping:       []*consumerSubscription{},
 		closeCh:       make(chan struct{}),

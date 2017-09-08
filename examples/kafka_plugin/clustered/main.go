@@ -13,6 +13,7 @@ import (
 	"github.com/namsral/flag"
 	"github.com/ligato/cn-infra/messaging/kafka/mux"
 	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ligato/cn-infra/messaging/kafka/client"
 )
 
 //********************************************************************
@@ -137,7 +138,8 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	// Init custom multiplexer. Multiplexer in kafka works in hash mode, to be able to publish/consume custom partitions
 	// and offsets, multiplexer with manual mode on has to be used. Creating a multiplexer is established a new connection
 	// to kafka
-	multiplexer, err := mux.InitMultiplexerWithConfig(plugin.Kafka.Config, plugin.Kafka.ServiceLabel.GetAgentLabel() + "-cluster", "manual", plugin.Log)
+	multiplexer, err := mux.InitMultiplexerWithConfig(plugin.Kafka.Config, plugin.Kafka.ServiceLabel.GetAgentLabel() + "-cluster",
+		client.Manual, plugin.Log)
 	if err != nil {
 		return err
 	}
@@ -147,12 +149,18 @@ func (plugin *ExamplePlugin) Init() (err error) {
 
 	// Create a synchronous and asynchronous publisher. In manual mode, every publisher has defined partition, where
 	// the messages for given partition will be stored
-	plugin.kafkaSyncPublisher = connection.NewSyncPublisherToPartition(topic1, syncMessagePartition)
+	plugin.kafkaSyncPublisher, err = connection.NewSyncPublisherToPartition(topic1, syncMessagePartition)
+	if err != nil {
+		return err
+	}
 	// Async publisher requires two more channels to send success/error callback
 	plugin.asyncSuccessChannel = make(chan messaging.ProtoMessage, 0)
 	plugin.asyncErrorChannel = make(chan messaging.ProtoMessageErr, 0)
-	plugin.kafkaAsyncPublisher = connection.NewAsyncPublisherToPartition(topic2, asyncMessagePartition,
+	plugin.kafkaAsyncPublisher, err = connection.NewAsyncPublisherToPartition(topic2, asyncMessagePartition,
 		messaging.ToProtoMsgChan(plugin.asyncSuccessChannel), messaging.ToProtoMsgErrChan(plugin.asyncErrorChannel))
+	if err != nil {
+		return err
+	}
 
 	// Initialize sync watcher
 	plugin.kafkaWatcher = plugin.Kafka.NewWatcher("sync-watcher")

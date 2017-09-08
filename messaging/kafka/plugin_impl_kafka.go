@@ -122,22 +122,22 @@ func (p *Plugin) NewProtoConnection(name string) *mux.ProtoConnection {
 }
 
 // NewSyncPublisher creates a publisher that allows to publish messages using synchronous API.
-func (p *Plugin) NewSyncPublisher(topic string) messaging.ProtoPublisher {
+func (p *Plugin) NewSyncPublisher(topic string) (messaging.ProtoPublisher, error) {
 	return p.NewProtoConnection("").NewSyncPublisher(topic)
 }
 
 // NewSyncPublisherToPartition creates a publisher that allows to publish messages to selected topic/partition using synchronous API .
-func (p *Plugin) NewSyncPublisherToPartition(topic string, partition int32) messaging.ProtoPublisher {
+func (p *Plugin) NewSyncPublisherToPartition(topic string, partition int32) (messaging.ProtoPublisher, error) {
 	return p.NewProtoConnection("").NewSyncPublisherToPartition(topic, partition)
 }
 
 // NewAsyncPublisher creates a publisher that allows to publish messages using asynchronous API.
-func (p *Plugin) NewAsyncPublisher(topic string, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) messaging.ProtoPublisher {
+func (p *Plugin) NewAsyncPublisher(topic string, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) (messaging.ProtoPublisher, error) {
 	return p.NewProtoConnection("").NewAsyncPublisher(topic, successClb, errorClb)
 }
 
 // NewAsyncPublisherToPartition creates a publisher that allows to publish messages to selected topic/partition using asynchronous API.
-func (p *Plugin) NewAsyncPublisherToPartition(topic string, partition int32, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) messaging.ProtoPublisher {
+func (p *Plugin) NewAsyncPublisherToPartition(topic string, partition int32, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) (messaging.ProtoPublisher, error) {
 	return p.NewProtoConnection("").NewAsyncPublisherToPartition(topic, partition, successClb, errorClb)
 }
 

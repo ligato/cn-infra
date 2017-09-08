@@ -99,5 +99,5 @@ func InitMultiplexerWithConfig(muxConfig *Config, name string, partitioner strin
 		return nil, err
 	}
 
-	return NewMultiplexer(getConsumerFactory(config), syncProducer, asyncProducer, name, log), nil
+	return NewMultiplexer(getConsumerFactory(config), syncProducer, asyncProducer, partitioner, name, log), nil
 }

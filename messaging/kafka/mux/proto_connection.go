@@ -183,9 +183,20 @@ func (conn *ProtoConnection) ConsumeTopicOnPartition(msgClb func(messaging.Proto
 	return nil
 }
 
+// Watch is an alias for ConsumeTopic method. The alias was added in order to conform to messaging.Mux interface.
+func (conn *ProtoConnection) Watch(msgClb func(messaging.ProtoMessage), topics ...string) error {
+	if conn.multiplexer.partitioner == client.Manual {
+		return fmt.Errorf("unable to create default watcher with 'manual' partitioner set")
+	}
+	return conn.ConsumeTopic(msgClb, topics...)
+}
+
 // WatchPartition is an alias for ConsumePartition method. The alias was added in order to conform to
 // messaging.Mux interface.
 func (conn *ProtoConnection) WatchPartition(msgClb func(messaging.ProtoMessage), topic string, partition int32, offset int64) error {
+	if conn.multiplexer.partitioner != client.Manual {
+		return fmt.Errorf("unable to watch partition without 'manual' partitioner")
+	}
 	return conn.ConsumePartition(msgClb, topic, partition, offset)
 }
 
@@ -206,11 +217,6 @@ func (conn *ProtoConnection) StopConsumingPartition(topic string, partition int3
 	return conn.multiplexer.stopConsumingPartition(topic, partition, offset, conn.name)
 }
 
-// Watch is an alias for ConsumeTopic method. The alias was added in order to conform to messaging.Mux interface.
-func (conn *ProtoConnection) Watch(msgClb func(messaging.ProtoMessage), topics ...string) error {
-	return conn.ConsumeTopic(msgClb, topics...)
-}
-
 // StopWatch is an alias for StopConsuming method. The alias was added in order to conform to messaging.Mux interface.
 func (conn *ProtoConnection) StopWatch(topic string) error {
 	return conn.StopConsuming(topic)
@@ -222,13 +228,19 @@ func (conn *ProtoConnection) StopWatchPartition(topic string, partition int32, o
 }
 
 // NewSyncPublisher creates a new instance of protoSyncPublisherKafka that allows to publish sync kafka messages using common messaging API
-func (conn *ProtoConnection) NewSyncPublisher(topic string) messaging.ProtoPublisher {
-	return &protoSyncPublisherKafka{conn, topic, DefPartition}
+func (conn *ProtoConnection) NewSyncPublisher(topic string) (messaging.ProtoPublisher, error) {
+	if conn.multiplexer.partitioner == client.Manual {
+		return nil, fmt.Errorf("unable to use default sync publisher with 'manual' partitioner")
+	}
+	return &protoSyncPublisherKafka{conn, topic, DefPartition}, nil
 }
 
 // NewSyncPublisherToPartition creates a new instance of protoSyncPublisherKafka that allows to publish sync kafka messages using common messaging API
-func (conn *ProtoConnection) NewSyncPublisherToPartition(topic string, partition int32) messaging.ProtoPublisher {
-	return &protoSyncPublisherKafka{conn, topic, partition}
+func (conn *ProtoConnection) NewSyncPublisherToPartition(topic string, partition int32) (messaging.ProtoPublisher, error) {
+	if conn.multiplexer.partitioner != client.Manual {
+		return nil, fmt.Errorf("sync publisher to partition can be used only with 'manual' partitioner")
+	}
+	return &protoSyncPublisherKafka{conn, topic, partition}, nil
 }
 
 // Put publishes a message into kafka
@@ -238,13 +250,19 @@ func (p *protoSyncPublisherKafka) Put(key string, message proto.Message, opts ..
 }
 
 // NewAsyncPublisher creates a new instance of protoAsyncPublisherKafka that allows to publish sync kafka messages using common messaging API
-func (conn *ProtoConnection) NewAsyncPublisher(topic string, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) messaging.ProtoPublisher {
-	return &protoAsyncPublisherKafka{conn, topic, DefPartition, successClb, errorClb}
+func (conn *ProtoConnection) NewAsyncPublisher(topic string, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) (messaging.ProtoPublisher, error) {
+	if conn.multiplexer.partitioner == client.Manual {
+		return nil, fmt.Errorf("unable to use default async publisher with 'manual' partitioner")
+	}
+	return &protoAsyncPublisherKafka{conn, topic, DefPartition, successClb, errorClb}, nil
 }
 
 // NewAsyncPublisherToPartition creates a new instance of protoAsyncPublisherKafka that allows to publish sync kafka messages using common messaging API
-func (conn *ProtoConnection) NewAsyncPublisherToPartition(topic string, partition int32, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) messaging.ProtoPublisher {
-	return &protoAsyncPublisherKafka{conn, topic, partition, successClb, errorClb}
+func (conn *ProtoConnection) NewAsyncPublisherToPartition(topic string, partition int32, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) (messaging.ProtoPublisher, error) {
+	if conn.multiplexer.partitioner != client.Manual {
+		return nil, fmt.Errorf("async publisher to partition can be used only with 'manual' partitioner")
+	}
+	return &protoAsyncPublisherKafka{conn, topic, partition, successClb, errorClb}, nil
 }
 
 // Put publishes a message into kafka
