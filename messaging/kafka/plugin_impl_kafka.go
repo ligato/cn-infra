@@ -31,6 +31,8 @@ const topic = "status-check"
 // Plugin provides API for interaction with kafka brokers.
 type Plugin struct {
 	Deps         // inject
+
+	Config		*mux.Config
 	subscription chan (*client.ConsumerMessage)
 	mx           *mux.Multiplexer
 	consumer     *client.Consumer
@@ -53,8 +55,8 @@ func (p *Plugin) Init() (err error) {
 	p.subscription = make(chan *client.ConsumerMessage)
 
 	// Get config data
-	config := &mux.Config{}
-	found, err := p.PluginConfig.GetValue(config)
+	p.Config = &mux.Config{}
+	found, err := p.PluginConfig.GetValue(p.Config)
 	if !found {
 		p.Log.Info("kafka config not found ", p.PluginConfig.GetConfigName(), " - skip loading this plugin")
 		return nil //skip loading the plugin
@@ -62,7 +64,7 @@ func (p *Plugin) Init() (err error) {
 	if err != nil {
 		return err
 	}
-	clientConfig := p.getClientConfig(config, p.Log, topic)
+	clientConfig := p.getClientConfig(p.Config, p.Log, topic)
 
 	// Init consumer
 	p.consumer, err = client.NewConsumer(clientConfig, nil)
@@ -71,7 +73,7 @@ func (p *Plugin) Init() (err error) {
 	}
 
 	if p.mx == nil {
-		p.mx, err = mux.InitMultiplexerWithConfig(config, p.ServiceLabel.GetAgentLabel(), p.Log)
+		p.mx, err = mux.InitMultiplexerWithConfig(p.Config, p.ServiceLabel.GetAgentLabel(), "", p.Log)
 	}
 
 	return err

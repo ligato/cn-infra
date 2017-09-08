@@ -30,7 +30,7 @@ import (
 
 func main() {
 	log.StandardLogger().SetLevel(logging.DebugLevel)
-	mx, err := mux.InitMultiplexer("", "default", logroot.StandardLogger())
+	mx, err := mux.InitMultiplexer("", "default", "", logroot.StandardLogger())
 	if err != nil {
 		os.Exit(1)
 	}

@@ -11,9 +11,9 @@ import (
 	"github.com/ligato/cn-infra/messaging/kafka"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
+	"github.com/ligato/cn-infra/messaging/kafka/mux"
+	"github.com/ligato/cn-infra/db/keyval"
 )
-
-// todo WIP
 
 //********************************************************************
 // The following functions show how to use the Agent's Kafka APIs
@@ -114,40 +114,66 @@ type Deps struct {
 	local.PluginLogDeps              	  // injected
 }
 
+const (
+	// Number of sync messages sent. Ensure that syncMessageCount >= syncMessageOffset
+	syncMessageCount = 10
+	// Partition sync messages are sent and watched on
+	syncMessagePartition = 1
+	// Offset for sync messages watcher
+	syncMessageOffset = 5
+	// Partiton async messages are sent and watched on
+	asyncMessagePartition = 2
+	// Offset for async messages watcher
+	asyncMessageOffset = 0
+)
+
 // Init is the entry point into the plugin that is called by Agent Core when the Agent is coming up.
 // The Go native plugin mechanism that was introduced in Go 1.8
 func (plugin *ExamplePlugin) Init() (err error) {
-	topicSync := "example-sync-clustered-topic"
-	topicAsync := "example-async-clustered-topic"
-	// Init channels required for async handler
+	// Prepare two topics for sync and async scenario
+	topic1 := "example-sync-clustered-topic"
+	topic2 := "example-async-clustered-topic"
+
+	// Init custom multiplexer. Multiplexer in kafka works in hash mode, to be able to publish/consume custom partitions
+	// and offsets, multiplexer with manual mode on has to be used. Creating a multiplexer is established a new connection
+	// to kafka
+	multiplexer, err := mux.InitMultiplexerWithConfig(plugin.Kafka.Config, plugin.Kafka.ServiceLabel.GetAgentLabel() + "-cluster", "manual", plugin.Log)
+	if err != nil {
+		return err
+	}
+
+	// Create a common connection on multiplexer. Every publisher/consumer initialized on this connection uses the multiplexer
+	connection := multiplexer.NewProtoConnection("example-proto-connection", &keyval.SerializerJSON{})
+
+	// Create a synchronous and asynchronous publisher. In manual mode, every publisher has defined partition, where
+	// the messages for given partition will be stored
+	plugin.kafkaSyncPublisher = connection.NewSyncPublisherToPartition(topic1, syncMessagePartition)
+	// Async publisher requires two more channels to send success/error callback
 	plugin.asyncSuccessChannel = make(chan messaging.ProtoMessage, 0)
 	plugin.asyncErrorChannel = make(chan messaging.ProtoMessageErr, 0)
+	plugin.kafkaAsyncPublisher = connection.NewAsyncPublisherToPartition(topic2, asyncMessagePartition,
+		messaging.ToProtoMsgChan(plugin.asyncSuccessChannel), messaging.ToProtoMsgErrChan(plugin.asyncErrorChannel))
 
-	connection := plugin.Kafka.NewProtoConnection("example-proto-connection")
-
-	// Create a synchronous publisher for the selected topic and partition
-	plugin.kafkaSyncPublisher = connection.NewSyncPublisherToPartition(topicSync, 0)
-
-	// Create an asynchronous publisher for the selected topic and partition
-	// todo success callback will return always from any partition. Watching on in causes that the callback is returned twice
-	plugin.kafkaAsyncPublisher = connection.NewAsyncPublisherToPartition(topicAsync, 0, messaging.ToProtoMsgChan(plugin.asyncSuccessChannel),
-		messaging.ToProtoMsgErrChan(plugin.asyncErrorChannel))
-
-	plugin.kafkaWatcher = plugin.Kafka.NewWatcher("kafka-sync-cluster-plugin")
-	plugin.kafkaAsyncWatcher = plugin.Kafka.NewWatcher("kafka-async-cluster-plugin")
-
-	// kafkaWatcher.Watch is called to start consuming a topic.
+	// Initialize sync watcher
+	plugin.kafkaWatcher = plugin.Kafka.NewWatcher("sync-watcher")
+	// Prepare subscription channel. Relevant kafka messages are send to this channel so watcher can read it
 	plugin.subscription = make(chan messaging.ProtoMessage)
-	// the watcher is consuming messages on default partition and offset, so it will receive them
-	err = plugin.kafkaWatcher.WatchPartition(messaging.ToProtoMsgChan(plugin.subscription), topicSync, 0, 0)
+	// The watcher is consuming messages on custom partition and offset. If there is a producer who stores message to
+	// the partition and offset which is the same or newer, the message will be consumed
+	err = plugin.kafkaWatcher.WatchPartition(messaging.ToProtoMsgChan(plugin.subscription), topic1,
+		syncMessagePartition, syncMessageOffset)
 	if err != nil {
 		plugin.Log.Error(err)
 	}
 
-	// kafkaWatcher.Watch is called to start consuming a topic.
+	// Initialize async watcher
+	plugin.kafkaAsyncWatcher = plugin.Kafka.NewWatcher("async-watcher")
+	// Prepare subscription channel. Relevant kafka messages are send to this channel so watcher can read it
 	plugin.asyncSubscription = make(chan messaging.ProtoMessage)
-	// the watcher is consuming messages on custom partition, so it should not receive any message
-	err = plugin.kafkaAsyncWatcher.WatchPartition(messaging.ToProtoMsgChan(plugin.asyncSubscription), topicAsync, 0, 0)
+	// The watcher is consuming messages on custom partition and offset. If there is a producer who stores message to
+	// the partition and offset which is the same or newer, the message will be consumed
+	err = plugin.kafkaAsyncWatcher.WatchPartition(messaging.ToProtoMsgChan(plugin.asyncSubscription), topic2,
+		asyncMessagePartition, asyncMessageOffset)
 	if err != nil {
 		plugin.Log.Error(err)
 	}
@@ -155,13 +181,13 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	plugin.Log.Info("Initialization of the custom plugin for the Kafka example is completed")
 
 	// Run sync and async kafka consumers
-	plugin.syncEventHandler()
+	go plugin.syncEventHandler()
 	go plugin.asyncEventHandler()
 
-	// Run the producer to send notifications
+	// Run the producer
 	go plugin.producer()
 
-	// Verify results and close the example
+	// Verify results and close the example if successful
 	go plugin.closeExample()
 
 	return err
@@ -186,34 +212,35 @@ func (plugin *ExamplePlugin) Close() error {
 	return nil
 }
 
-/***********************
- * Kafka Example calls *
- ***********************/
+/*************
+ * Producers *
+ *************/
 
-// Send Kafka notifications
+// Kafka Producer sends messages with desired topic and in manual mode also partition
 func (plugin *ExamplePlugin) producer() {
 	// Wait for the both event handlers to initialize
 	time.Sleep(2 * time.Second)
 
 	// Synchronous message with protobuf-encoded message
 	enc := &etcd_example.EtcdExample{
-		StringVal: "value",
+		StringVal: "sync-dummy-message",
 		Uint32Val: uint32(0),
 		BoolVal:   true,
 	}
-	plugin.Log.Info("Sending Kafka notification (protobuf)")
-	err := plugin.kafkaSyncPublisher.Put("proto-key", enc)
-	if err != nil {
-		plugin.Log.Errorf("Failed to sync-send a proto message, error %v", err)
-	} else {
-		plugin.Log.Info("Sync proto message sent")
+	// Send several sync messages with offset 0,1,...
+	plugin.Log.Info("Sending %v Kafka notifications (protobuf) ...", syncMessageCount)
+	for i := 0; i < syncMessageCount; i++{
+		err := plugin.kafkaSyncPublisher.Put("proto-key", enc)
+		if err != nil {
+			plugin.Log.Errorf("Failed to sync-send a proto message, error %v", err)
+		}
 	}
 
 	// Asynchronous message with protobuf encoded message. A success event is sent to the app asynchronously
 	// on an event channel when the message has been successfully sent to Kafka. An error message is sent to
-	// the app asynchronously if the message could not be sent.
+	// the app asynchronously if the message could not be sent (see also asyncEventHandler)
 	plugin.Log.Info("Sending async Kafka notification (protobuf)")
-	err = plugin.kafkaAsyncPublisher.Put("async-proto-key", enc)
+	err := plugin.kafkaAsyncPublisher.Put("async-proto-key", enc)
 	if err != nil {
 		plugin.Log.Errorf("Failed to async-send a proto message, error %v", err)
 	} else {
@@ -225,35 +252,55 @@ func (plugin *ExamplePlugin) producer() {
  * Consumers *
  *************/
 
-// Kafka consumer is subscribed to channel with specific topic. If producer sends a message with the topic, consumer will
-// receive it
+// Kafka consumer is subscribed to channel with specific topic, partition and offset. If producer sends a message with
+// correct parameters, consumer will receive it
 func (plugin *ExamplePlugin) syncEventHandler() {
-	plugin.Log.Info("Started Kafka event handler...")
+	plugin.Log.Info("Started Kafka sync event handler...")
 
-	// Watch on message channel for sync kafka events
-	go func() {
-		for message := range plugin.subscription {
-			plugin.Log.Infof("Received sync Kafka Message, topic '%s', partition '%v', offset '%v', key: '%s', ",
-				message.GetTopic(), message.GetPartition(), message.GetOffset(), message.GetKey())
-			// Let it know that this part of the example is done
+	// Producer sends several messages (set in syncMessageCount). Consumer should receive only messages from desired
+	// partition and offset
+	messageCounter := 0
+	for message := range plugin.subscription {
+		plugin.Log.Infof("Received sync Kafka Message, topic '%s', partition '%v', offset '%v', key: '%s', ",
+			message.GetTopic(), message.GetPartition(), message.GetOffset(), message.GetKey())
+		messageCounter++
+		if message.GetPartition() != syncMessagePartition {
+			plugin.Log.Errorf("Received sync message with unexpected partition: %v", message.GetOffset())
+		}
+		if message.GetOffset() < syncMessageOffset {
+			plugin.Log.Errorf("Received sync message with unexpected offset: %v", message.GetOffset())
+		}
+		// For example purpose: let it know that this part of the example is done
+		if messageCounter == (syncMessageCount - syncMessageOffset) {
 			plugin.syncCaseDone = true
 		}
-	}()
+	}
+
 }
 
-// asyncEventHandler shows handling of asynchronous events coming from the Kafka client
+// Kafka consumer is subscribed to channel with specific topic, partition and offset. If producer sends a message with
+// correct parameters, consumer will receive it
 func (plugin *ExamplePlugin) asyncEventHandler() {
 	plugin.Log.Info("Started Kafka async event handler...")
 	for {
 		select {
+		// Channel subscribed with watcher
 		case message := <-plugin.asyncSubscription:
 			plugin.Log.Infof("Received async Kafka Message, topic '%s', partition '%v', offset '%v', key: '%s', ",
 				message.GetTopic(), message.GetPartition(), message.GetOffset(), message.GetKey())
-			// Let it know that this part of the example is done
+			if message.GetPartition() != asyncMessagePartition {
+				plugin.Log.Errorf("Received async message with unexpected partition: %v", message.GetOffset())
+			}
+			if message.GetOffset() < asyncMessageOffset {
+				plugin.Log.Errorf("Received async message with unexpected offset: %v", message.GetOffset())
+			}
+			// For example purpose: let it know that this part of the example is done
 			plugin.asyncCaseDone = true
+		// Success callback channel
 		case message := <-plugin.asyncSuccessChannel:
 			plugin.Log.Infof("Async message successfully delivered, topic '%s', partition '%v', offset '%v', key: '%s', ",
 				message.GetTopic(), message.GetPartition(), message.GetOffset(), message.GetKey())
+		// Error callback channel
 		case err := <-plugin.asyncErrorChannel:
 			plugin.Log.Errorf("Failed to publish async message, %v", err)
 		}

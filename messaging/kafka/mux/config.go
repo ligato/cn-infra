@@ -56,7 +56,7 @@ func getConsumerFactory(config *client.Config) ConsumerFactory {
 // InitMultiplexer initialize and returns new kafka multiplexer based on the supplied config file.
 // Name is used as groupId identification of consumer. Kafka allows to store last read offset for
 // a groupId. This is leveraged to deliver unread messages after restart.
-func InitMultiplexer(configFile string, name string, log logging.Logger) (*Multiplexer, error) {
+func InitMultiplexer(configFile string, name string, partitioner string, log logging.Logger) (*Multiplexer, error) {
 
 	var err error
 	muxCfg := &Config{[]string{DefAddress}}
@@ -66,14 +66,14 @@ func InitMultiplexer(configFile string, name string, log logging.Logger) (*Multi
 			return nil, err
 		}
 	}
-	return InitMultiplexerWithConfig(muxCfg, name, log)
+	return InitMultiplexerWithConfig(muxCfg, name, partitioner, log)
 }
 
 // InitMultiplexerWithConfig initialize and returns new kafka multiplexer
 // based on the supplied configuration.
 // Name is used as groupId identification of consumer. Kafka allows to store last read offset for
 // a groupId. This is leveraged to deliver unread messages after restart.
-func InitMultiplexerWithConfig(muxConfig *Config, name string, log logging.Logger) (*Multiplexer, error) {
+func InitMultiplexerWithConfig(muxConfig *Config, name string, partitioner string, log logging.Logger) (*Multiplexer, error) {
 
 	const errorFmt = "Failed to create Kafka %s, Configured broker(s) %v, Error: '%s'"
 
@@ -85,8 +85,7 @@ func InitMultiplexerWithConfig(muxConfig *Config, name string, log logging.Logge
 	config.SetSendError(true)
 	config.SetErrorChan(make(chan *client.ProducerError))
 	config.Brokers = muxConfig.Addrs
-	// todo added
-	config.SetPartitioner("manual")
+	config.SetPartitioner(partitioner)
 
 	syncProducer, err := client.NewSyncProducer(config, nil)
 	if err != nil {
