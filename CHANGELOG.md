@@ -2,7 +2,7 @@
 * [FlavorAllConnectors](flavors/connectors)
     * Inlined plugins: ETCD, Kafka, Redis, Cassandra 
 * [Kafka Partitions](messaging/kafka) 
-    * Implemented new methods that allow to specificy partitions & offset parameters:
+    * Implemented new methods that allow to specify partitions & offset parameters:
       * publish: Mux.NewSyncPublisherToPartition() & Mux.NewAsyncPublisherToPartition()
       * watch: ProtoWatcher.WatchPartition()
     * Minimalistic examples & documentation for Kafka API will be improved in a later release. 
