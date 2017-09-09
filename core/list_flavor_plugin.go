@@ -15,6 +15,7 @@
 package core
 
 import (
+	"errors"
 	"reflect"
 
 	"github.com/ligato/cn-infra/logging/logroot"
@@ -32,11 +33,15 @@ type Flavor interface {
 // It extracts all plugins and returns them as a slice of NamedPlugins.
 func ListPluginsInFlavor(flavor Flavor) (plugins []*NamedPlugin) {
 	uniqueness := map[PluginName]Plugin{}
-	return listPluginsInFlavor(reflect.ValueOf(flavor), uniqueness)
+	l, err := listPluginsInFlavor(reflect.ValueOf(flavor), uniqueness)
+	if err != nil {
+		logroot.StandardLogger().Error("Invalid argument - it does not satisfy the Flavor interface")
+	}
+	return l
 }
 
 // listPluginsInFlavor checks every field and tries to cast it to Plugin or inspect its type recursively.
-func listPluginsInFlavor(flavorValue reflect.Value, uniqueness map[PluginName]Plugin) []*NamedPlugin {
+func listPluginsInFlavor(flavorValue reflect.Value, uniqueness map[PluginName]Plugin) ([]*NamedPlugin, error) {
 	var res []*NamedPlugin
 
 	flavorType := flavorValue.Type()
@@ -50,7 +55,11 @@ func listPluginsInFlavor(flavorValue reflect.Value, uniqueness map[PluginName]Pl
 	}
 
 	if !flavorValue.IsValid() {
-		return res
+		return res, nil
+	}
+
+	if _, ok := flavorValue.Addr().Interface().(Flavor); !ok {
+		return res, errors.New("does not satisfy the Flavor interface")
 	}
 
 	pluginType := reflect.TypeOf((*Plugin)(nil)).Elem()
@@ -75,15 +84,23 @@ func listPluginsInFlavor(flavorValue reflect.Value, uniqueness map[PluginName]Pl
 				}
 			} else {
 				// try to inspect flavor structure recursively
-				res = append(res, listPluginsInFlavor(fieldVal, uniqueness)...)
+				l, err := listPluginsInFlavor(fieldVal, uniqueness)
+				if err != nil {
+					logroot.StandardLogger().
+						WithField("fieldName", field.Name).
+						Error("Bad field: must satisfy either Plugin or Flavor interface")
+				} else {
+					res = append(res, l...)
+				}
 			}
 		}
 	}
 
-	return res
+	return res, nil
 }
 
-// fieldPlugin tries to cast given field to Plugin
+// fieldPlugin determines if a given field satisfies the Plugin interface.
+// If yes, the plugin value is returned; if not, nil is returned
 func fieldPlugin(field reflect.StructField, fieldVal reflect.Value, pluginType reflect.Type) Plugin {
 	switch fieldVal.Kind() {
 	case reflect.Struct:
