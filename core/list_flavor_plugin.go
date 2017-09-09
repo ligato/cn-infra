@@ -29,7 +29,7 @@ type Flavor interface {
 	Plugins() []*NamedPlugin
 }
 
-// ListPluginsInFlavor uses reflection to traverse top level fields of Flavor structure.
+// ListPluginsInFlavor lists plugins in a Flavor.
 // It extracts all plugins and returns them as a slice of NamedPlugins.
 func ListPluginsInFlavor(flavor Flavor) (plugins []*NamedPlugin) {
 	uniqueness := map[PluginName]Plugin{}
@@ -40,7 +40,18 @@ func ListPluginsInFlavor(flavor Flavor) (plugins []*NamedPlugin) {
 	return l
 }
 
-// listPluginsInFlavor checks every field and tries to cast it to Plugin or inspect its type recursively.
+// listPluginsInFlavor lists plugins in a Flavor. If there are multiple
+// instances of a given plugin type, only one plugin instance is listed.
+// A Flavor is composed of multiple Flavor and Plugins. The composition
+// is recursive: a component Flavor contains Plugin components and may
+// contain Flavor components as well. The function recursively lists
+// plugins contained in component Flavors.
+//
+// The function returns an error if the flavorValue argument does not
+// satisfy the Flavor interface. All components in the argument flavorValue
+// must satisfy either the Plugin or the Flavor interface. If they do not,
+// an error is logged, but the function does not return an error.
+// in the argument
 func listPluginsInFlavor(flavorValue reflect.Value, uniqueness map[PluginName]Plugin) ([]*NamedPlugin, error) {
 	var res []*NamedPlugin
 
@@ -100,7 +111,7 @@ func listPluginsInFlavor(flavorValue reflect.Value, uniqueness map[PluginName]Pl
 }
 
 // fieldPlugin determines if a given field satisfies the Plugin interface.
-// If yes, the plugin value is returned; if not, nil is returned
+// If yes, the plugin value is returned; if not, nil is returned.
 func fieldPlugin(field reflect.StructField, fieldVal reflect.Value, pluginType reflect.Type) Plugin {
 	switch fieldVal.Kind() {
 	case reflect.Struct:
