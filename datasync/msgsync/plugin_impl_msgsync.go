@@ -26,15 +26,15 @@ import (
 // PubPlugin implements KeyProtoValWriter that propagates protobuf messages
 // to a particular topic (unless the messaging.Mux is not disabled).
 type PubPlugin struct {
-	Deps // inject
+	Deps    // inject
 	adapter messaging.ProtoPublisher
 }
 
 // Deps is here to group injected dependencies of plugin
 // to not mix with other plugin fields.
 type Deps struct {
-	local.PluginInfraDeps   // inject
-	Messaging messaging.Mux // inject
+	local.PluginInfraDeps               // inject
+	Messaging             messaging.Mux // inject
 	Cfg
 }
 
@@ -56,7 +56,11 @@ func (plugin *PubPlugin) AfterInit() error {
 		plugin.PluginConfig.GetValue(&cfg)
 
 		if cfg.Topic != "" {
-			plugin.adapter = plugin.Messaging.NewSyncPublisher(cfg.Topic)
+			var err error
+			plugin.adapter, err = plugin.Messaging.NewSyncPublisher(cfg.Topic)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
