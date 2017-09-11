@@ -2,7 +2,8 @@
 
 Each plugin must implement the Init() and Close() methods (see
 [plugin_spi.go][1]. A plugin may optionally implement the AfterInit()
-method. These methods are called sequentially at startup by [agent_core.go][2].
+method. These methods are called sequentially at startup
+by [agent_core.go][2].
 
 There are following rules for what to put in the methods:
 ## Init()
@@ -17,8 +18,8 @@ There are following rules for what to put in the methods:
 ## AfterInit()
 * Connect clients & start servers here (see the
   [System Integration Guidelines][4]
-* Propagate errors. Agent will stop because it is not properly initialized
-  and calls Close() methods.
+* Propagate errors. Agent will stop because it is not properly
+  initialized and calls Close() methods.
 * Subscribe for watching data (see the go channel in the example below).
 
 ## Close()

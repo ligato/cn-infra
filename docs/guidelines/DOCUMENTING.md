@@ -1,6 +1,7 @@
 # Documenting
 
-You can store documentation in three different places (README.md, doc.go, GOlang comments)
+You can store documentation in three different places (README.md, doc.go,
+GOlang comments)
 
 |               | Description   | Visibility                                                                   |
 | ------------- |---------------|------------------------------------------------------------------------------|

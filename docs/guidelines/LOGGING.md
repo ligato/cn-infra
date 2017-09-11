@@ -2,16 +2,21 @@
 
 ## Overview
 CN-Infra logging API is defined in the [logging package](../../logging/log_api.go).
-The API defines interface of a logger, a log registry and a log factory. Currently the only provided
-implementation of a logger is based on [Logrus](https://github.com/sirupsen/logrus) and can be found
+The API defines interface of a logger, a log registry and a log factory.
+Currently the only provided implementation of a logger is based on
+[Logrus](https://github.com/sirupsen/logrus) and can be found
 [here](../../logging/logrus/logger.go).
 
 ## Log Registry
-The Logrus-based logger also ships with an implementation of both the log registry
-and the log factory under one structure denoted [logRegistry](../../logging/logrus/registry.go).
-The registry can be installed into a CN-Infra based applications through the [local flavor](../../flavors/local).
-On its own it allows to create a new logger with a given label and maintain a local view of all active loggers.
-The following example is a combination of code snippets presenting the use of the registry in a user-defined plugin:
+The Logrus-based logger also ships with an implementation of both
+the log registry and the log factory under one structure denoted
+as [logRegistry](../../logging/logrus/registry.go).
+The registry can be installed into a CN-Infra based applications
+through the [local flavor](../../flavors/local).
+On its own it allows to create a new logger with a given label and
+maintain a local view of all active loggers.
+The following example is a combination of code snippets presenting
+the use of the registry in a user-defined plugin:
 ```go
 /*** A very simple plugin which uses LogRegistry ***/
 type Plugin struct {
@@ -57,17 +62,23 @@ func (f *Flavor) Inject() bool {
 }
 ```
 
-The registry gets much more interesting in combination with the [RPC flavor](../../flavors/rpc).
-The RPC flavor includes [log manager](../../logging/logmanager) which provides a remote access to the log
-registry through REST API. It is possible to view all active loggers via HTTP GET method and to set the log
-level individually for each logger via HTTP POST method.
+The registry gets much more interesting in a combination with
+the [RPC flavor](../../flavors/rpc).
+The RPC flavor includes [log manager](../../logging/logmanager) which
+provides a remote access to the log registry through REST API.
+It is possible to view all active loggers via HTTP GET method and to set
+the log level individually for each logger via HTTP POST method.
 
 ## Logging dependency
-Plugins that need to use the logging capabilities should be defined as dependent on [PluginLogger](../../logging/log_api.go).
-Such dependency definition is already prepared and can be applied through embedding from the structure
-[PluginLogDeps](../../flavors/localdeps/plugin_deps.go). Plugins that interact with DB/Messaging may use
-[PluginInfraDeps](../../flavors/localdeps/plugin_deps.go) instead, which, apart from logging, also includes some other
-basic dependencies likely to be needed.
+Plugins that need to use the logging capabilities should be defined
+as dependent on [PluginLogger](../../logging/log_api.go).
+Such dependency definition is already prepared and can be applied through
+embedding from the structure
+[PluginLogDeps](../../flavors/localdeps/plugin_deps.go).
+Plugins that interact with DB/Messaging may use
+[PluginInfraDeps](../../flavors/localdeps/plugin_deps.go) instead, which,
+apart from logging, also includes some other basic dependencies likely
+to be needed.
 
 Example:
 ```go
@@ -84,11 +95,15 @@ type Deps struct {
 }
 ```
 
-All plugin infra-dependencies can be fully satisfied by the local flavor. The log registry is used to create a new logger
-referenced by the plugin name and injected into the plugin as a struct member labelled **Log** (inherited from PluginLogger).
+All plugin infra-dependencies can be fully satisfied by the local flavor.
+The log registry is used to create a new logger referenced by the plugin
+name and injected into the plugin as a struct member labelled **Log**
+(inherited from PluginLogger).
 
-For the injection of plugin infra-dependencies from the local flavor there is already a helper method
-[InfraDeps()](../../flavors/local/local_flavor.go) as presented in the following example:
+For the injection of plugin infra-dependencies from the local flavor
+there is already a helper method
+[InfraDeps()](../../flavors/local/local_flavor.go) as presented in the
+following example:
 ```go
 type Flavor struct {
 	*local.FlavorLocal
@@ -116,11 +131,15 @@ func (f *Flavor) Inject() error {
 }
 ```
 
-Similarly, for PluginLogDeps the helper method [LogDeps()](../../flavors/local/local_flavor.go) can be used to inject the logger.
+Similarly, for PluginLogDeps the helper method
+[LogDeps()](../../flavors/local/local_flavor.go) can be used to inject
+the logger.
 
 ## Plugin Logger
-The use of golang embedding from PluginLogger through PluginLogDeps/PluginInfraDeps, plugin's own Deps and all the way
-to the top definition of the plugin, allows to access the plugin logger in a rather concise manner:
+The use of golang embedding from PluginLogger through
+PluginLogDeps/PluginInfraDeps, plugin's own Deps and all the way
+to the top definition of the plugin, allows to access the plugin logger
+in a rather concise manner:
 ```go
  func (plugin *Plugin) Init() error {
  	plugin.Log.Debug("Initializing interface plugin")
@@ -128,16 +147,21 @@ to the top definition of the plugin, allows to access the plugin logger in a rat
  }
 ```
 
-While plugins can still use the [DefaultLogger](../../logging/logrus) (referenced as "defaultLogger"), it is recommended
-to use a separate logger for each plugin through the dependency injection as explained in [Logging dependency](#Logging dependency).
-This gives the advantage of being able to set different log level for each plugin. This is especially useful for debugging
-purposes as some selected plugins may be switched the the Debug log level while others can simultaneously remain in a less
-verbose mode.
+While plugins can still use the [DefaultLogger](../../logging/logrus)
+(referenced as "defaultLogger"), it is recommended to use a separate
+logger for each plugin through the dependency injection as explained in
+[Logging dependency](#Logging dependency).
+This gives the advantage of being able to set different log level for
+each plugin. This is especially useful for debugging purposes as some
+selected plugins may be switched to the Debug log level while others can
+simultaneously remain in a less verbose mode.
 
-For a more complicated plugin it can be preferred to split log messages into mulitple topics using **child loggers**.
-This is possible because the injected plugin logger not only implements the logger API, but also the interface of the log factory.
-Method [NewLogger()](../../logging/log_api.go) allows to create a new child logger with a name that gets prefixed with
-the plugin label:
+For a more complicated plugin it can be preferred to split log messages
+into multiple topics using **child loggers**. This is possible because
+the injected plugin logger not only implements the logger API, but also
+the interface of the log factory.
+Method [NewLogger()](../../logging/log_api.go) allows to create a new
+child logger with a name that gets prefixed with the plugin label:
 ```go
 // Create a new child logger
 childLogger := plugin.Log.NewLogger("childLogger")
@@ -145,5 +169,6 @@ childLogger := plugin.Log.NewLogger("childLogger")
 childLogger.Infof("Log using named logger with name: %v", childLogger.GetName())
 ```
 
-A full code example with plugin's own logger injected through the use of PluginLogDeps and with one child logger can be found
-in [examples/logs_in_plugin](../../examples/logs_in_plugin/main.go).
+A full code example with plugin's own logger injected through
+the use of PluginLogDeps and with one child logger can be found in
+[examples/logs_in_plugin](../../examples/logs_in_plugin/main.go).
