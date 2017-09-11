@@ -45,22 +45,47 @@ func TestListPlugins02OnePluginInFlavor(t *testing.T) {
 		PluginName("Plugin2"), &flavor.Plugin2}}))
 }
 
-// FlavorNoPlugin contains no plugins
+// TestListPlugins03ConfusingDepPointerToPlugin
+func TestListPlugins03ConfusingDepPointerToPlugin(t *testing.T) {
+	gomega.RegisterTestingT(t)
+
+	flavor := &FlavorConfusingDepPointerToPlugin{}
+	plugs := flavor.Plugins()
+	t.Log("plugs ", plugs)
+	gomega.Expect(plugs).To(gomega.Equal([]*NamedPlugin{
+		{PluginName("Plugin1"), &flavor.Plugin1},
+		{PluginName("Dep01"), flavor.Plugin2.Dep01}}))
+}
+
 type FlavorNoPlugin struct {
+	Dep1    string
 	Plugin1 MissignCloseMethod
 	Plugin2 struct {
 		Dep1B string
 	}
 }
 
-// FlavorOnePlugin contains one plugin (another is missing Close method)
+// FlavorOnePlugin impleme
 type FlavorOnePlugin struct {
+	Dep1    string
 	Plugin1 MissignCloseMethod
 	Plugin2 DummyPlugin
 }
 
+// FlavorConfusingDepPointerToPlugin impleme
+type FlavorConfusingDepPointerToPlugin struct {
+	Plugin1 DummyPlugin
+	Plugin2 MissignCloseMethodWithDepPointingToPlugin
+}
+
 // MissignCloseMethod implements just Init() but not Close() method
 type MissignCloseMethod struct {
+}
+
+// MissignCloseMethodWithDepPointingToPlugin intentionaly
+// contains pointer to dependency
+type MissignCloseMethodWithDepPointingToPlugin struct {
+	Dep01 *DummyPlugin
 }
 
 // Init does nothing
@@ -70,7 +95,6 @@ func (*MissignCloseMethod) Init() error {
 
 // DummyPlugin just defines Init() Close() with empty method bodies
 type DummyPlugin struct {
-	internalFlag bool
 }
 
 // Init does nothing
@@ -83,42 +107,21 @@ func (*DummyPlugin) Close() error {
 	return nil
 }
 
-// DummyPlugin just defines Init() Close() with empty method bodies
-type DummyPluginDep2 struct {
-	internalFlag bool
-}
-
 // Init does nothing
-func (*DummyPluginDep2) Init() error {
+func (*MissignCloseMethodWithDepPointingToPlugin) Init() error {
 	return nil
 }
 
-// Close does nothing
-func (*DummyPluginDep2) Close() error {
-	return nil
-}
-
-// DummyPluginDep1 just defines Init() Close() with empty method bodies
-type DummyPluginDep1 struct {
-	internalFlag bool
-}
-
-// Init does nothing
-func (*DummyPluginDep1) Init() error {
-	return nil
-}
-
-// Close does nothing
-func (*DummyPluginDep1) Close() error {
-	return nil
-}
-
-// Plugins list plugins in this flavor
 func (f *FlavorNoPlugin) Plugins() []*NamedPlugin {
 	return ListPluginsInFlavor(f)
 }
 
-// Plugins list plugins in this flavor
 func (f *FlavorOnePlugin) Plugins() []*NamedPlugin {
+	return ListPluginsInFlavor(f)
+}
+
+func (f *FlavorConfusingDepPointerToPlugin) Plugins() []*NamedPlugin {
+	f.Plugin2.Dep01 = &f.Plugin1
+
 	return ListPluginsInFlavor(f)
 }
