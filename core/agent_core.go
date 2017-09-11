@@ -36,14 +36,16 @@ type Agent struct {
 	MaxStartupTime time.Duration
 	// plugin list
 	plugins []*NamedPlugin
+	// the field is set before initialization of every plugin with its name
+	handledPlugin string
 	logging.Logger
 }
 
 const (
-	logErrorFmt       = "Plugin %s: init error '%s'"
-	logSuccessFmt     = "Plugin %s: init success"
-	logPostErrorFmt   = "Plugin %s: post-init error '%s'"
-	logPostSuccessFmt = "Plugin %s: post-init success"
+	logErrorFmt       = "plugin %s: init error '%s'"
+	logSuccessFmt     = "plugin %s: init success"
+	logPostErrorFmt   = "plugin %s: post-init error '%s'"
+	logPostSuccessFmt = "plugin %s: post-init success"
 )
 
 // NewAgent returns a new instance of the Agent with plugins.
@@ -51,6 +53,7 @@ func NewAgent(logger logging.Logger, maxStartup time.Duration, plugins ...*Named
 	a := Agent{
 		maxStartup,
 		plugins,
+		"",
 		logger,
 	}
 	return &a
@@ -97,7 +100,7 @@ func (agent *Agent) Start() error {
 		return nil
 	case <-time.After(agent.MaxStartupTime):
 		//TODO FIX - stop the initialization and close already initialized
-		return fmt.Errorf("%s", "Some plugins not intialized before timeout")
+		return fmt.Errorf("plugin %v not completed before timeout", agent.handledPlugin)
 	}
 }
 
@@ -133,6 +136,8 @@ func (agent *Agent) Stop() error {
 // initPlugins calls Init() an all plugins on the list
 func (agent *Agent) initPlugins() error {
 	for i, plug := range agent.plugins {
+		// set currently initialized plugin name
+		agent.handledPlugin = string(plug.PluginName + " Init()")
 		err := plug.Init()
 		if err != nil {
 			//Stop the plugins that are initialized
@@ -154,6 +159,8 @@ func (agent *Agent) initPlugins() error {
 // finish their initialization after  all other plugins have been initialized.
 func (agent *Agent) handleAfterInit() error {
 	for _, plug := range agent.plugins {
+		// set currently after-initialized plugin name
+		agent.handledPlugin = string(plug.PluginName + " AfterInit()")
 		if plug2, ok := plug.Plugin.(PostInit); ok {
 			agent.Debug("afterInit begin for ", plug.PluginName)
 			err := plug2.AfterInit()
