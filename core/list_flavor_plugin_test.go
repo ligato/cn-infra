@@ -45,7 +45,9 @@ func TestListPlugins02OnePluginInFlavor(t *testing.T) {
 		PluginName("Plugin2"), &flavor.Plugin2}}))
 }
 
-// TestListPlugins03ConfusingDepPointerToPlugin
+// TestListPlugins03ConfusingDepPointerToPlugin checks that flavor that contains multiple fields
+// but only one implements Plugin interface (another field is missing Close()
+// but has dependency - pointer to a plugin) returns slice with one particular plugin.
 func TestListPlugins03ConfusingDepPointerToPlugin(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
@@ -57,22 +59,22 @@ func TestListPlugins03ConfusingDepPointerToPlugin(t *testing.T) {
 		{PluginName("Dep01"), flavor.Plugin2.Dep01}}))
 }
 
+// FlavorNoPlugin contains no plugins
 type FlavorNoPlugin struct {
-	Dep1    string
 	Plugin1 MissignCloseMethod
 	Plugin2 struct {
 		Dep1B string
 	}
 }
 
-// FlavorOnePlugin impleme
+// FlavorOnePlugin contains one plugin (another is missing Close method)
 type FlavorOnePlugin struct {
-	Dep1    string
 	Plugin1 MissignCloseMethod
 	Plugin2 DummyPlugin
 }
 
-// FlavorConfusingDepPointerToPlugin impleme
+// FlavorConfusingDepPointerToPlugin one plugin
+// & another field that seems to be plugin (but it is not)
 type FlavorConfusingDepPointerToPlugin struct {
 	Plugin1 DummyPlugin
 	Plugin2 MissignCloseMethodWithDepPointingToPlugin
@@ -82,7 +84,7 @@ type FlavorConfusingDepPointerToPlugin struct {
 type MissignCloseMethod struct {
 }
 
-// MissignCloseMethodWithDepPointingToPlugin intentionaly
+// MissignCloseMethodWithDepPointingToPlugin intentionally
 // contains pointer to dependency
 type MissignCloseMethodWithDepPointingToPlugin struct {
 	Dep01 *DummyPlugin
@@ -112,14 +114,17 @@ func (*MissignCloseMethodWithDepPointingToPlugin) Init() error {
 	return nil
 }
 
+// Plugins list plugins in this flavor
 func (f *FlavorNoPlugin) Plugins() []*NamedPlugin {
 	return ListPluginsInFlavor(f)
 }
 
+// Plugins list plugins in this flavor
 func (f *FlavorOnePlugin) Plugins() []*NamedPlugin {
 	return ListPluginsInFlavor(f)
 }
 
+// Plugins list plugins in this flavor
 func (f *FlavorConfusingDepPointerToPlugin) Plugins() []*NamedPlugin {
 	f.Plugin2.Dep01 = &f.Plugin1
 
