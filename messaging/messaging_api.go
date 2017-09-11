@@ -27,6 +27,8 @@ type Mux interface {
 	NewAsyncPublisherToPartition(topic string, partition int32,
 		successClb func(ProtoMessage), errorClb func(err ProtoMessageErr)) ProtoPublisher
 	NewWatcher(subscriberName string) ProtoWatcher
+	// Disabled if the plugin config was not found
+	Disabled() (disabled bool)
 }
 
 // ProtoPublisher allows to publish a message of type proto.Message into messaging system.
