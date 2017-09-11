@@ -11,7 +11,6 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/examples/model"
 	"github.com/ligato/cn-infra/flavors/local"
-	"github.com/ligato/cn-infra/flavors/localdeps"
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
@@ -117,7 +116,7 @@ type ExamplePlugin struct {
 
 // Deps is a helper struct which is grouping all dependencies injected to the plugin
 type Deps struct {
-	localdeps.PluginInfraDeps   // injected
+	local.PluginInfraDeps                 // injected
 	Publisher datasync.KeyProtoValWriter  // injected - To write ETCD data
 	Watcher   datasync.KeyValProtoWatcher // injected - To watch ETCD data
 }
@@ -130,6 +129,16 @@ func (plugin *ExamplePlugin) Init() error {
 	plugin.changeChannel = make(chan datasync.ChangeEvent)
 	plugin.context = context.Background()
 
+
+	// Start the consumer (ETCD watcher) before the custom plugin configurator is initialized
+	go plugin.consumer()
+	// Subscribe watcher to be able to watch on data changes and resync events
+	err := plugin.subscribeWatcher()
+	if err != nil {
+		return err
+	}
+
+
 	plugin.Log.Info("Initialization of the custom plugin for the ETCD example is completed")
 
 	return nil
@@ -137,16 +146,8 @@ func (plugin *ExamplePlugin) Init() error {
 
 // AfterInit is called after every plugin is initialized
 func (plugin *ExamplePlugin) AfterInit() error {
-	// Start the consumer (ETCD watcher) before the custom plugin configurator is initialized
-	go plugin.consumer()
 
 	go plugin.etcdPublisher()
-
-	// Subscribe watcher to be able to watch on data changes and resync events
-	err := plugin.subscribeWatcher()
-	if err != nil {
-		return err
-	}
 
 	go plugin.closeExample()
 

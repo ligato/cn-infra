@@ -18,7 +18,7 @@ as the other plugin (internal) fields.
 ```go
 	package xy
 	import (
-	    "github.com/ligato/cn-infra/flavors/localdeps"
+	    "github.com/ligato/cn-infra/flavors/local"
 	    "github.com/ligato/cn-infra/datasync"
 	)
 
@@ -30,11 +30,12 @@ as the other plugin (internal) fields.
 	}
 
 	type Deps struct {
-	    localdeps.PluginLogDeps //Plugin Logger & Plugin Name
+	    local.PluginLogDeps //Plugin Logger & Plugin Name
 
-	    //other dependencies:
+	    // other dependencies:
 
 	    Watcher datasync.KeyValProtoWatcher
+	    // ...
 	}
 
     func (plugin *PluginXY) Init() error {

@@ -16,8 +16,7 @@ package cassandra
 
 import (
 	"github.com/ligato/cn-infra/db/sql"
-	"github.com/ligato/cn-infra/flavors/localdeps"
-	"github.com/ligato/cn-infra/utils/safeclose"
+	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/willfaught/gockle"
 )
 
@@ -32,7 +31,7 @@ type Plugin struct {
 // Deps is here to group injected dependencies of plugin
 // to not mix with other plugin fields.
 type Deps struct {
-	localdeps.PluginInfraDeps // inject
+	local.PluginInfraDeps // inject
 }
 
 // Init is called at plugin startup. The session to etcd is established.
@@ -102,8 +101,8 @@ func (p *Plugin) NewBroker() sql.Broker {
 
 // Close resources
 func (p *Plugin) Close() error {
-	_, err := safeclose.CloseAll(p.session)
-	return err
+	p.session.Close()
+	return nil
 }
 
 // String returns if set Deps.PluginName or "cassa-client" otherwise
