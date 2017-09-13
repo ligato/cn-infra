@@ -17,8 +17,8 @@ const PluginName = "example"
 // This flag name is calculated from the name of the plugin.
 const ExampleConfFlag = PluginName + config.FlagSuffix
 
-// ExampleConf is default (flag value) - filename for the configuration.
-const ExampleConf = PluginName + ".conf"
+// ExampleConfDefault is default (flag value) - filename for the configuration.
+const ExampleConfDefault = PluginName + ".conf"
 
 // ExampleConfUsage used as flag usage (see implementation in declareFlags())
 const ExampleConfUsage = "Location of the example configuration file; also set via 'EXAMPLE_CONFIG' env variable."
@@ -53,7 +53,7 @@ type ExampleFlavor struct {
 func (f *ExampleFlavor) Plugins() []*core.NamedPlugin {
 	if f.FlavorLocal.Inject() {
 		f.ExamplePlugin.PluginInfraDeps = *f.InfraDeps(PluginName)
-		flag.String(ExampleConfFlag, ExampleConf, ExampleConfUsage)
+		flag.String(ExampleConfFlag, ExampleConfDefault, ExampleConfUsage)
 	}
 
 	return core.ListPluginsInFlavor(f)
