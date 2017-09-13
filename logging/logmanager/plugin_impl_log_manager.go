@@ -61,7 +61,7 @@ func NewConf() *Conf {
 	return &Conf{Loggers: []ConfLogger{}}
 }
 
-// Config for loggers
+// Conf is a binding that supports to define default log levels for multiple loggers
 type Conf struct {
 	//TODO Default ConfDefault
 	Loggers []ConfLogger
