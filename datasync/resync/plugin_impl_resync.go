@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/ligato/cn-infra/flavors/local"
-	"github.com/ligato/cn-infra/logging/logroot"
 )
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
@@ -93,11 +92,11 @@ func (plugin *Plugin) startResync() {
 		plugin.startSingleResync(regName, reg)
 
 		resyncPart := time.Since(resyncPartStart)
-		logroot.StandardLogger().WithField("timeInNs", resyncPart.Nanoseconds()).Info("Resync of ", regName, " took ", resyncPart)
+		plugin.Log.WithField("timeInNs", resyncPart.Nanoseconds()).Info("Resync of ", regName, " took ", resyncPart)
 	}
 
 	resyncTime := time.Since(startTime)
-	logroot.StandardLogger().WithField("timeInNs", resyncTime.Nanoseconds()).Info("Resync took ", resyncTime)
+	plugin.Log.WithField("timeInNs", resyncTime.Nanoseconds()).Info("Resync took ", resyncTime)
 	// TODO check if there ReportError (if not than report) if error occurred even during Resync
 }
 func (plugin *Plugin) startSingleResync(resyncName string, reg Registration) {
