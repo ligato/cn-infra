@@ -32,8 +32,12 @@ const topic = "status-check"
 type Plugin struct {
 	Deps         // inject
 	subscription chan (*client.ConsumerMessage)
-	muxDefault   *mux.Multiplexer
+
+	// Kafka plugin is using two multiplexers. The first one is using 'hash' (default) partitioner. The second mux
+	// uses manual partitioner.
+	muxHash      *mux.Multiplexer
 	muxManual    *mux.Multiplexer
+
 	consumer     *client.Consumer
 	disabled     bool
 }
@@ -46,7 +50,7 @@ type Deps struct {
 
 // FromExistingMux is used mainly for testing purposes.
 func FromExistingMux(mux *mux.Multiplexer) *Plugin {
-	return &Plugin{muxDefault: mux}
+	return &Plugin{muxHash: mux}
 }
 
 // Init is called at plugin initialization.
@@ -73,8 +77,8 @@ func (p *Plugin) Init() (err error) {
 		return err
 	}
 
-	if p.muxDefault == nil {
-		p.muxDefault, err = mux.InitMultiplexerWithConfig(config, p.ServiceLabel.GetAgentLabel(), client.Hash, p.Log)
+	if p.muxHash == nil {
+		p.muxHash, err = mux.InitMultiplexerWithConfig(config, p.ServiceLabel.GetAgentLabel(), client.Hash, p.Log)
 		if err != nil {
 			return err
 		}
@@ -95,7 +99,7 @@ func (p *Plugin) Init() (err error) {
 // AfterInit is called in the second phase of initialization. The kafka multiplexer
 // is started, all consumers have to be subscribed until this phase.
 func (p *Plugin) AfterInit() error {
-	if p.muxDefault == nil {
+	if p.muxHash == nil {
 		return nil
 	}
 
@@ -114,18 +118,18 @@ func (p *Plugin) AfterInit() error {
 		p.Log.Warnf("Unable to start status check for kafka")
 	}
 
-	return p.muxDefault.Start()
+	return p.muxHash.Start()
 }
 
 // Close is called at plugin cleanup phase.
 func (p *Plugin) Close() error {
-	_, err := safeclose.CloseAll(p.consumer.Close(), p.muxDefault)
+	_, err := safeclose.CloseAll(p.consumer.Close(), p.muxHash)
 	return err
 }
 
 // NewConnection returns a new instance of connection to access the kafka brokers.
 func (p *Plugin) NewConnection(name string) *mux.Connection {
-	return p.muxDefault.NewConnection(name)
+	return p.muxHash.NewConnection(name)
 }
 
 // NewConnectionToPartition returns a new instance of connection to access the kafka brokers.
@@ -136,7 +140,7 @@ func (p *Plugin) NewConnectionToPartition(name string) *mux.Connection {
 // NewProtoConnection returns a new instance of connection to access the kafka brokers. The connection
 // uses proto-modelled messages.
 func (p *Plugin) NewProtoConnection(name string) *mux.ProtoConnection {
-	return p.muxDefault.NewProtoConnection(name, &keyval.SerializerJSON{})
+	return p.muxHash.NewProtoConnection(name, &keyval.SerializerJSON{})
 }
 // NewProtoConnectionToPartition returns a new instance of connection to access the kafka brokers. The connection
 // uses proto-modelled messages.
@@ -151,7 +155,7 @@ func (p *Plugin) NewSyncPublisher(topic string) (messaging.ProtoPublisher, error
 
 // NewSyncPublisherToPartition creates a publisher that allows to publish messages to selected topic/partition using synchronous API .
 func (p *Plugin) NewSyncPublisherToPartition(topic string, partition int32) (messaging.ProtoPublisher, error) {
-	return p.NewProtoConnection("").NewSyncPublisherToPartition(topic, partition)
+	return p.NewProtoConnectionToPartition("").NewSyncPublisherToPartition(topic, partition)
 }
 
 // NewAsyncPublisher creates a publisher that allows to publish messages using asynchronous API.
@@ -161,7 +165,7 @@ func (p *Plugin) NewAsyncPublisher(topic string, successClb func(messaging.Proto
 
 // NewAsyncPublisherToPartition creates a publisher that allows to publish messages to selected topic/partition using asynchronous API.
 func (p *Plugin) NewAsyncPublisherToPartition(topic string, partition int32, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) (messaging.ProtoPublisher, error) {
-	return p.NewProtoConnection("").NewAsyncPublisherToPartition(topic, partition, successClb, errorClb)
+	return p.NewProtoConnectionToPartition("").NewAsyncPublisherToPartition(topic, partition, successClb, errorClb)
 }
 
 // NewWatcher creates a watcher that allows to start/stop consuming of messaging published to given topics.
