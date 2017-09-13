@@ -80,17 +80,16 @@ func (p *pluginConfig) GetConfigName() string {
 			// if exist value from flag
 			if _, err := os.Stat(flgVal); !os.IsNotExist(err) {
 				return flgVal
-			} else {
-				cfgDir, err := ConfigDir()
-				if err != nil {
-					logroot.StandardLogger().Error(err)
-					return ""
-				}
-				// if exist flag value in config dir
-				flgValInConfigDir := path.Join(cfgDir, flgVal)
-				if _, err := os.Stat(flgValInConfigDir); !os.IsNotExist(err) {
-					return flgValInConfigDir
-				}
+			}
+			cfgDir, err := Dir()
+			if err != nil {
+				logroot.StandardLogger().Error(err)
+				return ""
+			}
+			// if exist flag value in config dir
+			flgValInConfigDir := path.Join(cfgDir, flgVal)
+			if _, err := os.Stat(flgValInConfigDir); !os.IsNotExist(err) {
+				return flgValInConfigDir
 			}
 		}
 	}
@@ -98,8 +97,8 @@ func (p *pluginConfig) GetConfigName() string {
 	return ""
 }
 
-// ConfigDir evaluates flag DirFlag. It interprets "." as current working directory.
-func ConfigDir() (string, error) {
+// Dir evaluates flag DirFlag. It interprets "." as current working directory.
+func Dir() (string, error) {
 	flg := flag.CommandLine.Lookup(DirFlag)
 	if flg != nil {
 		val := flg.Value.String()
@@ -113,9 +112,9 @@ func ConfigDir() (string, error) {
 				return cwd + val[1:], nil
 			}
 			return cwd, nil
-		} else {
-			return val, nil
 		}
+
+		return val, nil
 	}
 
 	return "", nil
