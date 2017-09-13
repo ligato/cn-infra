@@ -24,6 +24,7 @@
 
 ## Kafka
 * kafka.Plugin.Disabled() returned if there is no kafka.conf present
+* Connection struct renamed to BytesConnection
 * fixes inside Mux.NewSyncPublisher() & Mux.NewAsyncPublisher() related to previous partition changes
 * Known Issues:
   * More than one network connection to Kafka (multiple instances of MUX)
