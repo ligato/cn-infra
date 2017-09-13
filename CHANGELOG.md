@@ -1,3 +1,24 @@
+# Release v1.0.4 (NOT RELEASED)
+## Plugin Configuration
+* new [examples/plugin_config](examples/plugin_config)
+* new flag --config-dir=. (by default "." meaning current working directory)
+* configuration files can but not need to have absolute paths anymore (e.g. --kafka-config=kafka.conf)
+* if you put all configuration files (etcd.conf, kafka.conf etc.) in one directory agent will load them
+* if you want to disable configuration file just put empty value for a particular flag (e.g. --kafka-config)
+
+## Kafka
+* kafka.Plugin.Disabled() returned if there is no kafka.conf present
+* fixes inside Mux.NewSyncPublisher() & Mux.NewAsyncPublisher() related to previous partition changes
+* Known Issues:
+  * More than one network connection to Kafka (multiple instances of MUX)
+  * TODO Minimalistic examples & documentation for Kafka API will be improved in a later release.
+
+## Cassandra
+* TODO status check???
+
+## Profiling
+* Logging duration (etcd con, kafka con, resync)
+
 # Release v1.0.3 (2017-09-08)
 * [FlavorAllConnectors](flavors/connectors)
     * Inlined plugins: ETCD, Kafka, Redis, Cassandra 
