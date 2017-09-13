@@ -29,6 +29,7 @@ var watcher keyval.BytesWatcher
 var prefix string
 var debug bool
 var debugIterator bool
+var redis_config string
 
 func main() {
 	//generateSampleConfigs()
@@ -54,6 +55,8 @@ func loadConfig() interface{} {
 		"Specifies whether to enable debugging; default to false")
 	flag.BoolVar(&debugIterator, "debug-iterator", false,
 		"Specifies whether to enable debugging; default to false")
+	flag.StringVar(&redis_config, "redis-config", "",
+		"Specifies configuration file path")
 	flag.Parse()
 
 	flag.Usage = func() {

@@ -15,9 +15,16 @@
 package redis
 
 import (
+	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/utils/safeclose"
+)
+
+const (
+	// healthCheckProbeKey is a key used to probe Redis state
+	healthCheckProbeKey string = "probe-redis-connection"
 )
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
@@ -57,6 +64,28 @@ func (p *Plugin) Init() error {
 	return p.Skeleton.Init()
 }
 
+// AfterInit is called by the Agent Core after all plugins have been initialized.
+func (p *Plugin) AfterInit() error {
+	if p.disabled {
+		return nil
+	}
+
+	// Register for providing status reports (polling mode)
+	if p.StatusCheck != nil {
+		p.StatusCheck.Register(core.PluginName(p.String()), func() (statuscheck.PluginState, error) {
+			_, _, err := p.Skeleton.NewBroker("/").GetValue(healthCheckProbeKey, nil)
+			if err == nil {
+				return statuscheck.OK, nil
+			}
+			return statuscheck.Error, err
+		})
+	} else {
+		p.Log.Warnf("Unable to start status check for redis")
+	}
+
+	return nil
+}
+
 // Close resources
 func (p *Plugin) Close() error {
 	_, err := safeclose.CloseAll(p.Skeleton)
@@ -78,6 +107,14 @@ func (p *Plugin) retrieveConfig() (cfg interface{}, err error) {
 		}
 	}
 	return cfg, nil
+}
+
+// String returns if set Deps.PluginName or "redis-client" otherwise
+func (p *Plugin) String() string {
+	if len(p.Deps.PluginName) == 0 {
+		return "redis-client"
+	}
+	return string(p.Deps.PluginName)
 }
 
 // Disabled if the plugin was not found

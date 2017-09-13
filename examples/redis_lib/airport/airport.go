@@ -104,6 +104,7 @@ var hangarWatcher keyval.ProtoWatcher
 
 var prefix string
 var debug bool
+var redis_config string
 
 func main() {
 	if setup() {
@@ -152,6 +153,8 @@ func loadConfig() interface{} {
 		"Specifies key prefix")
 	flag.BoolVar(&debug, "debug", false,
 		"Specifies whether to enable debugging; default to false")
+	flag.StringVar(&redis_config, "redis-config", "",
+		"Specifies configuration file path")
 	flag.Parse()
 
 	flag.Usage = func() {
