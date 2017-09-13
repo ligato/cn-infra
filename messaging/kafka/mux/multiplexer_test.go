@@ -104,7 +104,7 @@ func TestStopConsumingPartition(t *testing.T) {
 	ch1 := make(chan *client.ConsumerMessage)
 	ch2 := make(chan *client.ConsumerMessage)
 
-	err := c1.ConsumeTopicOnPartition(ToBytesMsgChan(ch1), "topic1",1, 0)
+	err := c1.ConsumeTopicOnPartition(ToBytesMsgChan(ch1), "topic1", 1, 0)
 	gomega.Expect(err).To(gomega.BeNil())
 	err = c2.ConsumeTopicOnPartition(ToBytesMsgChan(ch2), "topic2", 2, 1)
 	gomega.Expect(err).To(gomega.BeNil())

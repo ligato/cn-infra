@@ -159,16 +159,24 @@ func (mux *Multiplexer) Close() {
 	safeclose.Close(mux.asyncProducer)
 }
 
-// NewBytesConnection creates instance of the BytesConnection that will be provide access to shared Multiplexer's clients.
+// NewBytesConnection creates instance of the BytesConnection that provides access to shared Multiplexer's clients.
 func (mux *Multiplexer) NewBytesConnection(name string) *BytesConnection {
 	return &BytesConnection{multiplexer: mux, name: name}
 }
 
-// NewProtoConnection creates instance of the ProtoConnection that will be provide access to shared Multiplexer's clients.
-func (mux *Multiplexer) NewProtoConnection(name string, serializer keyval.Serializer) *ProtoConnection {
-	return &ProtoConnection{multiplexer: mux, serializer: serializer, name: name}
+// NewProtoHashConnection creates instance of the ProtoHashConnection that provides access to shared
+// Multiplexer's clients with hash partitioner.
+func (mux *Multiplexer) NewProtoHashConnection(name string, serializer keyval.Serializer) *ProtoHashConnection {
+	return &ProtoHashConnection{ProtoConnection{multiplexer: mux, serializer: serializer, name: name}}
 }
 
+// NewProtoManualConnection creates instance of the ProtoConnection that provides access to shared
+// Multiplexer's clients with manual partitioner.
+func (mux *Multiplexer) NewProtoManualConnection(name string, serializer keyval.Serializer) *ProtoManualConnection {
+	return &ProtoManualConnection{ProtoConnection{multiplexer: mux, serializer: serializer, name: name}}
+}
+
+// Propagates incoming messages to respective channels.
 func (mux *Multiplexer) propagateMessage(msg *client.ConsumerMessage) {
 	mux.rwlock.RLock()
 	defer mux.rwlock.RUnlock()
@@ -197,7 +205,7 @@ func (mux *Multiplexer) propagateMessage(msg *client.ConsumerMessage) {
 	}
 }
 
-// genericConsumer handles incoming messages to the multiplexer and distributes them among the subscribers
+// GenericConsumer handles incoming messages to the multiplexer and distributes them among the subscribers.
 func (mux *Multiplexer) genericConsumer() {
 	mux.Debug("Generic consumer started")
 	for {
@@ -218,6 +226,7 @@ func (mux *Multiplexer) genericConsumer() {
 
 }
 
+// Remove consumer subscription on given topic. If there is no such a subscription, return error.
 func (mux *Multiplexer) stopConsuming(topic string, name string) error {
 	mux.rwlock.Lock()
 	defer mux.rwlock.Unlock()
@@ -225,7 +234,7 @@ func (mux *Multiplexer) stopConsuming(topic string, name string) error {
 	var wasError error
 	var topicFound bool
 	for index, subs := range mux.mapping {
-		if !subs.manual && subs.topic == topic && subs.connectionName == name{
+		if !subs.manual && subs.topic == topic && subs.connectionName == name {
 			topicFound = true
 			mux.mapping = append(mux.mapping[:index], mux.mapping[index+1:]...)
 		}
@@ -236,6 +245,8 @@ func (mux *Multiplexer) stopConsuming(topic string, name string) error {
 	return wasError
 }
 
+// Remove consumer subscription on given topic, partition and initial offset. If there is no such a subscription
+// (all fields must match), return error.
 func (mux *Multiplexer) stopConsumingPartition(topic string, partition int32, offset int64, name string) error {
 	mux.rwlock.Lock()
 	defer mux.rwlock.Unlock()
@@ -243,7 +254,7 @@ func (mux *Multiplexer) stopConsumingPartition(topic string, partition int32, of
 	var wasError error
 	var topicFound bool
 	for index, subs := range mux.mapping {
-		if subs.manual && subs.topic == topic && subs.partition == partition && subs.offset == offset && subs.connectionName == name{
+		if subs.manual && subs.topic == topic && subs.partition == partition && subs.offset == offset && subs.connectionName == name {
 			topicFound = true
 			mux.mapping = append(mux.mapping[:index], mux.mapping[index+1:]...)
 		}

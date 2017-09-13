@@ -151,7 +151,7 @@ To create a Connection that reuses Multiplexer access to kafka run:
 
 	or
 
-	cn := mx.NewProtoConnection("c1")
+	cn := mx.NewProtoHashConnection("c1")
 
 Afterwards you can produce messages using sync API:
 
@@ -214,7 +214,7 @@ The plugin allows to create connections:
 
 or connection that support proto-modelled messages:
 
-        protoConn := plugin.NewProtoConnection("protoConnection")
+        protoConn := plugin.NewProtoHashConnection("protoConnection")
 The usage of connections is described above.
 
 */
