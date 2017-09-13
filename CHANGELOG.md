@@ -1,3 +1,8 @@
+# Release v1.0.5 (PLANNED)
+
+## Cassandra
+* connectivity status check
+
 # Release v1.0.4 (NOT RELEASED)
 
 ## Profiling
@@ -23,9 +28,6 @@
 * Known Issues:
   * More than one network connection to Kafka (multiple instances of MUX)
   * TODO Minimalistic examples & documentation for Kafka API will be improved in a later release.
-
-## Cassandra
-* TODO status check???
 
 # Release v1.0.3 (2017-09-08)
 * [FlavorAllConnectors](flavors/connectors)
