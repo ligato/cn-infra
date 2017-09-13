@@ -9,6 +9,7 @@ import (
 
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/namsral/flag"
+	"strings"
 )
 
 // FlagSuffix is added to plugin name while loading plugins configuration
@@ -102,8 +103,16 @@ func ConfigDir() (string, error) {
 	flg := flag.CommandLine.Lookup(DirFlag)
 	if flg != nil {
 		val := flg.Value.String()
-		if val == "." {
-			return os.Getwd()
+		if strings.HasPrefix(val, ".") {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return cwd, err
+			}
+
+			if len(val) > 1 {
+				return cwd + val[1:], nil
+			}
+			return cwd, nil
 		} else {
 			return val, nil
 		}
