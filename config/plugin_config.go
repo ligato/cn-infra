@@ -14,15 +14,15 @@ import (
 // FlagSuffix is added to plugin name while loading plugins configuration
 const FlagSuffix = "-config"
 
-// ConfigDirFlag used as flag name (see implementation in declareFlags())
+// DirFlag used as flag name (see implementation in declareFlags())
 // It is used to define default directory where config files reside.
 // This flag name is calculated from the name of the plugin.
 const DirFlag = "config-dir"
 
-// ConfigDirDefault - default value for flag "." represents current working directory
+// DirDefault - default value for flag "." represents current working directory
 const DirDefault = "."
 
-// CassaConfUsage used as flag usage (see implementation in declareFlags())
+// DirUsage used as flag usage (see implementation in declareFlags())
 const DirUsage = "Location of the configuration files; also set via 'CONFIG_DIR' env variable."
 
 // PluginConfig is API for plugins to access configuration.
@@ -34,8 +34,8 @@ type PluginConfig interface {
 	// Argument data is a pointer to instance of a go structure.
 	GetValue(data interface{}) (found bool, err error)
 
-	// GetConfigName returns usually derived config name from plugin name
-	// PluginName + "-config" (most often absolute path to a config file)
+	// GetConfigName returns usually derived config name from plugin name:
+	// flag = PluginName + FlagSuffix (evaluated most often a absolute path to a config file)
 	GetConfigName() string
 }
 
