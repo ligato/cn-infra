@@ -92,11 +92,11 @@ func (plugin *Plugin) startResync() {
 		plugin.startSingleResync(regName, reg)
 
 		resyncPart := time.Since(resyncPartStart)
-		plugin.Log.WithField("timeInNs", resyncPart.Nanoseconds()).Info("Resync of ", regName, " took ", resyncPart)
+		plugin.Log.WithField("durationInNs", resyncPart.Nanoseconds()).Info("Resync of ", regName, " took ", resyncPart)
 	}
 
 	resyncTime := time.Since(startTime)
-	plugin.Log.WithField("timeInNs", resyncTime.Nanoseconds()).Info("Resync took ", resyncTime)
+	plugin.Log.WithField("durationInNs", resyncTime.Nanoseconds()).Info("Resync took ", resyncTime)
 	// TODO check if there ReportError (if not than report) if error occurred even during Resync
 }
 func (plugin *Plugin) startSingleResync(resyncName string, reg Registration) {

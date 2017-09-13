@@ -101,7 +101,7 @@ func InitMultiplexerWithConfig(muxConfig *Config, name string, partitioner strin
 		return nil, err
 	}
 	kafkaConnect := time.Since(startTime)
-	log.WithField("timeInNs", kafkaConnect.Nanoseconds()).Info("Connecting to kafka took ", kafkaConnect)
+	log.WithField("durationInNs", kafkaConnect.Nanoseconds()).Info("Connecting to kafka took ", kafkaConnect)
 
 	return NewMultiplexer(getConsumerFactory(config), syncProducer, asyncProducer, partitioner, name, log), nil
 }
