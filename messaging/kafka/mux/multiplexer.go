@@ -65,11 +65,6 @@ type consumerSubscription struct {
 	byteConsMsg func(*client.ConsumerMessage)
 }
 
-type topicToPartition struct {
-	topic     string
-	partition int32
-}
-
 // asyncMeta is auxiliary structure used by Multiplexer to distribute consumer messages
 type asyncMeta struct {
 	successClb func(*client.ProducerMessage)
@@ -164,9 +159,9 @@ func (mux *Multiplexer) Close() {
 	safeclose.Close(mux.asyncProducer)
 }
 
-// NewConnection creates instance of the Connection that will be provide access to shared Multiplexer's clients.
-func (mux *Multiplexer) NewConnection(name string) *Connection {
-	return &Connection{multiplexer: mux, name: name}
+// NewBytesConnection creates instance of the BytesConnection that will be provide access to shared Multiplexer's clients.
+func (mux *Multiplexer) NewBytesConnection(name string) *BytesConnection {
+	return &BytesConnection{multiplexer: mux, name: name}
 }
 
 // NewProtoConnection creates instance of the ProtoConnection that will be provide access to shared Multiplexer's clients.
