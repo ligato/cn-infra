@@ -42,10 +42,12 @@ type Agent struct {
 type startup struct {
 	// The startup/initialization must take no longer that maxStartup.
 	MaxStartupTime time.Duration
-	// loaded plugins
-	loadedPlugins []*NamedPlugin
+	// successfully initialized plugins
+	initSuccess []*NamedPlugin
+	// successfully after-initialized plugins
+	afterInitSuccess []*NamedPlugin
 	// the field is set before initialization of every plugin with its name
-	handledPlugin string
+	currentlyProcessing string
 }
 
 const (
@@ -105,9 +107,10 @@ func (agent *Agent) Start() error {
 		agent.Info("All plugins initialized successfully")
 		return nil
 	case <-time.After(agent.MaxStartupTime):
-		//TODO FIX - stop the initialization and close already initialized
-		return fmt.Errorf("plugin %v not completed before timeout. Initialized %d plugins of %d: %v",
-			agent.handledPlugin, len(agent.loadedPlugins), len(agent.plugins), agent.loadedPlugins)
+		nonInitialized := agent.calculateDiff(agent.initSuccess)
+		nonAfterInitialized := agent.calculateDiff(agent.afterInitSuccess)
+		return fmt.Errorf("plugin %v not completed before timeout.\nInit succ: %v \nInit err: %v \nAfterInit succ: %v \nAfterInit err: %v",
+			agent.currentlyProcessing, agent.initSuccess, nonInitialized, agent.afterInitSuccess, nonAfterInitialized)
 	}
 }
 
@@ -144,7 +147,7 @@ func (agent *Agent) Stop() error {
 func (agent *Agent) initPlugins() error {
 	for i, plug := range agent.plugins {
 		// set currently initialized plugin name
-		agent.handledPlugin = string(plug.PluginName + " Init()")
+		agent.currentlyProcessing = string(plug.PluginName + " Init()")
 		err := plug.Init()
 		if err != nil {
 			//Stop the plugins that are initialized
@@ -158,7 +161,7 @@ func (agent *Agent) initPlugins() error {
 			return fmt.Errorf(logErrorFmt, plug.PluginName, err)
 		}
 		agent.Info(fmt.Sprintf(logSuccessFmt, plug.PluginName))
-		agent.loadedPlugins = append(agent.loadedPlugins, plug)
+		agent.initSuccess = append(agent.initSuccess, plug)
 	}
 	return nil
 }
@@ -166,10 +169,9 @@ func (agent *Agent) initPlugins() error {
 // handleAfterInit calls the AfterInit handlers for plugins that can only
 // finish their initialization after  all other plugins have been initialized.
 func (agent *Agent) handleAfterInit() error {
-	agent.loadedPlugins = []*NamedPlugin{} // reset loaded plugins
 	for _, plug := range agent.plugins {
 		// set currently after-initialized plugin name
-		agent.handledPlugin = string(plug.PluginName + " AfterInit()")
+		agent.currentlyProcessing = string(plug.PluginName + " AfterInit()")
 		if plug2, ok := plug.Plugin.(PostInit); ok {
 			agent.Debug("afterInit begin for ", plug.PluginName)
 			err := plug2.AfterInit()
@@ -178,8 +180,25 @@ func (agent *Agent) handleAfterInit() error {
 				return fmt.Errorf(logPostErrorFmt, plug.PluginName, err)
 			}
 			agent.Info(fmt.Sprintf(logPostSuccessFmt, plug.PluginName))
-			agent.loadedPlugins = append(agent.loadedPlugins, plug)
+			agent.afterInitSuccess = append(agent.initSuccess, plug)
 		}
 	}
 	return nil
+}
+
+// Returns list of plugins which are not initialized
+func (agent *Agent) calculateDiff(initialized []*NamedPlugin) []*NamedPlugin {
+	var diff []*NamedPlugin
+	for _, plugin := range agent.plugins {
+		var found bool
+		for _, initialized := range initialized {
+			if plugin == initialized {
+				found = true
+			}
+		}
+		if !found {
+			diff = append(diff, plugin)
+		}
+	}
+	return diff
 }
