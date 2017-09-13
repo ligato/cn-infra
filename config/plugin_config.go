@@ -1,8 +1,29 @@
 package config
 
 import (
+	"sync"
+
+	"os"
+
+	"path"
+
+	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/namsral/flag"
 )
+
+// FlagSuffix is added to plugin name while loading plugins configuration
+const FlagSuffix = "-config"
+
+// ConfigDirFlag used as flag name (see implementation in declareFlags())
+// It is used to define default directory where config files reside.
+// This flag name is calculated from the name of the plugin.
+const DirFlag = "config-dir"
+
+// ConfigDirDefault - default value for flag "." represents current working directory
+const DirDefault = "."
+
+// CassaConfUsage used as flag usage (see implementation in declareFlags())
+const DirUsage = "Location of the configuration files; also set via 'CONFIG_DIR' env variable."
 
 // PluginConfig is API for plugins to access configuration.
 //
@@ -14,7 +35,7 @@ type PluginConfig interface {
 	GetValue(data interface{}) (found bool, err error)
 
 	// GetConfigName returns usually derived config name from plugin name
-	// PluginName + "-config"
+	// PluginName + "-config" (most often absolute path to a config file)
 	GetConfigName() string
 }
 
@@ -28,11 +49,16 @@ func ForPlugin(pluginName string) PluginConfig {
 
 type pluginConfig struct {
 	pluginName string
+	access     sync.Mutex
 }
 
 // GetValue binds the configuration to config method argument
 func (p *pluginConfig) GetValue(config interface{}) (found bool, err error) {
-	err = ParseConfigFromYamlFile(p.GetConfigName(), config) //TODO switch to Viper
+	cfgName := p.GetConfigName()
+	if cfgName == "" {
+		return false, nil
+	}
+	err = ParseConfigFromYamlFile(cfgName, config) //TODO switch to Viper (possible to have one huge config file)
 	if err != nil {
 		return false, err
 	}
@@ -40,17 +66,48 @@ func (p *pluginConfig) GetValue(config interface{}) (found bool, err error) {
 	return true, nil
 }
 
-// GetConfigName - see description in PluginConfig.GetConfigName
+// GetConfigName lookups flag value and uses it to:
+// 1. find config in flag value location
+// 2. alternatively it tries to find it in config dir
 func (p *pluginConfig) GetConfigName() string {
-	plugCfg := p.pluginName + "-config"
-	flg := flag.CommandLine.Lookup(plugCfg)
+	flgName := p.pluginName + FlagSuffix
+	flg := flag.CommandLine.Lookup(flgName)
 	if flg != nil {
-		val := flg.Value.String()
+		flgVal := flg.Value.String()
 
-		if val != "" {
-			plugCfg = val
+		if flgVal != "" {
+			// if exist value from flag
+			if _, err := os.Stat(flgVal); !os.IsNotExist(err) {
+				return flgVal
+			} else {
+				cfgDir, err := ConfigDir()
+				if err != nil {
+					logroot.StandardLogger().Error(err)
+					return ""
+				}
+				// if exist flag value in config dir
+				flgValInConfigDir := path.Join(cfgDir, flgVal)
+				if _, err := os.Stat(flgValInConfigDir); !os.IsNotExist(err) {
+					return flgValInConfigDir
+				}
+			}
 		}
 	}
 
-	return plugCfg
+	return ""
+}
+
+// ConfigDir evaluates flag DirFlag. It interprets "." as current working directory.
+func ConfigDir() (string, error) {
+	flg := flag.CommandLine.Lookup(DirFlag)
+	if flg != nil {
+		val := flg.Value.String()
+		if val == "." {
+			return os.Getwd()
+		} else {
+			return val, nil
+		}
+	}
+
+	return "", nil
 }

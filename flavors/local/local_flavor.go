@@ -21,6 +21,7 @@ import (
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/servicelabel"
+	"github.com/namsral/flag"
 )
 
 // FlavorLocal glues together very minimal subset of cn-infra plugins
@@ -42,6 +43,8 @@ func (f *FlavorLocal) Inject() bool {
 		return false
 	}
 	f.injected = true
+
+	declareFlags()
 
 	f.StatusCheck.Deps.Log = f.LoggerFor("status-check")
 	f.StatusCheck.Deps.PluginName = core.PluginName("status-check")
@@ -92,4 +95,9 @@ func (f *FlavorLocal) InfraDeps(pluginName string) *PluginInfraDeps {
 		config.ForPlugin(pluginName),
 		&f.StatusCheck,
 		&f.ServiceLabel}
+}
+
+
+func declareFlags() {
+	flag.String(config.DirFlag, config.DirDefault, config.DirUsage)
 }
