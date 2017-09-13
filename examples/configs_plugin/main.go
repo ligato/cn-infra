@@ -10,7 +10,7 @@ import (
 	"github.com/namsral/flag"
 )
 
-// Plugin name is used below in dependency injection & in following constant
+// PluginName is used below in dependency injection & in following constant
 // to achieve consistent string values.
 const PluginName = "example"
 
