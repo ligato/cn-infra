@@ -85,6 +85,23 @@ func (lm *Plugin) Init() error {
 		if err != nil {
 			return err
 		}
+
+		// try to set log levels (note, not all of them might exist yet)
+		for _, cfgLogger := range lm.Conf.Loggers {
+			if _, found := lm.LogRegistry.Lookup(cfgLogger.Name); !found {
+				continue
+			}
+
+			lm.Log.WithFields(map[string]interface{}{"logger": cfgLogger.Name, "level": cfgLogger.Level}).
+				Debug("setting log level from config", cfgLogger.Name, " ", cfgLogger.Level)
+			lm.LogRegistry.SetLevel(cfgLogger.Name, cfgLogger.Level)
+			if err != nil {
+				//intentionally just log warn & not propagate the error (it is minor thing to interrupt startup)
+				lm.Log.WithFields(map[string]interface{}{"logger": cfgLogger.Name, "level": cfgLogger.Level}).
+					Warn("log registry set lever failed ", err)
+			}
+		}
+
 	}
 
 	return nil
@@ -101,9 +118,6 @@ func (lm *Plugin) AfterInit() error {
 			lm.Log.WithFields(map[string]interface{}{"logger": logger, "level": level}).
 				Debug("AfterInit - begin ", logger, " ", level)
 		}
-
-		//defaultLogger
-		//logs
 
 		for _, cfgLogger := range lm.Conf.Loggers {
 			lm.Log.WithFields(map[string]interface{}{"logger": cfgLogger.Name, "level": cfgLogger.Level}).

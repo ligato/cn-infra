@@ -7,9 +7,10 @@ import (
 
 	"path"
 
+	"strings"
+
 	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/namsral/flag"
-	"strings"
 )
 
 // FlagSuffix is added to plugin name while loading plugins configuration
@@ -51,6 +52,7 @@ func ForPlugin(pluginName string) PluginConfig {
 type pluginConfig struct {
 	pluginName string
 	access     sync.Mutex
+	cfg        string
 }
 
 // GetValue binds the configuration to config method argument
@@ -70,7 +72,18 @@ func (p *pluginConfig) GetValue(config interface{}) (found bool, err error) {
 // GetConfigName lookups flag value and uses it to:
 // 1. find config in flag value location
 // 2. alternatively it tries to find it in config dir
+// (see also Dir() comments)
 func (p *pluginConfig) GetConfigName() string {
+	p.access.Lock()
+	defer p.access.Unlock()
+	if p.cfg == "" {
+		p.cfg = p.getConfigName()
+	}
+
+	return p.cfg
+}
+
+func (p *pluginConfig) getConfigName() string {
 	flgName := p.pluginName + FlagSuffix
 	flg := flag.CommandLine.Lookup(flgName)
 	if flg != nil {
