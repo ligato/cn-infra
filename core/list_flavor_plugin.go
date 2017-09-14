@@ -28,14 +28,16 @@ type Flavor interface {
 	Plugins() []*NamedPlugin
 }
 
-// ListPluginsInFlavor uses reflection to traverse top level fields of Flavor structure.
-// It extracts all plugins and returns them as a slice of NamedPlugins.
+// ListPluginsInFlavor uses reflection to traverse top level fields of Flavor
+// structure. It extracts all plugins and returns them as a slice
+// of NamedPlugins.
 func ListPluginsInFlavor(flavor Flavor) (plugins []*NamedPlugin) {
 	uniqueness := map[PluginName]Plugin{}
 	return listPluginsInFlavor(reflect.ValueOf(flavor), uniqueness)
 }
 
-// listPluginsInFlavor checks every field and tries to cast it to Plugin or inspect its type recursively.
+// listPluginsInFlavor checks every field and tries to cast it to Plugin
+// or inspect its type recursively.
 func listPluginsInFlavor(flavorValue reflect.Value, uniqueness map[PluginName]Plugin) []*NamedPlugin {
 	var res []*NamedPlugin
 

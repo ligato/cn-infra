@@ -18,7 +18,7 @@ import "time"
 
 // Config is a configuration for HTTP server
 type Config struct {
-	// Endpoint is a address of HTTP server
+	// Endpoint is an address of HTTP server
 	Endpoint string
 
 	// ReadTimeout is the maximum duration for reading the entire

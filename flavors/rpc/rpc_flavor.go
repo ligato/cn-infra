@@ -22,7 +22,8 @@ import (
 	"github.com/ligato/cn-infra/rpc/rest"
 )
 
-// FlavorRPC glues together multiple plugins that are useful for almost every micro-service
+// FlavorRPC glues together multiple plugins that provide RPC-like access.
+// They are typically used to enable remote management for other plugins.
 type FlavorRPC struct {
 	*local.FlavorLocal
 
@@ -35,7 +36,7 @@ type FlavorRPC struct {
 	injected bool
 }
 
-// Inject sets object references
+// Inject initializes flavor references/dependencies.
 func (f *FlavorRPC) Inject() bool {
 	if f.injected {
 		return false
@@ -61,7 +62,7 @@ func (f *FlavorRPC) Inject() bool {
 	return true
 }
 
-// Plugins combines all Plugins in flavor to the list
+// Plugins combines all Plugins in flavor to the list.
 func (f *FlavorRPC) Plugins() []*core.NamedPlugin {
 	f.Inject()
 	return core.ListPluginsInFlavor(f)

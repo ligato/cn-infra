@@ -16,14 +16,15 @@
 // API for the Redis key-value data store. See cn-infra/db/keyval for the
 // definition of the key-value Data Broker client API.
 //
-// The entity BytesConnectionRedis provides access to CRUD as well as event subscription API's.
+// The entity BytesConnectionRedis provides access to CRUD as well as event
+// subscription API's.
 //
 //   +-----+    --> (Broker)   +------------------------+  -->  CRUD      +-------+
 //   | app |                   |  BytesConnectionRedis  |                 | Redis |
 //   +-----+    <-- (KeyValProtoWatcher)  +------------------------+  <--  events    +-------+
 //
-// The code snippets below provide examples to help you get started.  For simplicity, error
-// handling is omitted.
+// The code snippets below provide examples to help you get started.
+// For simplicity, error handling is omitted.
 //
 // Imports
 //   import "github.com/ligato/cn-infra/db/keyval/kvproto"
@@ -127,9 +128,9 @@
 //       }
 //   }
 //
-// NOTE: You must configure Redis for it to publish key space events.  For example,
-//   config SET notify-keyspace-events KA
-// See EVENT NOTIFICATION in https://raw.githubusercontent.com/antirez/redis/3.2/redis.conf
+// NOTE: You must configure Redis for it to publish key space events.
+//       For example, config SET notify-keyspace-events KA
+//       See EVENT NOTIFICATION in https://raw.githubusercontent.com/antirez/redis/3.2/redis.conf
 //
 // You can find detailed examples in
 //   ligato/cn-infra/db/keyval/redis/examples/simple/
@@ -137,9 +138,9 @@
 //
 // Resiliency
 //
-// Connection/read/write time-outs, failover, reconnection and recovery are validated by running
-// the airport example against a Redis Sentinel Cluster.  Redis nodes are paused selectively to
-// simulate server down:
+// Connection/read/write time-outs, failover, reconnection and recovery are
+// validated by running the airport example against a Redis Sentinel Cluster.
+// Redis nodes are paused selectively to simulate server outage:
 //
 //   $ docker-compose ps
 //

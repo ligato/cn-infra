@@ -21,35 +21,71 @@ import (
 
 // Mux defines API for the plugins that use access to kafka brokers.
 type Mux interface {
+	// NewSyncPublisher creates a publisher that allows to publish messages
+	// using synchronous API.
 	NewSyncPublisher(topic string) ProtoPublisher
+
+	// NewSyncPublisherToPartition creates a publisher that allows to publish
+	// messages to selected topic/partition using synchronous API
 	NewSyncPublisherToPartition(topic string, partition int32) ProtoPublisher
+
+	// NewAsyncPublisher creates a publisher that allows to publish messages
+	// using asynchronous API.
 	NewAsyncPublisher(topic string, successClb func(ProtoMessage), errorClb func(err ProtoMessageErr)) ProtoPublisher
+
+	// NewAsyncPublisherToPartition creates a publisher that allows to publish
+	// messages to selected topic/partition using asynchronous API.
 	NewAsyncPublisherToPartition(topic string, partition int32,
 		successClb func(ProtoMessage), errorClb func(err ProtoMessageErr)) ProtoPublisher
+
+	// NewWatcher creates a watcher that allows to start/stop consuming
+	// of messaging published to selected topics/partitions.
 	NewWatcher(subscriberName string) ProtoWatcher
 }
 
-// ProtoPublisher allows to publish a message of type proto.Message into messaging system.
+// ProtoPublisher allows to publish a message of type proto.Message into
+// messaging system.
 type ProtoPublisher interface {
 	datasync.KeyProtoValWriter
 }
 
-// ProtoWatcher allows to subscribe for receiving of messages published to given topics.
+// ProtoWatcher allows to subscribe for receiving of messages published
+// to selected topics.
 type ProtoWatcher interface {
+	// Watch starts consuming all selected <topics>.
+	// Callback <msgCallback> is called for each delivered message.
 	Watch(msgCallback func(ProtoMessage), topics ...string) error
+
+	// WatchPartition starts consuming specific <partition> of a selected <topic>
+	// from a given <offset>.
+	// Callback <msgCallback> is called for each delivered message.
 	WatchPartition(msgCallback func(ProtoMessage), topic string, partition int32, offset int64) error
+
+	// StopWatch cancels the previously created subscription for consuming
+	// a given <topic>.
 	StopWatch(topic string) error
 }
 
-// ProtoMessage defines functions for inspection of a message receive from messaging system.
+// ProtoMessage exposes parameters of a single message received from messaging
+// system.
 type ProtoMessage interface {
 	keyval.ProtoKvPair
+
+	// GetTopic returns the name of the topic from which the message
+	// was consumed.
 	GetTopic() string
+
+	// GetTopic returns the index of the partition from which the message
+	// was consumed.
 	GetPartition() int32
 }
 
-// ProtoMessageErr represents a message that was not published successfully to a messaging system.
+// ProtoMessageErr represents a message that was not published successfully
+// to a messaging system.
 type ProtoMessageErr interface {
 	ProtoMessage
+
+	// Error returns an error instance describing the cause of the failed
+	// delivery.
 	Error() error
 }
