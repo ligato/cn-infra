@@ -28,7 +28,7 @@ import (
 	"regexp"
 	"sync/atomic"
 
-	lg "github.com/sirupsen/logrus"
+	lg "github.com/Sirupsen/logrus"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/satori/go.uuid"
 )
@@ -81,6 +81,10 @@ func NewLogger(name string) *Logger {
 		tagmap: make(map[uint64]string, 64),
 		name:   name,
 	}
+
+	tf := NewTextFormatter()
+	tf.TimestampFormat = "2006-01-02 15:04:05.00000"
+	logger.SetFormatter(tf)
 
 	logger.InitTag("00000000")
 
@@ -322,6 +326,7 @@ func (logger *Logger) withFields(fields Fields, depth ...int) *LogMsg {
 	if _, ok := f[locKey]; !ok {
 		f[locKey] = logger.GetLineInfo(d)
 	}
+	f[loggerKey] = logger.name
 
 	entry := logger.std.WithFields(f)
 	return &LogMsg{

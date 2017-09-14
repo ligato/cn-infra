@@ -15,14 +15,15 @@
 package logrus
 
 import (
-	lg "github.com/sirupsen/logrus"
+	lg "github.com/Sirupsen/logrus"
 	"github.com/ligato/cn-infra/logging"
 )
 
 // Tag names for structured fields of log message
 const (
-	locKey = "loc"
-	tagKey = "tag"
+	locKey    = "loc"
+	tagKey    = "tag"
+	loggerKey = "logger"
 )
 
 // LogMsg represent an item to be logged
@@ -83,6 +84,7 @@ func (entry *LogMsg) withFields(fields Fields, depth ...int) *LogMsg {
 	if _, ok := f[locKey]; !ok {
 		f[locKey] = entry.GetLineInfo(d)
 	}
+	f[loggerKey] = entry.logger.name
 	e := entry.Entry.WithFields(f)
 	return &LogMsg{
 		logger: entry.logger,
