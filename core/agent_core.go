@@ -43,23 +43,25 @@ type startup struct {
 	// The startup/initialization must take no longer that maxStartup.
 	MaxStartupTime time.Duration
 	// successfully initialized plugins
-	initSuccess []*NamedPlugin
-	// init duration in ns
-	initDuration int64
+	initDuration time.Duration
 	// successfully after-initialized plugins
-	afterInitSuccess []*NamedPlugin
-	// after-init duration in ns
-	afterInitDuration int64
+	afterInitDuration time.Duration
 	// the field is set before initialization of every plugin with its name
 	currentlyProcessing string
 }
 
 const (
-	logErrorFmt       = "plugin %s: init error '%s', duration %d"
-	logSuccessFmt     = "plugin %s: init success"
-	logPostErrorFmt   = "plugin %s: post-init error '%s', duration %d"
-	logPostSuccessFmt = "plugin %s: post-init success"
-	logTimeoutFmt     = "plugin %s not completed before timeout"
+	logErrorFmt        = "plugin %s: Init error '%s', took %v"
+	logSuccessFmt      = "plugin %s: Init took %v"
+	logSkippedFmt      = "plugin %s: Init skipped due to previous error"
+	logAfterSkippedFmt = "plugin %s: AfterInit skipped due to previous error"
+	logAfterErrorFmt   = "plugin %s: AfterInit error '%s', took %v"
+	logAfterSuccessFmt = "plugin %s: AfterInit took %v"
+	logNoAfterInitFmt  = "plugin %s: not implement AfterInit"
+	logTimeoutFmt      = "plugin %s not completed before timeout"
+	// The default value serves as an indicator for timer still running even after MaxStartupTime. Used in case
+	// some plugin lasts long time to load or is stuck
+	defaultTimerValue = -1
 )
 
 // NewAgent returns a new instance of the Agent with plugins.
@@ -107,21 +109,23 @@ func (agent *Agent) Start() error {
 	//block until all Plugins are initialized or timeout expires
 	select {
 	case err := <-errChannel:
-		errInit := agent.calculateDiff(agent.initSuccess)
-		errAfterInit := agent.calculateDiff(agent.afterInitSuccess)
-		agent.WithFields(logging.Fields{"AfterInitFail: ": errAfterInit, "AfterInit succ: ": agent.afterInitSuccess,
-			"Init succ: ": agent.initSuccess, "Init fail: ": errInit}).Error("Agent failed to start")
-
-		// Error is logged in handleInit/AfterInit
+		agent.WithField("durationInNs: ", agent.initDuration.Nanoseconds()).Infof("Agent Init took %v", agent.initDuration)
+		agent.WithField("durationInNs: ", agent.afterInitDuration.Nanoseconds()).Infof("Agent AfterInit took %v", agent.afterInitDuration)
 		return err
 	case <-doneChannel:
-		agent.WithField("durationNs:", agent.initDuration+agent.afterInitDuration).Info("All plugins initialized successfully")
+		agent.WithField("durationInNs: ", agent.initDuration.Nanoseconds()).Infof("Agent Init took %v", agent.initDuration)
+		agent.WithField("durationInNs: ", agent.afterInitDuration.Nanoseconds()).Infof("Agent AfterInit took %v", agent.afterInitDuration)
+		duration := agent.initDuration + agent.afterInitDuration
+		agent.WithField("durationInNs: ", duration.Nanoseconds()).Info(fmt.Sprintf("All plugins initialized successfully, took %v", duration))
 		return nil
 	case <-time.After(agent.MaxStartupTime):
-		errInit := agent.calculateDiff(agent.initSuccess)
-		errAfterInit := agent.calculateDiff(agent.afterInitSuccess)
-		agent.WithFields(logging.Fields{"AfterInitFail: ": errAfterInit, "AfterInit succ: ": agent.afterInitSuccess,
-			"Init succ: ": agent.initSuccess, "Init fail: ": errInit}).Error("Agent failed to start")
+		if agent.initDuration == defaultTimerValue {
+			agent.Infof("Agent Init took > %v", agent.MaxStartupTime)
+			agent.WithField("durationInNs: ", agent.afterInitDuration.Nanoseconds()).Infof("Agent AfterInit took %v", agent.afterInitDuration)
+		} else if agent.afterInitDuration == defaultTimerValue {
+			agent.WithField("durationInNs: ", agent.initDuration.Nanoseconds()).Infof("Agent Init took %v", agent.initDuration)
+			agent.Infof("Agent AfterInit took > %v", agent.MaxStartupTime)
+		}
 
 		return fmt.Errorf(logTimeoutFmt, agent.currentlyProcessing)
 	}
@@ -158,68 +162,96 @@ func (agent *Agent) Stop() error {
 
 // initPlugins calls Init() an all plugins on the list
 func (agent *Agent) initPlugins() error {
-	startTime := time.Now()
-	for i, plug := range agent.plugins {
+	// Flag indicates that some of the plugins failed to initialize
+	var initPluginCounter int
+	var pluginFailed bool
+	var wasError error
+
+	agent.initDuration = defaultTimerValue
+	initStartTime := time.Now()
+	for index, plugin := range agent.plugins {
+		initPluginCounter = index
+
 		// set currently initialized plugin name
-		agent.currentlyProcessing = string(plug.PluginName + " Init()")
-		err := plug.Init()
-		if err != nil {
-			//Stop the plugins that are initialized
-			for j := i; j >= 0; j-- {
-				err := safeclose.Close(agent.plugins[j])
-				if err != nil {
-					agent.Warn("err closing ", agent.plugins[j].PluginName, " ", err)
-				}
-			}
-			initErrTime := time.Since(startTime)
-			return fmt.Errorf(logErrorFmt, plug.PluginName, err, initErrTime.Nanoseconds())
+		agent.currentlyProcessing = string(plugin.PluginName)
+
+		// skip all other plugins if some of them failed
+		if pluginFailed {
+			agent.Info(fmt.Sprintf(logSkippedFmt, plugin.PluginName))
+			continue
 		}
 
-		agent.Info(fmt.Sprintf(logSuccessFmt, plug.PluginName))
-		agent.initSuccess = append(agent.initSuccess, plug)
-	}
-	agent.initDuration = time.Since(startTime).Nanoseconds()
+		pluginStartTime := time.Now()
+		err := plugin.Init()
+		if err != nil {
+			pluginErrTime := time.Since(pluginStartTime)
+			agent.WithField("durationInNs", pluginErrTime.Nanoseconds()).Errorf(logErrorFmt, plugin.PluginName, err, pluginErrTime)
 
+			pluginFailed = true
+			wasError = fmt.Errorf(logErrorFmt, plugin.PluginName, err, pluginErrTime)
+		} else {
+			pluginSuccTime := time.Since(pluginStartTime)
+			agent.WithField("durationInNs", pluginSuccTime.Nanoseconds()).Infof(logSuccessFmt, plugin.PluginName, pluginSuccTime)
+		}
+	}
+	agent.initDuration = time.Since(initStartTime)
+
+	if wasError != nil {
+		//Stop the plugins that are initialized
+		for i := initPluginCounter; i >= 0; i-- {
+			agent.Debugf("Closing %v", agent.plugins[i])
+			err := safeclose.Close(agent.plugins[i])
+			if err != nil {
+				wasError = err
+			}
+		}
+		return wasError
+	}
 	return nil
 }
 
 // handleAfterInit calls the AfterInit handlers for plugins that can only
 // finish their initialization after  all other plugins have been initialized.
 func (agent *Agent) handleAfterInit() error {
-	startTime := time.Now()
+	// Flag indicates that some of the plugins failed to after-initialize
+	var pluginFailed bool
+	var wasError error
+
+	agent.afterInitDuration = defaultTimerValue
+	afterInitStartTime := time.Now()
 	for _, plug := range agent.plugins {
 		// set currently after-initialized plugin name
-		agent.currentlyProcessing = string(plug.PluginName + " AfterInit()")
-		if plug2, ok := plug.Plugin.(PostInit); ok {
-			agent.Debug("afterInit begin for ", plug.PluginName)
-			err := plug2.AfterInit()
+		agent.currentlyProcessing = string(plug.PluginName)
+
+		// skip all other plugins if some of them failed
+		if pluginFailed {
+			agent.Info(fmt.Sprintf(logAfterSkippedFmt, plug.PluginName))
+			continue
+		}
+
+		// Check if plugin implements AfterInit()
+		if plugin, ok := plug.Plugin.(PostInit); ok {
+			pluginStartTime := time.Now()
+			err := plugin.AfterInit()
 			if err != nil {
-				agent.Stop()
-				afterInitErrTime := time.Since(startTime)
-				return fmt.Errorf(logPostErrorFmt, plug.PluginName, err, afterInitErrTime.Nanoseconds())
+				pluginErrTime := time.Since(pluginStartTime)
+				agent.WithField("durationInNs", pluginErrTime.Nanoseconds()).Errorf(logAfterErrorFmt, plug.PluginName, err, pluginErrTime)
+
+				pluginFailed = true
+				wasError = fmt.Errorf(logAfterErrorFmt, plug.PluginName, err, pluginErrTime)
+			} else {
+				pluginSuccTime := time.Since(pluginStartTime)
+				agent.WithField("durationInNs", pluginSuccTime.Nanoseconds()).Infof(logAfterSuccessFmt, plug.PluginName, pluginSuccTime)
 			}
-			agent.Info(fmt.Sprintf(logPostSuccessFmt, plug.PluginName))
-			agent.afterInitSuccess = append(agent.afterInitSuccess, plug)
+		} else {
+			agent.Info(fmt.Sprintf(logNoAfterInitFmt, plug.PluginName))
 		}
 	}
-	agent.afterInitDuration = time.Since(startTime).Nanoseconds()
+	agent.afterInitDuration = time.Since(afterInitStartTime)
 
+	if wasError != nil {
+		agent.Stop()
+		return wasError
+	}
 	return nil
-}
-
-// Returns list of plugins which are not initialized
-func (agent *Agent) calculateDiff(initialized []*NamedPlugin) []*NamedPlugin {
-	var diff []*NamedPlugin
-	for _, plugin := range agent.plugins {
-		var found bool
-		for _, initialized := range initialized {
-			if plugin == initialized {
-				found = true
-			}
-		}
-		if !found {
-			diff = append(diff, plugin)
-		}
-	}
-	return diff
 }
