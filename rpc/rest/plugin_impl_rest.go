@@ -21,8 +21,9 @@ import (
 	"fmt"
 
 	"github.com/gorilla/mux"
+	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync/grpcsync"
-	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
 	"github.com/unrolled/render"
@@ -58,7 +59,8 @@ type Plugin struct {
 
 // Deps lists the dependencies of the Rest plugin.
 type Deps struct {
-	local.PluginLogDeps // inject
+	Log        logging.PluginLogger //inject
+	PluginName core.PluginName      //inject
 
 	// Used to simplify if not whole config needs to be configured
 	HTTPport string // inject (optional)

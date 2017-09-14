@@ -21,26 +21,33 @@ import (
 
 // Mux defines API for the plugins that use access to kafka brokers.
 type Mux interface {
-	// NewSyncPublisher creates a publisher that allows to publish messages
-	// using synchronous API.
-	NewSyncPublisher(topic string) ProtoPublisher
+	// Creates new Kafka synchronous publisher sending messages to given topic.
+	// Partitioner has to be set to 'hash' (default) or 'random' scheme,
+	// otherwise an error is thrown.
+	NewSyncPublisher(topic string) (ProtoPublisher, error)
 
-	// NewSyncPublisherToPartition creates a publisher that allows to publish
-	// messages to selected topic/partition using synchronous API
-	NewSyncPublisherToPartition(topic string, partition int32) ProtoPublisher
+	// Creates new Kafka synchronous publisher sending messages to given topic
+	// and partition. Partitioner has to be set to 'manual' scheme,
+	// otherwise an error is thrown.
+	NewSyncPublisherToPartition(topic string, partition int32) (ProtoPublisher, error)
 
-	// NewAsyncPublisher creates a publisher that allows to publish messages
-	// using asynchronous API.
-	NewAsyncPublisher(topic string, successClb func(ProtoMessage), errorClb func(err ProtoMessageErr)) ProtoPublisher
+	// Creates new Kafka asynchronous publisher sending messages to given topic.
+	// Partitioner has to be set to 'hash' (default) or 'random' scheme,
+	// otherwise an error is thrown.
+	NewAsyncPublisher(topic string, successClb func(ProtoMessage), errorClb func(err ProtoMessageErr)) (ProtoPublisher, error)
 
-	// NewAsyncPublisherToPartition creates a publisher that allows to publish
-	// messages to selected topic/partition using asynchronous API.
+	// Creates new Kafka asynchronous publisher sending messages to given topic
+	// and partition. Partitioner has to be set to 'manual' scheme,
+	// otherwise an error is thrown.
 	NewAsyncPublisherToPartition(topic string, partition int32,
-		successClb func(ProtoMessage), errorClb func(err ProtoMessageErr)) ProtoPublisher
+		successClb func(ProtoMessage), errorClb func(err ProtoMessageErr)) (ProtoPublisher, error)
 
-	// NewWatcher creates a watcher that allows to start/stop consuming
-	// of messaging published to selected topics/partitions.
+	// Initializes new watcher which can start/stop watching on topic,
+	// eventually partition and offset.
 	NewWatcher(subscriberName string) ProtoWatcher
+
+	// Disabled if the plugin config was not found.
+	Disabled() (disabled bool)
 }
 
 // ProtoPublisher allows to publish a message of type proto.Message into
@@ -53,17 +60,24 @@ type ProtoPublisher interface {
 // to selected topics.
 type ProtoWatcher interface {
 	// Watch starts consuming all selected <topics>.
+	// Returns error if 'manual' partitioner scheme is chosen
 	// Callback <msgCallback> is called for each delivered message.
 	Watch(msgCallback func(ProtoMessage), topics ...string) error
-
-	// WatchPartition starts consuming specific <partition> of a selected <topic>
-	// from a given <offset>.
-	// Callback <msgCallback> is called for each delivered message.
-	WatchPartition(msgCallback func(ProtoMessage), topic string, partition int32, offset int64) error
 
 	// StopWatch cancels the previously created subscription for consuming
 	// a given <topic>.
 	StopWatch(topic string) error
+
+	// WatchPartition starts consuming specific <partition> of a selected <topic>
+	// from a given <offset>. Offset is the oldest message index consumed,
+	// all previously published messages are ignored.
+	// Callback <msgCallback> is called for each delivered message.
+	WatchPartition(msgCallback func(ProtoMessage), topic string, partition int32, offset int64) error
+
+	// StopWatchPartition cancels the previously created subscription
+	// for consuming a given <topic>/<partition>/<offset>.
+	// Return error if such a combination is not subscribed
+	StopWatchPartition(topic string, partition int32, offset int64) error
 }
 
 // ProtoMessage exposes parameters of a single message received from messaging
@@ -78,6 +92,7 @@ type ProtoMessage interface {
 	// GetTopic returns the index of the partition from which the message
 	// was consumed.
 	GetPartition() int32
+	GetOffset() int64
 }
 
 // ProtoMessageErr represents a message that was not published successfully

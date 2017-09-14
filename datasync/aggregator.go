@@ -65,13 +65,13 @@ func (ta *CompositeKVProtoWatcher) Watch(resyncName string, changeChan chan Chan
 
 // Put writes data to all aggregated transports.
 // This function implements KeyProtoValWriter.Put().
-func (ta *CompositeKVProtoWriter) Put(key string, data proto.Message) error {
+func (ta *CompositeKVProtoWriter) Put(key string, data proto.Message, opts ...PutOption) error {
 	if len(ta.Adapters) == 0 {
 		return fmt.Errorf("No transport is available in aggregator")
 	}
 	var wasError error
 	for _, transport := range ta.Adapters {
-		err := transport.Put(key, data)
+		err := transport.Put(key, data, opts...)
 		if err != nil {
 			wasError = err
 		}
