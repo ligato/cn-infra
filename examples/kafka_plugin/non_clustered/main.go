@@ -127,7 +127,7 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	}
 
 	// Create an asynchronous publisher for the selected topic.
-	plugin.kafkaAsyncPublisher, err = plugin.Kafka.NewAsyncPublisher(topic, messaging.ToProtoMsgChan(plugin.asyncMessageChannel),
+	plugin.kafkaAsyncPublisher, err = plugin.Kafka.NewAsyncPublisher(conn, topic, messaging.ToProtoMsgChan(plugin.asyncMessageChannel),
 		messaging.ToProtoMsgErrChan(plugin.asyncErrorChannel))
 	if err != nil {
 		return err

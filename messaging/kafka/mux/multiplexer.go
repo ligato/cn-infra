@@ -164,16 +164,16 @@ func (mux *Multiplexer) NewBytesConnection(name string) *BytesConnection {
 	return &BytesConnection{multiplexer: mux, name: name}
 }
 
-// NewProtoHashConnection creates instance of the ProtoHashConnection that provides access to shared
+// NewProtoConnection creates instance of the ProtoConnection that provides access to shared
 // Multiplexer's clients with hash partitioner.
-func (mux *Multiplexer) NewProtoHashConnection(name string, serializer keyval.Serializer) *ProtoHashConnection {
-	return &ProtoHashConnection{ProtoConnection{multiplexer: mux, serializer: serializer, name: name}}
+func (mux *Multiplexer) NewProtoConnection(name string, serializer keyval.Serializer) *ProtoConnection {
+	return &ProtoConnection{ProtoConnectionFields{multiplexer: mux, serializer: serializer, name: name}}
 }
 
-// NewProtoManualConnection creates instance of the ProtoConnection that provides access to shared
+// NewProtoManualConnection creates instance of the ProtoConnectionFields that provides access to shared
 // Multiplexer's clients with manual partitioner.
 func (mux *Multiplexer) NewProtoManualConnection(name string, serializer keyval.Serializer) *ProtoManualConnection {
-	return &ProtoManualConnection{ProtoConnection{multiplexer: mux, serializer: serializer, name: name}}
+	return &ProtoManualConnection{ProtoConnectionFields{multiplexer: mux, serializer: serializer, name: name}}
 }
 
 // Propagates incoming messages to respective channels.

@@ -140,10 +140,10 @@ func (p *Plugin) NewBytesConnectionToPartition(name string) *mux.BytesConnection
 	return p.muxManual.NewBytesConnection(name)
 }
 
-// NewProtoHashConnection returns a new instance of a connection to access kafka brokers. The connection allows to create
+// NewProtoConnection returns a new instance of a connection to access kafka brokers. The connection allows to create
 // new kafka providers/consumers on multiplexer with hash partitioner.The connection uses proto-modelled messages.
-func (p *Plugin) NewProtoHashConnection(name string) mux.HashConnection {
-	return p.muxHash.NewProtoHashConnection(name, &keyval.SerializerJSON{})
+func (p *Plugin) NewProtoConnection(name string) mux.Connection {
+	return p.muxHash.NewProtoConnection(name, &keyval.SerializerJSON{})
 }
 
 // NewProtoManualConnection returns a new instance of a connection to access kafka brokers. The connection allows to create
@@ -156,7 +156,7 @@ func (p *Plugin) NewProtoManualConnection(name string) mux.ManualConnection {
 // NewSyncPublisher creates a publisher that allows to publish messages using synchronous API. The publisher creates
 // new proto connection on multiplexer with default partitioner.
 func (p *Plugin) NewSyncPublisher(connectionName string, topic string) (messaging.ProtoPublisher, error) {
-	return p.NewProtoHashConnection(connectionName).NewSyncPublisher(topic)
+	return p.NewProtoConnection(connectionName).NewSyncPublisher(topic)
 }
 
 // NewSyncPublisherToPartition creates a publisher that allows to publish messages to custom partition using synchronous API.
@@ -167,19 +167,19 @@ func (p *Plugin) NewSyncPublisherToPartition(connectionName string, topic string
 
 // NewAsyncPublisher creates a publisher that allows to publish messages using asynchronous API. The publisher creates
 // new proto connection on multiplexer with default partitioner.
-func (p *Plugin) NewAsyncPublisher(topic string, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) (messaging.ProtoPublisher, error) {
-	return p.NewProtoHashConnection("").NewAsyncPublisher(topic, successClb, errorClb)
+func (p *Plugin) NewAsyncPublisher(connectionName string, topic string, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) (messaging.ProtoPublisher, error) {
+	return p.NewProtoConnection(connectionName).NewAsyncPublisher(topic, successClb, errorClb)
 }
 
 // NewAsyncPublisherToPartition creates a publisher that allows to publish messages to custom partition using asynchronous API.
 // The publisher creates new proto connection on multiplexer with manual partitioner.
-func (p *Plugin) NewAsyncPublisherToPartition(topic string, partition int32, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) (messaging.ProtoPublisher, error) {
-	return p.NewProtoManualConnection("").NewAsyncPublisherToPartition(topic, partition, successClb, errorClb)
+func (p *Plugin) NewAsyncPublisherToPartition(connectionName string,topic string, partition int32, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) (messaging.ProtoPublisher, error) {
+	return p.NewProtoManualConnection(connectionName).NewAsyncPublisherToPartition(topic, partition, successClb, errorClb)
 }
 
 // NewWatcher creates a watcher that allows to start/stop consuming of messaging published to given topics.
 func (p *Plugin) NewWatcher(name string) messaging.ProtoWatcher {
-	return p.NewProtoHashConnection(name)
+	return p.NewProtoConnection(name)
 }
 
 // Disabled if the plugin config was not found
