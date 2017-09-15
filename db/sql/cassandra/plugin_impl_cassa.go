@@ -22,6 +22,10 @@ import (
 	"github.com/willfaught/gockle"
 )
 
+const (
+	ProbeCassandraConnection = "SELECT keyspace_name FROM system_schema.keyspaces"
+)
+
 // Plugin implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
 	Deps // inject
@@ -36,7 +40,7 @@ type Deps struct {
 	local.PluginInfraDeps // inject
 }
 
-// Init is called at plugin startup. The session to etcd is established.
+// Init is called at plugin startup. The session to Cassandra is established.
 func (p *Plugin) Init() (err error) {
 	if p.session != nil {
 		return nil // skip initialization
@@ -45,7 +49,6 @@ func (p *Plugin) Init() (err error) {
 	// Retrieve config
 	var cfg Config
 	found, err := p.PluginConfig.GetValue(&cfg)
-	// need to be strict about config presence for ETCD
 	if !found {
 		p.Log.Info("cassandra client config not found ", p.PluginConfig.GetConfigName(),
 			" - skip loading this plugin")
@@ -78,8 +81,7 @@ func (p *Plugin) AfterInit() error {
 	// Register for providing status reports (polling mode)
 	if p.StatusCheck != nil && p.session != nil {
 		p.StatusCheck.Register(core.PluginName(p.String()), func() (statuscheck.PluginState, error) {
-			broker := p.NewBroker()
-			err := broker.Exec(`select keyspace_name from system_schema.keyspaces`)
+			err := p.session.Exec(ProbeCassandraConnection)
 			if err == nil {
 				return statuscheck.OK, nil
 			}

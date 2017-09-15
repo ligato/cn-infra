@@ -79,6 +79,7 @@ define build_plugin_examples_only
     @cd examples/kafka_plugin/non_clustered && go build -v ${LDFLAGS}
     @cd examples/logs_plugin && go build -v ${LDFLAGS}
     @cd examples/simple-agent && go build -v ${LDFLAGS}
+    @cd examples/redis_plugin && go build -v ${LDFLAGS}
     @echo "# done"
 endef
 
@@ -113,6 +114,7 @@ define clean_plugin_examples_only
     @rm -f examples/flags_plugin/flags_plugin
     @rm -f examples/kafka_plugin/non_clustered/non_clustered
     @rm -f examples/logs_plugin/logs_plugin
+    @rm -f examples/redis_plugin/redis_plugin
     @echo "# done"
 endef
 
