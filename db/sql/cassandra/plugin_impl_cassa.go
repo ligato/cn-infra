@@ -22,8 +22,9 @@ import (
 	"github.com/willfaught/gockle"
 )
 
+//
 const (
-	ProbeCassandraConnection = "SELECT keyspace_name FROM system_schema.keyspaces"
+	probeCassandraConnection = "SELECT keyspace_name FROM system_schema.keyspaces"
 )
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
@@ -81,7 +82,7 @@ func (p *Plugin) AfterInit() error {
 	// Register for providing status reports (polling mode)
 	if p.StatusCheck != nil && p.session != nil {
 		p.StatusCheck.Register(core.PluginName(p.String()), func() (statuscheck.PluginState, error) {
-			err := p.session.Exec(ProbeCassandraConnection)
+			err := p.session.Exec(probeCassandraConnection)
 			if err == nil {
 				return statuscheck.OK, nil
 			}
