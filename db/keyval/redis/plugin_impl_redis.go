@@ -55,23 +55,13 @@ func (p *Plugin) Init() error {
 		return err
 	}
 
-	if p.Skeleton == nil {
-		con, err := NewBytesConnection(client, p.Log)
-		if err != nil {
-			return err
-		}
-
-		p.Skeleton = plugin.NewSkeleton(p.String(),
-			p.ServiceLabel,
-			con,
-		)
-	}
-	err = p.Skeleton.Init()
+	connection, err := NewBytesConnection(client, p.Log)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	p.Skeleton = plugin.NewSkeleton(p.String(), p.ServiceLabel, connection)
+	return p.Skeleton.Init()
 }
 
 // AfterInit is called by the Agent Core after all plugins have been initialized.
