@@ -21,7 +21,7 @@ import (
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/health/statuscheck/model/status"
+	status "github.com/ligato/cn-infra/health/statuscheck/model"
 	"github.com/ligato/cn-infra/logging"
 )
 
