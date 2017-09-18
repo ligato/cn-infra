@@ -16,33 +16,35 @@ package logrus
 
 import (
 	"fmt"
-	"sync"
 
-	"github.com/ligato/cn-infra/logging"
 	"github.com/Sirupsen/logrus"
+	"github.com/ligato/cn-infra/logging"
+	"sync/atomic"
 )
 
 // NewLogRegistry is a constructor
 func NewLogRegistry() logging.Registry {
-	registry := &logRegistry{mapping: map[string]*Logger{}}
+	registry := &logRegistry{}
+	// Init mapping in value
+	registry.value.Store(make(map[string]*Logger))
+	// Put default logger value
 	registry.put(defaultLogger)
 	return registry
 }
 
 // logRegistry contains logger map and rwlock guarding access to it
 type logRegistry struct {
-	// mapping holds logger instances indexed by their names
-	mapping map[string] /*logger name*/ *Logger
-	rwmutex sync.RWMutex
+	// value holds mapping of logger instances indexed by their names
+	value atomic.Value
 }
 
 // NewLogger creates new named Logger instance. Name can be subsequently used to
 // refer the logger in registry.
 func (lr *logRegistry) NewLogger(name string) logging.Logger {
-	if _, exists := lr.mapping[name]; exists {
+	mapping := lr.value.Load().(map[string]*Logger)
+	if _, exists := mapping[name]; exists {
 		panic(fmt.Errorf("logger with name '%s' already exists", name))
 	}
-
 	if err := checkLoggerName(name); err != nil {
 		panic(err)
 	}
@@ -55,10 +57,9 @@ func (lr *logRegistry) NewLogger(name string) logging.Logger {
 
 // ListLoggers returns a map (loggerName => log level)
 func (lr *logRegistry) ListLoggers() map[string]string {
-	lr.rwmutex.RLock()
-	defer lr.rwmutex.RUnlock()
+	mapping := lr.value.Load().(map[string]*Logger)
 	list := map[string]string{}
-	for k, v := range lr.mapping {
+	for k, v := range mapping {
 		list[k] = v.GetLevel().String()
 	}
 	return list
@@ -66,11 +67,10 @@ func (lr *logRegistry) ListLoggers() map[string]string {
 
 // SetLevel modifies log level of selected logger in the registry
 func (lr *logRegistry) SetLevel(logger, level string) error {
-	lr.rwmutex.RLock()
-	defer lr.rwmutex.RUnlock()
-	lg, ok := lr.mapping[logger]
+	mapping := lr.value.Load().(map[string]*Logger)
+	lg, ok := mapping[logger]
 	if !ok {
-		return fmt.Errorf("Logger %s not found", logger)
+		return fmt.Errorf("logger %s not found", logger)
 	}
 	lvl, err := logrus.ParseLevel(level)
 	if err == nil {
@@ -95,39 +95,36 @@ func (lr *logRegistry) SetLevel(logger, level string) error {
 
 // GetLevel returns the currently set log level of the logger
 func (lr *logRegistry) GetLevel(logger string) (string, error) {
-	lr.rwmutex.RLock()
-	defer lr.rwmutex.RUnlock()
-	lg, ok := lr.mapping[logger]
+	mapping := lr.value.Load().(map[string]*Logger)
+	lg, ok := mapping[logger]
 	if !ok {
-		return "", fmt.Errorf("Logger %s not found", logger)
+		return "", fmt.Errorf("logger %s not found", logger)
 	}
 	return lg.GetLevel().String(), nil
 }
 
 // Lookup returns a logger instance identified by name from registry
 func (lr *logRegistry) Lookup(loggerName string) (logger logging.Logger, found bool) {
-	lr.rwmutex.RLock()
-	defer lr.rwmutex.RUnlock()
-	logger, found = lr.mapping[loggerName]
+	mapping := lr.value.Load().(map[string]*Logger)
+	logger, found = mapping[loggerName]
 	return
 }
 
 // ClearRegistry removes all loggers except the default one from registry
 func (lr *logRegistry) ClearRegistry() {
-	lr.rwmutex.Lock()
-	defer lr.rwmutex.Unlock()
-
-	for k := range lr.mapping {
+	mapping := lr.value.Load().(map[string]*Logger)
+	for k := range mapping {
 		if k != DefaultLoggerName {
-			delete(lr.mapping, k)
+			delete(mapping, k)
 		}
 	}
+	lr.value.Store(mapping)
 }
 
 // put writes logger into map of named loggers
 func (lr *logRegistry) put(logger *Logger) {
-	lr.rwmutex.Lock()
-	defer lr.rwmutex.Unlock()
+	mapping := lr.value.Load().(map[string]*Logger)
+	mapping[logger.name] = logger
 
-	lr.mapping[logger.name] = logger
+	lr.value.Store(mapping)
 }
