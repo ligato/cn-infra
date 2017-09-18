@@ -5,89 +5,30 @@ import (
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/examples/model"
-	"github.com/ligato/cn-infra/flavors/local"
-	log "github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/messaging"
-	"github.com/ligato/cn-infra/messaging/kafka"
 	"github.com/ligato/cn-infra/utils/safeclose"
-	"github.com/namsral/flag"
 )
 
 //********************************************************************
-// The following functions show how to use the Agent's Kafka APIs
-// and perform synchronous/asynchronous call and how to watch on
-// these events
+// This example shows how to use the Agent's Kafka APIs to perform
+// synchronous/asynchronous calls and how to watch on these events.
 //********************************************************************
 
-/********
- * Main *
- ********/
-
-// Main allows running Example Plugin as a statically linked binary with Agent Core Plugins. Close channel and plugins
-// required for the example are initialized. Agent is instantiated with generic plugins (ETCD, Kafka, Status check,
-// HTTP and Log) and example plugin which demonstrates Kafka functionality.
 func main() {
 	// Init close channel used to stop the example
 	exampleFinished := make(chan struct{}, 1)
 
-	// Start Agent with ExampleFlavor (combination of ExamplePlugin & reused cn-infra plugins)
+	// Start Agent with ExampleFlavor
+	// (combination of ExamplePlugin & reused cn-infra plugins).
 	flavor := ExampleFlavor{closeChan: &exampleFinished}
-	agent := core.NewAgent(log.StandardLogger(), 15*time.Second, append(flavor.Plugins())...)
+	plugins := flavor.Plugins()
+	agent := core.NewAgent(flavor.LogRegistry().NewLogger("core"), 15*time.Second, plugins...)
 	core.EventLoopWithInterrupt(agent, exampleFinished)
 }
 
-/**********
- * Flavor *
- **********/
-
-// Kafka flag to load config
-func init() {
-	flag.String("kafka-config", "kafka.conf",
-		"Location of the kafka configuration file")
-}
-
-// ExampleFlavor is a set of plugins required for the datasync example.
-type ExampleFlavor struct {
-	// Local flavor to access to Infra (logger, service label, status check)
-	*local.FlavorLocal
-	// Kafka plugin
-	Kafka kafka.Plugin
-	// Example plugin
-	KafkaExample ExamplePlugin
-	// For example purposes, use channel when the example is finished
-	closeChan *chan struct{}
-}
-
-// Inject sets object references
-func (ef *ExampleFlavor) Inject() (allReadyInjected bool) {
-	// Init local flavor
-	if ef.FlavorLocal == nil {
-		ef.FlavorLocal = &local.FlavorLocal{}
-	}
-	ef.FlavorLocal.Inject()
-	// Init kafka
-	ef.Kafka.Deps.PluginInfraDeps = *ef.FlavorLocal.InfraDeps("kafka")
-	// Inject kafka to example plugin
-	ef.KafkaExample.Deps.PluginLogDeps = *ef.FlavorLocal.LogDeps("kafka-example")
-	ef.KafkaExample.Kafka = &ef.Kafka
-	ef.KafkaExample.closeChannel = ef.closeChan
-
-	return true
-}
-
-// Plugins combines all Plugins in flavor to the list
-func (ef *ExampleFlavor) Plugins() []*core.NamedPlugin {
-	ef.Inject()
-	return core.ListPluginsInFlavor(ef)
-}
-
-/******************
- * Example plugin *
- ******************/
-
-// ExamplePlugin implements Plugin interface which is used to pass custom plugin instances to the agent. The Kafka
-// ConsumerHandle is required to read messages from a topic, and PluginConnection is needed to start consuming on
-// the topic
+// ExamplePlugin demonstrates the use of Kafka plugin API from another plugin.
+// The Kafka ConsumerHandle is required to read messages from a topic
+// and PluginConnection is needed to start consuming on that topic.
 type ExamplePlugin struct {
 	Deps // plugin dependencies are injected
 
@@ -95,20 +36,15 @@ type ExamplePlugin struct {
 	kafkaSyncPublisher  messaging.ProtoPublisher
 	kafkaAsyncPublisher messaging.ProtoPublisher
 	kafkaWatcher        messaging.ProtoWatcher
-	// Successfully published kafka message is sent through the message channel, error channel otherwise
+	// Successfully published kafka message is sent through the message channel.
+	// In case of a failure it sent through the error channel.
 	asyncSubscription   chan (messaging.ProtoMessage)
 	asyncSuccessChannel chan (messaging.ProtoMessage)
 	asyncErrorChannel   chan (messaging.ProtoMessageErr)
-	// Fields below are used to properly finish the example
+	// Fields below are used to properly finish the example.
 	syncCaseDone  bool
 	asyncCaseDone bool
 	closeChannel  *chan struct{}
-}
-
-// Deps is a helper struct which is grouping all dependencies injected to the plugin
-type Deps struct {
-	Kafka               *kafka.Plugin // injected
-	local.PluginLogDeps               // injected
 }
 
 const (
@@ -130,19 +66,18 @@ const (
 	topic2 = "example-async-clustered-topic"
 )
 
-// Init is the entry point into the plugin that is called by Agent Core when the Agent is coming up.
-// The Go native plugin mechanism that was introduced in Go 1.8
+// Init initializes and starts producers and consumers.
 func (plugin *ExamplePlugin) Init() (err error) {
 	// Create connection
 	connection := plugin.Kafka.NewProtoConnectionToPartition("example-proto-connection")
 
-	// Create a synchronous and asynchronous publisher. In manual mode, every publisher has defined partition, where
-	// the messages for given partition will be stored
+	// Create a synchronous and asynchronous publisher.
+	// In the manual mode, every publisher has selected its target partition.
 	plugin.kafkaSyncPublisher, err = connection.NewSyncPublisherToPartition(topic1, syncMessagePartition)
 	if err != nil {
 		return err
 	}
-	// Async publisher requires two more channels to send success/error callback
+	// Async publisher requires two more channels to send success/error callback.
 	plugin.asyncSuccessChannel = make(chan messaging.ProtoMessage, 0)
 	plugin.asyncErrorChannel = make(chan messaging.ProtoMessageErr, 0)
 	plugin.kafkaAsyncPublisher, err = connection.NewAsyncPublisherToPartition(topic2, asyncMessagePartition,
@@ -151,23 +86,27 @@ func (plugin *ExamplePlugin) Init() (err error) {
 		return err
 	}
 
-	// Initialize sync watcher
+	// Initialize sync watcher.
 	plugin.kafkaWatcher = plugin.Kafka.NewWatcher("example-watcher")
 
-	// Prepare subscription channel. Relevant kafka messages are send to this channel so watcher can read it
+	// Prepare subscription channel. Relevant kafka messages are send to this
+	// channel so that the watcher can read it.
 	plugin.subscription = make(chan messaging.ProtoMessage)
-	// The watcher is consuming messages on custom partition and offset. If there is a producer who stores message to
-	// the partition and offset which is the same or newer, the message will be consumed
+	// The watcher is consuming messages on a custom partition and an offset.
+	// If there is a producer who stores message to the same partition under
+	// the same or a newer offset, the message will be consumed.
 	err = plugin.kafkaWatcher.WatchPartition(messaging.ToProtoMsgChan(plugin.subscription), topic1,
 		syncMessagePartition, syncMessageOffset)
 	if err != nil {
 		plugin.Log.Error(err)
 	}
 
-	// Prepare subscription channel. Relevant kafka messages are send to this channel so watcher can read it
+	// Prepare subscription channel. Relevant kafka messages are send to this
+	// channel so that the watcher can read it
 	plugin.asyncSubscription = make(chan messaging.ProtoMessage)
-	// The watcher is consuming messages on custom partition and offset. If there is a producer who stores message to
-	// the partition and offset which is the same or newer, the message will be consumed
+	// The watcher is consuming messages on custom partition and offset.
+	// If there is a producer who stores message to the same partition under
+	// the same or a newer offset, the message will be consumed.
 	err = plugin.kafkaWatcher.WatchPartition(messaging.ToProtoMsgChan(plugin.asyncSubscription), topic2,
 		asyncMessagePartition, asyncMessageOffset)
 	if err != nil {
@@ -176,14 +115,14 @@ func (plugin *ExamplePlugin) Init() (err error) {
 
 	plugin.Log.Info("Initialization of the custom plugin for the Kafka example is completed")
 
-	// Run sync and async kafka consumers
+	// Run sync and async kafka consumers.
 	go plugin.syncEventHandler()
 	go plugin.asyncEventHandler()
 
-	// Run the producer
+	// Run the producer.
 	go plugin.producer()
 
-	// Verify results and close the example if successful
+	// Verify results and close the example if successful.
 	go plugin.closeExample()
 
 	return err
@@ -199,8 +138,7 @@ func (plugin *ExamplePlugin) closeExample() {
 	}
 }
 
-// Close is called by Agent Core when the Agent is shutting down. It is supposed to clean up resources that were
-// allocated by the plugin during its lifetime
+// Close closes the subscription and the channels used by the async producer.
 func (plugin *ExamplePlugin) Close() error {
 	safeclose.Close(plugin.subscription)
 	safeclose.Close(plugin.asyncErrorChannel)
@@ -212,18 +150,19 @@ func (plugin *ExamplePlugin) Close() error {
  * Producers *
  *************/
 
-// Kafka Producer sends messages with desired topic and in manual mode also partition
+// producer sends messages to a desired topic and in the manual mode also
+// to a specified partition.
 func (plugin *ExamplePlugin) producer() {
-	// Wait for the both event handlers to initialize
+	// Wait for the both event handlers to initialize.
 	time.Sleep(2 * time.Second)
 
-	// Synchronous message with protobuf-encoded message
+	// Synchronous message with protobuf-encoded data.
 	enc := &etcd_example.EtcdExample{
 		StringVal: "sync-dummy-message",
 		Uint32Val: uint32(0),
 		BoolVal:   true,
 	}
-	// Send several sync messages with offset 0,1,...
+	// Send several sync messages with offsets 0,1,...
 	plugin.Log.Info("Sending %v Kafka notifications (protobuf) ...", syncMessageCount)
 	for i := 0; i < syncMessageCount; i++ {
 		err := plugin.kafkaSyncPublisher.Put("proto-key", enc)
@@ -232,9 +171,10 @@ func (plugin *ExamplePlugin) producer() {
 		}
 	}
 
-	// Asynchronous message with protobuf encoded message. A success event is sent to the app asynchronously
-	// on an event channel when the message has been successfully sent to Kafka. An error message is sent to
-	// the app asynchronously if the message could not be sent (see also asyncEventHandler)
+	// Send message with protobuf encoded data asynchronously.
+	// Delivery status is propagated back to the application through
+	// the configured pair of channels - one for the success events and one for
+	// the errors.
 	plugin.Log.Info("Sending async Kafka notification (protobuf)")
 	err := plugin.kafkaAsyncPublisher.Put("async-proto-key", enc)
 	if err != nil {
@@ -248,13 +188,15 @@ func (plugin *ExamplePlugin) producer() {
  * Consumers *
  *************/
 
-// Kafka consumer is subscribed to channel with specific topic, partition and offset. If producer sends a message with
-// correct parameters, consumer will receive it
+// syncEventHandler is a Kafka consumer synchronously processing events from
+// a channel associated with a specific topic, partition and a starting offset.
+// If a producer sends a message matching this destination criteria, the consumer
+// will receive it.
 func (plugin *ExamplePlugin) syncEventHandler() {
 	plugin.Log.Info("Started Kafka sync event handler...")
 
-	// Producer sends several messages (set in syncMessageCount). Consumer should receive only messages from desired
-	// partition and offset
+	// Producer sends several messages (set in syncMessageCount).
+	// Consumer should receive only messages from desired partition and offset.
 	messageCounter := 0
 	for message := range plugin.subscription {
 		plugin.Log.Infof("Received sync Kafka Message, topic '%s', partition '%v', offset '%v', key: '%s', ",
@@ -274,8 +216,10 @@ func (plugin *ExamplePlugin) syncEventHandler() {
 
 }
 
-// Kafka consumer is subscribed to channel with specific topic, partition and offset. If producer sends a message with
-// correct parameters, consumer will receive it
+// asyncEventHandler is a Kafka consumer asynchronously processing events from
+// a channel associated with a specific topic, partition and a starting offset.
+// If a producer sends a message matching this destination criteria, the consumer
+// will receive it.
 func (plugin *ExamplePlugin) asyncEventHandler() {
 	plugin.Log.Info("Started Kafka async event handler...")
 	for {

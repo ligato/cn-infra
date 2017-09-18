@@ -74,8 +74,9 @@ endef
 # build plugin example only
 define build_plugin_examples_only
     @echo "# building plugin examples"
+    @cd examples/configs_plugin && go build -v ${LDFLAGS}
     @cd examples/datasync_plugin && go build -v ${LDFLAGS}
-    @cd examples/flags_plugin && go build -v ${LDFLAGS}
+    @cd examples/flags_lib && go build -v ${LDFLAGS}
     @cd examples/kafka_plugin/non_clustered && go build -v ${LDFLAGS}
     @cd examples/logs_plugin && go build -v ${LDFLAGS}
     @cd examples/simple-agent && go build -v ${LDFLAGS}
@@ -109,8 +110,9 @@ endef
 define clean_plugin_examples_only
     @echo "# cleaning plugin examples"
     @rm -f examples/simple-agent/simple-agent
+    @rm -f examples/configs_plugin/configs_plugin
     @rm -f examples/datasync_plugin/datasync_plugin
-    @rm -f examples/flags_plugin/flags_plugin
+    @rm -f examples/flags_lib/flags_lib
     @rm -f examples/kafka_plugin/non_clustered/non_clustered
     @rm -f examples/logs_plugin/logs_plugin
     @echo "# done"

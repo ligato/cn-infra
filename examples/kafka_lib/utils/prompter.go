@@ -20,7 +20,7 @@ import (
 	"github.com/Songmu/prompter"
 )
 
-// Message contains the message elements to prompt for
+// Message contains the message elements to prompt for.
 type Message struct {
 	Topic    string
 	Text     string
@@ -28,13 +28,13 @@ type Message struct {
 	Metadata string
 }
 
-// Command to prompt for
+// Command to prompt for.
 type Command struct {
 	Cmd string
 	Message
 }
 
-// GetCommand from the user
+// GetCommand allows user to select a command and reads the input arguments.
 func GetCommand() *Command {
 	var command *Command
 loop:
