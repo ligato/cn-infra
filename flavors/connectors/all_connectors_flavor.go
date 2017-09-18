@@ -25,7 +25,7 @@ import (
 	"github.com/ligato/cn-infra/messaging/kafka"
 )
 
-// AllConnectorsFlavor is combination of all plugins that allow
+// AllConnectorsFlavor is a combination of all plugins that allow
 // connectivity to external database/messaging...
 // Effectively it is combination of ETCD, Kafka, Redis, Cassandra
 // plugins.
@@ -50,7 +50,7 @@ type AllConnectorsFlavor struct {
 	injected bool
 }
 
-// Inject sets object references
+// Inject initializes flavor references/dependencies.
 func (f *AllConnectorsFlavor) Inject() bool {
 	if f.injected {
 		return false

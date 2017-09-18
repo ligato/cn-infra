@@ -10,7 +10,7 @@ import (
 )
 
 // *************************************************************************
-// This file contains a logger use cases. To define a custom logger, use
+// This file contains logger use cases. To define a custom logger, use
 // PluginLogger.NewLogger(name). The logger is using 6 levels of logging:
 // - Debug
 // - Info (this one is default)
@@ -23,54 +23,24 @@ import (
 // or remotely using REST (but different flavor must be used: rpc.RpcFlavor).
 // ************************************************************************/
 
-/********
- * Main *
- ********/
-
-// Main allows running Example Plugin as a statically linked binary with Agent Core Plugins. Close channel and plugins
-// required for the example are initialized. Agent is instantiated with generic plugins (ETCD, Kafka, Status check,
-// HTTP and Log) and example plugin which demonstrates Logs functionality.
 func main() {
 	// Init close channel to stop the example after everything was logged
 	exampleFinished := make(chan struct{}, 1)
 
-	// Start Agent with ExampleFlavor (combination of ExamplePlugin & reused cn-infra plugins)
+	// Start Agent with ExampleFlavor
+	// (combination of ExamplePlugin & reused cn-infra plugins).
 	flavor := ExampleFlavor{ExamplePlugin: ExamplePlugin{exampleFinished: exampleFinished}}
 	agent := core.NewAgent(logroot.StandardLogger(), 15*time.Second, flavor.Plugins()...)
 	core.EventLoopWithInterrupt(agent, exampleFinished)
 }
 
-/**********
- * Flavor *
- **********/
-
-// ExampleFlavor is composition of ExamplePlugin and existing flavor
-type ExampleFlavor struct {
-	local.FlavorLocal
-	ExamplePlugin
-}
-
-// Plugins combines all Plugins in flavor to the list
-func (f *ExampleFlavor) Plugins() []*core.NamedPlugin {
-	if f.FlavorLocal.Inject() {
-		f.ExamplePlugin.PluginLogDeps = *f.LogDeps("logs-example")
-	}
-
-	return core.ListPluginsInFlavor(f)
-}
-
-/******************
- * Example plugin *
- ******************/
-
-// ExamplePlugin implements Plugin interface which is used to pass custom plugin instances to the agent
+// ExamplePlugin presents the PluginLogger API.
 type ExamplePlugin struct {
 	local.PluginLogDeps // this field is usually injected in flavor
 	exampleFinished         chan struct{}
 }
 
-// Init is the entry point into the plugin that is called by Agent Core when the Agent is coming up.
-// The Go native plugin mechanism that was introduced in Go 1.8
+// Init demonstrates the usage of PluginLogger API.
 func (plugin *ExamplePlugin) Init() (err error) {
 	exampleString := "example"
 	exampleNum := 15
@@ -109,7 +79,7 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	return nil
 }
 
-// Demostrates panic log + recovering
+// showPanicLog demonstrates panic log + recovering.
 func (plugin *ExamplePlugin) showPanicLog() {
 	defer func() {
 		if err := recover(); err != nil {
