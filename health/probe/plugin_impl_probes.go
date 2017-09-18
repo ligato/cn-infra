@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	// Default port used for http and probing
+	// Default port used for http and probing.
 	defaultPort               = "9191"
 	livenessProbePath  string = "/liveness"  // liveness probe URL
 	readinessProbePath string = "/readiness" // readiness probe URL
@@ -47,24 +47,25 @@ func init() {
 		"Listen port for the Agent's HTTPProbe server.")
 }
 
-// Plugin struct holds all plugin-related data
+// Plugin struct holds all plugin-related data.
 type Plugin struct {
 	Deps
 
 	customProbe bool
 }
 
-// Deps is here to group injected dependencies of plugin
-// to not mix with other plugin fields.
+// Deps lists dependencies of the probe plugin.
 type Deps struct {
-	local.PluginLogDeps                               //inject
-	HTTP                    *rest.Plugin                  //inject optionally
-	StatusCheck             statuscheck.AgentStatusReader //inject
+	local.PluginLogDeps                               // inject
+	HTTP                *rest.Plugin                  // inject (optional)
+	StatusCheck         statuscheck.AgentStatusReader // inject
 }
 
-// Init is the plugin entry point called by the Agent Core
+// Init may create a new (custom) instance of HTTP if the injected instance uses
+// different HTTP port than requested.
 func (p *Plugin) Init() (err error) {
-	// Start Init() and AfterInit() for new probe in case the port is different from agent http
+	// Start Init() and AfterInit() for new probe in case the port is different
+	// from agent http.
 	if p.HTTP.HTTPport != httpPort {
 		childPlugNameHTTP := p.String() + "-HTTP"
 		p.HTTP = &rest.Plugin{
@@ -88,7 +89,7 @@ func (p *Plugin) Init() (err error) {
 	return nil
 }
 
-// AfterInit is called by the Agent Core after all plugins have been initialized.
+// AfterInit registers HTTP handlers for liveness and readiness probes.
 func (p *Plugin) AfterInit() error {
 	if p.HTTP != nil {
 		if p.StatusCheck != nil {
@@ -106,7 +107,7 @@ func (p *Plugin) AfterInit() error {
 	return nil
 }
 
-// Close is called by the Agent Core when it's time to clean up the plugin
+// Close shutdowns HTTP if a custom instance was created in Init().
 func (p *Plugin) Close() error {
 	if p.customProbe {
 		_, err := safeclose.CloseAll(p.HTTP)
@@ -149,7 +150,7 @@ func (p *Plugin) livenessProbeHandler(formatter *render.Render) http.HandlerFunc
 	}
 }
 
-// String returns plugin name if it is set
+// String returns plugin name if it was injected, "HEALTH_RPC_PROBES" otherwise.
 func (p *Plugin) String() string {
 	if len(string(p.PluginName)) > 0 {
 		return string(p.PluginName)

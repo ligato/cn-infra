@@ -1,3 +1,17 @@
+// Copyright (c) 2017 Cisco and/or its affiliates.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
@@ -6,66 +20,50 @@ import (
 	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/flavors/local"
-	"github.com/ligato/cn-infra/logging/logroot"
-	"github.com/namsral/flag"
 )
 
-// PluginName is used below in dependency injection & in following constant
-// to achieve consistent string values.
+// PluginName is injected as the plugin name.
 const PluginName = "example"
 
-// ExampleConfFlag used as flag name (see implementation in declareFlags())
-// It is used to load configuration of Example plugin.
-// This flag name is calculated from the name of the plugin.
+// ExampleConfFlag is the name of the flag used by PluginConfig (package config)
+// to get the filename of the configuration file for the Example plugin.
+// This flag name is composed of the plugin name and the suffix
+// config.FlagSuffix.
+// The flag is created in ExampleFlavor.Plugins().
 const ExampleConfFlag = PluginName + config.FlagSuffix
 
-// ExampleConfDefault is default (flag value) - filename for the configuration.
+// ExampleConfDefault is the default (flag value) filename for the configuration
+// file.
 const ExampleConfDefault = PluginName + ".conf"
 
-// ExampleConfUsage used as flag usage (see implementation in declareFlags())
+// ExampleConfUsage is the documentation for ExampleConfFlag.
 const ExampleConfUsage = "Location of the example configuration file; also set via 'EXAMPLE_CONFIG' env variable."
 
 // *************************************************************************
-// This file contains a Plugin Config show case:
-// - plugin binds it's configuration to a example specific Conf structure
+// This file contains a PluginConfig show case:
+// - plugin binds it's configuration to an example specific Conf structure
 //   (see code how default is handled & how it can be overridden by flags)
-// - cn-infra helps by locating config file (flags)
+// - cn-infra helps by locating and parsing the configuration file
 //
 // ************************************************************************/
 
-// Main allows running Example Plugin as a statically linked binary with Agent Core Plugins. Close channel and plugins
-// required for the example are initialized.
 func main() {
-	// Init close channel to stop the example after everything was logged
+	// Init close channel to stop the example after everything was logged.
 	exampleFinished := make(chan struct{}, 1)
 
-	// Start Agent with ExampleFlavor (combination of ExamplePlugin & reused cn-infra plugins)
+	// Start Agent with ExampleFlavor
+	// (combination of ExamplePlugin & Local flavor)
 	flavor := ExampleFlavor{ExamplePlugin: ExamplePlugin{exampleFinished: exampleFinished}}
-	agent := core.NewAgent(logroot.StandardLogger(), 15*time.Second, flavor.Plugins()...)
+	plugins := flavor.Plugins()
+	agent := core.NewAgent(flavor.LogRegistry().NewLogger("core"), 15*time.Second, plugins...)
 	core.EventLoopWithInterrupt(agent, exampleFinished)
 }
 
-// ExampleFlavor is composition of ExamplePlugin and existing flavor
-type ExampleFlavor struct {
-	local.FlavorLocal
-	ExamplePlugin
-}
-
-// Plugins combines all Plugins in flavor to the list
-func (f *ExampleFlavor) Plugins() []*core.NamedPlugin {
-	if f.FlavorLocal.Inject() {
-		f.ExamplePlugin.PluginInfraDeps = *f.InfraDeps(PluginName)
-		flag.String(ExampleConfFlag, ExampleConfDefault, ExampleConfUsage)
-	}
-
-	return core.ListPluginsInFlavor(f)
-}
-
-// ExamplePlugin implements Plugin interface which is used to pass custom plugin instances to the agent
+// ExamplePlugin demonstrates the use of injected Config plugin.
 type ExamplePlugin struct {
 	local.PluginInfraDeps // this field is usually injected in flavor
-	*Conf                 // it is possible to set config value programatically (can be overriden)
-	exampleFinished chan struct{}
+	*Conf                 // it is possible to set config value programmatically (can be overridden)
+	exampleFinished       chan struct{}
 }
 
 // Conf - example config binding
@@ -79,8 +77,9 @@ func (conf *Conf) String() string {
 	return "{Field1:" + conf.Field1 + ", Sleep:" + conf.Sleep.String() + "}"
 }
 
-// Init is the entry point into the plugin that is called by Agent Core when the Agent is coming up.
-// The Go native plugin mechanism that was introduced in Go 1.8
+// Init loads the configuration file assigned to ExamplePlugin (can be changed
+// via the example-config flag).
+// Loaded config is printed into the log file.
 func (plugin *ExamplePlugin) Init() (err error) {
 	plugin.Log.Info("Loading plugin config ", plugin.PluginConfig.GetConfigName())
 

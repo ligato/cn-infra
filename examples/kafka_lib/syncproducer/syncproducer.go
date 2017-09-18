@@ -29,6 +29,7 @@ import (
 )
 
 var (
+	// Flags used to read the input arguments.
 	brokerList  = flag.String("brokers", os.Getenv("KAFKA_PEERS"), "The comma separated list of brokers in the Kafka cluster. You can also set the KAFKA_PEERS environment variable")
 	partitioner = flag.String("partitioner", "hash", "The partitioning scheme to use. Can be `hash`, `manual`, or `random`")
 	partition   = flag.Int("partition", -1, "The partition to produce to.")
@@ -50,14 +51,15 @@ func main() {
 	config.SetPartition(int32(*partition))
 	config.SetPartitioner(*partitioner)
 	config.SetBrokers(strings.Split(*brokerList, ",")...)
-	// init producer
+
+	// Create new Sync-producer using NewSyncProducer() API.
 	producer, err := client.NewSyncProducer(config, nil)
 	if err != nil {
 		fmt.Printf("NewSyncProducer errored: %v\n", err)
 		os.Exit(1)
 	}
 
-	// get command
+	// Prompt user for the command to execute and read the input parameters.
 	for {
 		command := utils.GetCommand()
 		switch command.Cmd {
@@ -81,7 +83,8 @@ func main() {
 	}
 }
 
-// send message
+// sendMessage demonstrates SyncProducer.SendMsgByte API to publish a single
+// message to a Kafka topic.
 func sendMessage(producer *client.SyncProducer, msg utils.Message) error {
 	var (
 		msgKey   []byte
@@ -94,7 +97,8 @@ func sendMessage(producer *client.SyncProducer, msg utils.Message) error {
 	}
 	msgValue = []byte(msg.Text)
 
-	// send message
+	// Demonstrate the use of SyncProducer.SendMsgByte() API.
+	// The function doesn't return until the delivery status is known.
 	_, err := producer.SendMsgByte(msg.Topic, msgKey, msgValue)
 	if err != nil {
 		log.StandardLogger().Errorf("SendMsg Error: %v", err)

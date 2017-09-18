@@ -41,7 +41,6 @@ func printContact(c *phonebook.Contact) {
 }
 
 func main() {
-
 	cfg, err := processArgs()
 	if err != nil {
 		printUsage()
@@ -49,19 +48,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	//create connection to etcd
+	// Create connection to etcd datastore.
 	broker, err := etcdv3.NewEtcdConnectionWithBytes(*cfg, logroot.StandardLogger())
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	//initialize proto decorator
+	// Initialize proto decorator.
 	protoBroker := kvproto.NewProtoWrapper(broker)
 
 	respChan := make(chan keyval.ProtoWatchResp, 0)
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt)
 
+	// Register watcher and select the respChan channel as the destination
+	// for the delivery of all the change events.
 	err = protoBroker.Watch(keyval.ToChanProto(respChan), phonebook.EtcdPath())
 	if err != nil {
 		fmt.Println(err)
@@ -69,6 +70,7 @@ func main() {
 	}
 	fmt.Println("Watching the key: ", phonebook.EtcdPath())
 
+	// Keep watching for changes until the interrupt signal is received.
 watcherLoop:
 	for {
 		select {

@@ -14,6 +14,7 @@ import (
 	"github.com/ligato/cn-infra/logging/logroot"
 )
 
+// processArgs processes input arguments.
 func processArgs() (*etcdv3.ClientConfig, error) {
 	fileConfig := &etcdv3.Config{}
 	if len(os.Args) > 2 {
@@ -37,7 +38,6 @@ func printUsage() {
 }
 
 func main() {
-
 	cfg, err := processArgs()
 	if err != nil {
 		printUsage()
@@ -45,23 +45,24 @@ func main() {
 		os.Exit(1)
 	}
 
-	//create connection to etcd
+	// Create connection to etcd.
 	db, err := etcdv3.NewEtcdConnectionWithBytes(*cfg, logroot.StandardLogger())
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	//initialize proto decorator
+	// Initialize proto decorator.
 	protoDb := kvproto.NewProtoWrapper(db)
 
-	//retrieve all contacts
+	// Retrieve all contacts from database.
 	resp, err := protoDb.ListValues(phonebook.EtcdPath())
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
+	// Print out all contacts one-by-one.
 	var revision int64
 	fmt.Println("Phonebook:")
 	for {
@@ -70,7 +71,7 @@ func main() {
 		if stop {
 			break
 		}
-		//maintain latest revision
+		// Maintain the latest revision.
 		if kv.GetRevision() > revision {
 			revision = kv.GetRevision()
 		}

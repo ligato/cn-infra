@@ -7,7 +7,7 @@ func EtcdPath() string {
 	return "/phonebook/"
 }
 
-// EtcdContactPath returns the path for the given contact.
+// EtcdContactPath returns the path for a given contact.
 func EtcdContactPath(contact *Contact) string {
 	return EtcdPath() + strings.Replace(contact.Name, " ", "", -1)
 }

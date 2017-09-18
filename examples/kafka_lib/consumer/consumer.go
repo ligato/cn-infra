@@ -31,13 +31,12 @@ import (
 )
 
 var (
+	// Flags used to read the input arguments.
 	brokerList = flag.String("brokers", os.Getenv("KAFKA_PEERS"), "The comma separated list of brokers in the Kafka cluster")
 	topicList  = flag.String("topics", "", "REQUIRED: the topics to consume")
-	//partitions = flag.String("partitions", "", "The partitions to consume, defaults to 'all' or comma-separated numbers")
 	groupID    = flag.String("groupid", "", "REQUIRED: the group name")
 	offset     = flag.String("offset", "newest", "The offset to start with. Can be `oldest`, `newest`")
 	debug      = flag.Bool("debug", false, "turns on debug logging")
-	//bufferSize = flag.Int("buffer-size", 256, "The buffer size of the message channel.")
 	commit     = flag.Bool("commit", false, "Commit offsets (default: true)")
 )
 
@@ -58,6 +57,7 @@ func main() {
 		printUsageErrorAndExit("-groupID is required")
 	}
 
+	// Determine the initial offset type.
 	initialOffset := sarama.OffsetNewest
 	_ = initialOffset
 	switch *offset {
@@ -69,26 +69,30 @@ func main() {
 		printUsageErrorAndExit("-offset should be `oldest` or `newest`")
 	}
 
-	//init config
+	// init config
 	config := client.NewConfig(logroot.StandardLogger())
 	config.SetDebug(*debug)
 	config.SetInitialOffset(initialOffset)
 	config.SetRecvNotification(true)
-	config.SetRecvNotificationChan(make(chan *cluster.Notification))
+	config.SetRecvNotificationChan(make(chan *cluster.Notification)) // channel for notification delivery
 	config.SetRecvError(true)
-	config.SetRecvErrorChan(make(chan error))
-	config.SetRecvMessageChan(make(chan *client.ConsumerMessage))
+	config.SetRecvErrorChan(make(chan error))                     // channel for error delivery
+	config.SetRecvMessageChan(make(chan *client.ConsumerMessage)) // channel for message delivery
 	config.SetBrokers(*brokerList)
 	config.SetTopics(*topicList)
 	config.SetGroup(*groupID)
 
-	// init consumer
+	// Demonstrate NewConsumer() API to create a new message consumer.
 	consumer, err := client.NewConsumer(config, nil)
 	if err != nil {
+		fmt.Printf("Failed to create a new Kafka consumer: %v", err)
 		os.Exit(1)
 	}
+
+	// Consume messages in a separate go routine.
 	go watchChannels(consumer, config)
 
+	// Wait for the interrupt signal.
 	signalChan := make(chan os.Signal)
 	signal.Notify(signalChan, os.Interrupt)
 	go func() {
@@ -96,7 +100,6 @@ func main() {
 		case <-signalChan:
 			consumer.Close()
 			log.StandardLogger().Debug("exiting")
-
 		}
 	}()
 
@@ -106,6 +109,8 @@ func main() {
 
 }
 
+// watchChannels watches channels configured for delivery of Kafka messages,
+// notifications and errors.
 func watchChannels(consumer *client.Consumer, cfg *client.Config) {
 
 	for {

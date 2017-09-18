@@ -27,20 +27,23 @@ const (
 	healthCheckProbeKey string = "probe-redis-connection"
 )
 
-// Plugin implements Plugin interface therefore can be loaded with other plugins
+// Plugin implements redis plugin.
 type Plugin struct {
 	Deps
 	*plugin.Skeleton
 	disabled bool
 }
 
-// Deps is here to group injected dependencies of plugin
-// to not mix with other plugin fields.
+// Deps lists dependencies of the redis plugin.
 type Deps struct {
 	local.PluginInfraDeps //inject
 }
 
-// Init is called on plugin startup. It establishes the connection to redis.
+// Init retrieves redis configuration and establishes a new connection
+// with the redis data store.
+// If the configuration file doesn't exist or cannot be read, the returned error
+// will be of type os.PathError. An untyped error is returned in case the file
+// doesn't contain a valid YAML configuration.
 func (p *Plugin) Init() error {
 	cfg, err := p.retrieveConfig()
 	if err != nil {
@@ -86,7 +89,7 @@ func (p *Plugin) AfterInit() error {
 	return nil
 }
 
-// Close resources
+// Close shutdowns the connection to redis.
 func (p *Plugin) Close() error {
 	_, err := safeclose.CloseAll(p.Skeleton)
 	return err
@@ -117,7 +120,8 @@ func (p *Plugin) String() string {
 	return string(p.Deps.PluginName)
 }
 
-// Disabled if the plugin was not found
+// Disabled returns *true* if the plugin is not in use due to missing
+// redis configuration.
 func (p *Plugin) Disabled() (disabled bool) {
 	return p.disabled
 }
