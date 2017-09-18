@@ -5,6 +5,7 @@ import (
 	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
+	"time"
 )
 
 const (
@@ -57,7 +58,6 @@ func getConsumerFactory(config *client.Config) ConsumerFactory {
 // Name is used as groupId identification of consumer. Kafka allows to store last read offset for
 // a groupId. This is leveraged to deliver unread messages after restart.
 func InitMultiplexer(configFile string, name string, partitioner string, log logging.Logger) (*Multiplexer, error) {
-
 	var err error
 	muxCfg := &Config{[]string{DefAddress}}
 	if configFile != "" {
@@ -74,7 +74,6 @@ func InitMultiplexer(configFile string, name string, partitioner string, log log
 // Name is used as groupId identification of consumer. Kafka allows to store last read offset for
 // a groupId. This is leveraged to deliver unread messages after restart.
 func InitMultiplexerWithConfig(muxConfig *Config, name string, partitioner string, log logging.Logger) (*Multiplexer, error) {
-
 	const errorFmt = "Failed to create Kafka %s, Configured broker(s) %v, Error: '%s'"
 
 	log.WithField("addrs", muxConfig.Addrs).Debug("Kafka connecting")
@@ -84,9 +83,10 @@ func InitMultiplexerWithConfig(muxConfig *Config, name string, partitioner strin
 	config.SetSuccessChan(make(chan *client.ProducerMessage))
 	config.SetSendError(true)
 	config.SetErrorChan(make(chan *client.ProducerError))
-	config.Brokers = muxConfig.Addrs
+	config.SetBrokers(muxConfig.Addrs...)
 	config.SetPartitioner(partitioner)
 
+	startTime := time.Now()
 	syncProducer, err := client.NewSyncProducer(config, nil)
 	if err != nil {
 		log.Errorf(errorFmt, "SyncProducer", muxConfig.Addrs, err)
@@ -98,6 +98,8 @@ func InitMultiplexerWithConfig(muxConfig *Config, name string, partitioner strin
 		log.Errorf(errorFmt, "AsyncProducer", muxConfig.Addrs, err)
 		return nil, err
 	}
+	kafkaConnect := time.Since(startTime)
+	log.WithField("durationInNs", kafkaConnect.Nanoseconds()).Info("Connecting to kafka took ", kafkaConnect)
 
 	return NewMultiplexer(getConsumerFactory(config), syncProducer, asyncProducer, partitioner, name, log), nil
 }
