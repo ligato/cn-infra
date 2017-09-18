@@ -54,14 +54,14 @@ func DefaultLogger() *Logger {
 // allows to define static log fields that are added to all subsequent log entries. It also automatically
 // appends file name and line where the log is coming from. In order to distinguish logs from different
 // go routines a tag (number that is based on the stack address) is computed. To achieve better readability
-// numeric value of a tag can be replaced by a string using SetTag function.
+// numeric loggers of a tag can be replaced by a string using SetTag function.
 type Logger struct {
-	access       sync.RWMutex
+	tagmap       atomic.Value
+	staticFields atomic.Value
+	stdStore     atomic.Value
 	std          *lg.Logger
 	depth        int
 	littleBuf    sync.Pool
-	tagmap       map[uint64]string
-	staticFields map[string]interface{}
 	name         string
 }
 
@@ -76,11 +76,21 @@ type Logger struct {
 //
 func NewLogger(name string) *Logger {
 	logger := &Logger{
-		std:    lg.New(),
-		depth:  2,
-		tagmap: make(map[uint64]string, 64),
-		name:   name,
+		std:   lg.New(),
+		depth: 2,
+		name:  name,
 	}
+
+	// init tagmap
+	tags := make(map[uint64]string, 64)
+	logger.tagmap.Store(tags)
+
+	// init static fields
+	statics := make(map[string]interface{})
+	logger.staticFields.Store(statics)
+
+	// init std store
+	logger.stdStore.Store(logger.std)
 
 	tf := NewTextFormatter()
 	tf.TimestampFormat = "2006-01-02 15:04:05.00000"
@@ -154,25 +164,24 @@ func (logger *Logger) GetLineInfo(depth int) string {
 
 // InitTag sets the tag for the main thread.
 func (logger *Logger) InitTag(tag ...string) {
-	logger.access.Lock()
-	defer logger.access.Unlock()
 	var t string
 	if tag != nil || len(tag) > 0 {
 		t = tag[0]
 	} else {
 		t = uuid.NewV4().String()[0:8]
 	}
-	logger.tagmap[0] = t
+	tags := logger.tagmap.Load().(map[uint64]string)
+	tags[0] = t
+	logger.tagmap.Store(tags)
 }
 
 // GetTag returns the tag identifying the caller's go routine.
 func (logger *Logger) GetTag() string {
-	logger.access.RLock()
-	defer logger.access.RUnlock()
 	ti := logger.curGoroutineID()
-	tag, ok := logger.tagmap[ti]
+	tags := logger.tagmap.Load().(map[uint64]string)
+	tag, ok := tags[ti]
 	if !ok {
-		tag = logger.tagmap[0]
+		tag = tags[0]
 	}
 
 	return tag
@@ -181,8 +190,6 @@ func (logger *Logger) GetTag() string {
 // SetTag allows to define a string tag for the current go routine. Otherwise
 // numeric identification is used.
 func (logger *Logger) SetTag(tag ...string) {
-	logger.access.Lock()
-	defer logger.access.Unlock()
 	ti := logger.curGoroutineID()
 	var t string
 	if tag != nil || len(tag) > 0 {
@@ -190,31 +197,29 @@ func (logger *Logger) SetTag(tag ...string) {
 	} else {
 		t = uuid.NewV4().String()[0:8]
 	}
-	logger.tagmap[ti] = t
+	tags := logger.tagmap.Load().(map[uint64]string)
+	tags[ti] = t
+	logger.tagmap.Store(tags)
 }
 
 // ClearTag removes the previously set string tag for the current go routine.
 func (logger *Logger) ClearTag() {
-	logger.access.Lock()
-	defer logger.access.Unlock()
 	ti := logger.curGoroutineID()
-	delete(logger.tagmap, ti)
+	tags := logger.tagmap.Load().(map[uint64]string)
+	delete(tags, ti)
+	logger.tagmap.Store(tags)
 }
 
 // SetStaticFields sets a map of fields that will be part of the each subsequent
 // log entry of the logger
 func (logger *Logger) SetStaticFields(fields map[string]interface{}) {
-	logger.access.Lock()
-	defer logger.access.Unlock()
-	logger.staticFields = fields
+	logger.staticFields.Store(fields)
 }
 
-// GetStaticFields returns currently set map of static fields - key-value pairs
+// GetStaticFields returns currently set map of static fields - key-loggers pairs
 // that are automatically added into log entry
 func (logger *Logger) GetStaticFields() map[string]interface{} {
-	logger.access.Lock()
-	defer logger.access.Unlock()
-	return logger.staticFields
+	return logger.staticFields.Load().(map[string]interface{})
 }
 
 // GetName return the logger name
@@ -224,37 +229,38 @@ func (logger *Logger) GetName() string {
 
 // SetOutput sets the standard logger output.
 func (logger *Logger) SetOutput(out io.Writer) {
-	logger.access.Lock()
-	defer logger.access.Unlock()
-	logger.std.Out = out
+	std := logger.stdStore.Load().(*lg.Logger)
+	std.Out = out
+	logger.stdStore.Store(std)
+
 }
 
 // SetFormatter sets the standard logger formatter.
 func (logger *Logger) SetFormatter(formatter lg.Formatter) {
-	logger.access.Lock()
-	defer logger.access.Unlock()
-	logger.std.Formatter = formatter
+	std := logger.stdStore.Load().(*lg.Logger)
+	std.Formatter = formatter
+	logger.stdStore.Store(std)
 }
 
 // SetLevel sets the standard logger level.
 func (logger *Logger) SetLevel(level logging.LogLevel) {
-	logger.access.Lock()
-	defer logger.access.Unlock()
+	std := logger.stdStore.Load().(*lg.Logger)
 	switch level {
 	case logging.PanicLevel:
-		logger.std.Level = lg.PanicLevel
+		std.Level = lg.PanicLevel
 	case logging.FatalLevel:
-		logger.std.Level = lg.FatalLevel
+		std.Level = lg.FatalLevel
 	case logging.ErrorLevel:
-		logger.std.Level = lg.ErrorLevel
+		std.Level = lg.ErrorLevel
 	case logging.WarnLevel:
-		logger.std.Level = lg.WarnLevel
+		std.Level = lg.WarnLevel
 	case logging.InfoLevel:
-		logger.std.Level = lg.InfoLevel
+		std.Level = lg.InfoLevel
 	case logging.DebugLevel:
-		logger.std.Level = lg.DebugLevel
+		std.Level = lg.DebugLevel
 	}
-
+	// Store previously set level
+	logger.stdStore.Store(std)
 }
 
 // GetLevel returns the standard logger level.
@@ -280,9 +286,9 @@ func (logger *Logger) GetLevel() logging.LogLevel {
 
 // AddHook adds a hook to the standard logger hooks.
 func (logger *Logger) AddHook(hook lg.Hook) {
-	logger.access.Lock()
-	defer logger.access.Unlock()
+	std := logger.stdStore.Load().(*lg.Logger)
 	logger.std.Hooks.Add(hook)
+	logger.stdStore.Store(std)
 }
 
 func (logger *Logger) withField(key string, value interface{}, depth ...int) *LogMsg {
