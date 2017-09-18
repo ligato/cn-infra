@@ -39,9 +39,16 @@ type Deps struct {
 }
 
 var (
+	// ErrMissingVisitorEntity is error returned when visitor is missing entity.
 	ErrMissingVisitorEntity  = errors.New("cassandra: visitor is missing entity")
+
+	// ErrMissingEntityField is error returned when visitor entity is missing field.
 	ErrMissingEntityField    = errors.New("cassandra: visitor entity is missing field")
+
+	// ErrUnexportedEntityField is error returned when visitor entity has unexported field.
 	ErrUnexportedEntityField = errors.New("cassandra: visitor entity with unexported field")
+
+	// ErrInvalidEndpointConfig is error returned when endpoint and port are not in valid format.
 	ErrInvalidEndpointConfig = errors.New("cassandra: invalid configuration, endpoint and port not in valid format")
 )
 

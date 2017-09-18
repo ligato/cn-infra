@@ -64,10 +64,6 @@ const (
 	defaultTimerValue = -1
 )
 
-var (
-	ErrPluginsInitTimeout = errors.New("some plugins not initialized before timeout")
-)
-
 // NewAgent returns a new instance of the Agent with plugins.
 // <logger> will be used to log messages related to the agent life-cycle,
 // but not for the plugins themselves.
