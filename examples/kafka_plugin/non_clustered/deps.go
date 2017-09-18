@@ -3,13 +3,12 @@ package main
 import (
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/flavors/local"
-	"github.com/ligato/cn-infra/messaging"
 	"github.com/ligato/cn-infra/messaging/kafka"
 )
 
 // Deps lists dependencies of ExamplePlugin.
 type Deps struct {
-	Kafka               messaging.Mux // injected
+	Kafka               *kafka.Plugin // injected
 	local.PluginLogDeps               // injected
 }
 
@@ -47,4 +46,3 @@ func (ef *ExampleFlavor) Plugins() []*core.NamedPlugin {
 	ef.Inject()
 	return core.ListPluginsInFlavor(ef)
 }
-
