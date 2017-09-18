@@ -25,7 +25,7 @@ Current examples:
   an example plugin,
 * **[etcdv3 lib](etcdv3_lib)** shows how to use the ETCD data broker API 
   to write data into ETCD and catch this change as an event by the watcher,
-* **[flags plugin](flags_plugin/main.go)** registers flags and shows their 
+* **[flags lib](https://github.com/ligato/cn-infra/tree/master/examples/flags_lib)** registers flags and shows their
   runtime values in an example plugin,
 * **[kafka lib](kafka_lib)** shows how to use the Kafka messaging library
   on a set of individual tools (sync and async producer, consumer, mux),

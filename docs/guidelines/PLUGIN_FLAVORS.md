@@ -93,7 +93,7 @@ For your applications, you can either define your own flavor, like we do
 in the [datasync_plugin example](../../examples/datasync_plugin/main.go),
 or simply reuse existing flavor through embedding and extend it with your
 own plugins. The latter approach can be seen in
-the [logs_in_plugin example](../../examples/logs_in_plugin).
+the [logs_plugin example](https://github.com/ligato/cn-infra/tree/master/examples/logs_plugin).
 If your plugins do not require dependency injection, you can even
 directly add them to the list of plugins as passed to NewAgent().
 
