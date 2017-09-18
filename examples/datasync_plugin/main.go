@@ -33,7 +33,7 @@ import (
 // required for the example are initialized. Agent is instantiated with ExampleFlavor
 func main() {
 	log := logroot.StandardLogger()
-	// Init close channel to stop the example
+	// Init close channel used to stop the example
 	exampleFinished := make(chan struct{}, 1)
 
 	// Start Agent with ExampleFlavor (combination of ExamplePlugin & reused cn-infra plugins)
@@ -54,7 +54,7 @@ func init() {
 
 // ExampleFlavor is a set of plugins required for the datasync example.
 type ExampleFlavor struct {
-	// Local flavor to access to Infra (logger, service label, status check)
+	// Local flavor to access the Infra (logger, service label, status check)
 	*local.FlavorLocal
 	// Resync orchestrator
 	ResyncOrch resync.Plugin

@@ -44,7 +44,7 @@ func init() {
 		"Listen port for the Agent's HTTP server.")
 }
 
-// Plugin implements the Plugin interface.
+// Plugin struct holds all plugin-related data.
 type Plugin struct {
 	Deps
 
@@ -57,21 +57,20 @@ type Plugin struct {
 	grpcServer *grpcsync.Adapter
 }
 
-// Deps is here to group injected dependencies of plugin
-// to not mix with other plugin fields.
+// Deps lists the dependencies of the Rest plugin.
 type Deps struct {
 	Log        logging.PluginLogger //inject
 	PluginName core.PluginName      //inject
 
 	// Used to simplify if not whole config needs to be configured
-	HTTPport string //inject optionally
+	HTTPport string // inject (optional)
 	// Config is a rich alternative comparing to HTTPport
 	// TODO Config *Config
 }
 
-// Init is entry point called by Agent Core
+// Init is the plugin entry point called by Agent Core
 // - It prepares Gorilla MUX HTTP Router
-// - registers grpc transport
+// - Registers grpc transport
 func (plugin *Plugin) Init() (err error) {
 	if plugin.HTTPport == "" /*TODO && plugin.Config == nil*/ {
 		plugin.HTTPport = httpPort
@@ -90,14 +89,14 @@ func (plugin *Plugin) Init() (err error) {
 	return err
 }
 
-// RegisterHTTPHandler propagates to Gorilla mux
+// RegisterHTTPHandler registers HTTP <handler> at the given <path>.
 func (plugin *Plugin) RegisterHTTPHandler(path string,
 	handler func(formatter *render.Render) http.HandlerFunc,
 	methods ...string) *mux.Route {
 	return plugin.mx.HandleFunc(path, handler(plugin.formatter)).Methods(methods...)
 }
 
-// AfterInit starts the HTTP server
+// AfterInit starts the HTTP server.
 func (plugin *Plugin) AfterInit() (err error) {
 	var cfgCopy Config
 	/*TODO if plugin.Config != nil {
@@ -118,7 +117,7 @@ func (plugin *Plugin) AfterInit() (err error) {
 	return err
 }
 
-// Close cleans up the resources
+// Close stops the HTTP server.
 func (plugin *Plugin) Close() error {
 	_, err := safeclose.CloseAll(plugin.grpcServer, plugin.server)
 	return err
