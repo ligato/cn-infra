@@ -41,9 +41,9 @@ const LogsFlagUsage = "Location of the configuration files; also set via 'LOGS_C
 // any agent specific server.
 type FlavorLocal struct {
 	logRegistry  logging.Registry
+	Logs         logmanager.Plugin //needs to be first plugin (it updates log level from config)
 	ServiceLabel servicelabel.Plugin
 	StatusCheck  statuscheck.Plugin
-	Logs         logmanager.Plugin
 
 	injected bool
 }

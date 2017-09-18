@@ -15,6 +15,7 @@
 // Package redis is the implementation of the key-value Data Broker client
 // API for the Redis key-value data store. See cn-infra/db/keyval for the
 // definition of the key-value Data Broker client API.
+
 //
 // The entity BytesConnectionRedis provides access to CRUD as well as event
 // subscription API's.
