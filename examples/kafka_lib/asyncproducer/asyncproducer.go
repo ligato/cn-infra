@@ -28,6 +28,7 @@ import (
 )
 
 var (
+	// Flags used to read the input arguments.
 	brokerList  = flag.String("brokers", os.Getenv("KAFKA_PEERS"), "The comma separated list of brokers in the Kafka cluster. You can also set the KAFKA_PEERS environment variable")
 	partitioner = flag.String("partitioner", "hash", "The partitioning scheme to use. Can be `hash`, `manual`, or `random`")
 	partition   = flag.Int("partition", -1, "The partition to produce to.")
@@ -56,12 +57,13 @@ func main() {
 	config.SetErrorChan(errCh)
 	config.SetBrokers(strings.Split(*brokerList, ",")...)
 
-	// init producer
+	// Create new Async-producer using NewAsyncProducer() API.
 	producer, err := client.NewAsyncProducer(config, nil)
 	if err != nil {
 		os.Exit(1)
 	}
 
+	// A separate go routine monitors the status of the message delivery.
 	go func() {
 	eventLoop:
 		for {
@@ -76,11 +78,12 @@ func main() {
 		}
 	}()
 
-	// get command
+	// Prompt user for the command to execute and read the input parameters.
 	for {
 		command := utils.GetCommand()
 		switch command.Cmd {
 		case "quit":
+			// Exit the application.
 			err := closeProducer(producer)
 			if err != nil {
 				fmt.Println("terminated abnormally")
@@ -89,6 +92,7 @@ func main() {
 			fmt.Println("ended successfully")
 			os.Exit(0)
 		case "message":
+			// Send the message.
 			err := sendMessage(producer, command.Message)
 			if err != nil {
 				fmt.Printf("send message error: %v\n", err)
@@ -100,7 +104,8 @@ func main() {
 	}
 }
 
-// send message
+// sendMessage demonstrates AsyncProducer.SendMsgByte API to publish a single
+// message to a Kafka topic.
 func sendMessage(producer *client.AsyncProducer, msg utils.Message) error {
 	var (
 		msgKey   []byte
@@ -124,6 +129,7 @@ func sendMessage(producer *client.AsyncProducer, msg utils.Message) error {
 	return nil
 }
 
+// closeProducer uses the AsyncProducer.Close() API to close the producer.
 func closeProducer(producer *client.AsyncProducer) error {
 	// close producer
 	fmt.Println("closing producer ...")

@@ -14,18 +14,19 @@ import (
 )
 
 const (
-	// Put represents put operation of single key-value pair
+	// Put represents put operation for a single key-value pair.
 	Put = iota
-	// PutTxn represents put operation used in transaction
+	// PutTxn represents put operation used in transaction.
 	PutTxn = iota
-	// Delete represents delete operation
+	// Delete represents delete operation.
 	Delete = iota
 )
 
+// processArgs processes input arguments.
 func processArgs() (cfg *etcdv3.ClientConfig, op int, data []string, err error) {
 	var task []string
 
-	//default args
+	// default args
 	fileConfig := &etcdv3.Config{}
 	op = Put
 
@@ -65,17 +66,20 @@ func printUsage() {
 	fmt.Printf("\n\n%s: [--cfg CONFIG_FILE] <delete NAME | put NAME COMPANY PHONE | puttxn JSONENCODED_CONTACTS>\n\n", os.Args[0])
 }
 
+// put demonstrates the use Put() API to create a new contact in the database.
 func put(db keyval.ProtoBroker, data []string) {
 	c := &phonebook.Contact{Name: data[0], Company: data[1], Phonenumber: data[2]}
 
 	key := phonebook.EtcdContactPath(c)
 
-	//Insert the key-value pair
+	// Insert the key-value pair.
 	db.Put(key, c)
 
 	fmt.Println("Saving ", key)
 }
 
+// putTxn demonstrates the use of NewTxn() and Commit() APIs to create multiple
+// contacts in the database in one transaction.
 func putTxn(db keyval.ProtoBroker, data string) {
 	contacts := []phonebook.Contact{}
 
@@ -95,16 +99,17 @@ func putTxn(db keyval.ProtoBroker, data string) {
 
 }
 
+// delete demonstrates the use of Delete() API to remove contact with a given
+// name.
 func delete(db keyval.ProtoBroker, name string) {
 	key := phonebook.EtcdContactPath(&phonebook.Contact{Name: name})
 
-	//Remove the key
+	// Remove the key.
 	db.Delete(key)
 	fmt.Println("Removing ", key)
 }
 
 func main() {
-
 	cfg, op, data, err := processArgs()
 	if err != nil {
 		printUsage()
@@ -118,7 +123,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	//initialize proto decorator
+	// Initialize proto decorator.
 	protoDb := kvproto.NewProtoWrapper(db)
 
 	switch op {

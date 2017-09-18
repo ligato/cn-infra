@@ -37,7 +37,7 @@ const LogsFlagDefault = "logs.conf"
 const LogsFlagUsage = "Location of the configuration files; also set via 'LOGS_CONFIG' env variable."
 
 // FlavorLocal glues together very minimal subset of cn-infra plugins
-// that can be embeddable inside different project without running
+// that can be embedded inside different projects without running
 // any agent specific server.
 type FlavorLocal struct {
 	logRegistry  logging.Registry
@@ -48,9 +48,10 @@ type FlavorLocal struct {
 	injected bool
 }
 
-// Inject does nothing (it is here for potential later extensibility)
+// Inject injects logger into StatusCheck.
 // Composite flavors embedding local flavor are supposed to call this
 // method.
+// Method returns <false> in case the injection has been already executed.
 func (f *FlavorLocal) Inject() bool {
 	if f.injected {
 		return false
@@ -93,10 +94,12 @@ func (f *FlavorLocal) LoggerFor(pluginName string) logging.PluginLogger {
 	return logging.ForPlugin(pluginName, f.LogRegistry())
 }
 
-// LogDeps for getting PlugginLofDeps instance.
-// - pluginName argument value is assigned to Plugin
-// - logger name is pre-initialized (see logging.ForPlugin)
-// This method is just convenient shortcut for Flavor.Inject()
+// LogDeps is a helper method for injecting PluginLogDeps dependencies with
+// plugins from the Local flavor.
+// <pluginName> argument value is injected as the plugin name.
+// Injected logger uses the same name as the plugin (see logging.ForPlugin)
+// This method is just a convenient shortcut to be used in Flavor.Inject()
+// by flavors that embed the LocalFlavor.
 func (f *FlavorLocal) LogDeps(pluginName string) *PluginLogDeps {
 	return &PluginLogDeps{
 		logging.ForPlugin(pluginName, f.LogRegistry()),
@@ -104,9 +107,14 @@ func (f *FlavorLocal) LogDeps(pluginName string) *PluginLogDeps {
 
 }
 
-// InfraDeps for getting PlugginInfraDeps instance:
-// - config file is preinitialized by pluginName (see config.ForPlugin method)
-// This method is just convenient shortcut for Flavor.Inject()
+// InfraDeps is a helper method for injecting PluginInfraDeps dependencies with
+// plugins from the Local flavor.
+// <pluginName> argument value is injected as the plugin name.
+// Logging dependencies are resolved using the LogDeps() method.
+// Plugin configuration file name is derived from the plugin name,
+// see PluginConfig.GetConfigName().
+// This method is just a convenient shortcut to be used in Flavor.Inject()
+// by flavors that embed the LocalFlavor..
 func (f *FlavorLocal) InfraDeps(pluginName string) *PluginInfraDeps {
 	return &PluginInfraDeps{
 		*f.LogDeps(pluginName),
