@@ -69,7 +69,7 @@ const (
 // Init initializes and starts producers and consumers.
 func (plugin *ExamplePlugin) Init() (err error) {
 	// Create connection
-	connection := plugin.Kafka.NewProtoConnectionToPartition("example-proto-connection")
+	connection := plugin.Kafka.NewProtoManualConnection("example-proto-connection")
 
 	// Create a synchronous and asynchronous publisher.
 	// In the manual mode, every publisher has selected its target partition.

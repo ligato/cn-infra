@@ -49,19 +49,20 @@ type ExamplePlugin struct {
 
 // Init initializes and starts producers and consumers.
 func (plugin *ExamplePlugin) Init() (err error) {
+	conn := "example-connection"
 	topic := "example-topic"
 	// Init channels required for async handler.
 	plugin.asyncMessageChannel = make(chan messaging.ProtoMessage, 0)
 	plugin.asyncErrorChannel = make(chan messaging.ProtoMessageErr, 0)
 
 	// Create a synchronous publisher for the selected topic.
-	plugin.kafkaSyncPublisher, err = plugin.Kafka.NewSyncPublisher(topic)
+	plugin.kafkaSyncPublisher, err = plugin.Kafka.NewSyncPublisher(conn, topic)
 	if err != nil {
 		return err
 	}
 
 	// Create an asynchronous publisher for the selected topic.
-	plugin.kafkaAsyncPublisher, err = plugin.Kafka.NewAsyncPublisher(topic, messaging.ToProtoMsgChan(plugin.asyncMessageChannel),
+	plugin.kafkaAsyncPublisher, err = plugin.Kafka.NewAsyncPublisher(conn, topic, messaging.ToProtoMsgChan(plugin.asyncMessageChannel),
 		messaging.ToProtoMsgErrChan(plugin.asyncErrorChannel))
 	if err != nil {
 		return err

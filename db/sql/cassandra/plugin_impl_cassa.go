@@ -17,8 +17,10 @@ package cassandra
 import (
 	"errors"
 
+	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/sql"
 	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/willfaught/gockle"
 )
 
@@ -82,18 +84,19 @@ func (p *Plugin) AfterInit() error {
 		p.session = gockle.NewSession(session)
 	}
 
-	/* TODO Register for providing status reports (polling mode)
+	// Register for providing status reports (polling mode)
 	if p.StatusCheck != nil && p.session != nil {
 		p.StatusCheck.Register(core.PluginName(p.String()), func() (statuscheck.PluginState, error) {
-			_, _, err := p.Skeleton.NewBroker("/").GetValue(healthCheckProbeKey, nil)
+			broker := p.NewBroker()
+			err := broker.Exec(`select keyspace_name from system_schema.keyspaces`)
 			if err == nil {
 				return statuscheck.OK, nil
 			}
 			return statuscheck.Error, err
 		})
 	} else {
-		p.Log.Warnf("Unable to start status check for etcd")
-	}*/
+		p.Log.Warnf("Unable to start status check for Cassandra")
+	}
 
 	return nil
 }

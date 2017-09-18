@@ -43,9 +43,10 @@ func main() {
 	if err != nil {
 		os.Exit(1)
 	}
+
 	// Create a new connection. This is a virtual connection, created on top
 	// of the real connection from the multiplexer.
-	cn := mx.NewConnection("plugin")
+	cn := mx.NewBytesConnection("plugin")
 
 	// Send one message synchronously.
 	offset, err := cn.SendSyncString("test", mux.DefPartition, "key", "value")
