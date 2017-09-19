@@ -12,118 +12,100 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package metrics implements Prometheus health/metrics handlers.
-package metrics
+// Package probe implements Prometheus health/metrics handlers.
+package probe
 
 import (
 	"net/http"
 
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/ligato/cn-infra/health/statuscheck"
-	"github.com/ligato/cn-infra/logging"
-	log "github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/rpc/rest"
-	"github.com/ligato/cn-infra/utils/safeclose"
-	"github.com/namsral/flag"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/unrolled/render"
 )
 
 const (
-	defaultPluginName  string = "HEALTH-METRICS"
-	DefaultMetricsPath string = "/metrics" // default Prometheus metrics URL
-	agentName          string = "agent"
-	namespace          string = ""
-	subsystem          string = ""
-	serviceLabel       string = "service"
-	dependencyLabel    string = "dependency"
-	buildVersionLabel  string = "build_version"
-	buildDateLabel     string = "build_date"
-	serviceHealthName  string = "service_health"
+	defaultPluginName string = "HEALTH-METRICS"
+	agentName         string = "agent"
+
+	// DefaultMetricsPath default Prometheus metrics URL
+	DefaultMetricsPath string = "/metrics"
+
+	// Namespace namespace to use for Prometheus metrics
+	Namespace string = ""
+	// Subsystem subsystem to use for Prometheus metrics
+	Subsystem string = ""
+	// ServiceLabel label for service field
+	ServiceLabel string = "service"
+	// DependencyLabel label for dependency field
+	DependencyLabel string = "dependency"
+	// BuildVersionLabel label for build version field
+	BuildVersionLabel string = "build_version"
+	// BuildDateLabel label for build date field
+	BuildDateLabel string = "build_date"
+
+	// ServiceHealthName name of service health metric
+	ServiceHealthName string = "service_health"
+
+	// ServiceHealthHelp help text for service health metric
 	// Adapt Ligato status code for now.
 	// TODO: Consolidate with that from the "Common Container Telemetry" proposal.
-	//serviceHealthHelp    string = "The health of the serviceLabel 0 = INIT, 1 = UP, 2 = DOWN, 3 = OUTAGE"
-	serviceHealthHelp    string = "The health of the serviceLabel 0 = INIT, 1 = OK, 2 = ERROR"
-	dependencyHealthName string = "service_dependency_health"
+	// ServiceHealthHelp    string = "The health of the ServiceLabel 0 = INIT, 1 = UP, 2 = DOWN, 3 = OUTAGE"
+	ServiceHealthHelp string = "The health of the ServiceLabel 0 = INIT, 1 = OK, 2 = ERROR"
+
+	// DependencyHealthName name of dependency health metric
+	DependencyHealthName string = "service_dependency_health"
+
+	// DependencyHealthHelp help text for dependency health metric
 	// Adapt Ligato status code for now.
 	// TODO: Consolidate with that from the "Common Container Telemetry" proposal.
-	//dependencyHealthHelp string = "The health of the dependencyLabel 0 = INIT, 1 = UP, 2 = DOWN, 3 = OUTAGE"
-	dependencyHealthHelp string = "The health of the dependencyLabel 0 = INIT, 1 = OK, 2 = ERROR"
-	serviceInfoName      string = "service_info"
-	serviceInfoHelp      string = "Build info for the service.  Value is always 1, build info is in the tags."
+	// DependencyHealthHelp string = "The health of the DependencyLabel 0 = INIT, 1 = UP, 2 = DOWN, 3 = OUTAGE"
+	DependencyHealthHelp string = "The health of the DependencyLabel 0 = INIT, 1 = OK, 2 = ERROR"
+
+	// ServiceInfoName name of service info metric
+	ServiceInfoName string = "service_info"
+	// ServiceInfoHelp help text for service info metric
+	ServiceInfoHelp string = "Build info for the service.  Value is always 1, build info is in the tags."
 )
 
-var (
-	httpPort string
-)
-
-// init is here only for parsing program arguments
-func init() {
-	flag.StringVar(&httpPort, "prometheus-http-port", rest.DefaultHTTPPort,
-		"Listening port for the Agent's Prometheus health/metrics port.")
+// PrometheusPlugin struct holds all plugin-related data.
+type PrometheusPlugin struct {
+	// FIXME: I know it's unconventional.  But to avoid name collision till probe.Deps is extracted and shared.
+	PluginDeps
 }
 
-// Plugin struct holds all plugin-related data.
-type Plugin struct {
-	Deps
-
-	customProbe bool
-}
-
-// Deps lists dependencies of the Prometheus plugin.
-type Deps struct {
+// PluginDeps lists dependencies of the Prometheus plugin.
+// FIXME: I know it's unconventional.  But to avoid name collision till probe.Deps is extracted and shared.
+type PluginDeps struct {
 	local.PluginLogDeps                               // inject
-	HTTP                *rest.Plugin                  // inject (optional)
+	HTTP                rest.HTTPHandlers             // inject
 	StatusCheck         statuscheck.AgentStatusReader // inject
 }
 
 // Init may create a new (custom) instance of HTTP if the injected instance uses
 // different HTTP port than requested.
-func (p *Plugin) Init() (err error) {
-	// Start Init() and AfterInit() for new Prometheus in case the port is different
-	// from agent http.
-	if p.HTTP.HTTPport != httpPort {
-		childPlugNameHTTP := p.String() + "-HTTP"
-		p.HTTP = &rest.Plugin{
-			Deps: rest.Deps{
-				Log:        logging.ForPlugin(childPlugNameHTTP, p.Log),
-				PluginName: core.PluginName(childPlugNameHTTP),
-				HTTPport:   httpPort,
-			},
-		}
-		err := p.HTTP.Init()
-		if err != nil {
-			return err
-		}
-		err = p.HTTP.AfterInit()
-		if err != nil {
-			return err
-		}
-
-		p.customProbe = true
-	}
-
-	p.RegisterGauge(
-		namespace,
-		subsystem,
-		serviceHealthName,
-		serviceHealthHelp,
-		prometheus.Labels{serviceLabel: agentName},
+func (p *PrometheusPlugin) Init() (err error) {
+	p.registerGauge(
+		Namespace,
+		Subsystem,
+		ServiceHealthName,
+		ServiceHealthHelp,
+		prometheus.Labels{ServiceLabel: agentName},
 		p.getServiceHealth,
 	)
 
 	agentStatus := p.StatusCheck.GetAgentStatus()
-	p.RegisterGauge(
-		namespace,
-		subsystem,
-		serviceInfoName,
-		serviceInfoHelp,
+	p.registerGauge(
+		Namespace,
+		Subsystem,
+		ServiceInfoName,
+		ServiceInfoHelp,
 		prometheus.Labels{
-			serviceLabel:      agentName,
-			buildVersionLabel: agentStatus.BuildVersion,
-			buildDateLabel:    agentStatus.BuildDate},
+			ServiceLabel:      agentName,
+			BuildVersionLabel: agentStatus.BuildVersion,
+			BuildDateLabel:    agentStatus.BuildDate},
 		func() float64 { return 1 },
 	)
 
@@ -131,10 +113,10 @@ func (p *Plugin) Init() (err error) {
 }
 
 // AfterInit registers HTTP handlers.
-func (p *Plugin) AfterInit() error {
+func (p *PrometheusPlugin) AfterInit() error {
 	if p.HTTP != nil {
 		if p.StatusCheck != nil {
-			p.Log.Infof("Starting Prometheus metrics handlers on port %v", p.HTTP.HTTPport)
+			p.Log.Info("Starting Prometheus metrics handlers")
 			p.HTTP.RegisterHTTPHandler(DefaultMetricsPath, p.metricsHandler, "GET")
 		} else {
 			p.Log.Info("Unable to register Prometheus metrics handlers, StatusCheck is nil")
@@ -147,31 +129,26 @@ func (p *Plugin) AfterInit() error {
 }
 
 // Close shutdowns HTTP if a custom instance was created in Init().
-func (p *Plugin) Close() error {
-	if p.customProbe {
-		_, err := safeclose.CloseAll(p.HTTP)
-		return err
-	}
-
+func (p *PrometheusPlugin) Close() error {
 	return nil
 }
 
 // metricsHandler handles Prometheus metrics collection.
-func (p *Plugin) metricsHandler(formatter *render.Render) http.HandlerFunc {
+func (p *PrometheusPlugin) metricsHandler(formatter *render.Render) http.HandlerFunc {
 	return promhttp.Handler().ServeHTTP
 }
 
-func (p *Plugin) getServiceHealth() float64 {
+func (p *PrometheusPlugin) getServiceHealth() float64 {
 	agentStatus := p.StatusCheck.GetAgentStatus()
 	// Adapt Ligato status code for now.
 	// TODO: Consolidate with that from the "Common Container Telemetry" proposal.
 	health := float64(agentStatus.State)
-	log.StandardLogger().Infof("getServiceHealth(): %f", health)
+	p.Log.Infof("getServiceHealth(): %f", health)
 	return health
 }
 
 // RegisterGauge registers custom gauge with specific valueFunc to report status when invoked.
-func (p *Plugin) RegisterGauge(namespace string, subsystem string, name string, help string,
+func (p *PrometheusPlugin) registerGauge(namespace string, subsystem string, name string, help string,
 	labels prometheus.Labels, valueFunc func() float64) {
 	gaugeName := name
 	if subsystem != "" {
@@ -219,14 +196,14 @@ func (p *Plugin) RegisterGauge(namespace string, subsystem string, name string, 
 		},
 		valueFunc,
 	)); err == nil {
-		log.StandardLogger().Infof("GaugeFunc('%s') registered.", gaugeName)
+		p.Log.Infof("GaugeFunc('%s') registered.", gaugeName)
 	} else {
-		log.StandardLogger().Errorf("GaugeFunc('%s') registration failed: %s", gaugeName, err)
+		p.Log.Errorf("GaugeFunc('%s') registration failed: %s", gaugeName, err)
 	}
 }
 
 // String returns plugin name if it was injected, defaultPluginName otherwise.
-func (p *Plugin) String() string {
+func (p *PrometheusPlugin) String() string {
 	if len(string(p.PluginName)) > 0 {
 		return string(p.PluginName)
 	}
