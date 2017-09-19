@@ -106,6 +106,21 @@ func (plugin *Plugin) AfterInit() (err error) {
 	return err
 }
 
+// ExternalInit initializes new http plugin from outside (currently used in probes)
+func (plugin *Plugin) ExternalInit() error {
+	var wasError error
+	wasError = plugin.Init()
+	if wasError == nil {
+		return plugin.AfterInit()
+	}
+	return wasError
+}
+
+// GetHTTPPort returns plugin's http port
+func (plugin *Plugin) GetHTTPPort() string {
+	return plugin.HTTPport
+}
+
 // Close stops the HTTP server.
 func (plugin *Plugin) Close() error {
 	_, err := safeclose.CloseAll(plugin.grpcServer, plugin.server)

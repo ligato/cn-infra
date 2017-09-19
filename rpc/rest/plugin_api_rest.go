@@ -34,7 +34,8 @@ type HTTPHandlers interface {
 	RegisterHTTPHandler(path string,
 		handler func(formatter *render.Render) http.HandlerFunc,
 		methods ...string) *mux.Route
-
-	// GetPort returns configured port number (for debugging purposes)
-	GetPort() int
+	// ExternalInit allows to init a new http handler from outside of agent's standard initialization process
+	ExternalInit() error
+	// GetHTTPPort returns port of a http handler
+	GetPort() string
 }
