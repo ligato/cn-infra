@@ -90,13 +90,13 @@ and the following test code:
 	func TestBSize(t *testing5.T) {
 		popr := math_rand5.New(math_rand5.NewSource(time5.Now().UnixNano()))
 		p := NewPopulatedB(popr, true)
-		dAtA, err := github_com_gogo_protobuf_proto2.Marshal(p)
+		data, err := github_com_gogo_protobuf_proto2.Marshal(p)
 		if err != nil {
 			panic(err)
 		}
 		size := p.Size()
-		if len(dAtA) != size {
-			t.Fatalf("size %v != marshalled size %v", size, len(dAtA))
+		if len(data) != size {
+			t.Fatalf("size %v != marshalled size %v", size, len(data))
 		}
 	}
 
@@ -121,7 +121,6 @@ package size
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
@@ -137,7 +136,6 @@ type size struct {
 	generator.PluginImports
 	atleastOne bool
 	localName  string
-	typesPkg   generator.Single
 }
 
 func NewSize() *size {
@@ -202,23 +200,6 @@ func (p *size) sizeZigZag() {
 	}`)
 }
 
-func (p *size) std(field *descriptor.FieldDescriptorProto, name string) (string, bool) {
-	if gogoproto.IsStdTime(field) {
-		if gogoproto.IsNullable(field) {
-			return p.typesPkg.Use() + `.SizeOfStdTime(*` + name + `)`, true
-		} else {
-			return p.typesPkg.Use() + `.SizeOfStdTime(` + name + `)`, true
-		}
-	} else if gogoproto.IsStdDuration(field) {
-		if gogoproto.IsNullable(field) {
-			return p.typesPkg.Use() + `.SizeOfStdDuration(*` + name + `)`, true
-		} else {
-			return p.typesPkg.Use() + `.SizeOfStdDuration(` + name + `)`, true
-		}
-	}
-	return "", false
-}
-
 func (p *size) generateField(proto3 bool, file *generator.FileDescriptor, message *generator.Descriptor, field *descriptor.FieldDescriptorProto, sizeName string) {
 	fieldname := p.GetOneOfFieldName(message, field)
 	nullable := gogoproto.IsNullable(field)
@@ -231,7 +212,7 @@ func (p *size) generateField(proto3 bool, file *generator.FileDescriptor, messag
 		p.P(`if m.`, fieldname, ` != nil {`)
 		p.In()
 	}
-	packed := field.IsPacked() || (proto3 && field.IsPacked3())
+	packed := field.IsPacked()
 	_, wire := p.GoType(message, field)
 	wireType := wireToType(wire)
 	fieldNumber := field.GetNumber()
@@ -413,45 +394,27 @@ func (p *size) generateField(proto3 bool, file *generator.FileDescriptor, messag
 				sum = append(sum, strconv.Itoa(valueKeySize))
 				sum = append(sum, `len(v)+sov`+p.localName+`(uint64(len(v)))`)
 			case descriptor.FieldDescriptorProto_TYPE_BYTES:
-				if gogoproto.IsCustomType(field) {
-					p.P(`l = 0`)
-					if nullable {
-						p.P(`if v != nil {`)
-						p.In()
-					}
-					p.P(`l = v.`, sizeName, `()`)
-					p.P(`l += `, strconv.Itoa(valueKeySize), ` + sov`+p.localName+`(uint64(l))`)
-					if nullable {
-						p.Out()
-						p.P(`}`)
-					}
-					sum = append(sum, `l`)
+				p.P(`l = 0`)
+				if proto3 {
+					p.P(`if len(v) > 0 {`)
 				} else {
-					p.P(`l = 0`)
-					if proto3 {
-						p.P(`if len(v) > 0 {`)
-					} else {
-						p.P(`if v != nil {`)
-					}
-					p.In()
-					p.P(`l = `, strconv.Itoa(valueKeySize), ` + len(v)+sov`+p.localName+`(uint64(len(v)))`)
-					p.Out()
-					p.P(`}`)
-					sum = append(sum, `l`)
+					p.P(`if v != nil {`)
 				}
+				p.In()
+				p.P(`l = `, strconv.Itoa(valueKeySize), ` + len(v)+sov`+p.localName+`(uint64(len(v)))`)
+				p.Out()
+				p.P(`}`)
+				sum = append(sum, `l`)
 			case descriptor.FieldDescriptorProto_TYPE_SINT32,
 				descriptor.FieldDescriptorProto_TYPE_SINT64:
 				sum = append(sum, strconv.Itoa(valueKeySize))
 				sum = append(sum, `soz`+p.localName+`(uint64(v))`)
 			case descriptor.FieldDescriptorProto_TYPE_MESSAGE:
-				stdSizeCall, stdOk := p.std(field, "v")
 				if nullable {
 					p.P(`l = 0`)
 					p.P(`if v != nil {`)
 					p.In()
-					if stdOk {
-						p.P(`l = `, stdSizeCall)
-					} else if valuegoTyp != valuegoAliasTyp {
+					if valuegoTyp != valuegoAliasTyp {
 						p.P(`l = ((`, valuegoTyp, `)(v)).`, sizeName, `()`)
 					} else {
 						p.P(`l = v.`, sizeName, `()`)
@@ -461,9 +424,7 @@ func (p *size) generateField(proto3 bool, file *generator.FileDescriptor, messag
 					p.P(`}`)
 					sum = append(sum, `l`)
 				} else {
-					if stdOk {
-						p.P(`l = `, stdSizeCall)
-					} else if valuegoTyp != valuegoAliasTyp {
+					if valuegoTyp != valuegoAliasTyp {
 						p.P(`l = ((*`, valuegoTyp, `)(&v)).`, sizeName, `()`)
 					} else {
 						p.P(`l = v.`, sizeName, `()`)
@@ -479,22 +440,12 @@ func (p *size) generateField(proto3 bool, file *generator.FileDescriptor, messag
 		} else if repeated {
 			p.P(`for _, e := range m.`, fieldname, ` { `)
 			p.In()
-			stdSizeCall, stdOk := p.std(field, "e")
-			if stdOk {
-				p.P(`l=`, stdSizeCall)
-			} else {
-				p.P(`l=e.`, sizeName, `()`)
-			}
+			p.P(`l=e.`, sizeName, `()`)
 			p.P(`n+=`, strconv.Itoa(key), `+l+sov`, p.localName, `(uint64(l))`)
 			p.Out()
 			p.P(`}`)
 		} else {
-			stdSizeCall, stdOk := p.std(field, "m."+fieldname)
-			if stdOk {
-				p.P(`l=`, stdSizeCall)
-			} else {
-				p.P(`l=m.`, fieldname, `.`, sizeName, `()`)
-			}
+			p.P(`l=m.`, fieldname, `.`, sizeName, `()`)
 			p.P(`n+=`, strconv.Itoa(key), `+l+sov`, p.localName, `(uint64(l))`)
 		}
 	case descriptor.FieldDescriptorProto_TYPE_BYTES:
@@ -570,17 +521,12 @@ func (p *size) Generate(file *generator.FileDescriptor) {
 	p.PluginImports = generator.NewPluginImports(p.Generator)
 	p.atleastOne = false
 	p.localName = generator.FileName(file)
-	p.typesPkg = p.NewImport("github.com/gogo/protobuf/types")
 	protoPkg := p.NewImport("github.com/gogo/protobuf/proto")
 	if !gogoproto.ImportsGoGoProto(file.FileDescriptorProto) {
 		protoPkg = p.NewImport("github.com/golang/protobuf/proto")
 	}
 	for _, message := range file.Messages() {
 		sizeName := ""
-		if gogoproto.IsSizer(file.FileDescriptorProto, message.DescriptorProto) && gogoproto.IsProtoSizer(file.FileDescriptorProto, message.DescriptorProto) {
-			fmt.Fprintf(os.Stderr, "ERROR: message %v cannot support both sizer and protosizer plugins\n", generator.CamelCase(*message.Name))
-			os.Exit(1)
-		}
 		if gogoproto.IsSizer(file.FileDescriptorProto, message.DescriptorProto) {
 			sizeName = "Size"
 		} else if gogoproto.IsProtoSizer(file.FileDescriptorProto, message.DescriptorProto) {
@@ -652,7 +598,7 @@ func (p *size) Generate(file *generator.FileDescriptor) {
 			p.In()
 			p.P(`var l int`)
 			p.P(`_ = l`)
-			vanity.TurnOffNullableForNativeTypes(f)
+			vanity.TurnOffNullableForNativeTypesWithoutDefaultsOnly(f)
 			p.generateField(false, file, message, f, sizeName)
 			p.P(`return n`)
 			p.Out()

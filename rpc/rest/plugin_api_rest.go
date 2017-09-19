@@ -34,4 +34,7 @@ type HTTPHandlers interface {
 	RegisterHTTPHandler(path string,
 		handler func(formatter *render.Render) http.HandlerFunc,
 		methods ...string) *mux.Route
+
+	// GetPort returns configured port number (for debugging purposes)
+	GetPort() int
 }

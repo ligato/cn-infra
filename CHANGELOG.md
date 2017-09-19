@@ -1,9 +1,8 @@
-# Release v1.0.5 (PLANNED)
-
-## Cassandra
-* connectivity status check
-
 # Release v1.0.4 (NOT RELEASED)
+
+## Health, status check & probes
+* status check is now registered also for Cassandra & Redis
+* new prometheus format probe support (in rpcflavor)
 
 ## Profiling
 * Logging duration (etcd connection establishment, kafka connection establishment, resync)
@@ -29,6 +28,7 @@
   Every multiplexer can create its own connection and provides access to different set of methods 
   (publishing to partition, watching on partition/offset) 
 * fixes inside Mux.NewSyncPublisher() & Mux.NewAsyncPublisher() related to previous partition changes
+* TODO offset improvements
 * Known Issues:
   * More than one network connection to Kafka (multiple instances of MUX)
   * TODO Minimalistic examples & documentation for Kafka API will be improved in a later release.
