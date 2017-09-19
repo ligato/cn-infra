@@ -21,7 +21,7 @@ import (
 	"github.com/ligato/cn-infra/rpc/rest"
 )
 
-// PluginDeps lists dependencies of all proble plugins.
+// Deps lists dependencies of all proble plugins.
 type Deps struct {
 	local.PluginLogDeps                       // inject
 	HTTP        rest.HTTPHandlers             // inject

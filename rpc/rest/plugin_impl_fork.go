@@ -44,7 +44,7 @@ type ForkPlugin struct {
 	grpcServer *grpcsync.Adapter
 }
 
-// Deps lists the dependencies of the Rest plugin.
+// ForkDeps lists the dependencies of the Fork on top of Rest plugin.
 type ForkDeps struct {
 	// DefaultHTTP is used if there is no different configuration
 	DefaultHTTP HTTPHandlers //inject

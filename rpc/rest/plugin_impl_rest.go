@@ -32,7 +32,9 @@ import (
 const (
 	// DefaultHTTPPort is used during HTTP server startup unless different port was configured
 	DefaultHTTPPort = "9191"
-	DefaultIP       = "0.0.0.0"
+	// DefaultIP 0.0.0.0
+	DefaultIP = "0.0.0.0"
+	// DefaultEndpoint 0.0.0.0:9191
 	DefaultEndpoint = DefaultIP + ":" + DefaultHTTPPort
 )
 
