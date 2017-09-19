@@ -5,19 +5,24 @@
 
 # Release v1.0.4 (NOT RELEASED)
 
+## Documentation
+* Improved documentation of public APIs (comments)
+* Improved documentation of examples (comments, doc.go, README.md)
+* Underscore in example suffixes "_lib" and "_plugin" replaced with a dash
+
 ## Profiling
 * Logging duration (etcd connection establishment, kafka connection establishment, resync)
 
 ## Plugin Configuration
-* new [examples/plugin_config](examples/plugin_config)
+* new [examples/configs-plugin](examples/configs-plugin)
 * new flag --config-dir=. (by default "." meaning current working directory)
 * configuration files can but not need to have absolute paths anymore (e.g. --kafka-config=kafka.conf)
 * if you put all configuration files (etcd.conf, kafka.conf etc.) in one directory agent will load them
 * if you want to disable configuration file just put empty value for a particular flag (e.g. --kafka-config)
 
 ## Logging
-* [logmanager plugin](logging/manager)
-  * new optional flag --logs-config=logs.conf (showcase in [examples/logs_plugin](examples/logs_plugin))
+* [logmanager plugin](logging/logmanager)
+  * new optional flag --logs-config=logs.conf (showcase in [examples/logs-plugin](examples/logs-plugin))
   * this plugin is now part of LocalFlavor (see field Logs) & tries to load configuration
   * HTTP dependency is optional (if it is not set it just does not registers HTTP handlers)
 * logger name added in logger fields (possible to grep only certain logger - effectively by plugin)

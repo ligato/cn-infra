@@ -13,8 +13,8 @@ type of microservice should be pushed into a dedicated GIT repository
 Each example is stored in its own directory under
 the [examples](../../examples) folder. From the name of the directory
 it should be clear what CN-Infra feature is being presented.
-Additionally, suffix the directory name with "_plugin" if the example
-runs agent with plugins, or with "_lib" if the demonstrated
+Additionally, suffix the directory name with "-plugin" if the example
+runs agent with plugins, or with "-lib" if the demonstrated
 functionality is packaged as a (lower-level) library and the example
 itself is a flat procedural code (not leveraging the plugin-based
 infrastructure).

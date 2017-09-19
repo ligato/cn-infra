@@ -1,0 +1,6 @@
+endpoints:
+- localhost:9042
+op_timeout: 2000000000 # 2 seconds
+dial_timeout: 3000000000 # 3 seconds
+redial_interval: 60000000000 # 60 seconds
+protocol_version: 4
