@@ -92,12 +92,7 @@ func loadConfig() (cassandra.Config, error) {
 }
 
 func exampleKeyspace(session *gocql.Session) (err error) {
-	if err := session.Query("CREATE KEYSPACE IF NOT EXISTS demo WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 1};").
-		Exec(); err != nil {
-		return err
-	}
-
-	return nil
+	return session.Query("CREATE KEYSPACE IF NOT EXISTS demo WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 1};").Exec()
 }
 
 func example(session *gocql.Session) (err error) {
@@ -146,12 +141,7 @@ func exampleDDL(session *gocql.Session) (err error) {
 		return err
 	}
 
-	if err := session.Query("CREATE INDEX IF NOT EXISTS demo_users_last_name ON demo.user (last_name);").
-		Exec(); err != nil {
-		return err
-	}
-
-	return nil
+	return session.Query("CREATE INDEX IF NOT EXISTS demo_users_last_name ON demo.user (last_name);").Exec()
 }
 
 func exampleDML(session *gocql.Session) (err error) {
