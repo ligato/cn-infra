@@ -94,14 +94,7 @@ func (plugin *Plugin) GetPort() int {
 
 // AfterInit starts the HTTP server.
 func (plugin *Plugin) AfterInit() (err error) {
-	var cfgCopy Config
-	if plugin.Config != nil {
-		cfgCopy = *plugin.Config
-	}
-
-	if cfgCopy.Endpoint == "" {
-		cfgCopy.Endpoint = fmt.Sprintf("0.0.0.0:%s", DefaultHTTPPort)
-	}
+	cfgCopy := *plugin.Config
 
 	if plugin.listenAndServe != nil {
 		plugin.server, err = plugin.listenAndServe(cfgCopy, plugin.mx)

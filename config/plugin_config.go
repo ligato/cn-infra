@@ -47,8 +47,8 @@ type PluginConfig interface {
 // ForPlugin returns API that is injectable to a particular Plugin
 // to read it's configuration.
 //
-// It tries to lookup `plugin + "-config"` in flags.
-//
+// It tries to lookup `plugin + "-config"` in flags and declare
+// the flag if it still not exists. It uses following opts.
 // opts (used for defining flag if it was not allready defined):
 // - usage
 // - default value
