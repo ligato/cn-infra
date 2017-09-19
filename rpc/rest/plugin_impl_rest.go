@@ -18,8 +18,6 @@ import (
 	"io"
 	"net/http"
 
-	"fmt"
-
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/core"
