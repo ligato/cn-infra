@@ -22,6 +22,7 @@ import (
 	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/willfaught/gockle"
+	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
 // Plugin implements Plugin interface therefore can be loaded with other plugins
@@ -120,7 +121,7 @@ func (p *Plugin) NewBroker() sql.Broker {
 
 // Close resources
 func (p *Plugin) Close() error {
-	p.session.Close()
+	safeclose.Close(p.session)
 	return nil
 }
 
