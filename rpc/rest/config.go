@@ -14,9 +14,52 @@
 
 package rest
 
-import "time"
+import (
+	"strconv"
+	"strings"
+	"time"
+	"github.com/namsral/flag"
+	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/config"
+)
+
+
+// PluginConfig tries :
+// - to load flag <plugin-name>-port and then FixConfig() just in case
+// - alternatively <plugin-name>-config and then FixConfig() just in case
+// - alternatively DefaultConfig()
+func PluginConfig(pluginCfg config.PluginConfig, cfg *Config, pluginName core.PluginName) (error) {
+	portFlag := flag.Lookup(httpPortFlag(pluginName))
+	if portFlag != nil && portFlag.Value != nil && portFlag.Value.String() != "" && cfg != nil {
+		cfg.Endpoint = DefaultIP + ":" + portFlag.Value.String()
+	}
+
+	if pluginCfg != nil {
+		_, err := pluginCfg.GetValue(cfg)
+		if err != nil {
+			return err
+		}
+	}
+
+	FixConfig(cfg)
+
+	return nil
+}
+
+// DefaultConfig returns new instance of config with default endpoint
+func DefaultConfig() *Config {
+	return &Config{Endpoint: DefaultEndpoint}
+}
+
+// FixConfig fill default values for empty fields
+func FixConfig(cfg *Config) {
+	if cfg != nil && cfg.Endpoint == "" {
+		cfg.Endpoint = DefaultEndpoint
+	}
+}
 
 // Config is a configuration for HTTP server
+// It is meant to be extended with security (TLS...)
 type Config struct {
 	// Endpoint is an address of HTTP server
 	Endpoint string
@@ -54,4 +97,49 @@ type Config struct {
 	// size of the request body.
 	// If zero, DefaultMaxHeaderBytes is used.
 	MaxHeaderBytes int
+}
+
+// GetPort parses suffix from endpoint & returns integer after last ":" (otherwise it returns 0)
+func (cfg *Config) GetPort() int {
+	if cfg.Endpoint != "" && cfg.Endpoint != ":" {
+		index := strings.LastIndex(cfg.Endpoint, ":")
+		if index >= 0 {
+			port, err := strconv.Atoi(cfg.Endpoint[index+1:])
+			if err == nil {
+				return port
+			}
+		}
+	}
+
+	return 0
+}
+
+
+// DeclareHttpFlag declares http port (with usage & default value) a flag for a particular plugin name
+func DeclareHttpFlag(pluginName core.PluginName, defaultPortOpts ...uint) {
+	var defaultPort string
+	if len(defaultPortOpts) > 0 {
+		defaultPort = string(defaultPortOpts[0])
+	} else {
+		defaultPort = DefaultHTTPPort
+	}
+
+	pluginNameToUpper := strings.ToUpper(string(pluginName))
+
+	var httpServerSuffix string
+	flag.String(httpPortFlag(pluginName), defaultPort,
+		"Listen port for the Agent's HTTP " + httpServerSuffix + " server; also set via '"+
+			pluginNameToUpper+ "_PORT"+ "' env variable.")
+	flag.String(httpConfigFlag(pluginName), defaultPort,
+		"Configure Agent's HTTP " + httpServerSuffix + " server (port & timeouts); also set via '"+
+			pluginNameToUpper+ config.EnvSuffix+ "' env variable.")
+
+}
+
+func httpPortFlag(pluginName core.PluginName) string {
+	return strings.ToLower(string(pluginName)) + "-port"
+}
+
+func httpConfigFlag(pluginName core.PluginName) string {
+	return strings.ToLower(string(pluginName)) + config.FlagSuffix
 }

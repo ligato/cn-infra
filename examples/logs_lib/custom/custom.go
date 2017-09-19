@@ -35,7 +35,7 @@ func main() {
 
 	// setup fields that will be added to all subsequent log entries
 	logger.SetStaticFields(map[string]interface{}{"component": "componentXY", "key": "value"})
-
+logrus.DefaultLogger()
 	logger.WithFields(logging.Fields{
 		"CM_IP": "10.1.10",
 	}).Debug("Cable modem is online")

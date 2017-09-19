@@ -12,15 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package probe implements Prometheus health/metrics handlers.
 package probe
 
 import (
 	"net/http"
 
-	"github.com/ligato/cn-infra/flavors/local"
-	"github.com/ligato/cn-infra/health/statuscheck"
-	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/unrolled/render"
@@ -72,16 +68,7 @@ const (
 
 // PrometheusPlugin struct holds all plugin-related data.
 type PrometheusPlugin struct {
-	// FIXME: I know it's unconventional.  But to avoid name collision till probe.Deps is extracted and shared.
-	PluginDeps
-}
-
-// PluginDeps lists dependencies of the Prometheus plugin.
-// FIXME: I know it's unconventional.  But to avoid name collision till probe.Deps is extracted and shared.
-type PluginDeps struct {
-	local.PluginLogDeps                               // inject
-	HTTP                rest.HTTPHandlers             // inject
-	StatusCheck         statuscheck.AgentStatusReader // inject
+	Deps
 }
 
 // Init may create a new (custom) instance of HTTP if the injected instance uses
