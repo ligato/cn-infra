@@ -57,22 +57,20 @@ func (f *AllConnectorsFlavor) Inject() bool {
 	}
 	f.injected = true
 
-	declareFlags()
-
 	if f.FlavorLocal == nil {
 		f.FlavorLocal = &local.FlavorLocal{}
 	}
 	f.FlavorLocal.Inject()
 
-	f.ETCD.Deps.PluginInfraDeps = *f.InfraDeps("etcdv3")
+	f.ETCD.Deps.PluginInfraDeps = *f.InfraDeps("etcdv3", local.WithConf())
 	InjectKVDBSync(&f.ETCDDataSync, &f.ETCD, f.ETCD.PluginName, f.FlavorLocal, &f.ResyncOrch)
 
-	f.Redis.Deps.PluginInfraDeps = *f.InfraDeps("redis")
+	f.Redis.Deps.PluginInfraDeps = *f.InfraDeps("redis", local.WithConf())
 	InjectKVDBSync(&f.RedisDataSync, &f.Redis, f.Redis.PluginName, f.FlavorLocal, &f.ResyncOrch)
 
-	f.Kafka.Deps.PluginInfraDeps = *f.InfraDeps("kafka")
+	f.Kafka.Deps.PluginInfraDeps = *f.InfraDeps("kafka", local.WithConf())
 
-	f.Cassandra.Deps.PluginInfraDeps = *f.InfraDeps("cassandra")
+	f.Cassandra.Deps.PluginInfraDeps = *f.InfraDeps("cassandra", local.WithConf())
 
 	f.ResyncOrch.PluginLogDeps = *f.LogDeps("resync-orch")
 

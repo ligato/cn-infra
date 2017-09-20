@@ -1,8 +1,6 @@
 package main
 
 import (
-	"github.com/namsral/flag"
-
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/kvdbsync"
@@ -14,9 +12,9 @@ import (
 
 // Deps lists dependencies of ExamplePlugin.
 type Deps struct {
-	local.PluginInfraDeps                             // injected
-	Publisher             datasync.KeyProtoValWriter  // injected - To write ETCD data
-	Watcher               datasync.KeyValProtoWatcher // injected - To watch ETCD data
+	local.PluginInfraDeps                 // injected
+	Publisher datasync.KeyProtoValWriter  // injected - To write ETCD data
+	Watcher   datasync.KeyValProtoWatcher // injected - To watch ETCD data
 }
 
 // ExampleFlavor is a set of plugins required for the datasync example.
@@ -37,8 +35,6 @@ type ExampleFlavor struct {
 
 // Inject sets inter-plugin references.
 func (ef *ExampleFlavor) Inject() (allReadyInjected bool) {
-	declareFlags()
-
 	// Init local flavor
 	if ef.FlavorLocal == nil {
 		ef.FlavorLocal = &local.FlavorLocal{}
@@ -47,7 +43,8 @@ func (ef *ExampleFlavor) Inject() (allReadyInjected bool) {
 
 	// Init Resync, ETCD + ETCD sync
 	ef.ResyncOrch.Deps.PluginLogDeps = *ef.FlavorLocal.LogDeps("resync-orch")
-	ef.ETCD.Deps.PluginInfraDeps = *ef.InfraDeps("etcdv3")
+	ef.ETCD.Deps.PluginInfraDeps = *ef.InfraDeps("etcdv3",
+		local.WithConf())
 	connectors.InjectKVDBSync(&ef.ETCDDataSync, &ef.ETCD, ef.ETCD.PluginName, ef.FlavorLocal, &ef.ResyncOrch)
 
 	// Inject infra + transport (publisher, watcher) to example plugin
@@ -63,9 +60,4 @@ func (ef *ExampleFlavor) Inject() (allReadyInjected bool) {
 func (ef *ExampleFlavor) Plugins() []*core.NamedPlugin {
 	ef.Inject()
 	return core.ListPluginsInFlavor(ef)
-}
-
-func declareFlags() {
-	// Make etcd config filename configurable.
-	flag.String(connectors.ETCDConfFlag, connectors.ETCDConf, connectors.ETCDConfUsage)
 }

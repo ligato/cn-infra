@@ -2,16 +2,14 @@ package main
 
 import (
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/flavors/connectors"
 	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/ligato/cn-infra/messaging/kafka"
-	"github.com/namsral/flag"
 )
 
 // Deps lists dependencies of ExamplePlugin.
 type Deps struct {
-	Kafka               *kafka.Plugin // injected
-	local.PluginLogDeps               // injected
+	Kafka *kafka.Plugin // injected
+	local.PluginLogDeps // injected
 }
 
 // ExampleFlavor is a set of plugins required for the example.
@@ -28,15 +26,14 @@ type ExampleFlavor struct {
 
 // Inject sets inter-plugin references.
 func (ef *ExampleFlavor) Inject() (allReadyInjected bool) {
-	declareFlags()
-
 	// Init local flavor
 	if ef.FlavorLocal == nil {
 		ef.FlavorLocal = &local.FlavorLocal{}
 	}
 	ef.FlavorLocal.Inject()
 	// Init kafka
-	ef.Kafka.Deps.PluginInfraDeps = *ef.FlavorLocal.InfraDeps("kafka")
+	ef.Kafka.Deps.PluginInfraDeps = *ef.FlavorLocal.InfraDeps("kafka",
+		local.WithConf())
 	// Inject kafka to example plugin
 	ef.KafkaExample.Deps.PluginLogDeps = *ef.FlavorLocal.LogDeps("kafka-example")
 	ef.KafkaExample.Kafka = &ef.Kafka
@@ -49,9 +46,4 @@ func (ef *ExampleFlavor) Inject() (allReadyInjected bool) {
 func (ef *ExampleFlavor) Plugins() []*core.NamedPlugin {
 	ef.Inject()
 	return core.ListPluginsInFlavor(ef)
-}
-
-func declareFlags() {
-	// Make kafka config filename configurable.
-	flag.String(connectors.KafkaConfFlag, connectors.KafkaConf, connectors.KafkaConfUsage)
 }
