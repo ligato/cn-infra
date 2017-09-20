@@ -17,32 +17,24 @@ package main
 import (
 	"time"
 
-	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/flavors/local"
 )
 
 // PluginName is injected as the plugin name.
+// LocalFlavor.InfraDeps() will create and initialize a new flag used to make
+// the plugin config file name configurable for the user (via dedicated CLI
+// option and env. variable).
+// The flag name is composed of the plugin name and the suffix config.FlagSuffix.
+// The default (flag value) filename for the configuration file is the plugin
+// name with the extension ".conf".
 const PluginName = "example"
-
-// ExampleConfFlag is the name of the flag used by PluginConfig (package config)
-// to get the filename of the configuration file for the Example plugin.
-// This flag name is composed of the plugin name and the suffix
-// config.FlagSuffix.
-// The flag is created in ExampleFlavor.Plugins().
-const ExampleConfFlag = PluginName + config.FlagSuffix
-
-// ExampleConfDefault is the default (flag value) filename for the configuration
-// file.
-const ExampleConfDefault = PluginName + ".conf"
-
-// ExampleConfUsage is the documentation for ExampleConfFlag.
-const ExampleConfUsage = "Location of the example configuration file; also set via 'EXAMPLE_CONFIG' env variable."
 
 // *************************************************************************
 // This file contains a PluginConfig show case:
 // - plugin binds it's configuration to an example specific Conf structure
-//   (see code how default is handled & how it can be overridden by flags)
+//   (see Init() to learn how the default configuration is set & how it can be
+//    overridden via flags)
 // - cn-infra helps by locating and parsing the configuration file
 //
 // ************************************************************************/

@@ -17,7 +17,6 @@ package main
 import (
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/flavors/local"
-	"github.com/namsral/flag"
 )
 
 // ExampleFlavor is composition of ExamplePlugin and Local flavor.
@@ -35,14 +34,10 @@ func (ef *ExampleFlavor) Plugins() []*core.NamedPlugin {
 	ef.FlavorLocal.Inject()
 
 	// Inject plugins from the Local flavor into the Example plugin.
+	// This function also initialize the flag used to make the plugin config
+	// file name configurable for the user.
 	ef.ExamplePlugin.PluginInfraDeps = *ef.InfraDeps(PluginName)
-
-	// Initialize and enable flag that PluginConfig will use to get
-	// the filename of the configuration file for ExampleFlavor.
-	// See the comment for ExampleConfFlag in main.go.
-	flag.String(ExampleConfFlag, ExampleConfDefault, ExampleConfUsage)
 
 	// Return plugins in a slice.
 	return core.ListPluginsInFlavor(ef)
 }
-
