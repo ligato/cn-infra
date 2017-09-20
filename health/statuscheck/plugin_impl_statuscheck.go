@@ -292,3 +292,11 @@ func stateToProto(state PluginState) status.OperationalState {
 		return status.OperationalState_ERROR
 	}
 }
+
+// GetPluginStatus return current operational state of the plugin.
+func (p *Plugin) GetPluginStatus(pluginName string) status.PluginStatus {
+	p.access.Lock()
+	defer p.access.Unlock()
+
+	return *(p.pluginStat[string(pluginName)])
+}

@@ -90,10 +90,10 @@ the [Plugin Dependencies Guidelines](PLUGIN_DEPENDENCIES.md).
 ## Guidelines
 
 For your applications, you can either define your own flavor, like we do
-in the [datasync_plugin example](../../examples/datasync_plugin/main.go),
+in the [datasync-plugin example](../../examples/datasync-plugin/main.go),
 or simply reuse existing flavor through embedding and extend it with your
 own plugins. The latter approach can be seen in
-the [logs_plugin example](https://github.com/ligato/cn-infra/tree/master/examples/logs_plugin).
+the [logs-plugin example](../../examples/logs-plugin).
 If your plugins do not require dependency injection, you can even
 directly add them to the list of plugins as passed to NewAgent().
 

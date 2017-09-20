@@ -74,9 +74,9 @@ Plugins that need to use the logging capabilities should be defined
 as dependent on [PluginLogger](../../logging/log_api.go).
 Such dependency definition is already prepared and can be applied through
 embedding from the structure
-[PluginLogDeps](https://github.com/ligato/cn-infra/blob/master/flavors/local/plugin_deps.go).
+[PluginLogDeps](../../flavors/local/plugin_deps.go).
 Plugins that interact with DB/Messaging may use
-[PluginInfraDeps](https://github.com/ligato/cn-infra/blob/master/flavors/local/plugin_deps.go) instead, which,
+[PluginInfraDeps](../../flavors/local/plugin_deps.go) instead, which,
 apart from logging, also includes some other basic dependencies likely
 to be needed.
 
@@ -171,4 +171,4 @@ childLogger.Infof("Log using named logger with name: %v", childLogger.GetName())
 
 A full code example with plugin's own logger injected through
 the use of PluginLogDeps and with one child logger can be found in
-[https://github.com/ligato/cn-infra/blob/master/examples/logs_plugin/main.go).
+[examples/logs-plugin](../../examples/logs-plugin/main.go).
