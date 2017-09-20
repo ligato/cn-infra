@@ -115,13 +115,42 @@ func (f *FlavorLocal) LogDeps(pluginName string) *PluginLogDeps {
 // see PluginConfig.GetConfigName().
 // This method is just a convenient shortcut to be used in Flavor.Inject()
 // by flavors that embed the LocalFlavor..
-func (f *FlavorLocal) InfraDeps(pluginName string) *PluginInfraDeps {
+func (f *FlavorLocal) InfraDeps(pluginName string, opts ...InfraDepsOpts) *PluginInfraDeps {
+	if len(opts) == 1 {
+		if confOpt, ok := opts[0].(*ConfOpts); ok {
+			return &PluginInfraDeps{
+				*f.LogDeps(pluginName),
+				config.ForPlugin(pluginName, confOpt.confUsage, confOpt.confDefault),
+				&f.StatusCheck,
+				&f.ServiceLabel}
+		}
+	}
+
 	return &PluginInfraDeps{
 		*f.LogDeps(pluginName),
 		config.ForPlugin(pluginName),
 		&f.StatusCheck,
 		&f.ServiceLabel}
 }
+
+// InfraDepsOpts is to make typesafe the InfraDeps varargs
+type InfraDepsOpts interface {
+	// InfraDepsOpts method is maker to declare implementation of InfraDepsOpts interface
+	InfraDepsOpts()
+}
+
+// WithConf is a function to create option for InfraDeps()
+func WithConf(confDefault, confUsage string) *ConfOpts {
+	return &ConfOpts{confDefault, confUsage}
+}
+
+// ConfOpts is a structure that holds default value & usage for configuration flag
+type ConfOpts struct {
+	confDefault, confUsage string
+}
+
+// InfraDepsOpts method is maker to declare implementation of InfraDepsOpts interface
+func (*ConfOpts) InfraDepsOpts() {}
 
 func declareFlags() {
 	if flag.Lookup(config.DirFlag) == nil {

@@ -8,9 +8,9 @@ import (
 	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/redis"
+	"github.com/ligato/cn-infra/flavors/connectors"
 	"github.com/ligato/cn-infra/flavors/local"
 	log "github.com/ligato/cn-infra/logging/logroot"
-	"github.com/namsral/flag"
 )
 
 // Main allows running Example Plugin as a statically linked binary with Agent Core Plugins. Close channel and plugins
@@ -24,12 +24,6 @@ func main() {
 	flavor := ExampleFlavor{closeChan: &exampleFinished}
 	agent := core.NewAgent(log.StandardLogger(), 15*time.Second, append(flavor.Plugins())...)
 	core.EventLoopWithInterrupt(agent, exampleFinished)
-}
-
-// Redis flag to load config
-func init() {
-	flag.String("redis-config", "redis.conf",
-		"Location of the redis configuration file")
 }
 
 // ExampleFlavor is a set of plugins required for the redis example.
@@ -57,7 +51,8 @@ func (ef *ExampleFlavor) Inject() (allReadyInjected bool) {
 		ef.FlavorLocal = &local.FlavorLocal{}
 	}
 	ef.FlavorLocal.Inject()
-	ef.Redis.Deps.PluginInfraDeps = *ef.InfraDeps("redis")
+	ef.Redis.Deps.PluginInfraDeps = *ef.InfraDeps("redis",
+		local.WithConf(connectors.RedisConf, connectors.RedisConfUsage))
 	InjectKVDBSync(&ef.RedisDataSync, &ef.Redis, ef.Redis.PluginName, ef.FlavorLocal, &ef.ResyncOrch)
 	ef.RedisExample.Deps.PluginLogDeps = *ef.FlavorLocal.LogDeps("redis-example")
 	ef.RedisExample.closeChannel = ef.closeChan

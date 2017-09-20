@@ -28,7 +28,7 @@ const DirFlag = "config-dir"
 const DirDefault = "."
 
 // DirUsage used as flag usage (see implementation in declareFlags())
-const DirUsage = "Location of the configuration files; also set via '" + EnvSuffix + "_DIR' env variable."
+const DirUsage = "Location of the configuration files; also set via 'CONFIG_DIR' env variable."
 
 // PluginConfig is API for plugins to access configuration.
 //
@@ -55,15 +55,15 @@ type PluginConfig interface {
 func ForPlugin(pluginName string, opts ...string) PluginConfig {
 	flgName := pluginName + FlagSuffix
 	flg := flag.CommandLine.Lookup(flgName)
-	if flg == nil {
-		var  flagDefault, flagUsage string
-		if len(opts) > 0 {
-			flagDefault = opts[0]
+	if flg == nil && len(opts) > 0 {
+		var flagDefault, flagUsage string
+		if len(opts) > 0 && opts[0] != "" {
+			flagUsage = opts[0]
+		}
+		if len(opts) > 1 && opts[1] != "" {
+			flagDefault = opts[1]
 		} else {
 			flagDefault = pluginName + ".conf"
-		}
-		if len(opts) > 1 {
-			flagUsage = opts[1]
 		}
 		flag.String(flgName, flagDefault, flagUsage)
 	}
