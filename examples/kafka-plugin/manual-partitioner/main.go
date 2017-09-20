@@ -35,7 +35,7 @@ type ExamplePlugin struct {
 	subscription        chan (messaging.ProtoMessage)
 	kafkaSyncPublisher  messaging.ProtoPublisher
 	kafkaAsyncPublisher messaging.ProtoPublisher
-	kafkaWatcher        messaging.ProtoWatcher
+	kafkaWatcher        messaging.ProtoManualWatcher
 	// Successfully published kafka message is sent through the message channel.
 	// In case of a failure it sent through the error channel.
 	asyncSubscription   chan (messaging.ProtoMessage)
@@ -85,7 +85,8 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	}
 
 	// Initialize sync watcher.
-	plugin.kafkaWatcher = plugin.Kafka.NewWatcher("example-watcher")
+
+	plugin.kafkaWatcher = plugin.Kafka.NewPartitionWatcher("example-part-watcher")
 
 	// Prepare subscription channel. Relevant kafka messages are send to this
 	// channel so that the watcher can read it.

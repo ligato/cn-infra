@@ -8,7 +8,6 @@ import (
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/utils/safeclose"
-	"github.com/ligato/cn-infra/logging/logroot"
 )
 
 // Multiplexer encapsulates clients to kafka cluster (syncProducer, asyncProducer, consumer).
@@ -217,7 +216,6 @@ func (mux *Multiplexer) genericConsumer() {
 		case msg := <-mux.consumer.Config.RecvMessageChan:
 			mux.Debug("Kafka message received")
 			mux.propagateMessage(msg)
-			logroot.StandardLogger().Warnf("part: %v", mux.partitioner) // todo remove
 			// Mark offset for hash/random partitioners
 			if mux.partitioner != client.Manual {
 				// Mark offset as read. If the Multiplexer is restarted it
