@@ -1,11 +1,13 @@
 .idea/
 glide.lock
 examples/cassandra_lib/cassandra_lib
+examples/configs_plugin/configs_plugin
 examples/datasync_plugin/datasync_plugin
 examples/etcdv3_lib/editor/editor
 examples/etcdv3_lib/view/view
 examples/etcdv3_lib/watcher/watcher
 examples/flags_plugin/flags_plugin
+examples/flags_lib/flags_lib
 examples/kafka_lib/asyncproducer/asyncproducer
 examples/kafka_lib/consumer/consumer
 examples/kafka_lib/mux/mux
