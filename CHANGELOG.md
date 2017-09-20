@@ -8,14 +8,14 @@
 * Logging duration (etcd connection establishment, kafka connection establishment, resync)
 
 ## Plugin Configuration
-* new [examples/plugin_config](https://github.com/ligato/cn-infra/blob/master/config/plugin_config.go)
+* new [examples/plugin_config](examples/plugin_config)
 * new flag --config-dir=. (by default "." meaning current working directory)
 * configuration files can but not need to have absolute paths anymore (e.g. --kafka-config=kafka.conf)
 * if you put all configuration files (etcd.conf, kafka.conf etc.) in one directory agent will load them
 * if you want to disable configuration file just put empty value for a particular flag (e.g. --kafka-config)
 
 ## Logging
-* [logmanager plugin](https://github.com/ligato/cn-infra/blob/master/logging/logmanager/plugin_impl_log_manager.go)
+* [logmanager plugin](logging/manager)
   * new optional flag --logs-config=logs.conf (showcase in [examples/logs_plugin](examples/logs_plugin))
   * this plugin is now part of LocalFlavor (see field Logs) & tries to load configuration
   * HTTP dependency is optional (if it is not set it just does not registers HTTP handlers)
