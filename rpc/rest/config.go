@@ -115,8 +115,8 @@ func (cfg *Config) GetPort() int {
 }
 
 
-// DeclareHttpFlag declares http port (with usage & default value) a flag for a particular plugin name
-func DeclareHttpFlag(pluginName core.PluginName, defaultPortOpts ...uint) {
+// DeclareHTTPFlag declares http port (with usage & default value) a flag for a particular plugin name
+func DeclareHTTPFlag(pluginName core.PluginName, defaultPortOpts ...uint) {
 	var defaultPort string
 	if len(defaultPortOpts) > 0 {
 		defaultPort = string(defaultPortOpts[0])

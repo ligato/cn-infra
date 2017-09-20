@@ -48,7 +48,7 @@ func (f *FlavorRPC) Inject() bool {
 	}
 	f.FlavorLocal.Inject()
 
-	rest.DeclareHttpFlag("http")
+	rest.DeclareHTTPFlag("http")
 	httpPlugDeps := *f.InfraDeps("http")
 	f.HTTP.Deps.Log = httpPlugDeps.Log
 	f.HTTP.Deps.PluginConfig = httpPlugDeps.PluginConfig
@@ -56,7 +56,7 @@ func (f *FlavorRPC) Inject() bool {
 
 	f.Logs.HTTP = &f.HTTP
 
-	rest.DeclareHttpFlag("http-probe")
+	rest.DeclareHTTPFlag("http-probe")
 	httpProbeDeps := *f.InfraDeps("http-probe")
 	f.HTTPProbe.Deps.Log = httpProbeDeps.Log
 	f.HTTPProbe.Deps.PluginConfig = httpProbeDeps.PluginConfig
