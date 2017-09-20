@@ -36,7 +36,7 @@ func (ef *ExampleFlavor) Plugins() []*core.NamedPlugin {
 	// Inject plugins from the Local flavor into the Example plugin.
 	// This function also initialize the flag used to make the plugin config
 	// file name configurable for the user.
-	ef.ExamplePlugin.PluginInfraDeps = *ef.InfraDeps(PluginName)
+	ef.ExamplePlugin.PluginInfraDeps = *ef.InfraDeps(PluginName, local.WithConf())
 
 	// Return plugins in a slice.
 	return core.ListPluginsInFlavor(ef)

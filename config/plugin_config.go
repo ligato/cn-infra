@@ -49,21 +49,26 @@ type PluginConfig interface {
 //
 // It tries to lookup `plugin + "-config"` in flags and declare
 // the flag if it still not exists. It uses following opts.
-// opts (used for defining flag if it was not allready defined):
-// - usage
+// opts (used for defining flag if it was not already defined):
 // - default value
+// - usage
 func ForPlugin(pluginName string, opts ...string) PluginConfig {
 	flgName := pluginName + FlagSuffix
 	flg := flag.CommandLine.Lookup(flgName)
 	if flg == nil && len(opts) > 0 {
 		var flagDefault, flagUsage string
+
 		if len(opts) > 0 && opts[0] != "" {
-			flagUsage = opts[0]
-		}
-		if len(opts) > 1 && opts[1] != "" {
-			flagDefault = opts[1]
+			flagDefault = opts[0]
 		} else {
 			flagDefault = pluginName + ".conf"
+		}
+		if len(opts) > 1 && opts[1] != "" {
+			flagUsage = opts[1]
+		} else {
+			flagUsage = "Location of the " + pluginName +
+				" Client configuration file; also set via '" +
+				strings.ToUpper(pluginName) + EnvSuffix + "' env variable."
 		}
 		flag.String(flgName, flagDefault, flagUsage)
 	}

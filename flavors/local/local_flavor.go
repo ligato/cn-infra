@@ -140,8 +140,17 @@ type InfraDepsOpts interface {
 }
 
 // WithConf is a function to create option for InfraDeps()
-func WithConf(confDefault, confUsage string) *ConfOpts {
-	return &ConfOpts{confDefault, confUsage}
+// no need to pass opts (used for defining flag if it was not already defined), if so in this order:
+// - default value
+// - usage
+func WithConf(deafultUsageOpts ...string) *ConfOpts {
+	if len(deafultUsageOpts) > 1 {
+		return &ConfOpts{deafultUsageOpts[0], deafultUsageOpts[1]}
+	} else if len(deafultUsageOpts) > 0 {
+		return &ConfOpts{deafultUsageOpts[0], ""}
+	}
+
+	return &ConfOpts{}
 }
 
 // ConfOpts is a structure that holds default value & usage for configuration flag
