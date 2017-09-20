@@ -31,6 +31,7 @@ import (
 	lg "github.com/Sirupsen/logrus"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/satori/go.uuid"
+	"unsafe"
 )
 
 // DefaultLoggerName is logger name of global instance of logger
@@ -54,11 +55,10 @@ func DefaultLogger() *Logger {
 // allows to define static log fields that are added to all subsequent log entries. It also automatically
 // appends file name and line where the log is coming from. In order to distinguish logs from different
 // go routines a tag (number that is based on the stack address) is computed. To achieve better readability
-// numeric loggers of a tag can be replaced by a string using SetTag function.
+// numeric value of a tag can be replaced by a string using SetTag function.
 type Logger struct {
 	tagmap       atomic.Value
 	staticFields atomic.Value
-	stdStore     atomic.Value
 	std          *lg.Logger
 	depth        int
 	littleBuf    sync.Pool
@@ -89,8 +89,8 @@ func NewLogger(name string) *Logger {
 	statics := make(map[string]interface{})
 	logger.staticFields.Store(statics)
 
-	// init std store
-	logger.stdStore.Store(logger.std)
+	// store std
+	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&logger.std)), unsafe.Pointer(logger.std))
 
 	tf := NewTextFormatter()
 	tf.TimestampFormat = "2006-01-02 15:04:05.00000"
@@ -229,22 +229,27 @@ func (logger *Logger) GetName() string {
 
 // SetOutput sets the standard logger output.
 func (logger *Logger) SetOutput(out io.Writer) {
-	std := logger.stdStore.Load().(*lg.Logger)
-	std.Out = out
-	logger.stdStore.Store(std)
-
+	unsafeStd := (*unsafe.Pointer)(unsafe.Pointer(&logger.std))
+	stdVal := (*lg.Logger)(atomic.LoadPointer(unsafeStd))
+	if stdVal != nil {
+		stdVal.Out = out
+		atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&logger.std)), unsafe.Pointer(logger.std))
+	}
 }
 
 // SetFormatter sets the standard logger formatter.
 func (logger *Logger) SetFormatter(formatter lg.Formatter) {
-	std := logger.stdStore.Load().(*lg.Logger)
-	std.Formatter = formatter
-	logger.stdStore.Store(std)
+	unsafeStd := (*unsafe.Pointer)(unsafe.Pointer(&logger.std))
+	stdVal := (*lg.Logger)(atomic.LoadPointer(unsafeStd))
+	if stdVal != nil {
+		stdVal.Formatter = formatter
+		atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&logger.std)), unsafe.Pointer(logger.std))
+	}
 }
 
 // SetLevel sets the standard logger level.
 func (logger *Logger) SetLevel(level logging.LogLevel) {
-	std := logger.stdStore.Load().(*lg.Logger)
+	std := logger.std
 	switch level {
 	case logging.PanicLevel:
 		std.Level = lg.PanicLevel
@@ -259,13 +264,11 @@ func (logger *Logger) SetLevel(level logging.LogLevel) {
 	case logging.DebugLevel:
 		std.Level = lg.DebugLevel
 	}
-	// Store previously set level
-	logger.stdStore.Store(std)
 }
 
 // GetLevel returns the standard logger level.
 func (logger *Logger) GetLevel() logging.LogLevel {
-	l := lg.Level(atomic.LoadUint32((*uint32)(&logger.std.Level)))
+	l := logger.std.Level
 	switch l {
 	case lg.PanicLevel:
 		return logging.PanicLevel
@@ -286,9 +289,12 @@ func (logger *Logger) GetLevel() logging.LogLevel {
 
 // AddHook adds a hook to the standard logger hooks.
 func (logger *Logger) AddHook(hook lg.Hook) {
-	std := logger.stdStore.Load().(*lg.Logger)
-	logger.std.Hooks.Add(hook)
-	logger.stdStore.Store(std)
+	unsafeStd := (*unsafe.Pointer)(unsafe.Pointer(&logger.std))
+	stdVal := (*lg.Logger)(atomic.LoadPointer(unsafeStd))
+	if stdVal != nil {
+		stdVal.Hooks.Add(hook)
+		atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&logger.std)), unsafe.Pointer(logger.std))
+	}
 }
 
 func (logger *Logger) withField(key string, value interface{}, depth ...int) *LogMsg {
@@ -368,7 +374,11 @@ func (logger *Logger) Debug(args ...interface{}) {
 
 // Print logs a message at level Info on the standard logger.
 func (logger *Logger) Print(args ...interface{}) {
-	logger.std.Print(args...)
+	unsafeStd := (*unsafe.Pointer)(unsafe.Pointer(&logger.std))
+	stdVal := (*lg.Logger)(atomic.LoadPointer(unsafeStd))
+	if stdVal != nil {
+		stdVal.Print(args...)
+	}
 }
 
 // Info logs a message at level Info on the standard logger.
