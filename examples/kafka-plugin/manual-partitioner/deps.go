@@ -3,9 +3,8 @@ package main
 import (
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/flavors/local"
-	"github.com/ligato/cn-infra/messaging/kafka"
 	"github.com/ligato/cn-infra/messaging"
-	"github.com/ligato/cn-infra/flavors/connectors"
+	"github.com/ligato/cn-infra/messaging/kafka"
 )
 
 // Deps lists dependencies of ExamplePlugin.
