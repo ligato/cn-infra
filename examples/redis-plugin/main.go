@@ -8,7 +8,6 @@ import (
 	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/redis"
-	"github.com/ligato/cn-infra/flavors/connectors"
 	"github.com/ligato/cn-infra/flavors/local"
 	log "github.com/ligato/cn-infra/logging/logroot"
 )
