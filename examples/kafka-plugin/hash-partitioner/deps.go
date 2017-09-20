@@ -5,7 +5,6 @@ import (
 	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/ligato/cn-infra/messaging"
 	"github.com/ligato/cn-infra/messaging/kafka"
-	"github.com/namsral/flag"
 )
 
 // Deps lists dependencies of ExamplePlugin.
