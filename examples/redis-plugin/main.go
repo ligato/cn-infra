@@ -23,7 +23,7 @@ func main() {
 
 // Redis flag to load config
 func init() {
-	flag.String("redis-config", "redis.conf","Location of the redis configuration file")
+	flag.String("redis-config", "redis.conf", "Location of the redis configuration file")
 }
 
 // ExamplePlugin to depict the use of Redis flavor
