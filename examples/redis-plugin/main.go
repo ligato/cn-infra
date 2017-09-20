@@ -52,7 +52,7 @@ func (ef *ExampleFlavor) Inject() (allReadyInjected bool) {
 	}
 	ef.FlavorLocal.Inject()
 	ef.Redis.Deps.PluginInfraDeps = *ef.InfraDeps("redis",
-		local.WithConf(connectors.RedisConf, connectors.RedisConfUsage))
+		local.WithConf())
 	InjectKVDBSync(&ef.RedisDataSync, &ef.Redis, ef.Redis.PluginName, ef.FlavorLocal, &ef.ResyncOrch)
 	ef.RedisExample.Deps.PluginLogDeps = *ef.FlavorLocal.LogDeps("redis-example")
 	ef.RedisExample.closeChannel = ef.closeChan

@@ -44,7 +44,7 @@ func (ef *ExampleFlavor) Inject() (allReadyInjected bool) {
 	// Init Resync, ETCD + ETCD sync
 	ef.ResyncOrch.Deps.PluginLogDeps = *ef.FlavorLocal.LogDeps("resync-orch")
 	ef.ETCD.Deps.PluginInfraDeps = *ef.InfraDeps("etcdv3",
-		local.WithConf(connectors.ETCDConf, connectors.ETCDConfUsage))
+		local.WithConf())
 	connectors.InjectKVDBSync(&ef.ETCDDataSync, &ef.ETCD, ef.ETCD.PluginName, ef.FlavorLocal, &ef.ResyncOrch)
 
 	// Inject infra + transport (publisher, watcher) to example plugin

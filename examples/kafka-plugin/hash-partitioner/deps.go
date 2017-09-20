@@ -34,7 +34,7 @@ func (ef *ExampleFlavor) Inject() (allReadyInjected bool) {
 	ef.FlavorLocal.Inject()
 	// Init kafka
 	ef.Kafka.Deps.PluginInfraDeps = *ef.FlavorLocal.InfraDeps("kafka",
-		local.WithConf(connectors.KafkaConf, connectors.KafkaConfUsage))
+		local.WithConf())
 	// Inject kafka to example plugin
 	ef.KafkaExample.Deps.PluginLogDeps = *ef.FlavorLocal.LogDeps("kafka-example")
 	ef.KafkaExample.Kafka = &ef.Kafka
