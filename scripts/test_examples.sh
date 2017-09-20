@@ -7,8 +7,7 @@ PREV_IFS="$IFS"
 # test whether output of the command contains expected lines
 # arguments
 # 1-st command to run
-# 2-nd array of expected strings in the
-
+# 2-nd array of expected strings in the command output
 function testOutput {
 IFS="${PREV_IFS}"
 
