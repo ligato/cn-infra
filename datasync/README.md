@@ -23,7 +23,7 @@ plugins have been registered in Init().
   
 ## Watch data API
 Watch data API is used by app plugin (see the following diagram and
-the [example](../examples/datasync_plugin)) to:
+the [example](../examples/datasync-plugin)) to:
 1. Subscribe channels for data changes using `Watch()`, while being
    abstracted from a particular message source (data store, message bus
    or RPC)

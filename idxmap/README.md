@@ -48,7 +48,7 @@ the cache from the example can be found
 
 
 ## Examples
-* Real world example from [VPP-agent plugin API](https://github.com/ligato/vpp-agent/blob/master/plugins/defaultplugins/defaultplugins_api.go)
+* Real world example from [VPP-agent plugin API](https://github.com/ligato/vpp-agent/blob/master/plugins/defaultplugins/plugin_api_vpp.go)
 * Isolated and simplified examples can be found here: 
   * [lookup](https://github.com/ligato/vpp-agent/tree/master/examples/idx_mapping_lookup)
   * [watch](https://github.com/ligato/vpp-agent/tree/master/examples/idx_mapping_watcher)

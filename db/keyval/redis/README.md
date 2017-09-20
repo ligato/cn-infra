@@ -1,7 +1,10 @@
 Redis is the implementation of the key-value Data Broker client
-API for the Redis key-value data store. See [cn-infra/db/keyval](https://github.com/ligato/cn-infra/tree/master/db/keyval) for the definition of the key-value Data Broker client API.
+API for the Redis key-value data store.
+See [cn-infra/db/keyval](../../../db/keyval) for the definition
+of the key-value Data Broker client API.
 
-The entity BytesConnectionRedis provides access to CRUD as well as event subscription API's.
+The entity BytesConnectionRedis provides access to CRUD as well as event
+subscription API's.
 ```
    +-----+   (Broker)   +------------------------+ -->  CRUD      +-------+ -->
    | app |                   |  BytesConnectionRedis  |                 | Redis |
@@ -9,8 +12,8 @@ The entity BytesConnectionRedis provides access to CRUD as well as event subscri
 ```
 
 ## How to use Redis
-The code snippets below provide examples to help you get started.  For simplicity, error
-handling is omitted.
+The code snippets below provide examples to help you get started.
+For simplicity, error handling is omitted.
 
 #### Need to import following dependencies
 ```
@@ -26,9 +29,10 @@ var cfg redis.NodeConfig
 var cfg redis.SentinelConfig
 - Redis Cluster
 var cfg redis.ClusterConfig
-- See sample YAML configurations [(*.yaml files)](https://github.com/ligato/cn-infra/tree/master/examples/redis_lib)
+- See sample YAML configurations [(*.yaml files)](../../../examples/redis-lib)
 
-You can initialize any of the above configuration instances in memory, or load the settings from file using
+You can initialize any of the above configuration instances in memory,
+or load the settings from file using
 ```
    err = config.ParseConfigFromYamlFile(configFile, &cfg)
 ```
@@ -122,16 +126,17 @@ You can also load any of the three configuration files using
 ```
    config SET notify-keyspace-events KA
 ```
-See [EVENT NOTIFICATION](https://raw.githubusercontent.com/antirez/redis/3.2/redis.conf) for more details.
+See [EVENT NOTIFICATION](https://raw.githubusercontent.com/antirez/redis/3.2/redis.conf)
+for more details.
 
 You can find detailed examples in
-- [simple](https://github.com/ligato/cn-infra/tree/master/examples/redis_lib/simple)
-- [airport](https://github.com/ligato/cn-infra/tree/master/examples/redis_lib/airport)
+- [simple](../../../examples/redis-lib/simple)
+- [airport](../../../examples/redis-lib/airport)
 
 #### Resiliency
-Connection/read/write time-outs, failover, reconnection and recovery are validated by running
-the airport example against a Redis Sentinel Cluster.  Redis nodes are paused selectively to
-simulate server down:
+Connection/read/write time-outs, failover, reconnection and recovery
+are validated by running the airport example against a Redis Sentinel
+Cluster. Redis nodes are paused selectively to simulate server down:
 ```
 $ docker-compose ps
 ```
