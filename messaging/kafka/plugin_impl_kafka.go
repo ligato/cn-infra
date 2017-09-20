@@ -182,6 +182,11 @@ func (p *Plugin) NewWatcher(name string) messaging.ProtoWatcher {
 	return p.NewProtoConnection(name)
 }
 
+// NewWatcher creates a watcher that allows to start/stop consuming of messaging published to given topics.
+func (p *Plugin) NewPartitionWatcher(name string) messaging.ProtoWatcher {
+	return p.NewProtoManualConnection(name)
+}
+
 // Disabled if the plugin config was not found
 func (p *Plugin) Disabled() (disabled bool) {
 	return p.disabled
