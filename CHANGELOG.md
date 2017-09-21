@@ -31,7 +31,9 @@
 * Connection in bytes_connection.go renamed to BytesConnection
 * kafka plugin initializes two multiplexers for dynamic mode (automatic partitions) and manual mode.
   Every multiplexer can create its own connection and provides access to different set of methods 
-  (publishing to partition, watching on partition/offset) 
+  (publishing to partition, watching on partition/offset)
+* ProtoWatcher from API was split to ProtoWatcher for dynamic mode and ProtoManualWatcher to listen on
+  specific partition/offset. Both of them allows only the respective watch methods   
 * fixes inside Mux.NewSyncPublisher() & Mux.NewAsyncPublisher() related to previous partition changes
 * TODO offset improvements
 * Known Issues:
