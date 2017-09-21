@@ -89,9 +89,6 @@ func NewLogger(name string) *Logger {
 	statics := make(map[string]interface{})
 	logger.staticFields.Store(statics)
 
-	// store std
-	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&logger.std)), unsafe.Pointer(logger.std))
-
 	tf := NewTextFormatter()
 	tf.TimestampFormat = "2006-01-02 15:04:05.00000"
 	logger.SetFormatter(tf)
@@ -230,21 +227,18 @@ func (logger *Logger) GetName() string {
 // SetOutput sets the standard logger output.
 func (logger *Logger) SetOutput(out io.Writer) {
 	unsafeStd := (*unsafe.Pointer)(unsafe.Pointer(&logger.std))
-	stdVal := (*lg.Logger)(atomic.LoadPointer(unsafeStd))
-	if stdVal != nil {
-		stdVal.Out = out
-		atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&logger.std)), unsafe.Pointer(logger.std))
-	}
+ 	old := logger.std
+	logger.std.Out = out
+	atomic.CompareAndSwapPointer(unsafeStd, unsafe.Pointer(old), unsafe.Pointer(logger.std))
+
 }
 
 // SetFormatter sets the standard logger formatter.
 func (logger *Logger) SetFormatter(formatter lg.Formatter) {
 	unsafeStd := (*unsafe.Pointer)(unsafe.Pointer(&logger.std))
-	stdVal := (*lg.Logger)(atomic.LoadPointer(unsafeStd))
-	if stdVal != nil {
-		stdVal.Formatter = formatter
-		atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&logger.std)), unsafe.Pointer(logger.std))
-	}
+	old := logger.std
+	logger.std.Formatter = formatter
+	atomic.CompareAndSwapPointer(unsafeStd, unsafe.Pointer(old), unsafe.Pointer(logger.std))
 }
 
 // SetLevel sets the standard logger level.
