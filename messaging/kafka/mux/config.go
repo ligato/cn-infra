@@ -95,34 +95,43 @@ func InitMultiplexerWithConfig(clientCfg *client.Config, hsClient sarama.Client,
 	log.WithField("addrs", hsClient.Brokers()).Debug("Kafka connecting")
 
 	startTime := time.Now()
+	producers := multiplexerProducers{}
+
 	// Prepare sync/async producer
-	hashSyncProducer, err := client.NewSyncProducer(clientCfg, hsClient, client.Hash, nil)
-	if err != nil {
-		log.Errorf(errorFmt, "SyncProducer (hash)", clientCfg.Brokers, err)
-		return nil, err
+	if hsClient != nil {
+		hashSyncProducer, err := client.NewSyncProducer(clientCfg, hsClient, client.Hash, nil)
+		if err != nil {
+			log.Errorf(errorFmt, "SyncProducer (hash)", clientCfg.Brokers, err)
+			return nil, err
+		}
+		// Prepare manual sync/async producer
+		hashAsyncProducer, err := client.NewAsyncProducer(clientCfg, hsClient, client.Hash, nil)
+		if err != nil {
+			log.Errorf(errorFmt, "AsyncProducer", clientCfg.Brokers, err)
+			return nil, err
+		}
+		producers.hashSyncProducer = hashSyncProducer
+		producers.hashAsyncProducer = hashAsyncProducer
 	}
 
-	manualSyncProducer, err := client.NewSyncProducer(clientCfg, manClient, client.Manual, nil)
-	if err != nil {
-		log.Errorf(errorFmt, "SyncProducer (manual)", clientCfg.Brokers, err)
-		return nil, err
-	}
-	// Prepare manual sync/async producer
-	hashAsyncProducer, err := client.NewAsyncProducer(clientCfg, hsClient, client.Hash, nil)
-	if err != nil {
-		log.Errorf(errorFmt, "AsyncProducer", clientCfg.Brokers, err)
-		return nil, err
-	}
+	if manClient != nil {
+		manualSyncProducer, err := client.NewSyncProducer(clientCfg, manClient, client.Manual, nil)
+		if err != nil {
+			log.Errorf(errorFmt, "SyncProducer (manual)", clientCfg.Brokers, err)
+			return nil, err
+		}
 
-	manualAsyncProducer, err := client.NewAsyncProducer(clientCfg, manClient, client.Manual, nil)
-	if err != nil {
-		log.Errorf(errorFmt, "AsyncProducer", clientCfg.Brokers, err)
-		return nil, err
+		manualAsyncProducer, err := client.NewAsyncProducer(clientCfg, manClient, client.Manual, nil)
+		if err != nil {
+			log.Errorf(errorFmt, "AsyncProducer", clientCfg.Brokers, err)
+			return nil, err
+		}
+		producers.manSyncProducer = manualSyncProducer
+		producers.manAsyncProducer = manualAsyncProducer
 	}
 
 	kafkaConnect := time.Since(startTime)
 	log.WithField("durationInNs", kafkaConnect.Nanoseconds()).Info("Connecting to kafka took ", kafkaConnect)
 
-	return NewMultiplexer(getConsumerFactory(clientCfg), hashSyncProducer, manualSyncProducer, hashAsyncProducer,
-		manualAsyncProducer, name, log), nil
+	return NewMultiplexer(getConsumerFactory(clientCfg), producers, hsClient, manClient, name, log), nil
 }

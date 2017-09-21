@@ -19,18 +19,16 @@ import (
 // Once the Multiplexer's consumer has been started new topics can not be added.
 type Multiplexer struct {
 	logging.Logger
-	// sarama client
-	client *sarama.Client
+	// client with 'hash' partitioner
+	hsClient sarama.Client
+	// client with 'manual' partitioner
+	manClient sarama.Client
 	// consumer used by the Multiplexer
 	consumer *client.Consumer
-	// hashSyncProducer with hash partitioner used by the Multiplexer
-	hashSyncProducer *client.SyncProducer
-	// manSyncProducer with manual partitioner used by the Multiplexer
-	manSyncProducer *client.SyncProducer
-	// hashAsyncProducer with hash used by the Multiplexer
-	hashAsyncProducer *client.AsyncProducer
-	// manAsyncProducer with manual used by the Multiplexer
-	manAsyncProducer *client.AsyncProducer
+
+	// producers available for this mux
+	multiplexerProducers
+
 	// name is used for identification of stored last consumed offset in kafka. This allows
 	// to follow up messages after restart.
 	name string
@@ -75,24 +73,35 @@ type asyncMeta struct {
 	errorClb   func(error *client.ProducerError)
 	usersMeta  interface{}
 }
+// multiplexerProducers groups all mux producers
+type multiplexerProducers struct {
+	// hashSyncProducer with hash partitioner used by the Multiplexer
+	hashSyncProducer *client.SyncProducer
+	// manSyncProducer with manual partitioner used by the Multiplexer
+	manSyncProducer *client.SyncProducer
+	// hashAsyncProducer with hash used by the Multiplexer
+	hashAsyncProducer *client.AsyncProducer
+	// manAsyncProducer with manual used by the Multiplexer
+	manAsyncProducer *client.AsyncProducer
+}
 
 // NewMultiplexer creates new instance of Kafka Multiplexer
-func NewMultiplexer(consumerFactory ConsumerFactory, hashSyncP *client.SyncProducer, manSyncP *client.SyncProducer,
-	hashAsyncP *client.AsyncProducer, manAsyncP *client.AsyncProducer, name string, log logging.Logger) *Multiplexer {
+func NewMultiplexer(consumerFactory ConsumerFactory, producers multiplexerProducers, hsClient sarama.Client,
+	manClient sarama.Client, name string, log logging.Logger) *Multiplexer {
 	cl := &Multiplexer{consumerFactory: consumerFactory,
 		Logger:        log,
 		name:          name,
 		mapping:       []*consumerSubscription{},
 		closeCh:       make(chan struct{}),
-		// hash producers
-		hashSyncProducer:  hashSyncP,
-		manSyncProducer:manSyncP,
-		// manual producers
-		hashAsyncProducer: hashAsyncP,
-		manAsyncProducer: manAsyncP,
+		hsClient:      hsClient,
+		manClient:     manClient,
+		multiplexerProducers: producers,
 	}
 
 	go cl.watchAsyncProducerChannels()
+	if producers.manSyncProducer != nil && producers.manAsyncProducer != nil {
+		go cl.watchManualAsyncProducerChannels()
+	}
 	return cl
 }
 
@@ -107,6 +116,21 @@ func (mux *Multiplexer) watchAsyncProducerChannels() {
 				err.ProducerMessage.Metadata = errMeta.usersMeta
 				errMeta.errorClb(err)
 			}
+		case success := <-mux.hashAsyncProducer.Config.SuccessChan:
+
+			if succMeta, ok := success.Metadata.(*asyncMeta); ok && succMeta.successClb != nil {
+				success.Metadata = succMeta.usersMeta
+				succMeta.successClb(success)
+			}
+		case <-mux.hashAsyncProducer.GetCloseChannel():
+			mux.Debug("AsyncProducer (hash): closing watch loop")
+		}
+	}
+}
+
+func (mux *Multiplexer) watchManualAsyncProducerChannels() {
+	for {
+		select {
 		case err := <-mux.manAsyncProducer.Config.ErrorChan:
 			mux.Println("AsyncProducer (manual): failed to produce message", err.Err)
 			errMsg := err.ProducerMessage
@@ -115,20 +139,12 @@ func (mux *Multiplexer) watchAsyncProducerChannels() {
 				err.ProducerMessage.Metadata = errMeta.usersMeta
 				errMeta.errorClb(err)
 			}
-		case success := <-mux.hashAsyncProducer.Config.SuccessChan:
-
-			if succMeta, ok := success.Metadata.(*asyncMeta); ok && succMeta.successClb != nil {
-				success.Metadata = succMeta.usersMeta
-				succMeta.successClb(success)
-			}
 		case success := <-mux.manAsyncProducer.Config.SuccessChan:
 
 			if succMeta, ok := success.Metadata.(*asyncMeta); ok && succMeta.successClb != nil {
 				success.Metadata = succMeta.usersMeta
 				succMeta.successClb(success)
 			}
-		case <-mux.hashAsyncProducer.GetCloseChannel():
-			mux.Debug("AsyncProducer (hash): closing watch loop")
 		case <-mux.manAsyncProducer.GetCloseChannel():
 			mux.Debug("AsyncProducer (manual): closing watch loop")
 		}
@@ -178,12 +194,8 @@ func (mux *Multiplexer) Start() error {
 // Close cleans up the resources used by the Multiplexer
 func (mux *Multiplexer) Close() {
 	close(mux.closeCh)
-	safeclose.Close(mux.consumer)
-	safeclose.Close(mux.hashSyncProducer)
-	safeclose.Close(mux.hashAsyncProducer)
-	safeclose.Close(mux.manSyncProducer)
-	safeclose.Close(mux.manAsyncProducer)
-	safeclose.Close(mux.client)
+	safeclose.CloseAll(mux.consumer, mux.hashSyncProducer, mux.hashAsyncProducer, mux.manSyncProducer, mux.manAsyncProducer,
+		mux.hsClient, mux.manClient)
 }
 
 // NewBytesConnection creates instance of the BytesConnection that provides access to shared Multiplexer's clients.
