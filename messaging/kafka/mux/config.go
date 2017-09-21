@@ -59,47 +59,70 @@ func getConsumerFactory(config *client.Config) ConsumerFactory {
 // a groupId. This is leveraged to deliver unread messages after restart.
 func InitMultiplexer(configFile string, name string, partitioner string, log logging.Logger) (*Multiplexer, error) {
 	var err error
-	muxCfg := &Config{[]string{DefAddress}}
+	cfg := &Config{[]string{DefAddress}}
 	if configFile != "" {
-		muxCfg, err = ConfigFromFile(configFile)
+		cfg, err = ConfigFromFile(configFile)
 		if err != nil {
 			return nil, err
 		}
 	}
-	return InitMultiplexerWithConfig(muxCfg, name, partitioner, log)
+
+	// prepare client config
+	clientCfg := client.NewConfig(log)
+	clientCfg.SetSendSuccess(true)
+	clientCfg.SetSuccessChan(make(chan *client.ProducerMessage))
+	clientCfg.SetSendError(true)
+	clientCfg.SetErrorChan(make(chan *client.ProducerError))
+	clientCfg.SetBrokers(cfg.Addrs...)
+	clientCfg.SetPartitioner(partitioner)
+
+	// create client
+	sClient, err := client.NewClient(clientCfg, partitioner)
+	if err != nil {
+		return nil, err
+	}
+
+	// todo client is currently set always as hash
+	return InitMultiplexerWithConfig(clientCfg, sClient, nil, name, log)
 }
 
-// InitMultiplexerWithConfig initialize and returns new kafka multiplexer
-// based on the supplied configuration.
-// Name is used as groupId identification of consumer. Kafka allows to store last read offset for
-// a groupId. This is leveraged to deliver unread messages after restart.
-func InitMultiplexerWithConfig(muxConfig *Config, name string, partitioner string, log logging.Logger) (*Multiplexer, error) {
+// InitMultiplexerWithConfig initialize and returns new kafka multiplexer based on the supplied mux configuration.
+// Name is used as groupId identification of consumer. Kafka allows to store last read offset for a groupId.
+// This is leveraged to deliver unread messages after restart.
+func InitMultiplexerWithConfig(clientCfg *client.Config, hsClient sarama.Client, manClient sarama.Client, name string, log logging.Logger) (*Multiplexer, error) {
 	const errorFmt = "Failed to create Kafka %s, Configured broker(s) %v, Error: '%s'"
 
-	log.WithField("addrs", muxConfig.Addrs).Debug("Kafka connecting")
-
-	config := client.NewConfig(log)
-	config.SetSendSuccess(true)
-	config.SetSuccessChan(make(chan *client.ProducerMessage))
-	config.SetSendError(true)
-	config.SetErrorChan(make(chan *client.ProducerError))
-	config.SetBrokers(muxConfig.Addrs...)
-	config.SetPartitioner(partitioner)
+	log.WithField("addrs", hsClient.Brokers()).Debug("Kafka connecting")
 
 	startTime := time.Now()
-	syncProducer, err := client.NewSyncProducer(config, nil)
+	// Prepare sync/async producer
+	hashSyncProducer, err := client.NewSyncProducer(clientCfg, hsClient, client.Hash, nil)
 	if err != nil {
-		log.Errorf(errorFmt, "SyncProducer", muxConfig.Addrs, err)
+		log.Errorf(errorFmt, "SyncProducer (hash)", clientCfg.Brokers, err)
 		return nil, err
 	}
 
-	asyncProducer, err := client.NewAsyncProducer(config, nil)
+	manualSyncProducer, err := client.NewSyncProducer(clientCfg, manClient, client.Manual, nil)
 	if err != nil {
-		log.Errorf(errorFmt, "AsyncProducer", muxConfig.Addrs, err)
+		log.Errorf(errorFmt, "SyncProducer (manual)", clientCfg.Brokers, err)
 		return nil, err
 	}
+	// Prepare manual sync/async producer
+	hashAsyncProducer, err := client.NewAsyncProducer(clientCfg, hsClient, client.Hash, nil)
+	if err != nil {
+		log.Errorf(errorFmt, "AsyncProducer", clientCfg.Brokers, err)
+		return nil, err
+	}
+
+	manualAsyncProducer, err := client.NewAsyncProducer(clientCfg, manClient, client.Manual, nil)
+	if err != nil {
+		log.Errorf(errorFmt, "AsyncProducer", clientCfg.Brokers, err)
+		return nil, err
+	}
+
 	kafkaConnect := time.Since(startTime)
 	log.WithField("durationInNs", kafkaConnect.Nanoseconds()).Info("Connecting to kafka took ", kafkaConnect)
 
-	return NewMultiplexer(getConsumerFactory(config), syncProducer, asyncProducer, partitioner, name, log), nil
+	return NewMultiplexer(getConsumerFactory(clientCfg), hashSyncProducer, manualSyncProducer, hashAsyncProducer,
+		manualAsyncProducer, name, log), nil
 }

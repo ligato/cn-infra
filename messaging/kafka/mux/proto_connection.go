@@ -80,34 +80,22 @@ type protoManualAsyncPublisherKafka struct {
 
 // NewSyncPublisher creates a new instance of protoSyncPublisherKafka that allows to publish sync kafka messages using common messaging API
 func (conn *ProtoConnection) NewSyncPublisher(topic string) (messaging.ProtoPublisher, error) {
-	if conn.multiplexer.partitioner == client.Manual {
-		return nil, fmt.Errorf("unable to use default sync publisher with 'manual' partitioner")
-	}
 	return &protoSyncPublisherKafka{conn, topic, DefPartition}, nil
 }
 
 // NewAsyncPublisher creates a new instance of protoAsyncPublisherKafka that allows to publish sync kafka messages using common messaging API
 func (conn *ProtoConnection) NewAsyncPublisher(topic string, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) (messaging.ProtoPublisher, error) {
-	if conn.multiplexer.partitioner == client.Manual {
-		return nil, fmt.Errorf("unable to use default async publisher with 'manual' partitioner")
-	}
 	return &protoAsyncPublisherKafka{conn, topic, DefPartition, successClb, errorClb}, nil
 }
 
-// NewSyncPublisherToPartition creates a new instance of protoSyncPublisherKafka that allows to publish sync kafka messages using common messaging API
+// NewSyncPublisherToPartition creates a new instance of protoManualSyncPublisherKafka that allows to publish sync kafka messages using common messaging API
 func (conn *ProtoManualConnection) NewSyncPublisherToPartition(topic string, partition int32) (messaging.ProtoPublisher, error) {
-	if conn.multiplexer.partitioner != client.Manual {
-		return nil, fmt.Errorf("sync publisher to partition can be used only with 'manual' partitioner")
-	}
 	return &protoManualSyncPublisherKafka{conn, topic, partition}, nil
 }
 
-// NewAsyncPublisherToPartition creates a new instance of protoAsyncPublisherKafka that allows to publish sync kafka
+// NewAsyncPublisherToPartition creates a new instance of protoManualAsyncPublisherKafka that allows to publish sync kafka
 // messages using common messaging API.
 func (conn *ProtoManualConnection) NewAsyncPublisherToPartition(topic string, partition int32, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) (messaging.ProtoPublisher, error) {
-	if conn.multiplexer.partitioner != client.Manual {
-		return nil, fmt.Errorf("async publisher to partition can be used only with 'manual' partitioner")
-	}
 	return &protoManualAsyncPublisherKafka{conn, topic, partition, successClb, errorClb}, nil
 }
 
@@ -246,41 +234,50 @@ func (conn *ProtoConnectionFields) StopConsumingPartition(topic string, partitio
 
 // Put publishes a message into kafka
 func (p *protoSyncPublisherKafka) Put(key string, message proto.Message, opts ...datasync.PutOption) error {
-	_, err := p.conn.sendSyncMessage(p.topic, p.partition, key, message)
+	_, err := p.conn.sendSyncMessage(p.topic, p.partition, key, message, false)
 	return err
 }
 
 // Put publishes a message into kafka
 func (p *protoAsyncPublisherKafka) Put(key string, message proto.Message, opts ...datasync.PutOption) error {
-	return p.conn.sendAsyncMessage(p.topic, p.partition, key, message, nil, p.succCallback, p.errCallback)
+	return p.conn.sendAsyncMessage(p.topic, p.partition, key, message, false, nil, p.succCallback, p.errCallback)
 }
 
 // Put publishes a message into kafka
 func (p *protoManualSyncPublisherKafka) Put(key string, message proto.Message, opts ...datasync.PutOption) error {
-	_, err := p.conn.sendSyncMessage(p.topic, p.partition, key, message)
+	_, err := p.conn.sendSyncMessage(p.topic, p.partition, key, message, true)
 	return err
 }
 
 // Put publishes a message into kafka
 func (p *protoManualAsyncPublisherKafka) Put(key string, message proto.Message, opts ...datasync.PutOption) error {
-	return p.conn.sendAsyncMessage(p.topic, p.partition, key, message, nil, p.succCallback, p.errCallback)
+	return p.conn.sendAsyncMessage(p.topic, p.partition, key, message, true, nil, p.succCallback, p.errCallback)
 }
 
-// sendSyncMessage sends a message using the sync API
-func (conn *ProtoConnectionFields) sendSyncMessage(topic string, partition int32, key string, value proto.Message) (offset int64, err error) {
+// sendSyncMessage sends a message using the sync API. If manual mode is chosen, the appropriate producer will be used.
+func (conn *ProtoConnectionFields) sendSyncMessage(topic string, partition int32, key string, value proto.Message, manualMode bool) (offset int64, err error) {
 	data, err := conn.serializer.Marshal(value)
 	if err != nil {
 		return 0, err
 	}
-	msg, err := conn.multiplexer.syncProducer.SendMsg(topic, partition, sarama.StringEncoder(key), sarama.ByteEncoder(data))
+
+	if manualMode {
+		msg, err := conn.multiplexer.manSyncProducer.SendMsg(topic, partition, sarama.StringEncoder(key), sarama.ByteEncoder(data))
+		if err != nil {
+			return 0, err
+		}
+		return msg.Offset, err
+	}
+	msg, err := conn.multiplexer.hashSyncProducer.SendMsg(topic, partition, sarama.StringEncoder(key), sarama.ByteEncoder(data))
 	if err != nil {
 		return 0, err
 	}
 	return msg.Offset, err
 }
 
-// sendAsyncMessage sends a message using the async API
-func (conn *ProtoConnectionFields) sendAsyncMessage(topic string, partition int32, key string, value proto.Message, meta interface{}, successClb func(messaging.ProtoMessage), errClb func(messaging.ProtoMessageErr)) error {
+// sendAsyncMessage sends a message using the async API. If manual mode is chosen, the appropriate producer will be used.
+func (conn *ProtoConnectionFields) sendAsyncMessage(topic string, partition int32, key string, value proto.Message, manualMode bool,
+	meta interface{}, successClb func(messaging.ProtoMessage), errClb func(messaging.ProtoMessageErr)) error {
 	data, err := conn.serializer.Marshal(value)
 	if err != nil {
 		return err
@@ -304,7 +301,12 @@ func (conn *ProtoConnectionFields) sendAsyncMessage(topic string, partition int3
 		errClb(protoMsg)
 	}
 
+	if manualMode {
+		auxMeta := &asyncMeta{successClb: succByteClb, errorClb: errByteClb, usersMeta: meta}
+		conn.multiplexer.hashAsyncProducer.SendMsg(topic, partition, sarama.StringEncoder(key), sarama.ByteEncoder(data), auxMeta)
+		return nil
+	}
 	auxMeta := &asyncMeta{successClb: succByteClb, errorClb: errByteClb, usersMeta: meta}
-	conn.multiplexer.asyncProducer.SendMsg(topic, partition, sarama.StringEncoder(key), sarama.ByteEncoder(data), auxMeta)
+	conn.multiplexer.manAsyncProducer.SendMsg(topic, partition, sarama.StringEncoder(key), sarama.ByteEncoder(data), auxMeta)
 	return nil
 }

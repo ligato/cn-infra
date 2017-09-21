@@ -66,14 +66,14 @@ func NewConsumer(config *Config, wg *sync.WaitGroup) (*Consumer, error) {
 	config.ProducerConfig().Consumer.Return.Errors = config.RecvError
 	config.ConsumerConfig().Consumer.Offsets.Initial = config.InitialOffset
 
-	client, err := cluster.NewClient(config.Brokers, config.Config)
+	cClient, err := cluster.NewClient(config.Brokers, config.Config)
 	if err != nil {
 		return nil, err
 	}
 
 	config.Logger.Debug("new client created successfully ...")
 
-	consumer, err := cluster.NewConsumerFromClient(client, config.GroupID, config.Topics)
+	consumer, err := cluster.NewConsumerFromClient(cClient, config.GroupID, config.Topics)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func NewConsumer(config *Config, wg *sync.WaitGroup) (*Consumer, error) {
 	csmr := &Consumer{
 		Logger:       config.Logger,
 		Config:       config,
-		Client:       client,
+		Client:       cClient,
 		Consumer:     consumer,
 		closed:       false,
 		closeChannel: make(chan struct{}),
@@ -107,6 +107,47 @@ func NewConsumer(config *Config, wg *sync.WaitGroup) (*Consumer, error) {
 	go csmr.messageHandler(csmr.Consumer.Messages())
 
 	return csmr, nil
+}
+
+// NewClient initializes new sarama client instance from provided config and with defined partitioner
+func NewClient(config *Config, partitioner string) (sarama.Client, error) {
+	config.Logger.Debug("Creating new consumer")
+	if err := config.ValidateAsyncProducerConfig(); err != nil {
+		return nil, err
+	}
+
+	config.SetSendSuccess(true)
+	config.SetSuccessChan(make(chan *ProducerMessage))
+	config.SetSendError(true)
+	config.SetErrorChan(make(chan *ProducerError))
+	// Required acks will be set in sync/async producer
+	config.RequiredAcks = AcksUnset
+
+	// set other Producer config params
+	config.ProducerConfig().Producer.Return.Successes = config.SendSuccess
+	config.ProducerConfig().Producer.Return.Errors = config.SendError
+
+	// set partitioner
+	switch partitioner {
+	case Hash:
+		config.ProducerConfig().Producer.Partitioner = sarama.NewHashPartitioner
+	case Random:
+		config.ProducerConfig().Producer.Partitioner = sarama.NewRandomPartitioner
+	case Manual:
+		config.ProducerConfig().Producer.Partitioner = sarama.NewManualPartitioner
+	default:
+		// Hash partitioner is set as default
+		config.ProducerConfig().Producer.Partitioner = sarama.NewHashPartitioner
+	}
+
+	config.Logger.Debugf("AsyncProducer config: %#v", config)
+
+	sClient, err := sarama.NewClient(config.Brokers, &config.Config.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	return sClient, nil
 }
 
 // Close closes the client and consumer

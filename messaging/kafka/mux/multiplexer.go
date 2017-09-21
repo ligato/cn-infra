@@ -8,25 +8,29 @@ import (
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/utils/safeclose"
+	"github.com/Shopify/sarama"
 )
 
-// Multiplexer encapsulates clients to kafka cluster (syncProducer, asyncProducer, consumer).
-// It allows to create multiple Connections that use multiplexer's clients for communication
-// with kafka cluster. The aim of Multiplexer is to decrease the number of connections needed.
-// The set of topics to be consumed by Connections needs to be selected before the underlying
-// consumer in Multiplexer is started. Once the Multiplexer's consumer has been
-// started new topics can not be added.
+// Multiplexer encapsulates clients to kafka cluster (SyncProducer, AsyncProducer (both of them
+// with 'hash' and 'manual' partitioner), consumer). It allows to create multiple Connections
+// that use multiplexer's clients for communication with kafka cluster. The aim of Multiplexer
+// is to decrease the number of connections needed. The set of topics to be consumed by
+// Connections needs to be selected before the underlying consumer in Multiplexer is started.
+// Once the Multiplexer's consumer has been started new topics can not be added.
 type Multiplexer struct {
 	logging.Logger
+	// sarama client
+	client *sarama.Client
 	// consumer used by the Multiplexer
 	consumer *client.Consumer
-	// syncProducer used by the Multiplexer
-	syncProducer *client.SyncProducer
-	// asyncProducer used by the Multiplexer
-	asyncProducer *client.AsyncProducer
-	// partitioner used in this multiplexer
-	partitioner string
-
+	// hashSyncProducer with hash partitioner used by the Multiplexer
+	hashSyncProducer *client.SyncProducer
+	// manSyncProducer with manual partitioner used by the Multiplexer
+	manSyncProducer *client.SyncProducer
+	// hashAsyncProducer with hash used by the Multiplexer
+	hashAsyncProducer *client.AsyncProducer
+	// manAsyncProducer with manual used by the Multiplexer
+	manAsyncProducer *client.AsyncProducer
 	// name is used for identification of stored last consumed offset in kafka. This allows
 	// to follow up messages after restart.
 	name string
@@ -73,16 +77,19 @@ type asyncMeta struct {
 }
 
 // NewMultiplexer creates new instance of Kafka Multiplexer
-func NewMultiplexer(consumerFactory ConsumerFactory, syncP *client.SyncProducer, asyncP *client.AsyncProducer,
-	partitioner string, name string, log logging.Logger) *Multiplexer {
+func NewMultiplexer(consumerFactory ConsumerFactory, hashSyncP *client.SyncProducer, manSyncP *client.SyncProducer,
+	hashAsyncP *client.AsyncProducer, manAsyncP *client.AsyncProducer, name string, log logging.Logger) *Multiplexer {
 	cl := &Multiplexer{consumerFactory: consumerFactory,
 		Logger:        log,
-		syncProducer:  syncP,
-		asyncProducer: asyncP,
-		partitioner:   partitioner,
 		name:          name,
 		mapping:       []*consumerSubscription{},
 		closeCh:       make(chan struct{}),
+		// hash producers
+		hashSyncProducer:  hashSyncP,
+		manSyncProducer:manSyncP,
+		// manual producers
+		hashAsyncProducer: hashAsyncP,
+		manAsyncProducer: manAsyncP,
 	}
 
 	go cl.watchAsyncProducerChannels()
@@ -92,23 +99,40 @@ func NewMultiplexer(consumerFactory ConsumerFactory, syncP *client.SyncProducer,
 func (mux *Multiplexer) watchAsyncProducerChannels() {
 	for {
 		select {
-		case err := <-mux.asyncProducer.Config.ErrorChan:
-			mux.Println("Failed to produce message", err.Err)
+		case err := <-mux.hashAsyncProducer.Config.ErrorChan:
+			mux.Println("AsyncProducer (hash): failed to produce message", err.Err)
 			errMsg := err.ProducerMessage
 
 			if errMeta, ok := errMsg.Metadata.(*asyncMeta); ok && errMeta.errorClb != nil {
 				err.ProducerMessage.Metadata = errMeta.usersMeta
 				errMeta.errorClb(err)
 			}
-		case success := <-mux.asyncProducer.Config.SuccessChan:
+		case err := <-mux.manAsyncProducer.Config.ErrorChan:
+			mux.Println("AsyncProducer (manual): failed to produce message", err.Err)
+			errMsg := err.ProducerMessage
+
+			if errMeta, ok := errMsg.Metadata.(*asyncMeta); ok && errMeta.errorClb != nil {
+				err.ProducerMessage.Metadata = errMeta.usersMeta
+				errMeta.errorClb(err)
+			}
+		case success := <-mux.hashAsyncProducer.Config.SuccessChan:
 
 			if succMeta, ok := success.Metadata.(*asyncMeta); ok && succMeta.successClb != nil {
 				success.Metadata = succMeta.usersMeta
 				succMeta.successClb(success)
 			}
-		case <-mux.asyncProducer.GetCloseChannel():
-			mux.Debug("Closing watch loop for async producer")
+		case success := <-mux.manAsyncProducer.Config.SuccessChan:
+
+			if succMeta, ok := success.Metadata.(*asyncMeta); ok && succMeta.successClb != nil {
+				success.Metadata = succMeta.usersMeta
+				succMeta.successClb(success)
+			}
+		case <-mux.hashAsyncProducer.GetCloseChannel():
+			mux.Debug("AsyncProducer (hash): closing watch loop")
+		case <-mux.manAsyncProducer.GetCloseChannel():
+			mux.Debug("AsyncProducer (manual): closing watch loop")
 		}
+
 	}
 }
 
@@ -155,8 +179,11 @@ func (mux *Multiplexer) Start() error {
 func (mux *Multiplexer) Close() {
 	close(mux.closeCh)
 	safeclose.Close(mux.consumer)
-	safeclose.Close(mux.syncProducer)
-	safeclose.Close(mux.asyncProducer)
+	safeclose.Close(mux.hashSyncProducer)
+	safeclose.Close(mux.hashAsyncProducer)
+	safeclose.Close(mux.manSyncProducer)
+	safeclose.Close(mux.manAsyncProducer)
+	safeclose.Close(mux.client)
 }
 
 // NewBytesConnection creates instance of the BytesConnection that provides access to shared Multiplexer's clients.
@@ -217,11 +244,12 @@ func (mux *Multiplexer) genericConsumer() {
 			mux.Debug("Kafka message received")
 			mux.propagateMessage(msg)
 			// Mark offset for hash/random partitioners
-			if mux.partitioner != client.Manual {
+			// todo mux does not know anymore what partitioner was used
+			//if mux.partitioner != client.Manual {
 				// Mark offset as read. If the Multiplexer is restarted it
 				// continues to receive message after the last committed offset.
 				mux.consumer.MarkOffset(msg, "")
-			}
+			//}
 		case err := <-mux.consumer.Config.RecvErrorChan:
 			mux.Error("Received partitionConsumer error ", err)
 		}

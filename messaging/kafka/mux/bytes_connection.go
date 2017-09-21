@@ -147,9 +147,9 @@ func (conn *BytesConnection) SendSyncString(topic string, partition int32, key s
 	return conn.SendSyncMessage(topic, partition, sarama.StringEncoder(key), sarama.StringEncoder(value))
 }
 
-//SendSyncMessage sends a message using the sync API
+//SendSyncMessage sends a message using the sync API and default partitioner
 func (conn *BytesConnection) SendSyncMessage(topic string, partition int32, key client.Encoder, value client.Encoder) (offset int64, err error) {
-	msg, err := conn.multiplexer.syncProducer.SendMsg(topic, partition, key, value)
+	msg, err := conn.multiplexer.hashSyncProducer.SendMsg(topic, partition, key, value)
 	if err != nil {
 		return 0, err
 	}
@@ -166,25 +166,19 @@ func (conn *BytesConnection) SendAsyncString(topic string, partition int32, key 
 	conn.SendAsyncMessage(topic, partition, sarama.StringEncoder(key), sarama.StringEncoder(value), meta, successClb, errClb)
 }
 
-// SendAsyncMessage sends a message using the async API
+// SendAsyncMessage sends a message using the async API and default partitioner
 func (conn *BytesConnection) SendAsyncMessage(topic string, partition int32, key client.Encoder, value client.Encoder, meta interface{}, successClb func(*client.ProducerMessage), errClb func(*client.ProducerError)) {
 	auxMeta := &asyncMeta{successClb: successClb, errorClb: errClb, usersMeta: meta}
-	conn.multiplexer.asyncProducer.SendMsg(topic, partition, key, value, auxMeta)
+	conn.multiplexer.hashAsyncProducer.SendMsg(topic, partition, key, value, auxMeta)
 }
 
 // NewSyncPublisher creates a new instance of bytesSyncPublisherKafka that allows to publish sync kafka messages using common messaging API
 func (conn *BytesConnection) NewSyncPublisher(topic string) (BytesPublisher, error) {
-	if conn.multiplexer.partitioner == client.Manual {
-		return nil, fmt.Errorf("unable to use default sync publisher with 'manual' partitioner")
-	}
 	return &bytesSyncPublisherKafka{conn, topic, DefPartition}, nil
 }
 
 // NewSyncPublisherToPartition creates a new instance of bytesSyncPublisherKafka that allows to publish sync kafka messages using common messaging API
 func (conn *BytesConnection) NewSyncPublisherToPartition(topic string, partition int32) (BytesPublisher, error) {
-	if conn.multiplexer.partitioner != client.Manual {
-		return nil, fmt.Errorf("sync publisher to partition can be used only with 'manual' partitioner")
-	}
 	return &bytesSyncPublisherKafka{conn, topic, partition}, nil
 }
 
@@ -196,17 +190,11 @@ func (p *bytesSyncPublisherKafka) Publish(key string, data []byte) error {
 
 // NewAsyncPublisher creates a new instance of bytesAsyncPublisherKafka that allows to publish async kafka messages using common messaging API
 func (conn *BytesConnection) NewAsyncPublisher(topic string, successClb func(*client.ProducerMessage), errorClb func(err *client.ProducerError)) (BytesPublisher, error) {
-	if conn.multiplexer.partitioner == client.Manual {
-		return nil, fmt.Errorf("unable to use default async publisher with 'manual' partitioner")
-	}
 	return &bytesAsyncPublisherKafka{conn, topic, DefPartition, successClb, errorClb}, nil
 }
 
 // NewAsyncPublisherToPartition creates a new instance of bytesAsyncPublisherKafka that allows to publish async kafka messages using common messaging API
 func (conn *BytesConnection) NewAsyncPublisherToPartition(topic string, partition int32, successClb func(*client.ProducerMessage), errorClb func(err *client.ProducerError)) (BytesPublisher, error) {
-	if conn.multiplexer.partitioner != client.Manual {
-		return nil, fmt.Errorf("async publisher to partition can be used only with 'manual' partitioner")
-	}
 	return &bytesAsyncPublisherKafka{conn, topic, partition, successClb, errorClb}, nil
 }
 

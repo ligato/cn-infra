@@ -40,10 +40,14 @@ type AsyncProducer struct {
 	sync.Mutex
 }
 
-// NewAsyncProducer returns an AsyncProducer instance
-func NewAsyncProducer(config *Config, wg *sync.WaitGroup) (*AsyncProducer, error) {
+// NewAsyncProducer returns a new AsyncProducer instance. Producer is created from provided sarama client. Also
+// the partitioner is set here. Note: sarama partitioner should match the one used in config.
+func NewAsyncProducer(config *Config, sClient sarama.Client, partitioner string, wg *sync.WaitGroup) (*AsyncProducer, error) {
+	if config.Debug {
+		config.Logger.SetLevel(logging.DebugLevel)
+	}
 
-	config.Logger.Debug("NewAsyncProducer created")
+	config.Logger.Debug("Entering NewAsyncProducer ...")
 	if err := config.ValidateAsyncProducerConfig(); err != nil {
 		return nil, err
 	}
@@ -57,21 +61,13 @@ func NewAsyncProducer(config *Config, wg *sync.WaitGroup) (*AsyncProducer, error
 		return nil, errors.New("invalid RequiredAcks field in config")
 	}
 
-	// set other Producer config params
-	config.ProducerConfig().Producer.Return.Successes = config.SendSuccess
-	config.ProducerConfig().Producer.Return.Errors = config.SendError
-	config.ProducerConfig().Producer.Partitioner = config.Partitioner
+	// set partitioner
+	config.SetPartitioner(partitioner)
 
 	config.Logger.Debugf("AsyncProducer config: %#v", config)
 
-	// init a new client
-	client, err := sarama.NewClient(config.Brokers, &config.Config.Config)
-	if err != nil {
-		return nil, err
-	}
-
 	// init a new asyncproducer using this client
-	producer, err := sarama.NewAsyncProducerFromClient(client)
+	producer, err := sarama.NewAsyncProducerFromClient(sClient)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +76,7 @@ func NewAsyncProducer(config *Config, wg *sync.WaitGroup) (*AsyncProducer, error
 	ap := &AsyncProducer{
 		Logger:       config.Logger,
 		Config:       config,
-		Client:       client,
+		Client:       sClient,
 		Producer:     producer,
 		Partition:    config.Partition,
 		closed:       false,
@@ -172,10 +168,12 @@ func (ref *AsyncProducer) Close(async ...bool) error {
 		ref.Errorf("asyncProducer close error: %v", err)
 		return err
 	}
-	err = ref.Client.Close()
-	if err != nil {
-		ref.Errorf("client close error: %v", err)
-		return err
+	if ref.Client.Closed() {
+		err = ref.Client.Close()
+		if err != nil {
+			ref.Errorf("client close error: %v", err)
+			return err
+		}
 	}
 
 	return nil

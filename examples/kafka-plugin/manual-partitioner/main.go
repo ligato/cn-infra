@@ -117,7 +117,6 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	}
 
 	// Initialize sync watcher.
-
 	plugin.kafkaWatcher = plugin.Kafka.NewPartitionWatcher("example-part-watcher")
 
 	// Prepare subscription channel. Relevant kafka messages are send to this

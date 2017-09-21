@@ -37,8 +37,9 @@ type SyncProducer struct {
 	sync.Mutex
 }
 
-// NewSyncProducer returns a new SyncProducer
-func NewSyncProducer(config *Config, wg *sync.WaitGroup) (*SyncProducer, error) {
+// NewSyncProducer returns a new SyncProducer instance. Producer is created from provided sarama client. Also
+// the partitioner is set here. Note: sarama partitioner should match the one used in config.
+func NewSyncProducer(config *Config, sClient sarama.Client, partitioner string, wg *sync.WaitGroup) (*SyncProducer, error) {
 	if config.Debug {
 		config.Logger.SetLevel(logging.DebugLevel)
 	}
@@ -57,19 +58,12 @@ func NewSyncProducer(config *Config, wg *sync.WaitGroup) (*SyncProducer, error) 
 		return nil, errors.New("invalid RequiredAcks field in config")
 	}
 
-	// set other Producer config params
-	config.ProducerConfig().Producer.Partitioner = config.Partitioner
-	config.ProducerConfig().Producer.Return.Successes = true
+	// set partitioner
+	config.SetPartitioner(partitioner)
 
 	config.Logger.Debugf("SyncProducer config: %#v", config)
 
-	// init a new client
-	client, err := sarama.NewClient(config.Brokers, &config.Config.Config)
-	if err != nil {
-		return nil, err
-	}
-
-	producer, err := sarama.NewSyncProducerFromClient(client)
+	producer, err := sarama.NewSyncProducerFromClient(sClient)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +72,7 @@ func NewSyncProducer(config *Config, wg *sync.WaitGroup) (*SyncProducer, error) 
 	sp := &SyncProducer{
 		Logger:       config.Logger,
 		Config:       config,
-		Client:       client,
+		Client:       sClient,
 		Producer:     producer,
 		Partition:    config.Partition,
 		closed:       false,
@@ -124,10 +118,12 @@ func (ref *SyncProducer) Close() error {
 	}
 	ref.Debug("SyncProducer closed")
 
-	err = ref.Client.Close()
-	if err != nil {
-		ref.Errorf("client close error: %v", err)
-		return err
+	if !ref.Client.Closed() {
+		err = ref.Client.Close()
+		if err != nil {
+			ref.Errorf("client close error: %v", err)
+			return err
+		}
 	}
 
 	return nil
