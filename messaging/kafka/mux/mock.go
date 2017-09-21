@@ -33,7 +33,7 @@ func Mock(t *testing.T) *KafkaMock {
 	asyncP, aMock := client.GetAsyncProducerMock(t)
 	syncP, sMock := client.GetSyncProducerMock(t)
 	return &KafkaMock{
-		NewMultiplexer(getMockConsumerFactory(t), syncP, nil, asyncP, nil, "name", logroot.StandardLogger()),
+		NewMultiplexer(getMockConsumerFactory(t), syncP, syncP, asyncP, asyncP, "name", logroot.StandardLogger()),
 		aMock, sMock}
 }
 
