@@ -31,16 +31,16 @@ const topic = "status-check"
 // Plugin provides API for interaction with kafka brokers.
 type Plugin struct {
 	Deps         // inject
+	mux       *mux.Multiplexer
 	subscription chan (*client.ConsumerMessage)
 
-	// Kafka plugin is using two multiplexers. The first one is using 'hash' (default) partitioner. The second mux
+	// Kafka plugin is using two clients. The first one is using 'hash' (default) partitioner. The second mux
 	// uses manual partitioner which allows to send a message to specified partition and watching to desired partition/offset
-	muxHash   *mux.Multiplexer
-	muxManual *mux.Multiplexer // todo only one mux will be kept
-
-	consumer *client.Consumer
 	hsClient sarama.Client
 	manClient sarama.Client
+
+	consumer *client.Consumer
+
 	disabled bool
 }
 
@@ -52,7 +52,7 @@ type Deps struct {
 
 // FromExistingMux is used mainly for testing purposes.
 func FromExistingMux(mux *mux.Multiplexer) *Plugin {
-	return &Plugin{muxHash: mux}
+	return &Plugin{mux: mux}
 }
 
 // Init is called at plugin initialization.
@@ -93,21 +93,13 @@ func (plugin *Plugin) Init() (err error) {
 	}
 
 	// Initialize both multiplexers to allow both, dynamic and manual mode
-	if plugin.muxHash == nil {
+	if plugin.mux == nil {
 		name := plugin.ServiceLabel.GetAgentLabel() + "-hash"
-		plugin.muxHash, err = mux.InitMultiplexerWithConfig(clientCfg, plugin.hsClient, plugin.manClient, name, plugin.Log)
+		plugin.mux, err = mux.InitMultiplexerWithConfig(clientCfg, plugin.hsClient, plugin.manClient, name, plugin.Log)
 		if err != nil {
 			return err
 		}
 		plugin.Log.Debug("Default multiplexer initialized")
-	}
-	if plugin.muxManual == nil {
-		name := plugin.ServiceLabel.GetAgentLabel() + "-manual"
-		plugin.muxManual, err = mux.InitMultiplexerWithConfig(clientCfg, plugin.hsClient, plugin.manClient, name, plugin.Log)
-		if err != nil {
-			return err
-		}
-		plugin.Log.Debug("Manual multiplexer initialized")
 	}
 
 	return err
@@ -116,14 +108,8 @@ func (plugin *Plugin) Init() (err error) {
 // AfterInit is called in the second phase of the initialization. The kafka multiplexerNewWatcher
 // is started, all consumers have to be subscribed until this phase.
 func (plugin *Plugin) AfterInit() error {
-	if plugin.muxHash != nil {
-		err := plugin.muxHash.Start()
-		if err != nil {
-			return  err
-		}
-	}
-	if plugin.muxManual != nil {
-		err := plugin.muxManual.Start()
+	if plugin.mux != nil {
+		err := plugin.mux.Start()
 		if err != nil {
 			return err
 		}
@@ -144,39 +130,39 @@ func (plugin *Plugin) AfterInit() error {
 		plugin.Log.Warnf("Unable to start status check for kafka")
 	}
 
-	return wasError
+	return nil
 }
 
 // Close is called at plugin cleanup phase.
 func (plugin *Plugin) Close() error {
-	_, err := safeclose.CloseAll(plugin.consumer, plugin.hsClient, plugin.muxHash, plugin.muxManual)
+	_, err := safeclose.CloseAll(plugin.consumer, plugin.hsClient, plugin.manClient, plugin.mux)
 	return err
 }
 
 // NewBytesConnection returns a new instance of a connection to access kafka brokers. The connection allows to create
 // new kafka providers/consumers on multiplexer with hash partitioner.
 func (plugin *Plugin) NewBytesConnection(name string) *mux.BytesConnection {
-	return plugin.muxHash.NewBytesConnection(name)
+	return plugin.mux.NewBytesConnection(name)
 }
 
 // NewBytesConnectionToPartition returns a new instance of a connection to access kafka brokers. The connection allows to create
 // new kafka providers/consumers on multiplexer with manual partitioner which allows to send messages to specific partition
 // in kafka cluster and watch on partition/offset.
 func (plugin *Plugin) NewBytesConnectionToPartition(name string) *mux.BytesConnection {
-	return plugin.muxHash.NewBytesConnection(name)
+	return plugin.mux.NewBytesConnection(name)
 }
 
 // NewProtoConnection returns a new instance of a connection to access kafka brokers. The connection allows to create
 // new kafka providers/consumers on multiplexer with hash partitioner.The connection uses proto-modelled messages.
 func (plugin *Plugin) NewProtoConnection(name string) mux.Connection {
-	return plugin.muxHash.NewProtoConnection(name, &keyval.SerializerJSON{})
+	return plugin.mux.NewProtoConnection(name, &keyval.SerializerJSON{})
 }
 
 // NewProtoManualConnection returns a new instance of a connection to access kafka brokers. The connection allows to create
 // new kafka providers/consumers on multiplexer with manual partitioner which allows to send messages to specific partition
 // in kafka cluster and watch on partition/offset. The connection uses proto-modelled messages.
 func (plugin *Plugin) NewProtoManualConnection(name string) mux.ManualConnection {
-	return plugin.muxHash.NewProtoManualConnection(name, &keyval.SerializerJSON{})
+	return plugin.mux.NewProtoManualConnection(name, &keyval.SerializerJSON{})
 }
 
 // NewSyncPublisher creates a publisher that allows to publish messages using synchronous API. The publisher creates
