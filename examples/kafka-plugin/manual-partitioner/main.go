@@ -35,7 +35,7 @@ type ExamplePlugin struct {
 	subscription        chan (messaging.ProtoMessage)
 	kafkaSyncPublisher  messaging.ProtoPublisher
 	kafkaAsyncPublisher messaging.ProtoPublisher
-	kafkaWatcher        messaging.ProtoManualWatcher
+	kafkaWatcher        messaging.ProtoPartitionWatcher
 	// Successfully published kafka message is sent through the message channel.
 	// In case of a failure it sent through the error channel.
 	asyncSubscription   chan (messaging.ProtoMessage)

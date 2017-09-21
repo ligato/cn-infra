@@ -22,7 +22,7 @@ type Connection interface {
 
 // ManualConnection is interface for multiplexer with manual partitioner.
 type ManualConnection interface {
-	messaging.ProtoManualWatcher
+	messaging.ProtoPartitionWatcher
 	// Creates new synchronous publisher allowing to publish kafka messages to chosen partition
 	NewSyncPublisherToPartition(topic string, partition int32) (messaging.ProtoPublisher, error)
 	// Creates new asynchronous publisher allowing to publish kafka messages to chosen partition

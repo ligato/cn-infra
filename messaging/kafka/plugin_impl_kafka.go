@@ -99,12 +99,17 @@ func (p *Plugin) Init() (err error) {
 // AfterInit is called in the second phase of the initialization. The kafka multiplexerNewWatcher
 // is started, all consumers have to be subscribed until this phase.
 func (p *Plugin) AfterInit() error {
-	var wasError error
 	if p.muxHash != nil {
-		wasError = p.muxHash.Start()
+		err := p.muxHash.Start()
+		if err != nil {
+			return  err
+		}
 	}
 	if p.muxManual != nil {
-		wasError = p.muxManual.Start()
+		err := p.muxManual.Start()
+		if err != nil {
+			return err
+		}
 	}
 
 	// Register for providing status reports (polling mode)
@@ -122,7 +127,7 @@ func (p *Plugin) AfterInit() error {
 		p.Log.Warnf("Unable to start status check for kafka")
 	}
 
-	return wasError
+	return nil
 }
 
 // Close is called at plugin cleanup phase.
@@ -187,7 +192,7 @@ func (p *Plugin) NewWatcher(name string) messaging.ProtoWatcher {
 }
 
 // NewPartitionWatcher creates a watcher that allows to start/stop consuming of messaging published to given topics, offset and partition
-func (p *Plugin) NewPartitionWatcher(name string) messaging.ProtoManualWatcher {
+func (p *Plugin) NewPartitionWatcher(name string) messaging.ProtoPartitionWatcher {
 	return p.NewProtoManualConnection(name)
 }
 
