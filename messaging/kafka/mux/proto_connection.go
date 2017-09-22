@@ -199,7 +199,7 @@ func (conn *ProtoManualConnection) ConsumePartition(msgClb func(messaging.ProtoM
 			connectionName: conn.name,
 			byteConsMsg:    byteClb,
 		}
-		// subscribe new topic on partition todo separate map?
+		// subscribe new topic on partition
 		conn.multiplexer.mapping = append(conn.multiplexer.mapping, subs)
 	}
 
@@ -207,25 +207,25 @@ func (conn *ProtoManualConnection) ConsumePartition(msgClb func(messaging.ProtoM
 	subs.byteConsMsg = byteClb
 
 	if conn.multiplexer.started {
-		conn.multiplexer.Infof("Starting 'later-stage' manual consumer")
-		return conn.StartConsumerAtLaterStage(msgClb, topic, partition, offset)
+		conn.multiplexer.Infof("Starting 'post-init' manual consumer")
+		return conn.StartPostInitConsumer(msgClb, topic, partition, offset)
 	}
 
 	return nil
 }
 
-// StartConsumerAtLaterStage allows to start a new partition consumer after mux is initialized
-func (conn *ProtoConnectionFields) StartConsumerAtLaterStage(msgClb func(messaging.ProtoMessage), topic string, partition int32, offset int64) error {
+// StartPostInitConsumer allows to start a new partition consumer after mux is initialized
+func (conn *ProtoConnectionFields) StartPostInitConsumer(msgClb func(messaging.ProtoMessage), topic string, partition int32, offset int64) error {
 	multiplexer := conn.multiplexer
 	multiplexer.WithFields(logging.Fields{"topic": topic}).Debugf("Post-init consuming started")
 
-	// Create new sarama consumer from existing client
-	sConsumer, err := sarama.NewConsumerFromClient(multiplexer.manClient)
-	if err != nil {
-		return err
+	if multiplexer.sConsumer == nil {
+		multiplexer.Warn("Unable to start post-init consumer, client not available on the mux")
+		return nil
 	}
+
 	// Consumer that reads topic/partition/offset. Throws error if offset is 'in the future' (message with offset does not exist yet)
-	partitionConsumer, err := sConsumer.ConsumePartition(topic, partition, offset)
+	partitionConsumer, err := multiplexer.sConsumer.ConsumePartition(topic, partition, offset)
 	if err != nil {
 		return err
 	}
@@ -234,6 +234,9 @@ func (conn *ProtoConnectionFields) StartConsumerAtLaterStage(msgClb func(messagi
 	if err != nil {
 		return err
 	}
+
+	// store newly created consumer in mux, so it can be closed properly
+	multiplexer.postInitConsumers = append(multiplexer.postInitConsumers, consumer)
 
 	// Start message handler
 	go consumer.MessageHandler(partitionConsumer.Messages())

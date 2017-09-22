@@ -114,6 +114,7 @@ func InitMultiplexerWithConfig(clientCfg *client.Config, hsClient sarama.Client,
 		producers.hashAsyncProducer = hashAsyncProducer
 	}
 	// Prepare manual sync/async producer
+	var sConsumer sarama.Consumer
 	if manClient != nil {
 		manualSyncProducer, err := client.NewSyncProducer(clientCfg, manClient, client.Manual, nil)
 		if err != nil {
@@ -128,10 +129,15 @@ func InitMultiplexerWithConfig(clientCfg *client.Config, hsClient sarama.Client,
 		}
 		producers.manSyncProducer = manualSyncProducer
 		producers.manAsyncProducer = manualAsyncProducer
+		// create sarama consumer from manual client and store it in mux. It can be used later to create post-init consumers
+		sConsumer, err = sarama.NewConsumerFromClient(manClient)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	kafkaConnect := time.Since(startTime)
 	log.WithField("durationInNs", kafkaConnect.Nanoseconds()).Info("Connecting to kafka took ", kafkaConnect)
-
-	return NewMultiplexer(getConsumerFactory(clientCfg), producers, hsClient, manClient, clientCfg, name, log), nil
+	
+	return NewMultiplexer(getConsumerFactory(clientCfg), sConsumer, producers, hsClient, manClient, clientCfg, name, log), nil
 }

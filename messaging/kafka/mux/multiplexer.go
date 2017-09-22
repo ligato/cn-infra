@@ -26,8 +26,11 @@ type Multiplexer struct {
 	// client with 'manual' partitioner
 	manClient sarama.Client
 
-	// consumer used by the Multiplexer
+	// consumer used by the Multiplexer (bsm/sarama cluster)
 	consumer *client.Consumer
+
+	// consumer used by the Multiplexer (sarama)
+	sConsumer sarama.Consumer
 
 	// producers available for this mux
 	multiplexerProducers
@@ -49,7 +52,9 @@ type Multiplexer struct {
 	// Mapping provides the mapping of subscribed consumers. Subscription contains topic, partition and offset to consume,
 	// as well as dynamic/manual mode flag
 	mapping []*consumerSubscription
-	//mapping map[topicToPartition]*map[string]func(*client.ConsumerMessage)
+
+	// postInitConsumers are closed after mux.Close()
+	postInitConsumers []*client.Consumer
 
 	// factory that crates consumer used in the Multiplexer
 	consumerFactory func(topics []string, groupId string) (*client.Consumer, error)
@@ -92,10 +97,11 @@ type multiplexerProducers struct {
 }
 
 // NewMultiplexer creates new instance of Kafka Multiplexer
-func NewMultiplexer(consumerFactory ConsumerFactory, producers multiplexerProducers, hsClient sarama.Client,
+func NewMultiplexer(consumerFactory ConsumerFactory, sConsumer sarama.Consumer, producers multiplexerProducers, hsClient sarama.Client,
 	manClient sarama.Client, clientCfg *client.Config, name string, log logging.Logger) *Multiplexer {
 	cl := &Multiplexer{consumerFactory: consumerFactory,
 		Logger:        log,
+		sConsumer:	   sConsumer,
 		name:          name,
 		mapping:       []*consumerSubscription{},
 		closeCh:       make(chan struct{}),
@@ -203,6 +209,9 @@ func (mux *Multiplexer) Close() {
 	close(mux.closeCh)
 	safeclose.CloseAll(mux.consumer, mux.hashSyncProducer, mux.hashAsyncProducer, mux.manSyncProducer, mux.manAsyncProducer,
 		mux.hsClient, mux.manClient)
+	for _, postInitConsumer := range mux.postInitConsumers {
+		safeclose.Close(postInitConsumer)
+	}
 }
 
 // NewBytesConnection creates instance of the BytesConnection that provides access to shared Multiplexer's clients.
@@ -246,12 +255,14 @@ func (mux *Multiplexer) propagateMessage(msg *client.ConsumerMessage) {
 				// and report an error to avoid deadlock
 				mux.Debug("offset ", msg.Offset, string(msg.Value), string(msg.Key), msg.Partition)
 				subscription.byteConsMsg(msg)
+				// Mark offset
+				mux.consumer.MarkOffset(msg, "")
 			}
 		}
 	}
 }
 
-// GenericConsumer handles incoming messages to the multiplexer and distributes them among the subscribers.
+// genericConsumer handles incoming messages to the multiplexer and distributes them among the subscribers.
 func (mux *Multiplexer) genericConsumer() {
 	mux.Debug("Generic consumer started")
 	for {
@@ -261,21 +272,15 @@ func (mux *Multiplexer) genericConsumer() {
 			return
 		case msg := <-mux.consumer.Config.RecvMessageChan:
 			mux.Debug("Kafka message received")
+			// 'hash' partitioner messages will be marked
 			mux.propagateMessage(msg)
-			// Mark offset for hash/random partitioners
-			// todo mux does not know anymore what partitioner was used
-			//if mux.partitioner != client.Manual {
-				// Mark offset as read. If the Multiplexer is restarted it
-				// continues to receive message after the last committed offset.
-				mux.consumer.MarkOffset(msg, "")
-			//}
 		case err := <-mux.consumer.Config.RecvErrorChan:
 			mux.Error("Received partitionConsumer error ", err)
 		}
 	}
 }
 
-// GenericConsumer handles incoming messages to the multiplexer and distributes them among the subscribers.
+// laterStageConsumer takes a later-created consumer and handles incoming messages for them.
 func (mux *Multiplexer) laterStageConsumer(consumer *client.Consumer) {
 	mux.Debug("Generic consumer started")
 	for {
@@ -285,14 +290,8 @@ func (mux *Multiplexer) laterStageConsumer(consumer *client.Consumer) {
 			return
 		case msg := <-consumer.Config.RecvMessageChan:
 			mux.Debug("Kafka message received")
+			// 'later-stage' consumer does not consume 'hash' messages, none of them is marked
 			mux.propagateMessage(msg)
-			// Mark offset for hash/random partitioners
-			// todo mux does not know anymore what partitioner was used
-			//if mux.partitioner != client.Manual {
-			// Mark offset as read. If the Multiplexer is restarted it
-			// continues to receive message after the last committed offset.
-			consumer.MarkOffset(msg, "")
-			//}
 		case err := <-consumer.Config.RecvErrorChan:
 			mux.Error("Received partitionConsumer error ", err)
 		}

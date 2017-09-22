@@ -53,6 +53,7 @@ type ExamplePlugin struct {
 	asyncSuccessChannel chan (messaging.ProtoMessage)
 	asyncErrorChannel   chan (messaging.ProtoMessageErr)
 	// Fields below are used to properly finish the example.
+	messagesSent  bool
 	syncCaseDone  bool
 	asyncCaseDone bool
 	closeChannel  *chan struct{}
