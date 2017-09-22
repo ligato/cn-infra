@@ -53,8 +53,6 @@ type Plugin struct {
 	ctx    context.Context
 	cancel context.CancelFunc // cancel can be used to cancel all goroutines and their jobs inside of the plugin
 	wg     sync.WaitGroup     // wait group that allows to wait until all goroutines of the plugin have finished
-
-	pluginStatMap map[string]status.PluginStatus
 }
 
 // Deps lists the dependencies of statuscheck plugin.
@@ -304,21 +302,9 @@ func (p *Plugin) GetPluginStatus(pluginName string) status.PluginStatus {
 }
 
 // GetAllPluginStatus returns a map containing status of each plugin
-func (p *Plugin) GetAllPluginStatus() map[string]status.PluginStatus {
+func (p *Plugin) GetAllPluginStatus() map[string]*status.PluginStatus {
 	p.access.Lock()
 	defer p.access.Unlock()
-	p.Log.Info("Getting status for all plugins %v", p.pluginStat)
-	// Copy from the original map to the target map
-	for key, value := range p.pluginStat {
-		pluginStatus := status.PluginStatus{
-			State:      value.State,
-			LastChange: value.LastChange,
-			LastUpdate: value.LastUpdate,
-			Error:      value.Error,
-		}
-		p.pluginStatMap[key] = pluginStatus
-	}
-	return p.pluginStatMap
 
-	//return p.pluginStat
+	return p.pluginStat
 }

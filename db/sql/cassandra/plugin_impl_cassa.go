@@ -83,6 +83,15 @@ func (p *Plugin) Init() (err error) {
 		return err
 	}
 
+	if p.session == nil && p.clientConfig != nil {
+		session, err := CreateSessionFromConfig(p.clientConfig)
+		if err != nil {
+			return err
+		}
+
+		p.session = gockle.NewSession(session)
+	}
+
 	// Register for providing status reports (polling mode)
 	if p.StatusCheck != nil {
 		if p.session != nil {
@@ -106,15 +115,6 @@ func (p *Plugin) Init() (err error) {
 
 // AfterInit is called by the Agent Core after all plugins have been initialized.
 func (p *Plugin) AfterInit() error {
-	if p.session == nil && p.clientConfig != nil {
-		session, err := CreateSessionFromConfig(p.clientConfig)
-		if err != nil {
-			return err
-		}
-
-		p.session = gockle.NewSession(session)
-	}
-
 	return nil
 }
 
