@@ -87,7 +87,7 @@ func (plugin *Plugin) Init() (err error) {
 	}
 
 	// init bsm/sarama consumer
-	plugin.consumer, err = client.NewConsumer(clientCfg, nil)
+	plugin.consumer, err = client.NewConsumer(clientCfg, true,nil)
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func (plugin *Plugin) AfterInit() error {
 	if plugin.StatusCheck != nil {
 		plugin.StatusCheck.Register(plugin.PluginName, func() (statuscheck.PluginState, error) {
 			// Method 'RefreshMetadata()' returns error if kafka server is unavailable
-			err := plugin.consumer.Client.RefreshMetadata(topic)
+			err := plugin.hsClient.RefreshMetadata(topic)
 			if err == nil {
 				return statuscheck.OK, nil
 			}

@@ -50,8 +50,9 @@ type Consumer struct {
 	sync.Mutex
 }
 
-// NewConsumer returns a Consumer instance
-func NewConsumer(config *Config, wg *sync.WaitGroup) (*Consumer, error) {
+// NewConsumer returns a Consumer instance. If startHandlers is set to true, reading of messages, errors
+// and notifications is started using new consumer. Otherwise, only instance is returned
+func NewConsumer(config *Config, startHandlers bool, wg *sync.WaitGroup) (*Consumer, error) {
 	if config.Debug {
 		config.Logger.SetLevel(logging.DebugLevel)
 	}
@@ -93,18 +94,21 @@ func NewConsumer(config *Config, wg *sync.WaitGroup) (*Consumer, error) {
 		csmr.xwg.Add(1)
 	}
 
-	// if required, start reading from the notifications channel
-	if config.ConsumerConfig().Group.Return.Notifications {
-		go csmr.notificationHandler(csmr.Consumer.Notifications())
-	}
+	if startHandlers {
+		config.Logger.Info("Starting message handlers for new consumer ...")
+		// if required, start reading from the notifications channel
+		if config.ConsumerConfig().Group.Return.Notifications {
+			go csmr.notificationHandler(csmr.Consumer.Notifications())
+		}
 
-	// if required, start reading from the errors channel
-	if config.ProducerConfig().Consumer.Return.Errors {
-		go csmr.errorHandler(csmr.Consumer.Errors())
-	}
+		// if required, start reading from the errors channel
+		if config.ProducerConfig().Consumer.Return.Errors {
+			go csmr.errorHandler(csmr.Consumer.Errors())
+		}
 
-	// start the message handler
-	go csmr.messageHandler(csmr.Consumer.Messages())
+		// start the message handler
+		go csmr.MessageHandler(csmr.Consumer.Messages())
+	}
 
 	return csmr, nil
 }
@@ -254,42 +258,9 @@ func (ref *Consumer) PrintNotification(note map[string][]int32) {
 	}
 }
 
-// notificationHandler processes each message received when the consumer
-// is rebalanced
-func (ref *Consumer) notificationHandler(in <-chan *cluster.Notification) {
-	ref.Debug("notificationHandler started ...")
-
-	for {
-		select {
-		case note := <-in:
-			ref.Config.RecvNotificationChan <- note
-		case <-ref.closeChannel:
-			ref.Debug("Canceling notification handler")
-			return
-		}
-	}
-}
-
-// errorHandler processes each error message
-func (ref *Consumer) errorHandler(in <-chan error) {
-	ref.Debug("errorHandler started ...")
-	for {
-		select {
-		case err, more := <-in:
-			if more {
-				ref.Errorf("message error: %T, %v", err, err)
-				ref.Config.RecvErrorChan <- err
-			}
-		case <-ref.closeChannel:
-			ref.Debug("Canceling error handler")
-			return
-		}
-	}
-}
-
-// messageHandler processes each incoming message
-func (ref *Consumer) messageHandler(in <-chan *sarama.ConsumerMessage) {
-	ref.Debug("messageHandler started ...")
+// MessageHandler processes each incoming message
+func (ref *Consumer) MessageHandler(in <-chan *sarama.ConsumerMessage) {
+	ref.Debug("MessageHandler started ...")
 
 	for {
 		select {
@@ -312,6 +283,56 @@ func (ref *Consumer) messageHandler(in <-chan *sarama.ConsumerMessage) {
 			}
 		case <-ref.closeChannel:
 			ref.Debug("Canceling message handler")
+			return
+		}
+	}
+}
+
+// ConsumerErrorHandler processes each error message
+func (ref *Consumer) ConsumerErrorHandler(in <-chan *sarama.ConsumerError) {
+	ref.Debug("errorHandler started ...")
+	for {
+		select {
+		case err, more := <-in:
+			if more {
+				ref.Errorf("message error: %T, %v", err, err)
+				ref.Config.RecvErrorChan <- err
+			}
+		case <-ref.closeChannel:
+			ref.Debug("Canceling error handler")
+			return
+		}
+	}
+}
+
+// errorHandler processes each error message
+func (ref *Consumer) errorHandler(in <-chan error) {
+	ref.Debug("errorHandler started ...")
+	for {
+		select {
+		case err, more := <-in:
+			if more {
+				ref.Errorf("message error: %T, %v", err, err)
+				ref.Config.RecvErrorChan <- err
+			}
+		case <-ref.closeChannel:
+			ref.Debug("Canceling error handler")
+			return
+		}
+	}
+}
+
+// NotificationHandler processes each message received when the consumer
+// is rebalanced
+func (ref *Consumer) notificationHandler(in <-chan *cluster.Notification) {
+	ref.Debug("NotificationHandler started ...")
+
+	for {
+		select {
+		case note := <-in:
+			ref.Config.RecvNotificationChan <- note
+		case <-ref.closeChannel:
+			ref.Debug("Canceling notification handler")
 			return
 		}
 	}

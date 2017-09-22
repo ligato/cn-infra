@@ -140,8 +140,7 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	err = plugin.kafkaWatcher.WatchPartition(messaging.ToProtoMsgChan(plugin.asyncSubscription), topic2,
 		asyncMessagePartition, asyncMessageOffset)
 	if err != nil {
-		plugin.Log.Error(err)// Offset for async messages watcher
-	asyncMessageOffset = 0
+		plugin.Log.Error(err)
 	}
 
 	plugin.Log.Info("Initialization of the custom plugin for the Kafka example is completed")

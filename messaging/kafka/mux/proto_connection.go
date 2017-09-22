@@ -9,6 +9,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/messaging"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
+	"github.com/ligato/cn-infra/logging"
 )
 
 // Connection is interface for multiplexer with dynamic partitioner.
@@ -168,10 +169,6 @@ func (conn *ProtoManualConnection) ConsumePartition(msgClb func(messaging.ProtoM
 	conn.multiplexer.rwlock.Lock()
 	defer conn.multiplexer.rwlock.Unlock()
 
-	if conn.multiplexer.started {
-		return fmt.Errorf("ConsumeTopicOnPartition can be called only if the multiplexer has not been started yet")
-	}
-
 	byteClb := func(bm *client.ConsumerMessage) {
 		pm := client.NewProtoConsumerMessage(bm, conn.serializer)
 		msgClb(pm)
@@ -202,12 +199,48 @@ func (conn *ProtoManualConnection) ConsumePartition(msgClb func(messaging.ProtoM
 			connectionName: conn.name,
 			byteConsMsg:    byteClb,
 		}
-		// subscribe new topic on partition
+		// subscribe new topic on partition todo separate map?
 		conn.multiplexer.mapping = append(conn.multiplexer.mapping, subs)
 	}
 
 	// add subscription to consumerList
 	subs.byteConsMsg = byteClb
+
+	if conn.multiplexer.started {
+		conn.multiplexer.Infof("Starting 'later-stage' manual consumer")
+		return conn.StartConsumerAtLaterStage(msgClb, topic, partition, offset)
+	}
+
+	return nil
+}
+
+// StartConsumerAtLaterStage allows to start a new partition consumer after mux is initialized
+func (conn *ProtoConnectionFields) StartConsumerAtLaterStage(msgClb func(messaging.ProtoMessage), topic string, partition int32, offset int64) error {
+	multiplexer := conn.multiplexer
+	multiplexer.WithFields(logging.Fields{"topic": topic}).Debugf("Post-init consuming started")
+
+	// Create new sarama consumer from existing client
+	sConsumer, err := sarama.NewConsumerFromClient(multiplexer.manClient)
+	if err != nil {
+		return err
+	}
+	// Consumer that reads topic/partition/offset. Throws error if offset is 'in the future' (message with offset does not exist yet)
+	partitionConsumer, err := sConsumer.ConsumePartition(topic, partition, offset)
+	if err != nil {
+		return err
+	}
+	// Create client consumer but do not allow to start message handlers
+	consumer, err := client.NewConsumer(multiplexer.config, false, nil)
+	if err != nil {
+		return err
+	}
+
+	// Start message handler
+	go consumer.MessageHandler(partitionConsumer.Messages())
+	// Start error handler
+	go consumer.ConsumerErrorHandler(partitionConsumer.Errors())
+	// Start consumer
+	go conn.multiplexer.laterStageConsumer(consumer)
 
 	return nil
 }

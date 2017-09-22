@@ -50,7 +50,8 @@ func getConsumerFactory(config *client.Config) ConsumerFactory {
 		config.GroupID = groupId
 		config.SetInitialOffset(sarama.OffsetOldest)
 
-		return client.NewConsumer(config, nil)
+		// create new consumer and start message handlers
+		return client.NewConsumer(config, true, nil)
 	}
 }
 
@@ -104,7 +105,6 @@ func InitMultiplexerWithConfig(clientCfg *client.Config, hsClient sarama.Client,
 			log.Errorf(errorFmt, "SyncProducer (hash)", clientCfg.Brokers, err)
 			return nil, err
 		}
-		// Prepare manual sync/async producer
 		hashAsyncProducer, err := client.NewAsyncProducer(clientCfg, hsClient, client.Hash, nil)
 		if err != nil {
 			log.Errorf(errorFmt, "AsyncProducer", clientCfg.Brokers, err)
@@ -113,7 +113,7 @@ func InitMultiplexerWithConfig(clientCfg *client.Config, hsClient sarama.Client,
 		producers.hashSyncProducer = hashSyncProducer
 		producers.hashAsyncProducer = hashAsyncProducer
 	}
-
+	// Prepare manual sync/async producer
 	if manClient != nil {
 		manualSyncProducer, err := client.NewSyncProducer(clientCfg, manClient, client.Manual, nil)
 		if err != nil {
@@ -133,5 +133,5 @@ func InitMultiplexerWithConfig(clientCfg *client.Config, hsClient sarama.Client,
 	kafkaConnect := time.Since(startTime)
 	log.WithField("durationInNs", kafkaConnect.Nanoseconds()).Info("Connecting to kafka took ", kafkaConnect)
 
-	return NewMultiplexer(getConsumerFactory(clientCfg), producers, hsClient, manClient, name, log), nil
+	return NewMultiplexer(getConsumerFactory(clientCfg), producers, hsClient, manClient, clientCfg, name, log), nil
 }

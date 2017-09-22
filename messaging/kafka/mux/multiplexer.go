@@ -19,15 +19,21 @@ import (
 // Once the Multiplexer's consumer has been started new topics can not be added.
 type Multiplexer struct {
 	logging.Logger
+
 	// client with 'hash' partitioner
 	hsClient sarama.Client
+
 	// client with 'manual' partitioner
 	manClient sarama.Client
+
 	// consumer used by the Multiplexer
 	consumer *client.Consumer
 
 	// producers available for this mux
 	multiplexerProducers
+
+	// client config
+	config *client.Config
 
 	// name is used for identification of stored last consumed offset in kafka. This allows
 	// to follow up messages after restart.
@@ -87,7 +93,7 @@ type multiplexerProducers struct {
 
 // NewMultiplexer creates new instance of Kafka Multiplexer
 func NewMultiplexer(consumerFactory ConsumerFactory, producers multiplexerProducers, hsClient sarama.Client,
-	manClient sarama.Client, name string, log logging.Logger) *Multiplexer {
+	manClient sarama.Client, clientCfg *client.Config, name string, log logging.Logger) *Multiplexer {
 	cl := &Multiplexer{consumerFactory: consumerFactory,
 		Logger:        log,
 		name:          name,
@@ -96,6 +102,7 @@ func NewMultiplexer(consumerFactory ConsumerFactory, producers multiplexerProduc
 		hsClient:      hsClient,
 		manClient:     manClient,
 		multiplexerProducers: producers,
+		config:	       clientCfg,
 	}
 
 	go cl.watchAsyncProducerChannels()
@@ -266,7 +273,30 @@ func (mux *Multiplexer) genericConsumer() {
 			mux.Error("Received partitionConsumer error ", err)
 		}
 	}
+}
 
+// GenericConsumer handles incoming messages to the multiplexer and distributes them among the subscribers.
+func (mux *Multiplexer) laterStageConsumer(consumer *client.Consumer) {
+	mux.Debug("Generic consumer started")
+	for {
+		select {
+		case <-consumer.GetCloseChannel():
+			mux.Debug("Closing consumer")
+			return
+		case msg := <-consumer.Config.RecvMessageChan:
+			mux.Debug("Kafka message received")
+			mux.propagateMessage(msg)
+			// Mark offset for hash/random partitioners
+			// todo mux does not know anymore what partitioner was used
+			//if mux.partitioner != client.Manual {
+			// Mark offset as read. If the Multiplexer is restarted it
+			// continues to receive message after the last committed offset.
+			consumer.MarkOffset(msg, "")
+			//}
+		case err := <-consumer.Config.RecvErrorChan:
+			mux.Error("Received partitionConsumer error ", err)
+		}
+	}
 }
 
 // Remove consumer subscription on given topic. If there is no such a subscription, return error.
