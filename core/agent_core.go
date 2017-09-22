@@ -120,21 +120,21 @@ func (agent *Agent) Start() error {
 	//block until all Plugins are initialized or timeout expires
 	select {
 	case err := <-errChannel:
-		agent.WithField("durationInNs: ", agent.initDuration.Nanoseconds()).Infof("Agent Init took %v", agent.initDuration)
-		agent.WithField("durationInNs: ", agent.afterInitDuration.Nanoseconds()).Infof("Agent AfterInit took %v", agent.afterInitDuration)
+		agent.WithField("durationInNs", agent.initDuration.Nanoseconds()).Infof("Agent Init took %v", agent.initDuration)
+		agent.WithField("durationInNs", agent.afterInitDuration.Nanoseconds()).Infof("Agent AfterInit took %v", agent.afterInitDuration)
 		return err
 	case <-doneChannel:
-		agent.WithField("durationInNs: ", agent.initDuration.Nanoseconds()).Infof("Agent Init took %v", agent.initDuration)
-		agent.WithField("durationInNs: ", agent.afterInitDuration.Nanoseconds()).Infof("Agent AfterInit took %v", agent.afterInitDuration)
+		agent.WithField("durationInNs", agent.initDuration.Nanoseconds()).Infof("Agent Init took %v", agent.initDuration)
+		agent.WithField("durationInNs", agent.afterInitDuration.Nanoseconds()).Infof("Agent AfterInit took %v", agent.afterInitDuration)
 		duration := agent.initDuration + agent.afterInitDuration
-		agent.WithField("durationInNs: ", duration.Nanoseconds()).Info(fmt.Sprintf("All plugins initialized successfully, took %v", duration))
+		agent.WithField("durationInNs", duration.Nanoseconds()).Info(fmt.Sprintf("All plugins initialized successfully, took %v", duration))
 		return nil
 	case <-time.After(agent.MaxStartupTime):
 		if agent.initDuration == defaultTimerValue {
 			agent.Infof("Agent Init took > %v", agent.MaxStartupTime)
-			agent.WithField("durationInNs: ", agent.afterInitDuration.Nanoseconds()).Infof("Agent AfterInit took %v", agent.afterInitDuration)
+			agent.WithField("durationInNs", agent.afterInitDuration.Nanoseconds()).Infof("Agent AfterInit took %v", agent.afterInitDuration)
 		} else if agent.afterInitDuration == defaultTimerValue {
-			agent.WithField("durationInNs: ", agent.initDuration.Nanoseconds()).Infof("Agent Init took %v", agent.initDuration)
+			agent.WithField("durationInNs", agent.initDuration.Nanoseconds()).Infof("Agent Init took %v", agent.initDuration)
 			agent.Infof("Agent AfterInit took > %v", agent.MaxStartupTime)
 		}
 
