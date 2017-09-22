@@ -21,8 +21,8 @@ import (
 	"github.com/ligato/cn-infra/db/sql"
 	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/ligato/cn-infra/health/statuscheck"
-	"github.com/willfaught/gockle"
 	"github.com/ligato/cn-infra/utils/safeclose"
+	"github.com/willfaught/gockle"
 )
 
 //
@@ -83,6 +83,24 @@ func (p *Plugin) Init() (err error) {
 		return err
 	}
 
+	// Register for providing status reports (polling mode)
+	if p.StatusCheck != nil {
+		if p.session != nil {
+			p.StatusCheck.Register(core.PluginName(p.String()), func() (statuscheck.PluginState, error) {
+				broker := p.NewBroker()
+				err := broker.Exec(`select keyspace_name from system_schema.keyspaces`)
+				if err == nil {
+					return statuscheck.OK, nil
+				}
+				return statuscheck.Error, err
+			})
+		} else {
+			p.Log.Warnf("Cassandra connection not available")
+		}
+	} else {
+		p.Log.Warnf("Unable to start status check for Cassandra")
+	}
+
 	return nil
 }
 
@@ -95,19 +113,6 @@ func (p *Plugin) AfterInit() error {
 		}
 
 		p.session = gockle.NewSession(session)
-	}
-
-	// Register for providing status reports (polling mode)
-	if p.StatusCheck != nil && p.session != nil {
-		p.StatusCheck.Register(core.PluginName(p.String()), func() (statuscheck.PluginState, error) {
-			err := p.session.Exec(probeCassandraConnection)
-			if err == nil {
-				return statuscheck.OK, nil
-			}
-			return statuscheck.Error, err
-		})
-	} else {
-		p.Log.Warnf("Unable to start status check for Cassandra")
 	}
 
 	return nil

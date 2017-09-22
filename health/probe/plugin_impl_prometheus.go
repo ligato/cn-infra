@@ -155,7 +155,7 @@ func (p *PrometheusPlugin) getServiceHealth() float64 {
 	// Adapt Ligato status code for now.
 	// TODO: Consolidate with that from the "Common Container Telemetry" proposal.
 	health := float64(agentStatus.State)
-	p.Log.Infof("getServiceHealth(): %f", health)
+	p.Log.Infof("ServiceHealth: %v", health)
 	return health
 }
 
