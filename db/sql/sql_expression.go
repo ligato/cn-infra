@@ -234,6 +234,26 @@ func EQ(binding interface{}) (exp Expression) {
 	return &PrefixedExp{" = ", []Expression{Exp("?", binding)}, "", nil}
 }
 
+// GT operator ">" used in SQL expressions
+func GT(binding interface{}) (exp Expression) {
+	return &PrefixedExp{" > ", []Expression{Exp("?", binding)}, "", nil}
+}
+
+// GTE operator "=>" used in SQL expressions
+func GTE(binding interface{}) (exp Expression) {
+	return &PrefixedExp{" => ", []Expression{Exp("?", binding)}, "", nil}
+}
+
+// LT operator "<" used in SQL expressions
+func LT(binding interface{}) (exp Expression) {
+	return &PrefixedExp{" < ", []Expression{Exp("?", binding)}, "", nil}
+}
+
+// LTE operator "=<" used in SQL expressions
+func LTE(binding interface{}) (exp Expression) {
+	return &PrefixedExp{" =< ", []Expression{Exp("?", binding)}, "", nil}
+}
+
 // Parenthesis expression that surrounds "inside Expression" with "(" and ")"
 func Parenthesis(inside ...Expression) (exp Expression) {
 	return &PrefixedExp{"(", inside, ")", nil}
