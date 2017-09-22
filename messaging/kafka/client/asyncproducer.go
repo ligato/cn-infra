@@ -40,8 +40,9 @@ type AsyncProducer struct {
 	sync.Mutex
 }
 
-// NewAsyncProducer returns a new AsyncProducer instance. Producer is created from provided sarama client. Also
-// the partitioner is set here. Note: sarama partitioner should match the one used in config.
+// NewAsyncProducer returns a new AsyncProducer instance. Producer is created from provided sarama client which can be nil;
+// in that case a new client will be created. Also the partitioner is set here. Note: provided sarama client partitioner
+// should match the one used in config.
 func NewAsyncProducer(config *Config, sClient sarama.Client, partitioner string, wg *sync.WaitGroup) (*AsyncProducer, error) {
 	if config.Debug {
 		config.Logger.SetLevel(logging.DebugLevel)
@@ -66,22 +67,32 @@ func NewAsyncProducer(config *Config, sClient sarama.Client, partitioner string,
 
 	config.Logger.Debugf("AsyncProducer config: %#v", config)
 
+	// initAsyncProducer object
+	ap := &AsyncProducer{
+		Logger:       config.Logger,
+		Config:       config,
+		Partition:    config.Partition,
+		closed:       false,
+		closeChannel: make(chan struct{}),
+	}
+
+	// If client is nil, create a new one
+	if sClient == nil {
+		localClient, err := NewClient(config, partitioner)
+		if err != nil {
+			return nil, err
+		}
+		// store local client in syncProducer if it was created here
+		ap.Client = localClient
+		sClient = localClient
+	}
+
 	// init a new asyncproducer using this client
 	producer, err := sarama.NewAsyncProducerFromClient(sClient)
 	if err != nil {
 		return nil, err
 	}
-
-	// initAsyncProducer object
-	ap := &AsyncProducer{
-		Logger:       config.Logger,
-		Config:       config,
-		Client:       sClient,
-		Producer:     producer,
-		Partition:    config.Partition,
-		closed:       false,
-		closeChannel: make(chan struct{}),
-	}
+	ap.Producer = producer
 
 	// if there is a "waitgroup" arg then use it
 	if wg != nil {
@@ -168,7 +179,7 @@ func (ref *AsyncProducer) Close(async ...bool) error {
 		ref.Errorf("asyncProducer close error: %v", err)
 		return err
 	}
-	if ref.Client.Closed() {
+	if ref.Client != nil && !ref.Client.Closed() {
 		err = ref.Client.Close()
 		if err != nil {
 			ref.Errorf("client close error: %v", err)

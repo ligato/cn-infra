@@ -37,8 +37,9 @@ type SyncProducer struct {
 	sync.Mutex
 }
 
-// NewSyncProducer returns a new SyncProducer instance. Producer is created from provided sarama client. Also
-// the partitioner is set here. Note: sarama partitioner should match the one used in config.
+// NewSyncProducer returns a new SyncProducer instance. Producer is created from provided sarama client which can be nil;
+// in that case, a new client is created. Also the partitioner is set here. Note: provided sarama client partitioner
+// should match the one used in config.
 func NewSyncProducer(config *Config, sClient sarama.Client, partitioner string, wg *sync.WaitGroup) (*SyncProducer, error) {
 	if config.Debug {
 		config.Logger.SetLevel(logging.DebugLevel)
@@ -63,21 +64,31 @@ func NewSyncProducer(config *Config, sClient sarama.Client, partitioner string, 
 
 	config.Logger.Debugf("SyncProducer config: %#v", config)
 
-	producer, err := sarama.NewSyncProducerFromClient(sClient)
-	if err != nil {
-		return nil, err
-	}
-
 	// initProducer object
 	sp := &SyncProducer{
 		Logger:       config.Logger,
 		Config:       config,
-		Client:       sClient,
-		Producer:     producer,
 		Partition:    config.Partition,
 		closed:       false,
 		closeChannel: make(chan struct{}),
 	}
+
+	// If client is nil, create a new one
+	if sClient == nil {
+		localClient, err := NewClient(config, partitioner)
+		if err != nil {
+			return nil, err
+		}
+		// store local client in syncProducer if it was created here
+		sp.Client = localClient
+		sClient = localClient
+	}
+
+	producer, err := sarama.NewSyncProducerFromClient(sClient)
+	if err != nil {
+		return nil, err
+	}
+	sp.Producer = producer
 
 	// if there is a "waitgroup" arg then use it
 	if wg != nil {
@@ -118,7 +129,7 @@ func (ref *SyncProducer) Close() error {
 	}
 	ref.Debug("SyncProducer closed")
 
-	if !ref.Client.Closed() {
+	if ref.Client != nil && !ref.Client.Closed() {
 		err = ref.Client.Close()
 		if err != nil {
 			ref.Errorf("client close error: %v", err)
