@@ -18,11 +18,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"github.com/namsral/flag"
-	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/config"
-)
 
+	"github.com/ligato/cn-infra/config"
+	"github.com/ligato/cn-infra/core"
+	"github.com/namsral/flag"
+)
 
 // PluginConfig tries :
 // - to load flag <plugin-name>-port and then FixConfig() just in case
@@ -114,9 +114,8 @@ func (cfg *Config) GetPort() int {
 	return 0
 }
 
-
-// DeclareHTTPFlag declares http port (with usage & default value) a flag for a particular plugin name
-func DeclareHTTPFlag(pluginName core.PluginName, defaultPortOpts ...uint) {
+// DeclareHTTPPortFlag declares http port (with usage & default value) a flag for a particular plugin name
+func DeclareHTTPPortFlag(pluginName core.PluginName, defaultPortOpts ...uint) {
 	var defaultPort string
 	if len(defaultPortOpts) > 0 {
 		defaultPort = string(defaultPortOpts[0])
@@ -124,22 +123,13 @@ func DeclareHTTPFlag(pluginName core.PluginName, defaultPortOpts ...uint) {
 		defaultPort = DefaultHTTPPort
 	}
 
-	pluginNameToUpper := strings.ToUpper(string(pluginName))
+	plugNameUpper := strings.ToUpper(string(pluginName))
 
-	var httpServerSuffix string
-	flag.String(httpPortFlag(pluginName), defaultPort,
-		"Listen port for the Agent's HTTP " + httpServerSuffix + " server; also set via '"+
-			pluginNameToUpper+ "_PORT"+ "' env variable.")
-	flag.String(httpConfigFlag(pluginName), defaultPort,
-		"Configure Agent's HTTP " + httpServerSuffix + " server (port & timeouts); also set via '"+
-			pluginNameToUpper+ config.EnvSuffix+ "' env variable.")
-
+	usage := "Configure Agent' " + plugNameUpper + " server (port & timeouts); also set via '" +
+		plugNameUpper + config.EnvSuffix + "' env variable."
+	flag.String(httpPortFlag(pluginName), defaultPort, usage)
 }
 
 func httpPortFlag(pluginName core.PluginName) string {
 	return strings.ToLower(string(pluginName)) + "-port"
-}
-
-func httpConfigFlag(pluginName core.PluginName) string {
-	return strings.ToLower(string(pluginName)) + config.FlagSuffix
 }

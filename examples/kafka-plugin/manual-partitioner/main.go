@@ -64,23 +64,21 @@ const (
 const (
 	topic1 = "example-sync-topic"
 	topic2 = "example-async-topic"
+	connection = "example-proto-connection"
 )
 
 // Init initializes and starts producers and consumers.
 func (plugin *ExamplePlugin) Init() (err error) {
-	// Create connection
-	connection := plugin.Kafka.NewProtoManualConnection("example-proto-connection")
-
 	// Create a synchronous and asynchronous publisher.
 	// In the manual mode, every publisher has selected its target partition.
-	plugin.kafkaSyncPublisher, err = connection.NewSyncPublisherToPartition(topic1, syncMessagePartition)
+	plugin.kafkaSyncPublisher, err = plugin.Kafka.NewSyncPublisherToPartition(connection, topic1, syncMessagePartition)
 	if err != nil {
 		return err
 	}
 	// Async publisher requires two more channels to send success/error callback.
 	plugin.asyncSuccessChannel = make(chan messaging.ProtoMessage, 0)
 	plugin.asyncErrorChannel = make(chan messaging.ProtoMessageErr, 0)
-	plugin.kafkaAsyncPublisher, err = connection.NewAsyncPublisherToPartition(topic2, asyncMessagePartition,
+	plugin.kafkaAsyncPublisher, err = plugin.Kafka.NewAsyncPublisherToPartition(connection, topic2, asyncMessagePartition,
 		messaging.ToProtoMsgChan(plugin.asyncSuccessChannel), messaging.ToProtoMsgErrChan(plugin.asyncErrorChannel))
 	if err != nil {
 		return err

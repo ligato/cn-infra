@@ -24,22 +24,22 @@ type Mux interface {
 	// Creates new Kafka synchronous publisher sending messages to given topic.
 	// Partitioner has to be set to 'hash' (default) or 'random' scheme,
 	// otherwise an error is thrown.
-	NewSyncPublisher(topic string) (ProtoPublisher, error)
+	NewSyncPublisher(connName string, topic string) (ProtoPublisher, error)
 
 	// Creates new Kafka synchronous publisher sending messages to given topic
 	// and partition. Partitioner has to be set to 'manual' scheme,
 	// otherwise an error is thrown.
-	NewSyncPublisherToPartition(topic string, partition int32) (ProtoPublisher, error)
+	NewSyncPublisherToPartition(connName string, topic string, partition int32) (ProtoPublisher, error)
 
 	// Creates new Kafka asynchronous publisher sending messages to given topic.
 	// Partitioner has to be set to 'hash' (default) or 'random' scheme,
 	// otherwise an error is thrown.
-	NewAsyncPublisher(topic string, successClb func(ProtoMessage), errorClb func(err ProtoMessageErr)) (ProtoPublisher, error)
+	NewAsyncPublisher(connName string, topic string, successClb func(ProtoMessage), errorClb func(err ProtoMessageErr)) (ProtoPublisher, error)
 
 	// Creates new Kafka asynchronous publisher sending messages to given topic
 	// and partition. Partitioner has to be set to 'manual' scheme,
 	// otherwise an error is thrown.
-	NewAsyncPublisherToPartition(topic string, partition int32,
+	NewAsyncPublisherToPartition(connName string, topic string, partition int32,
 		successClb func(ProtoMessage), errorClb func(err ProtoMessageErr)) (ProtoPublisher, error)
 
 	// Initializes new watcher which can start/stop watching on topic,
