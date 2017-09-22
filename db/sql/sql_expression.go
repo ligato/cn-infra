@@ -73,7 +73,6 @@ func ExpsToString(exps []Expression) string {
 		var buffer bytes.Buffer
 		for _, exp := range exps {
 			buffer.WriteString(exp.String())
-			exp.String()
 		}
 
 		return buffer.String()
