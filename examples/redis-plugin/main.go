@@ -5,7 +5,6 @@ import (
 
 	"github.com/ligato/cn-infra/core"
 	log "github.com/ligato/cn-infra/logging/logroot"
-	"github.com/namsral/flag"
 )
 
 // Main allows running Example Plugin as a statically linked binary with Agent Core Plugins. Close channel and plugins
@@ -19,11 +18,6 @@ func main() {
 	flavor := ExampleFlavor{closeChan: &exampleFinished}
 	agent := core.NewAgent(log.StandardLogger(), 15*time.Second, append(flavor.Plugins())...)
 	core.EventLoopWithInterrupt(agent, exampleFinished)
-}
-
-// Redis flag to load config
-func init() {
-	flag.String("redis-config", "redis.conf", "Location of the redis configuration file")
 }
 
 // ExamplePlugin to depict the use of Redis flavor

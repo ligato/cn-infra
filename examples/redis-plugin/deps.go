@@ -6,7 +6,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/redis"
 	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ligato/cn-infra/flavors/connectors"
 )
 
 // Deps is a helper struct which is grouping all dependencies injected to the plugin
@@ -35,29 +35,13 @@ func (ef *ExampleFlavor) Inject() (allReadyInjected bool) {
 		ef.FlavorLocal = &local.FlavorLocal{}
 	}
 	ef.FlavorLocal.Inject()
-	ef.Redis.Deps.PluginInfraDeps = *ef.InfraDeps("redis")
+	ef.Redis.Deps.PluginInfraDeps = *ef.InfraDeps("redis", local.WithConf())
 	ef.ResyncOrch.Deps.PluginLogDeps = *ef.LogDeps("redis-resync")
-	InjectKVDBSync(&ef.RedisDataSync, &ef.Redis, ef.Redis.PluginName, ef.FlavorLocal, &ef.ResyncOrch)
+	connectors.InjectKVDBSync(&ef.RedisDataSync, &ef.Redis, ef.Redis.PluginName, ef.FlavorLocal, &ef.ResyncOrch)
 	ef.RedisExample.Deps.PluginLogDeps = *ef.FlavorLocal.LogDeps("redis-example")
 	ef.RedisExample.closeChannel = ef.closeChan
 
 	return true
-}
-
-// InjectKVDBSync helper to set object references
-func InjectKVDBSync(dbsync *kvdbsync.Plugin,
-	db keyval.KvProtoPlugin, dbPlugName core.PluginName, local *local.FlavorLocal, resync resync.Subscriber) {
-
-	dbsync.Deps.PluginLogDeps = *local.LogDeps(string(dbPlugName) + "-datasync")
-	dbsync.KvPlugin = db
-	dbsync.ResyncOrch = resync
-	if local != nil {
-		dbsync.ServiceLabel = &local.ServiceLabel
-
-		if local.StatusCheck.Transport == nil {
-			local.StatusCheck.Transport = dbsync
-		}
-	}
 }
 
 // Plugins combines all Plugins in flavor to the list
