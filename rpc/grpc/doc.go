@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package rest implements the GRPC netListener through which plugins can
+// Package grpc implements the GRPC netListener through which plugins can
 // expose their services/API to the outside world.
 package grpc
