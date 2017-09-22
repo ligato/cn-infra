@@ -8,11 +8,19 @@ PREV_IFS="$IFS"
 # arguments
 # 1-st command to run
 # 2-nd array of expected strings in the command output
+# 3-rd argument is an optional command runtime limit
 function testOutput {
 IFS="${PREV_IFS}"
 
     #run the command
-    $1 > ${TMP_FILE} 2>&1
+    if [ $# -ge 3 ]; then
+        $1 > ${TMP_FILE} 2>&1 &
+        CMD_PID=$!
+        sleep $3
+        kill $CMD_PID
+    else
+        $1 > ${TMP_FILE} 2>&1
+    fi
 
 IFS="
 "
@@ -246,6 +254,35 @@ Stopping agent...
 ")
 
 testOutput examples/logs-plugin/logs-plugin "${expected}"
+
+#### Simple-agent ########################################################
+
+expected=("etcd config not found  - skip loading this plugin
+kafka config not found  - skip loading this plugin
+redis config not found  - skip loading this plugin
+cassandra client config not found  - skip loading this plugin
+All plugins initialized successfully
+")
+
+testOutput examples/simple-agent/simple-agent "${expected}" 5
+
+#### Simple-agent with Kafka and ETCD ####################################
+
+startEtcd
+startKafka
+
+expected=("Plugin etcdv3: status check probe registered
+Plugin kafka: status check probe registered
+redis config not found  - skip loading this plugin
+cassandra client config not found  - skip loading this plugin
+All plugins initialized successfully
+")
+
+cmd="examples/simple-agent/simple-agent --etcdv3-config=examples/datasync-plugin/etcd.conf --kafka-config examples/kafka-plugin/hash-partitioner/kafka.conf"
+testOutput "${cmd}" "${expected}" 5
+
+stopEtcd
+stopKafka
 
 ##########################################################################
 
