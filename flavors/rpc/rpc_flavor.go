@@ -66,6 +66,7 @@ func (f *FlavorRPC) Inject() bool {
 	f.HealthRPC.Deps.PluginLogDeps = *f.LogDeps("health-rpc")
 	f.HealthRPC.Deps.HTTP = &f.HTTPProbe
 	f.HealthRPC.Deps.StatusCheck = &f.StatusCheck
+	f.HealthRPC.Deps.PluginStatusCheck = &f.StatusCheck
 	//TODO f.HealthRPC.Transport inject restsync
 
 	//TODO f.PrometheusRPC.Deps.PluginLogDeps = *f.LogDeps("health-prometheus-rpc")

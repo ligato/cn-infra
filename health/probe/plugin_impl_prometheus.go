@@ -112,6 +112,31 @@ func (p *PrometheusPlugin) AfterInit() error {
 		p.Log.Info("Unable to register Prometheus metrics handlers, HTTP is nil")
 	}
 
+	if p.PluginStatusCheck != nil {
+		if p.PluginStatusCheck.GetAllPluginStatus() != nil {
+			allPluginStatusMap := p.PluginStatusCheck.GetAllPluginStatus()
+			for k, v := range allPluginStatusMap {
+				p.registerGauge(
+					Namespace,
+					Subsystem,
+					DependencyHealthName,
+					DependencyHealthHelp,
+					prometheus.Labels{
+						ServiceLabel:    agentName,
+						DependencyLabel: k,
+					},
+					func() float64 {
+						return float64(v.State)
+					},
+				)
+			}
+		} else {
+			p.Log.Error("Plugin map is nil")
+		}
+	} else {
+		p.Log.Error("PluginStatusCheck is nil")
+	}
+
 	return nil
 }
 

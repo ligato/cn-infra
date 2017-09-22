@@ -300,3 +300,10 @@ func (p *Plugin) GetPluginStatus(pluginName string) status.PluginStatus {
 
 	return *(p.pluginStat[string(pluginName)])
 }
+
+// GetAllPluginStatus returns a map of current operational state of all the plugins.
+func (p *Plugin) GetAllPluginStatus() map[string]*status.PluginStatus {
+	p.access.Lock()
+	defer p.access.Unlock()
+	return (p.pluginStat)
+}
