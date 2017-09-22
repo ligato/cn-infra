@@ -20,6 +20,7 @@ import (
 
 	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/namsral/flag"
 )
 
@@ -30,7 +31,7 @@ import (
 func PluginConfig(pluginCfg config.PluginConfig, cfg *Config, pluginName core.PluginName) error {
 	portFlag := flag.Lookup(grpcPortFlag(pluginName))
 	if portFlag != nil && portFlag.Value != nil && portFlag.Value.String() != "" && cfg != nil {
-		cfg.Endpoint = DefaultIP + ":" + portFlag.Value.String()
+		cfg.Endpoint = rest.DefaultIP + ":" + portFlag.Value.String()
 	}
 
 	if pluginCfg != nil {
@@ -47,14 +48,12 @@ func PluginConfig(pluginCfg config.PluginConfig, cfg *Config, pluginName core.Pl
 
 // DefaultConfig returns new instance of config with default endpoint
 func DefaultConfig() *Config {
-	return &Config{Endpoint: DefaultEndpoint}
+	return &Config{} //endpoint is not set intentionally
 }
 
-// FixConfig fill default values for empty fields
+// FixConfig fill default values for empty fields (does nothing yet)
 func FixConfig(cfg *Config) {
-	if cfg != nil && cfg.Endpoint == "" {
-		cfg.Endpoint = DefaultEndpoint
-	}
+
 }
 
 // Config is a configuration for GRPC netListener
@@ -73,8 +72,7 @@ type Config struct {
 
 	// Compression for inbound/outbound messages.
 	// Supported only gzip.
-	Compression string
-
+	//TODO Compression string
 	//TODO TLS/credentials
 }
 
@@ -94,19 +92,12 @@ func (cfg *Config) GetPort() int {
 }
 
 // DeclareGRPCPortFlag declares GRPC port (with usage & default value) a flag for a particular plugin name
-func DeclareGRPCPortFlag(pluginName core.PluginName, defaultPortOpts ...uint) {
-	var defaultPort string
-	if len(defaultPortOpts) > 0 {
-		defaultPort = string(defaultPortOpts[0])
-	} else {
-		defaultPort = DefaultGRPCPort
-	}
-
+func DeclareGRPCPortFlag(pluginName core.PluginName) {
 	plugNameUpper := strings.ToUpper(string(pluginName))
 
 	usage := "Configure Agent' " + plugNameUpper + " net listener (port & timeouts); also set via '" +
 		plugNameUpper + config.EnvSuffix + "' env variable."
-	flag.String(grpcPortFlag(pluginName), defaultPort, usage)
+	flag.String(grpcPortFlag(pluginName), "", usage)
 }
 
 func grpcPortFlag(pluginName core.PluginName) string {

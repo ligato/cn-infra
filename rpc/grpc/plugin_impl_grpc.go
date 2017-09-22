@@ -29,15 +29,7 @@ import (
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/unrolled/render"
 	"google.golang.org/grpc"
-)
-
-const (
-	// DefaultGRPCPort is used during HTTP netListener startup unless different port was configured
-	DefaultGRPCPort = "9111"
-	// DefaultIP 0.0.0.0
-	DefaultIP = "0.0.0.0"
-	// DefaultEndpoint 0.0.0.0:9191
-	DefaultEndpoint = DefaultIP + ":" + DefaultGRPCPort
+	"google.golang.org/grpc/grpclog"
 )
 
 // Plugin maintains the GRPC netListener (see Init, AfterInit, Close methods)
@@ -60,10 +52,10 @@ func FromExisting(server *grpc.Server) *Plugin {
 
 // Deps lists the dependencies of the Rest plugin.
 type Deps struct {
-	Log                 logging.PluginLogger //inject
-	PluginName          core.PluginName      //inject
-	config.PluginConfig                      //inject
-	HTTP                rest.HTTPHandlers    //inject optional
+	Log        logging.PluginLogger //inject
+	PluginName core.PluginName      //inject
+	config.PluginConfig             //inject
+	HTTP       rest.HTTPHandlers    //inject optional
 }
 
 // Init is the plugin entry point called by Agent Core
@@ -78,10 +70,17 @@ func (plugin *Plugin) Init() (err error) {
 
 	if plugin.grpcServer == nil {
 		opts := []grpc.ServerOption{}
+		if plugin.Config.MaxConcurrentStreams > 0 {
+			opts = append(opts, grpc.MaxConcurrentStreams(plugin.Config.MaxConcurrentStreams))
+		}
+		if plugin.Config.MaxMsgSize > 0 {
+			opts = append(opts, grpc.MaxMsgSize(plugin.Config.MaxMsgSize))
+		}
 		//TODO plugin.Config: TLS
 		//opts = append(opts, grpc.Creds(credentials.NewTLS(nil)))
 
 		plugin.grpcServer = grpc.NewServer(opts...)
+		grpclog.SetLogger(plugin.Log.NewLogger("server"))
 	}
 	plugin.grpcServerVal = reflect.ValueOf(plugin.grpcServer)
 

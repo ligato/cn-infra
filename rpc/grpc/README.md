@@ -11,7 +11,7 @@ to handle GRPC requests (see the diagram below) in this sequence:
 3. GRPC server routes GRPC requests to their respective registered handlers
    using the `grpc/Server`.
 
-![http](../../docs/imgs/grpc.png)
+![grpc](../../docs/imgs/grpc.png)
 
 **Configuration**
 
@@ -20,20 +20,11 @@ to handle GRPC requests (see the diagram below) in this sequence:
 
 **Example**
 
-The following example demonstrates the usage of the `GRPC Plugin` plugin
-API:
+The [grpc-server greeter example]*(../../examples/grpc-plugin/grpc-server)
+demonstrates the usage of the `GRPC Plugin` plugin API GetServer():
 ```
-// Register our GRPC request handler:
-GRPC.RegisterService(descriptor, service)
+// Register our GRPC request handler/service using generated RegisterGreeterServer:
+RegisterGreeterServer(plugin.GRPC.Server(), &GreeterService{})
 ```
-
-TODO you can expose GRPC services also through HTTP if you optionally inject GRPC.Dep.HTTP
-
 Once the handler is registered with `GRPC Plugin` and the agent is running, 
-you can use `curl` to verify that it is operating properly:
-```
-$ curl -X GET http://localhost:9191/service/example
-{
-  "Example": "This is an example"
-}
-```
+you can use grpc client to call the service (see [example](../../examples/grpc-plugin/grpc-client))

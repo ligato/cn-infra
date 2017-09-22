@@ -1,7 +1,7 @@
 package main
 
 import (
-	"os"
+	"flag"
 
 	"github.com/ligato/cn-infra/logging/logroot"
 	"golang.org/x/net/context"
@@ -10,11 +10,18 @@ import (
 )
 
 const (
-	address     = "localhost:9111"
-	defaultName = "world"
+	defaultAddress = "localhost:9111"
+	defaultName    = "world"
 )
 
+var address = defaultAddress
+var name = defaultName
+
 func main() {
+	flag.StringVar(&address, "address", defaultAddress, "address of GRPC server")
+	flag.StringVar(&name, "name", defaultName, "name used in GRPC request")
+	flag.Parse()
+
 	// Set up a connection to the server.
 	conn, err := grpc.Dial(address, grpc.WithInsecure())
 	if err != nil {
@@ -23,14 +30,9 @@ func main() {
 	defer conn.Close()
 	c := pb.NewGreeterClient(conn)
 
-	// Contact the server and print out its response.
-	name := defaultName
-	if len(os.Args) > 1 {
-		name = os.Args[1]
-	}
 	r, err := c.SayHello(context.Background(), &pb.HelloRequest{Name: name})
 	if err != nil {
 		logroot.StandardLogger().Fatalf("could not greet: %v", err)
 	}
-	logroot.StandardLogger().Printf("Greeting: %s", r.Message)
+	logroot.StandardLogger().Printf("Greeting: %s (received from server)", r.Message)
 }

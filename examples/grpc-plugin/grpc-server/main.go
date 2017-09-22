@@ -42,6 +42,8 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	return nil
 }
 
+// GreeterService implements GRPC GreeterServer interface (interface generated from protobuf definition file).
+// It is a simple implementation for testing/demo only purposes.
 type GreeterService struct{}
 
 // SayHello returns error if request.name was not filled otherwise: "hello " + request.Name
