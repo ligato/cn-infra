@@ -205,9 +205,8 @@ func intelligentOperator(emptyOperator *PrefixedExp, inside ...Expression) Expre
 func Field(pointerToAField interface{}, rigthOperand ...Expression) (exp Expression) {
 	if len(rigthOperand) == 0 {
 		return &FieldExpression{pointerToAField, nil}
-	} else {
-		return &FieldExpression{pointerToAField, rigthOperand[0]}
 	}
+	return &FieldExpression{pointerToAField, rigthOperand[0]}
 }
 
 // FieldEQ is combination of Field & EQ on same pointerToAField
