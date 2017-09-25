@@ -17,6 +17,7 @@ package probe
 import (
 	"net/http"
 
+	"github.com/ligato/cn-infra/health/statuscheck/model/status"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/unrolled/render"
@@ -112,10 +113,12 @@ func (p *PrometheusPlugin) AfterInit() error {
 		p.Log.Info("Unable to register Prometheus metrics handlers, HTTP is nil")
 	}
 
+	//TODO: Need improvement - instead of the exposing the map directly need to use in-memory mapping
 	if p.PluginStatusCheck != nil {
 		if p.PluginStatusCheck.GetAllPluginStatus() != nil {
 			allPluginStatusMap := p.PluginStatusCheck.GetAllPluginStatus()
 			for k, v := range allPluginStatusMap {
+				p.Log.Infof("k=%v, v=%v, state=%v", k, v, v.State)
 				p.registerGauge(
 					Namespace,
 					Subsystem,
@@ -125,9 +128,7 @@ func (p *PrometheusPlugin) AfterInit() error {
 						ServiceLabel:    p.getServiceLabel(),
 						DependencyLabel: k,
 					},
-					func() float64 {
-						return float64(v.State)
-					},
+					p.getDependencyHealth(k, v),
 				)
 			}
 		} else {
@@ -136,6 +137,40 @@ func (p *PrometheusPlugin) AfterInit() error {
 	} else {
 		p.Log.Error("PluginStatusCheck is nil")
 	}
+
+	/*if p.PluginStatusCheck != nil {
+		if p.PluginStatusCheck.GetPluginStatusMap() != nil {
+			pluginStatusIdx := p.PluginStatusCheck.GetPluginStatusMap()
+			allPluginNames := pluginStatusIdx.GetMapping().ListAllNames()
+			for _, v := range allPluginNames {
+				p.registerGauge(
+					Namespace,
+					Subsystem,
+					DependencyHealthName,
+					DependencyHealthHelp,
+					prometheus.Labels{
+						ServiceLabel:    agentName,
+						DependencyLabel: v,
+					},
+					func() float64 {
+						p.Log.Infof("DependencyHealth for Plugin %v", v)
+						pluginStatus, ok := pluginStatusIdx.GetValue(v)
+						if ok {
+							p.Log.Infof("DependencyHealth: %v", float64(pluginStatus.State))
+							return float64(pluginStatus.State)
+						} else {
+							p.Log.Info("DependencyHealth not found")
+							return float64(-1)
+						}
+					},
+				)
+			}
+		} else {
+			p.Log.Error("Plugin map is nil")
+		}
+	} else {
+		p.Log.Error("PluginStatusCheck is nil")
+	}*/
 
 	return nil
 }
@@ -150,6 +185,7 @@ func (p *PrometheusPlugin) metricsHandler(formatter *render.Render) http.Handler
 	return promhttp.Handler().ServeHTTP
 }
 
+// getServiceHealth returns agent health status
 func (p *PrometheusPlugin) getServiceHealth() float64 {
 	agentStatus := p.StatusCheck.GetAgentStatus()
 	// Adapt Ligato status code for now.
@@ -157,6 +193,18 @@ func (p *PrometheusPlugin) getServiceHealth() float64 {
 	health := float64(agentStatus.State)
 	p.Log.Infof("ServiceHealth: %v", health)
 	return health
+}
+
+// getDependencyHealth returns plugin health status
+func (p *PrometheusPlugin) getDependencyHealth(pluginName string, pluginStatus *status.PluginStatus) func() float64 {
+	p.Log.Infof("DependencyHealth for plugin %v: %v", pluginName, float64(pluginStatus.State))
+
+	return func() float64 {
+		health := float64(pluginStatus.State)
+		depName := pluginName
+		p.Log.Infof("Dependency Health %v: %v", depName, health)
+		return health
+	}
 }
 
 // RegisterGauge registers custom gauge with specific valueFunc to report status when invoked.
