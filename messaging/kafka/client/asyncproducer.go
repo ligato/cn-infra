@@ -25,7 +25,7 @@ import (
 )
 
 // AsyncProducer allows to publish message to kafka using asynchronous API.
-// The message using SendMsg and SendMsgByte function returns do not block.
+// The message using SendMsgToPartition and SendMsgByte function returns do not block.
 // The status whether message was sent successfully or not is delivered using channels
 // specified in config structure.
 type AsyncProducer struct {
@@ -118,14 +118,19 @@ func (ref *AsyncProducer) SendMsgByte(topic string, key []byte, msg []byte, meta
 	// generate key if none supplied - used by Hash partitioner
 	if key == nil || len(key) == 0 {
 		md5Sum := fmt.Sprintf("%x", md5.Sum(msg))
-		ref.SendMsg(topic, ref.Partition, sarama.ByteEncoder([]byte(md5Sum)), sarama.ByteEncoder(msg), metadata)
+		ref.SendMsgToPartition(topic, ref.Partition, sarama.ByteEncoder([]byte(md5Sum)), sarama.ByteEncoder(msg), metadata)
 		return
 	}
-	ref.SendMsg(topic, ref.Partition, sarama.ByteEncoder(key), sarama.ByteEncoder(msg), metadata)
+	ref.SendMsgToPartition(topic, ref.Partition, sarama.ByteEncoder(key), sarama.ByteEncoder(msg), metadata)
 }
 
-// SendMsg sends an async message to Kafka
-func (ref *AsyncProducer) SendMsg(topic string, partition int32, key Encoder, msg Encoder, metadata interface{}) {
+// SendMsg sends a message to Kafka using default partition
+func (ref *AsyncProducer) SendMsg(topic string, key sarama.Encoder, msg sarama.Encoder, metadata interface{}) {
+	ref.SendMsgToPartition(topic, ref.Partition, key, msg, metadata)
+}
+
+// SendMsgToPartition sends an async message to Kafka
+func (ref *AsyncProducer) SendMsgToPartition(topic string, partition int32, key Encoder, msg Encoder, metadata interface{}) {
 	if msg == nil {
 		return
 	}

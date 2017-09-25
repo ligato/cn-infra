@@ -198,12 +198,19 @@ stopKafka
 
 startCustomizedKafka examples/kafka-plugin/manual-partitioner/server.properties
 
-expected=("Received async Kafka Message, topic 'example-async-topic', partition '2', offset '0', key: 'async-proto-key'
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '5', key: 'proto-key'
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '6', key: 'proto-key'
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '7', key: 'proto-key'
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '8', key: 'proto-key'
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '9', key: 'proto-key'
+expected=("Sending 10 sync Kafka notifications
+Sending 10 async Kafka notifications
+Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '5', key: 'proto-key',
+Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '6', key: 'proto-key',
+Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '7', key: 'proto-key',
+Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '8', key: 'proto-key',
+Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '9', key: 'proto-key',
+Received async Kafka Message, topic 'example-async-topic', partition '2', offset '5', key: 'async-proto-key',
+Received async Kafka Message, topic 'example-async-topic', partition '2', offset '6', key: 'async-proto-key',
+Received async Kafka Message, topic 'example-async-topic', partition '2', offset '7', key: 'async-proto-key',
+Received async Kafka Message, topic 'example-async-topic', partition '2', offset '8', key: 'async-proto-key',
+Received async Kafka Message, topic 'example-async-topic', partition '2', offset '9', key: 'async-proto-key',
+Async message successfully delivered, topic 'example-async-topic'
 ")
 
 cmd="examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf"
@@ -215,11 +222,11 @@ stopKafka
 
 startKafka
 
-expected=("Sync proto message sent
-Async proto message sent
-Received async Kafka Message, topic 'example-topic', partition '0', offset '1', key: 'async-proto-key'
-Received Kafka Message, topic 'example-topic', partition '0', offset '0', key: 'proto-key'
-Received Kafka Message, topic 'example-topic', partition '0', offset '1', key: 'async-proto-key'
+expected=("Sending 10 sync Kafka notifications
+Sending 10 async Kafka notifications
+Received Kafka Message, topic 'example-sync-topic'
+Async message successfully delivered, topic 'example-async-topic'
+Received async Kafka Message, topic 'example-async-topic'
 ")
 
 cmd="examples/kafka-plugin/hash-partitioner/hash-partitioner --kafka-config examples/kafka-plugin/hash-partitioner/kafka.conf"

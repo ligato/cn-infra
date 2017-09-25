@@ -138,18 +138,18 @@ func (conn *BytesConnection) StopConsumingPartition(topic string, partition int3
 }
 
 // SendSyncByte sends a message that uses byte encoder using the sync API
-func (conn *BytesConnection) SendSyncByte(topic string, partition int32, key []byte, value []byte) (offset int64, err error) {
-	return conn.SendSyncMessage(topic, partition, sarama.ByteEncoder(key), sarama.ByteEncoder(value))
+func (conn *BytesConnection) SendSyncByte(topic string, key []byte, value []byte) (offset int64, err error) {
+	return conn.SendSyncMessage(topic, sarama.ByteEncoder(key), sarama.ByteEncoder(value))
 }
 
 // SendSyncString sends a message that uses string encoder using the sync API
-func (conn *BytesConnection) SendSyncString(topic string, partition int32, key string, value string) (offset int64, err error) {
-	return conn.SendSyncMessage(topic, partition, sarama.StringEncoder(key), sarama.StringEncoder(value))
+func (conn *BytesConnection) SendSyncString(topic string, key string, value string) (offset int64, err error) {
+	return conn.SendSyncMessage(topic, sarama.StringEncoder(key), sarama.StringEncoder(value))
 }
 
 //SendSyncMessage sends a message using the sync API and default partitioner
-func (conn *BytesConnection) SendSyncMessage(topic string, partition int32, key client.Encoder, value client.Encoder) (offset int64, err error) {
-	msg, err := conn.multiplexer.hashSyncProducer.SendMsg(topic, partition, key, value)
+func (conn *BytesConnection) SendSyncMessage(topic string, key client.Encoder, value client.Encoder) (offset int64, err error) {
+	msg, err := conn.multiplexer.hashSyncProducer.SendMsg(topic, key, value)
 	if err != nil {
 		return 0, err
 	}
@@ -157,19 +157,19 @@ func (conn *BytesConnection) SendSyncMessage(topic string, partition int32, key 
 }
 
 // SendAsyncByte sends a message that uses byte encoder using the async API
-func (conn *BytesConnection) SendAsyncByte(topic string, partition int32, key []byte, value []byte, meta interface{}, successClb func(*client.ProducerMessage), errClb func(*client.ProducerError)) {
-	conn.SendAsyncMessage(topic, partition, sarama.ByteEncoder(key), sarama.ByteEncoder(value), meta, successClb, errClb)
+func (conn *BytesConnection) SendAsyncByte(topic string, key []byte, value []byte, meta interface{}, successClb func(*client.ProducerMessage), errClb func(*client.ProducerError)) {
+	conn.SendAsyncMessage(topic, sarama.ByteEncoder(key), sarama.ByteEncoder(value), meta, successClb, errClb)
 }
 
 // SendAsyncString sends a message that uses string encoder using the async API
-func (conn *BytesConnection) SendAsyncString(topic string, partition int32, key string, value string, meta interface{}, successClb func(*client.ProducerMessage), errClb func(*client.ProducerError)) {
-	conn.SendAsyncMessage(topic, partition, sarama.StringEncoder(key), sarama.StringEncoder(value), meta, successClb, errClb)
+func (conn *BytesConnection) SendAsyncString(topic string, key string, value string, meta interface{}, successClb func(*client.ProducerMessage), errClb func(*client.ProducerError)) {
+	conn.SendAsyncMessage(topic, sarama.StringEncoder(key), sarama.StringEncoder(value), meta, successClb, errClb)
 }
 
 // SendAsyncMessage sends a message using the async API and default partitioner
-func (conn *BytesConnection) SendAsyncMessage(topic string, partition int32, key client.Encoder, value client.Encoder, meta interface{}, successClb func(*client.ProducerMessage), errClb func(*client.ProducerError)) {
+func (conn *BytesConnection) SendAsyncMessage(topic string, key client.Encoder, value client.Encoder, meta interface{}, successClb func(*client.ProducerMessage), errClb func(*client.ProducerError)) {
 	auxMeta := &asyncMeta{successClb: successClb, errorClb: errClb, usersMeta: meta}
-	conn.multiplexer.hashAsyncProducer.SendMsg(topic, partition, key, value, auxMeta)
+	conn.multiplexer.hashAsyncProducer.SendMsg(topic, key, value, auxMeta)
 }
 
 // NewSyncPublisher creates a new instance of bytesSyncPublisherKafka that allows to publish sync kafka messages using common messaging API
@@ -184,7 +184,7 @@ func (conn *BytesConnection) NewSyncPublisherToPartition(topic string, partition
 
 // Put publishes a message into kafka
 func (p *bytesSyncPublisherKafka) Publish(key string, data []byte) error {
-	_, err := p.conn.SendSyncByte(p.topic, p.partition, []byte(key), data)
+	_, err := p.conn.SendSyncByte(p.topic, []byte(key), data)
 	return err
 }
 
@@ -200,6 +200,6 @@ func (conn *BytesConnection) NewAsyncPublisherToPartition(topic string, partitio
 
 // Put publishes a message into kafka
 func (p *bytesAsyncPublisherKafka) Publish(key string, data []byte) error {
-	p.conn.SendAsyncMessage(p.topic, p.partition, sarama.StringEncoder(key), sarama.ByteEncoder(data), nil, p.succCallback, p.errCallback)
+	p.conn.SendAsyncMessage(p.topic, sarama.StringEncoder(key), sarama.ByteEncoder(data), nil, p.succCallback, p.errCallback)
 	return nil
 }

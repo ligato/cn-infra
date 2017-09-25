@@ -298,13 +298,13 @@ func (conn *ProtoConnectionFields) sendSyncMessage(topic string, partition int32
 	}
 
 	if manualMode {
-		msg, err := conn.multiplexer.manSyncProducer.SendMsg(topic, partition, sarama.StringEncoder(key), sarama.ByteEncoder(data))
+		msg, err := conn.multiplexer.manSyncProducer.SendMsgToPartition(topic, partition, sarama.StringEncoder(key), sarama.ByteEncoder(data))
 		if err != nil {
 			return 0, err
 		}
 		return msg.Offset, err
 	}
-	msg, err := conn.multiplexer.hashSyncProducer.SendMsg(topic, partition, sarama.StringEncoder(key), sarama.ByteEncoder(data))
+	msg, err := conn.multiplexer.hashSyncProducer.SendMsgToPartition(topic, partition, sarama.StringEncoder(key), sarama.ByteEncoder(data))
 	if err != nil {
 		return 0, err
 	}
@@ -339,10 +339,10 @@ func (conn *ProtoConnectionFields) sendAsyncMessage(topic string, partition int3
 
 	if manualMode {
 		auxMeta := &asyncMeta{successClb: succByteClb, errorClb: errByteClb, usersMeta: meta}
-		conn.multiplexer.hashAsyncProducer.SendMsg(topic, partition, sarama.StringEncoder(key), sarama.ByteEncoder(data), auxMeta)
+		conn.multiplexer.hashAsyncProducer.SendMsgToPartition(topic, partition, sarama.StringEncoder(key), sarama.ByteEncoder(data), auxMeta)
 		return nil
 	}
 	auxMeta := &asyncMeta{successClb: succByteClb, errorClb: errByteClb, usersMeta: meta}
-	conn.multiplexer.manAsyncProducer.SendMsg(topic, partition, sarama.StringEncoder(key), sarama.ByteEncoder(data), auxMeta)
+	conn.multiplexer.manAsyncProducer.SendMsgToPartition(topic, partition, sarama.StringEncoder(key), sarama.ByteEncoder(data), auxMeta)
 	return nil
 }
