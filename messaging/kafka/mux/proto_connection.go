@@ -7,9 +7,9 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/messaging"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
-	"github.com/ligato/cn-infra/logging"
 )
 
 // Connection is interface for multiplexer with dynamic partitioner.

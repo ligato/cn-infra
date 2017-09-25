@@ -58,7 +58,7 @@ func getConsumerFactory(config *client.Config) ConsumerFactory {
 // InitMultiplexer initialize and returns new kafka multiplexer based on the supplied config file.
 // Name is used as groupId identification of consumer. Kafka allows to store last read offset for
 // a groupId. This is leveraged to deliver unread messages after restart.
-func InitMultiplexer(configFile string, name string, partitioner string, log logging.Logger) (*Multiplexer, error) {
+func InitMultiplexer(configFile string, name string, log logging.Logger) (*Multiplexer, error) {
 	var err error
 	cfg := &Config{[]string{DefAddress}}
 	if configFile != "" {
@@ -75,16 +75,21 @@ func InitMultiplexer(configFile string, name string, partitioner string, log log
 	clientCfg.SetSendError(true)
 	clientCfg.SetErrorChan(make(chan *client.ProducerError))
 	clientCfg.SetBrokers(cfg.Addrs...)
-	clientCfg.SetPartitioner(partitioner)
 
-	// create client
-	sClient, err := client.NewClient(clientCfg, partitioner)
+	// create hash client
+	sClientHash, err := client.NewClient(clientCfg, client.Hash)
+	if err != nil {
+		return nil, err
+	}
+
+	// create manual client
+	sClientManual, err := client.NewClient(clientCfg, client.Manual)
 	if err != nil {
 		return nil, err
 	}
 
 	// todo client is currently set always as hash
-	return InitMultiplexerWithConfig(clientCfg, sClient, nil, name, log)
+	return InitMultiplexerWithConfig(clientCfg, sClientHash, sClientManual, name, log)
 }
 
 // InitMultiplexerWithConfig initialize and returns new kafka multiplexer based on the supplied mux configuration.
@@ -138,6 +143,6 @@ func InitMultiplexerWithConfig(clientCfg *client.Config, hsClient sarama.Client,
 
 	kafkaConnect := time.Since(startTime)
 	log.WithField("durationInNs", kafkaConnect.Nanoseconds()).Info("Connecting to kafka took ", kafkaConnect)
-	
+
 	return NewMultiplexer(getConsumerFactory(clientCfg), sConsumer, producers, hsClient, manClient, clientCfg, name, log), nil
 }

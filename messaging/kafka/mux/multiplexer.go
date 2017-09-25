@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/Shopify/sarama"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/utils/safeclose"
-	"github.com/Shopify/sarama"
 )
 
 // Multiplexer encapsulates clients to kafka cluster (SyncProducer, AsyncProducer (both of them
@@ -84,6 +84,7 @@ type asyncMeta struct {
 	errorClb   func(error *client.ProducerError)
 	usersMeta  interface{}
 }
+
 // multiplexerProducers groups all mux producers
 type multiplexerProducers struct {
 	// hashSyncProducer with hash partitioner used by the Multiplexer
@@ -100,15 +101,15 @@ type multiplexerProducers struct {
 func NewMultiplexer(consumerFactory ConsumerFactory, sConsumer sarama.Consumer, producers multiplexerProducers, hsClient sarama.Client,
 	manClient sarama.Client, clientCfg *client.Config, name string, log logging.Logger) *Multiplexer {
 	cl := &Multiplexer{consumerFactory: consumerFactory,
-		Logger:        log,
-		sConsumer:	   sConsumer,
-		name:          name,
-		mapping:       []*consumerSubscription{},
-		closeCh:       make(chan struct{}),
-		hsClient:      hsClient,
-		manClient:     manClient,
+		Logger:               log,
+		sConsumer:            sConsumer,
+		name:                 name,
+		mapping:              []*consumerSubscription{},
+		closeCh:              make(chan struct{}),
+		hsClient:             hsClient,
+		manClient:            manClient,
 		multiplexerProducers: producers,
-		config:	       clientCfg,
+		config:               clientCfg,
 	}
 
 	go cl.watchAsyncProducerChannels()

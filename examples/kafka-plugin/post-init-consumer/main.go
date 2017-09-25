@@ -32,14 +32,14 @@ func main() {
 type ExamplePlugin struct {
 	Deps // plugin dependencies are injected
 
-	subscription        chan (messaging.ProtoMessage)
-	kafkaSyncPublisher  messaging.ProtoPublisher
-	kafkaWatcher        messaging.ProtoPartitionWatcher
+	subscription       chan (messaging.ProtoMessage)
+	kafkaSyncPublisher messaging.ProtoPublisher
+	kafkaWatcher       messaging.ProtoPartitionWatcher
 	// Fields below are used to properly finish the example.
-	initialized	  bool // auxiliary flag that marks plugin as initialized
-	messagesSent  bool
-	syncCaseDone  bool
-	closeChannel  *chan struct{}
+	initialized  bool // auxiliary flag that marks plugin as initialized
+	messagesSent bool
+	syncCaseDone bool
+	closeChannel *chan struct{}
 }
 
 const (
@@ -53,7 +53,7 @@ const (
 
 // Topics
 const (
-	topic1 = "example-sync-topic"
+	topic1     = "example-sync-topic"
 	connection = "example-proto-connection"
 )
 
@@ -89,7 +89,7 @@ func (plugin *ExamplePlugin) Init() (err error) {
 func (plugin *ExamplePlugin) closeExample() {
 	for {
 		if plugin.syncCaseDone && plugin.messagesSent {
-			time.Sleep(2*time.Second)
+			time.Sleep(2 * time.Second)
 			plugin.Log.Info("kafka example finished, sending shutdown ...")
 			*plugin.closeChannel <- struct{}{}
 			break
@@ -146,7 +146,7 @@ func (plugin *ExamplePlugin) syncEventHandler() {
 		continue
 	}
 
-	time.Sleep(1*time.Second)
+	time.Sleep(1 * time.Second)
 
 	// Initialize sync watcher.
 	plugin.kafkaWatcher = plugin.Kafka.NewPartitionWatcher("example-part-watcher")

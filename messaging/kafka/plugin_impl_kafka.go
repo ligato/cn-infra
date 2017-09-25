@@ -15,6 +15,7 @@
 package kafka
 
 import (
+	"fmt"
 	"github.com/Shopify/sarama"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/flavors/local"
@@ -24,7 +25,6 @@ import (
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/messaging/kafka/mux"
 	"github.com/ligato/cn-infra/utils/safeclose"
-	"fmt"
 )
 
 const topic = "status-check"
@@ -32,12 +32,12 @@ const topic = "status-check"
 // Plugin provides API for interaction with kafka brokers.
 type Plugin struct {
 	Deps         // inject
-	mux       *mux.Multiplexer
+	mux          *mux.Multiplexer
 	subscription chan (*client.ConsumerMessage)
 
 	// Kafka plugin is using two clients. The first one is using 'hash' (default) partitioner. The second mux
 	// uses manual partitioner which allows to send a message to specified partition and watching to desired partition/offset
-	hsClient sarama.Client
+	hsClient  sarama.Client
 	manClient sarama.Client
 
 	disabled bool

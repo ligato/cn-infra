@@ -184,7 +184,7 @@ func (conn *BytesConnection) SendAsyncMessage(topic string, key client.Encoder, 
 // SendAsyncMessageToPartition sends a message using the async API and default partitioner
 func (conn *BytesConnection) SendAsyncMessageToPartition(topic string, partition int32, key client.Encoder, value client.Encoder, meta interface{}, successClb func(*client.ProducerMessage), errClb func(*client.ProducerError)) {
 	auxMeta := &asyncMeta{successClb: successClb, errorClb: errClb, usersMeta: meta}
-	conn.multiplexer.manAsyncProducer.SendMsgToPartition(topic, partition,  key, value, auxMeta)
+	conn.multiplexer.manAsyncProducer.SendMsgToPartition(topic, partition, key, value, auxMeta)
 }
 
 // NewSyncPublisher creates a new instance of bytesSyncPublisherKafka that allows to publish sync kafka messages using common messaging API
