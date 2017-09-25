@@ -113,7 +113,7 @@ func NewMultiplexer(consumerFactory ConsumerFactory, sConsumer sarama.Consumer, 
 	}
 
 	go cl.watchAsyncProducerChannels()
-	if producers.manSyncProducer != nil && producers.manAsyncProducer != nil {
+	if producers.manAsyncProducer != nil && producers.manAsyncProducer.Config != nil {
 		go cl.watchManualAsyncProducerChannels()
 	}
 	return cl

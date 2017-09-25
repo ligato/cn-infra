@@ -234,29 +234,6 @@ testOutput "${cmd}" "${expected}"
 
 stopKafka
 
-#### Kafka-plugin post-init-consumer #######################################
-
-startKafka
-
-expected=("Starting 'post-init' manual Consumer
-Sending 10 Kafka notifications
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '0', key: 'proto-key',
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '1', key: 'proto-key',
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '2', key: 'proto-key',
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '3', key: 'proto-key',
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '4', key: 'proto-key',
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '5', key: 'proto-key',
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '6', key: 'proto-key',
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '7', key: 'proto-key',
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '8', key: 'proto-key',
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '9', key: 'proto-key',
-")
-
-cmd="examples/kafka-plugin/hash-partitioner/hash-partitioner --kafka-config examples/kafka-plugin/hash-partitioner/kafka.conf"
-testOutput "${cmd}" "${expected}"
-
-stopKafka
-
 #### Logs-lib ############################################################
 
 expected=("Started observing beach

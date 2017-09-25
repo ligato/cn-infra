@@ -63,7 +63,7 @@ func (plugin *Plugin) Init() (err error) {
 	muxCfg := &mux.Config{}
 	found, err := plugin.PluginConfig.GetValue(muxCfg)
 	if !found {
-		plugin.Log.Info("kafka muxCfg not found ", plugin.PluginConfig.GetConfigName(), " - skip loading this plugin")
+		plugin.Log.Info("kafka config not found ", plugin.PluginConfig.GetConfigName(), " - skip loading this plugin")
 		plugin.disabled = true
 		return nil //skip loading the plugin
 	}
