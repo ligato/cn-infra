@@ -42,6 +42,10 @@
   * More than one network connection to Kafka (multiple instances of MUX)
   * TODO Minimalistic examples & documentation for Kafka API will be improved in a later release.
 
+## Flavors
+* optionally GPRC server can be enabled in [rpc flavor](flavors/rpc) using --grpc-port=9111 (or using config gprc.conf)
+* [Flavor interface](core/list_flavor_plugin.go) now contains three methods: Plugins(), Inject(), LogRegistry() to standardize these methods over all flavors. Note, LogRegistry() is usually embedded using local flavor.
+
 # Release v1.0.3 (2017-09-08)
 * [FlavorAllConnectors](flavors/connectors)
     * Inlined plugins: ETCD, Kafka, Redis, Cassandra 
