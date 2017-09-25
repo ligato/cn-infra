@@ -1,4 +1,4 @@
-# Release v1.0.4 (NOT RELEASED)
+# Release v1.0.4 (2017-9-25)
 
 ## Documentation
 * Improved documentation of public APIs (comments)
@@ -36,8 +36,12 @@
   from the ProtoWatcher interface and added to newly created ProtoPartitionWatcher. There is also a new 
   method under Mux interface - NewPartitionWatcher(subscriber) which returns ProtoPartitionWatcher
   instance that allows to call partition-related methods
+* Offset mark is done for hash/default-partitioned messages only. Manually partitioned message's offset 
+  is not marked.
+* It is possible to start kafka consumer on partition after kafka plugin initialization procedure. New
+  example [post-init-consumer](examples/kafka-plugin/post-init-consumer) was created to show the 
+  functionality     
 * fixes inside Mux.NewSyncPublisher() & Mux.NewAsyncPublisher() related to previous partition changes
-* TODO offset improvements
 * Known Issues:
   * More than one network connection to Kafka (multiple instances of MUX)
   * TODO Minimalistic examples & documentation for Kafka API will be improved in a later release.
