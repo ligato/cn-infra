@@ -157,7 +157,7 @@ func TestSendSync(t *testing.T) {
 	gomega.Expect(err).To(gomega.BeNil())
 
 	mock.SyncPub.ExpectSendMessageAndSucceed()
-	_, err = c1.SendSyncMessage("topic", DefPartition, sarama.ByteEncoder([]byte("key")), sarama.ByteEncoder([]byte("value")))
+	_, err = c1.SendSyncMessage("topic", sarama.ByteEncoder([]byte("key")), sarama.ByteEncoder([]byte("value")))
 	gomega.Expect(err).To(gomega.BeNil())
 
 	publisher, err := c1.NewSyncPublisher("test")
@@ -209,7 +209,7 @@ func TestSendAsync(t *testing.T) {
 	c1.SendAsyncString("topic", DefPartition, "key", "value", nil, nil, nil)
 
 	mock.AsyncPub.ExpectInputAndSucceed()
-	c1.SendAsyncMessage("topic", DefPartition, sarama.ByteEncoder([]byte("key")), sarama.ByteEncoder([]byte("value")), nil, nil, nil)
+	c1.SendAsyncMessage("topic", sarama.ByteEncoder([]byte("key")), sarama.ByteEncoder([]byte("value")), nil, nil, nil)
 
 	publisher, err := c1.NewAsyncPublisher("test", nil, nil)
 	gomega.Expect(err).To(gomega.BeNil())
@@ -234,7 +234,7 @@ func TestSendAsyncToCustomPartition(t *testing.T) {
 	c1.SendAsyncString("topic", 1, "key", "value", nil, nil, nil)
 
 	mock.AsyncPub.ExpectInputAndSucceed()
-	c1.SendAsyncMessage("topic", 2, sarama.ByteEncoder([]byte("key")), sarama.ByteEncoder([]byte("value")), nil, nil, nil)
+	c1.SendAsyncMessageToPartition("topic", 2, sarama.ByteEncoder([]byte("key")), sarama.ByteEncoder([]byte("value")), nil, nil, nil)
 
 	publisher, err := c1.NewAsyncPublisher("test", nil, nil)
 	gomega.Expect(err).To(gomega.BeNil())
