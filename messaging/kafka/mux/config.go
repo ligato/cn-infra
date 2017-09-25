@@ -24,9 +24,9 @@ type Config struct {
 	Addrs []string `json:"addrs"`
 }
 
-// ConsumerFactory produces a consumer for the selected topics in a specified consumer group.
-// The reason why a function(factory) is passed to Multiplexer instead of consumer instance is
-// that list of topics to be consumed has to be known on consumer initialization.
+// ConsumerFactory produces a Consumer for the selected topics in a specified Consumer group.
+// The reason why a function(factory) is passed to Multiplexer instead of Consumer instance is
+// that list of topics to be consumed has to be known on Consumer initialization.
 // Multiplexer calls the function once the list of topics to be consumed is selected.
 type ConsumerFactory func(topics []string, groupId string) (*client.Consumer, error)
 
@@ -50,13 +50,13 @@ func getConsumerFactory(config *client.Config) ConsumerFactory {
 		config.GroupID = groupId
 		config.SetInitialOffset(sarama.OffsetOldest)
 
-		// create new consumer and start message handlers
+		// create new Consumer and start message handlers
 		return client.NewConsumer(config, true, nil)
 	}
 }
 
 // InitMultiplexer initialize and returns new kafka multiplexer based on the supplied config file.
-// Name is used as groupId identification of consumer. Kafka allows to store last read offset for
+// Name is used as groupId identification of Consumer. Kafka allows to store last read offset for
 // a groupId. This is leveraged to deliver unread messages after restart.
 func InitMultiplexer(configFile string, name string, partitioner string, log logging.Logger) (*Multiplexer, error) {
 	var err error
@@ -88,7 +88,7 @@ func InitMultiplexer(configFile string, name string, partitioner string, log log
 }
 
 // InitMultiplexerWithConfig initialize and returns new kafka multiplexer based on the supplied mux configuration.
-// Name is used as groupId identification of consumer. Kafka allows to store last read offset for a groupId.
+// Name is used as groupId identification of Consumer. Kafka allows to store last read offset for a groupId.
 // This is leveraged to deliver unread messages after restart.
 func InitMultiplexerWithConfig(clientCfg *client.Config, hsClient sarama.Client, manClient sarama.Client, name string, log logging.Logger) (*Multiplexer, error) {
 	const errorFmt = "Failed to create Kafka %s, Configured broker(s) %v, Error: '%s'"
@@ -129,7 +129,7 @@ func InitMultiplexerWithConfig(clientCfg *client.Config, hsClient sarama.Client,
 		}
 		producers.manSyncProducer = manualSyncProducer
 		producers.manAsyncProducer = manualAsyncProducer
-		// create sarama consumer from manual client and store it in mux. It can be used later to create post-init consumers
+		// create sarama Consumer from manual client and store it in mux. It can be used later to create post-init consumers
 		sConsumer, err = sarama.NewConsumerFromClient(manClient)
 		if err != nil {
 			return nil, err

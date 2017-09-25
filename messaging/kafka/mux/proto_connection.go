@@ -207,20 +207,20 @@ func (conn *ProtoManualConnection) ConsumePartition(msgClb func(messaging.ProtoM
 	subs.byteConsMsg = byteClb
 
 	if conn.multiplexer.started {
-		conn.multiplexer.Infof("Starting 'post-init' manual consumer")
+		conn.multiplexer.Infof("Starting 'post-init' manual Consumer")
 		return conn.StartPostInitConsumer(msgClb, topic, partition, offset)
 	}
 
 	return nil
 }
 
-// StartPostInitConsumer allows to start a new partition consumer after mux is initialized
+// StartPostInitConsumer allows to start a new partition Consumer after mux is initialized
 func (conn *ProtoConnectionFields) StartPostInitConsumer(msgClb func(messaging.ProtoMessage), topic string, partition int32, offset int64) error {
 	multiplexer := conn.multiplexer
 	multiplexer.WithFields(logging.Fields{"topic": topic}).Debugf("Post-init consuming started")
 
 	if multiplexer.sConsumer == nil {
-		multiplexer.Warn("Unable to start post-init consumer, client not available on the mux")
+		multiplexer.Warn("Unable to start post-init Consumer, client not available on the mux")
 		return nil
 	}
 
@@ -229,20 +229,20 @@ func (conn *ProtoConnectionFields) StartPostInitConsumer(msgClb func(messaging.P
 	if err != nil {
 		return err
 	}
-	// Create client consumer but do not allow to start message handlers
+	// Create client Consumer but do not allow to start message handlers
 	consumer, err := client.NewConsumer(multiplexer.config, false, nil)
 	if err != nil {
 		return err
 	}
 
-	// store newly created consumer in mux, so it can be closed properly
+	// store newly created Consumer in mux, so it can be closed properly
 	multiplexer.postInitConsumers = append(multiplexer.postInitConsumers, consumer)
 
 	// Start message handler
 	go consumer.MessageHandler(partitionConsumer.Messages())
 	// Start error handler
 	go consumer.ConsumerErrorHandler(partitionConsumer.Errors())
-	// Start consumer
+	// Start Consumer
 	go conn.multiplexer.laterStageConsumer(consumer)
 
 	return nil

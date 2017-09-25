@@ -24,6 +24,7 @@ import (
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/messaging/kafka/mux"
 	"github.com/ligato/cn-infra/utils/safeclose"
+	"fmt"
 )
 
 const topic = "status-check"
@@ -38,8 +39,6 @@ type Plugin struct {
 	// uses manual partitioner which allows to send a message to specified partition and watching to desired partition/offset
 	hsClient sarama.Client
 	manClient sarama.Client
-
-	consumer *client.Consumer
 
 	disabled bool
 }
@@ -86,12 +85,6 @@ func (plugin *Plugin) Init() (err error) {
 		return err
 	}
 
-	// init bsm/sarama consumer
-	plugin.consumer, err = client.NewConsumer(clientCfg, true,nil)
-	if err != nil {
-		return err
-	}
-
 	// Initialize both multiplexers to allow both, dynamic and manual mode
 	if plugin.mux == nil {
 		name := plugin.ServiceLabel.GetAgentLabel() + "-hash"
@@ -116,8 +109,11 @@ func (plugin *Plugin) AfterInit() error {
 	}
 
 	// Register for providing status reports (polling mode)
-	if plugin.StatusCheck != nil {
+	if plugin.StatusCheck != nil && !plugin.disabled {
 		plugin.StatusCheck.Register(plugin.PluginName, func() (statuscheck.PluginState, error) {
+			if plugin.mux.Consumer == nil || plugin.mux.Consumer.Client == nil {
+				return statuscheck.Error, fmt.Errorf("kafka client/consumer not initialized")
+			}
 			// Method 'RefreshMetadata()' returns error if kafka server is unavailable
 			err := plugin.hsClient.RefreshMetadata(topic)
 			if err == nil {
@@ -135,7 +131,7 @@ func (plugin *Plugin) AfterInit() error {
 
 // Close is called at plugin cleanup phase.
 func (plugin *Plugin) Close() error {
-	_, err := safeclose.CloseAll(plugin.consumer, plugin.hsClient, plugin.manClient, plugin.mux)
+	_, err := safeclose.CloseAll(plugin.hsClient, plugin.manClient, plugin.mux)
 	return err
 }
 

@@ -70,7 +70,7 @@ var (
 	// Offset for sync messages watcher
 	messageOffset int64 = 5
 	// How many messages will be sent
-	messageCountNum int = 10
+	messageCountNum = 10
 )
 
 // Topics

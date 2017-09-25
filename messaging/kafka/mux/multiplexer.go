@@ -12,11 +12,11 @@ import (
 )
 
 // Multiplexer encapsulates clients to kafka cluster (SyncProducer, AsyncProducer (both of them
-// with 'hash' and 'manual' partitioner), consumer). It allows to create multiple Connections
+// with 'hash' and 'manual' partitioner), Consumer). It allows to create multiple Connections
 // that use multiplexer's clients for communication with kafka cluster. The aim of Multiplexer
 // is to decrease the number of connections needed. The set of topics to be consumed by
-// Connections needs to be selected before the underlying consumer in Multiplexer is started.
-// Once the Multiplexer's consumer has been started new topics can not be added.
+// Connections needs to be selected before the underlying Consumer in Multiplexer is started.
+// Once the Multiplexer's Consumer has been started new topics can not be added.
 type Multiplexer struct {
 	logging.Logger
 
@@ -26,10 +26,10 @@ type Multiplexer struct {
 	// client with 'manual' partitioner
 	manClient sarama.Client
 
-	// consumer used by the Multiplexer (bsm/sarama cluster)
-	consumer *client.Consumer
+	// Consumer used by the Multiplexer (bsm/sarama cluster)
+	Consumer *client.Consumer
 
-	// consumer used by the Multiplexer (sarama)
+	// Consumer used by the Multiplexer (sarama)
 	sConsumer sarama.Consumer
 
 	// producers available for this mux
@@ -56,12 +56,12 @@ type Multiplexer struct {
 	// postInitConsumers are closed after mux.Close()
 	postInitConsumers []*client.Consumer
 
-	// factory that crates consumer used in the Multiplexer
+	// factory that crates Consumer used in the Multiplexer
 	consumerFactory func(topics []string, groupId string) (*client.Consumer, error)
 	closeCh         chan struct{}
 }
 
-// ConsumerSubscription contains all information about subscribed kafka consumer/watcher
+// ConsumerSubscription contains all information about subscribed kafka Consumer/watcher
 type consumerSubscription struct {
 	// in manual mode, multiplexer is distributing messages according to topic, partition and offset. If manual
 	// mode is off, messages are distributed using topic only
@@ -78,7 +78,7 @@ type consumerSubscription struct {
 	byteConsMsg func(*client.ConsumerMessage)
 }
 
-// asyncMeta is auxiliary structure used by Multiplexer to distribute consumer messages
+// asyncMeta is auxiliary structure used by Multiplexer to distribute Consumer messages
 type asyncMeta struct {
 	successClb func(*client.ProducerMessage)
 	errorClb   func(error *client.ProducerError)
@@ -177,7 +177,7 @@ func (mux *Multiplexer) Start() error {
 		return fmt.Errorf("multiplexer has been started already")
 	}
 
-	// block further consumer consumers
+	// block further Consumer consumers
 	mux.started = true
 
 	var topics []string
@@ -193,7 +193,7 @@ func (mux *Multiplexer) Start() error {
 
 	mux.WithFields(logging.Fields{"topics": topics}).Debugf("Consuming started")
 
-	mux.consumer, err = mux.consumerFactory(topics, mux.name)
+	mux.Consumer, err = mux.consumerFactory(topics, mux.name)
 	if err != nil {
 		mux.Error(err)
 		return err
@@ -207,7 +207,7 @@ func (mux *Multiplexer) Start() error {
 // Close cleans up the resources used by the Multiplexer
 func (mux *Multiplexer) Close() {
 	close(mux.closeCh)
-	safeclose.CloseAll(mux.consumer, mux.hashSyncProducer, mux.hashAsyncProducer, mux.manSyncProducer, mux.manAsyncProducer,
+	safeclose.CloseAll(mux.Consumer, mux.hashSyncProducer, mux.hashAsyncProducer, mux.manSyncProducer, mux.manAsyncProducer,
 		mux.hsClient, mux.manClient)
 	for _, postInitConsumer := range mux.postInitConsumers {
 		safeclose.Close(postInitConsumer)
@@ -256,7 +256,7 @@ func (mux *Multiplexer) propagateMessage(msg *client.ConsumerMessage) {
 				mux.Debug("offset ", msg.Offset, string(msg.Value), string(msg.Key), msg.Partition)
 				subscription.byteConsMsg(msg)
 				// Mark offset
-				mux.consumer.MarkOffset(msg, "")
+				mux.Consumer.MarkOffset(msg, "")
 			}
 		}
 	}
@@ -264,33 +264,33 @@ func (mux *Multiplexer) propagateMessage(msg *client.ConsumerMessage) {
 
 // genericConsumer handles incoming messages to the multiplexer and distributes them among the subscribers.
 func (mux *Multiplexer) genericConsumer() {
-	mux.Debug("Generic consumer started")
+	mux.Debug("Generic Consumer started")
 	for {
 		select {
-		case <-mux.consumer.GetCloseChannel():
-			mux.Debug("Closing consumer")
+		case <-mux.Consumer.GetCloseChannel():
+			mux.Debug("Closing Consumer")
 			return
-		case msg := <-mux.consumer.Config.RecvMessageChan:
+		case msg := <-mux.Consumer.Config.RecvMessageChan:
 			mux.Debug("Kafka message received")
 			// 'hash' partitioner messages will be marked
 			mux.propagateMessage(msg)
-		case err := <-mux.consumer.Config.RecvErrorChan:
+		case err := <-mux.Consumer.Config.RecvErrorChan:
 			mux.Error("Received partitionConsumer error ", err)
 		}
 	}
 }
 
-// laterStageConsumer takes a later-created consumer and handles incoming messages for them.
+// laterStageConsumer takes a later-created Consumer and handles incoming messages for them.
 func (mux *Multiplexer) laterStageConsumer(consumer *client.Consumer) {
-	mux.Debug("Generic consumer started")
+	mux.Debug("Generic Consumer started")
 	for {
 		select {
 		case <-consumer.GetCloseChannel():
-			mux.Debug("Closing consumer")
+			mux.Debug("Closing Consumer")
 			return
 		case msg := <-consumer.Config.RecvMessageChan:
 			mux.Debug("Kafka message received")
-			// 'later-stage' consumer does not consume 'hash' messages, none of them is marked
+			// 'later-stage' Consumer does not consume 'hash' messages, none of them is marked
 			mux.propagateMessage(msg)
 		case err := <-consumer.Config.RecvErrorChan:
 			mux.Error("Received partitionConsumer error ", err)
@@ -298,7 +298,7 @@ func (mux *Multiplexer) laterStageConsumer(consumer *client.Consumer) {
 	}
 }
 
-// Remove consumer subscription on given topic. If there is no such a subscription, return error.
+// Remove Consumer subscription on given topic. If there is no such a subscription, return error.
 func (mux *Multiplexer) stopConsuming(topic string, name string) error {
 	mux.rwlock.Lock()
 	defer mux.rwlock.Unlock()
@@ -317,7 +317,7 @@ func (mux *Multiplexer) stopConsuming(topic string, name string) error {
 	return wasError
 }
 
-// Remove consumer subscription on given topic, partition and initial offset. If there is no such a subscription
+// Remove Consumer subscription on given topic, partition and initial offset. If there is no such a subscription
 // (all fields must match), return error.
 func (mux *Multiplexer) stopConsumingPartition(topic string, partition int32, offset int64, name string) error {
 	mux.rwlock.Lock()
