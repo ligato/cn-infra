@@ -12,11 +12,11 @@ import (
 )
 
 // Multiplexer encapsulates clients to kafka cluster (SyncProducer, AsyncProducer (both of them
-// with 'hash' and 'manual' partitioner), Consumer). It allows to create multiple Connections
+// with 'hash' and 'manual' partitioner), consumer). It allows to create multiple Connections
 // that use multiplexer's clients for communication with kafka cluster. The aim of Multiplexer
 // is to decrease the number of connections needed. The set of topics to be consumed by
-// Connections needs to be selected before the underlying Consumer in Multiplexer is started.
-// Once the Multiplexer's Consumer has been started new topics can not be added.
+// Connections needs to be selected before the underlying consumer in Multiplexer is started.
+// Once the Multiplexer's consumer has been started new topics can not be added.
 type Multiplexer struct {
 	logging.Logger
 
@@ -26,10 +26,10 @@ type Multiplexer struct {
 	// client with 'manual' partitioner
 	manClient sarama.Client
 
-	// Consumer used by the Multiplexer (bsm/sarama cluster)
+	// consumer used by the Multiplexer (bsm/sarama cluster)
 	Consumer *client.Consumer
 
-	// Consumer used by the Multiplexer (sarama)
+	// consumer used by the Multiplexer (sarama)
 	sConsumer sarama.Consumer
 
 	// producers available for this mux
@@ -61,7 +61,7 @@ type Multiplexer struct {
 	closeCh         chan struct{}
 }
 
-// ConsumerSubscription contains all information about subscribed kafka Consumer/watcher
+// ConsumerSubscription contains all information about subscribed kafka consumer/watcher
 type consumerSubscription struct {
 	// in manual mode, multiplexer is distributing messages according to topic, partition and offset. If manual
 	// mode is off, messages are distributed using topic only
@@ -78,7 +78,7 @@ type consumerSubscription struct {
 	byteConsMsg func(*client.ConsumerMessage)
 }
 
-// asyncMeta is auxiliary structure used by Multiplexer to distribute Consumer messages
+// asyncMeta is auxiliary structure used by Multiplexer to distribute consumer messages
 type asyncMeta struct {
 	successClb func(*client.ProducerMessage)
 	errorClb   func(error *client.ProducerError)
@@ -280,7 +280,7 @@ func (mux *Multiplexer) genericConsumer() {
 	}
 }
 
-// laterStageConsumer takes a later-created Consumer and handles incoming messages for them.
+// laterStageConsumer takes a later-created consumer and handles incoming messages for them.
 func (mux *Multiplexer) laterStageConsumer(consumer *client.Consumer) {
 	mux.Debug("Generic Consumer started")
 	for {
@@ -298,7 +298,7 @@ func (mux *Multiplexer) laterStageConsumer(consumer *client.Consumer) {
 	}
 }
 
-// Remove Consumer subscription on given topic. If there is no such a subscription, return error.
+// Remove consumer subscription on given topic. If there is no such a subscription, return error.
 func (mux *Multiplexer) stopConsuming(topic string, name string) error {
 	mux.rwlock.Lock()
 	defer mux.rwlock.Unlock()
@@ -317,7 +317,7 @@ func (mux *Multiplexer) stopConsuming(topic string, name string) error {
 	return wasError
 }
 
-// Remove Consumer subscription on given topic, partition and initial offset. If there is no such a subscription
+// Remove consumer subscription on given topic, partition and initial offset. If there is no such a subscription
 // (all fields must match), return error.
 func (mux *Multiplexer) stopConsumingPartition(topic string, partition int32, offset int64, name string) error {
 	mux.rwlock.Lock()

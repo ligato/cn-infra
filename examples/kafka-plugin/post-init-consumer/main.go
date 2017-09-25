@@ -37,6 +37,7 @@ type ExamplePlugin struct {
 	kafkaWatcher        messaging.ProtoPartitionWatcher
 	// Fields below are used to properly finish the example.
 	initialized	  bool // auxiliary flag that marks plugin as initialized
+	messagesSent  bool
 	syncCaseDone  bool
 	closeChannel  *chan struct{}
 }
@@ -87,7 +88,8 @@ func (plugin *ExamplePlugin) Init() (err error) {
 
 func (plugin *ExamplePlugin) closeExample() {
 	for {
-		if plugin.syncCaseDone {
+		if plugin.syncCaseDone && plugin.messagesSent {
+			time.Sleep(2*time.Second)
 			plugin.Log.Info("kafka example finished, sending shutdown ...")
 			*plugin.closeChannel <- struct{}{}
 			break
@@ -125,6 +127,8 @@ func (plugin *ExamplePlugin) producer() {
 			plugin.Log.Errorf("Failed to sync-send a proto message, error %v", err)
 		}
 	}
+
+	plugin.messagesSent = true
 }
 
 /*************

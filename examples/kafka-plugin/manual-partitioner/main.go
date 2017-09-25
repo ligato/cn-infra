@@ -73,7 +73,7 @@ var (
 	messageCountNum = 10
 )
 
-// Topics
+// Consts
 const (
 	topic1     = "example-sync-topic"
 	topic2     = "example-async-topic"
@@ -85,7 +85,7 @@ const (
 func (plugin *ExamplePlugin) Init() (err error) {
 	// handle flags
 	flag.Parse()
-	// sync  offset flag
+	// sync/async offset flag
 	if *offsetMsg != "" {
 		messageOffset, err = resolveOffset(*offsetMsg)
 		if err != nil {
@@ -94,7 +94,7 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	} else {
 		plugin.Log.Info("offset arg not set, using default value")
 	}
-	// async  offset flag
+	// message count flag
 	if *messageCount != "" {
 		messageCountNum, err = resolveMsgCount(*messageCount)
 		if err != nil {
