@@ -18,17 +18,23 @@ import (
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/syncbase"
 	"github.com/ligato/cn-infra/servicelabel"
+	"github.com/ligato/cn-infra/rpc/grpc"
 )
 
 // Plugin grpcsync implements Plugin interface therefore can be loaded with other plugins
 type Plugin struct {
+	Deps
+}
+
+type Deps struct {
+	GRPC grpc.Server
 	Adapter      datasync.KeyValProtoWatcher
 	ServiceLabel servicelabel.ReaderAPI
 }
 
 // Init uses provided connection to build new transport adapter
 func (plugin *Plugin) Init() error {
-	grpcAdapter := NewAdapter()
+	grpcAdapter := NewAdapter(plugin.GRPC.Server())
 	plugin.Adapter = &syncbase.Adapter{Watcher: grpcAdapter}
 
 	return nil
