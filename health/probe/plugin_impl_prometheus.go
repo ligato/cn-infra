@@ -77,10 +77,6 @@ type PrometheusPlugin struct {
 // Init may create a new (custom) instance of HTTP if the injected instance uses
 // different HTTP port than requested.
 func (p *PrometheusPlugin) Init() (err error) {
-	serviceLabel := p.String()
-	if p.Deps.ServiceLabel != nil {
-		serviceLabel = p.Deps.ServiceLabel.GetAgentLabel()
-	}
 
 	p.healthRegistry = prometheus.NewRegistry()
 
@@ -89,7 +85,7 @@ func (p *PrometheusPlugin) Init() (err error) {
 		Subsystem,
 		ServiceHealthName,
 		ServiceHealthHelp,
-		prometheus.Labels{ServiceLabel: serviceLabel},
+		prometheus.Labels{ServiceLabel: p.getServiceLabel()},
 		p.getServiceHealth,
 	)
 
@@ -100,7 +96,7 @@ func (p *PrometheusPlugin) Init() (err error) {
 		ServiceInfoName,
 		ServiceInfoHelp,
 		prometheus.Labels{
-			ServiceLabel:      serviceLabel,
+			ServiceLabel:      p.getServiceLabel(),
 			BuildVersionLabel: agentStatus.BuildVersion,
 			BuildDateLabel:    agentStatus.BuildDate},
 		func() float64 { return 1 },
@@ -281,4 +277,12 @@ func (p *PrometheusPlugin) String() string {
 		return string(p.PluginName)
 	}
 	return defaultPluginName
+}
+
+func (p *PrometheusPlugin) getServiceLabel() string {
+	serviceLabel := p.String()
+	if p.Deps.ServiceLabel != nil {
+		serviceLabel = p.Deps.ServiceLabel.GetAgentLabel()
+	}
+	return serviceLabel
 }
