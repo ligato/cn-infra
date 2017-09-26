@@ -110,7 +110,7 @@ func (visitor *toStringVisitor) VisitPrefixedExp(exp *sql.PrefixedExp) {
 
 	if exp.Prefix != "FROM" && exp.Binding != nil && len(exp.Binding) > 0 {
 		if visitor.binding != nil {
-			visitor.binding = append(visitor.binding, exp.Binding[0])
+			visitor.binding = append(visitor.binding, exp.Binding...)
 		} else {
 			visitor.binding = exp.Binding
 		}
