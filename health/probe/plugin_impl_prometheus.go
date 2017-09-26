@@ -115,24 +115,20 @@ func (p *PrometheusPlugin) AfterInit() error {
 
 	//TODO: Need improvement - instead of the exposing the map directly need to use in-memory mapping
 	if p.PluginStatusCheck != nil {
-		if p.PluginStatusCheck.GetAllPluginStatus() != nil {
-			allPluginStatusMap := p.PluginStatusCheck.GetAllPluginStatus()
-			for k, v := range allPluginStatusMap {
-				p.Log.Infof("k=%v, v=%v, state=%v", k, v, v.State)
-				p.registerGauge(
-					Namespace,
-					Subsystem,
-					DependencyHealthName,
-					DependencyHealthHelp,
-					prometheus.Labels{
-						ServiceLabel:    p.getServiceLabel(),
-						DependencyLabel: k,
-					},
-					p.getDependencyHealth(k, v),
-				)
-			}
-		} else {
-			p.Log.Error("Plugin map is nil")
+		allPluginStatusMap := p.PluginStatusCheck.GetAllPluginStatus()
+		for k, v := range allPluginStatusMap {
+			p.Log.Infof("k=%v, v=%v, state=%v", k, v, v.State)
+			p.registerGauge(
+				Namespace,
+				Subsystem,
+				DependencyHealthName,
+				DependencyHealthHelp,
+				prometheus.Labels{
+					ServiceLabel:    p.getServiceLabel(),
+					DependencyLabel: k,
+				},
+				p.getDependencyHealth(k, v),
+			)
 		}
 	} else {
 		p.Log.Error("PluginStatusCheck is nil")
