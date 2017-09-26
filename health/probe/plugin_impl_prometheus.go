@@ -28,10 +28,12 @@ const (
 
 	// DefaultMetricsPath default Prometheus metrics URL
 	DefaultMetricsPath string = "/metrics"
+	// DefaultHealthPath default Prometheus health metrics URL
+	DefaultHealthPath string = "/health"
 
-	// Namespace namespace to use for Prometheus metrics
+	// Namespace namespace to use for Prometheus health metrics
 	Namespace string = ""
-	// Subsystem subsystem to use for Prometheus metrics
+	// Subsystem subsystem to use for Prometheus health metrics
 	Subsystem string = ""
 	// ServiceLabel label for service field
 	ServiceLabel string = "service"
@@ -69,11 +71,14 @@ const (
 // PrometheusPlugin struct holds all plugin-related data.
 type PrometheusPlugin struct {
 	Deps
+	healthRegistry *prometheus.Registry
 }
 
 // Init may create a new (custom) instance of HTTP if the injected instance uses
 // different HTTP port than requested.
 func (p *PrometheusPlugin) Init() (err error) {
+
+	p.healthRegistry = prometheus.NewRegistry()
 
 	p.registerGauge(
 		Namespace,
@@ -106,6 +111,9 @@ func (p *PrometheusPlugin) AfterInit() error {
 		if p.StatusCheck != nil {
 			p.Log.Info("Starting Prometheus metrics handlers")
 			p.HTTP.RegisterHTTPHandler(DefaultMetricsPath, p.metricsHandler, "GET")
+			p.HTTP.RegisterHTTPHandler(DefaultHealthPath, p.healthMetricsHandler, "GET")
+			p.Log.Infof("Serving %s on port %d", DefaultMetricsPath, p.HTTP.GetPort())
+			p.Log.Infof("Serving %s on port %d", DefaultHealthPath, p.HTTP.GetPort())
 		} else {
 			p.Log.Info("Unable to register Prometheus metrics handlers, StatusCheck is nil")
 		}
@@ -181,6 +189,11 @@ func (p *PrometheusPlugin) metricsHandler(formatter *render.Render) http.Handler
 	return promhttp.Handler().ServeHTTP
 }
 
+// healthMetricsHandler handles custom health metrics for Prometheus.
+func (p *PrometheusPlugin) healthMetricsHandler(formatter *render.Render) http.HandlerFunc {
+	return promhttp.HandlerFor(p.healthRegistry, promhttp.HandlerOpts{}).ServeHTTP
+}
+
 // getServiceHealth returns agent health status
 func (p *PrometheusPlugin) getServiceHealth() float64 {
 	agentStatus := p.StatusCheck.GetAgentStatus()
@@ -203,7 +216,7 @@ func (p *PrometheusPlugin) getDependencyHealth(pluginName string, pluginStatus *
 	}
 }
 
-// RegisterGauge registers custom gauge with specific valueFunc to report status when invoked.
+// registerGauge registers custom gauge with specific valueFunc to report status when invoked.
 func (p *PrometheusPlugin) registerGauge(namespace string, subsystem string, name string, help string,
 	labels prometheus.Labels, valueFunc func() float64) {
 	gaugeName := name
@@ -213,7 +226,7 @@ func (p *PrometheusPlugin) registerGauge(namespace string, subsystem string, nam
 	if namespace != "" {
 		gaugeName = namespace + "_" + gaugeName
 	}
-	if err := prometheus.DefaultRegisterer.Register(prometheus.NewGaugeFunc(
+	if err := p.healthRegistry.Register(prometheus.NewGaugeFunc(
 		prometheus.GaugeOpts{
 			// Namespace, Subsystem, and Name are components of the fully-qualified
 			// name of the Metric (created by joining these components with
