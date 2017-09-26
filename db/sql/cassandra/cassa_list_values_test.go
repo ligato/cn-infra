@@ -60,7 +60,7 @@ func TestListValues_AND(t *testing.T) {
 		sql.Field(&UserTable.LastName), sql.EQ("Bond")))
 	sqlStr, _ /*binding*/, err := cassandra.SelectExpToString(query)
 	gomega.Expect(sqlStr).Should(gomega.BeEquivalentTo(
-		"SELECT id, first_name, last_name FROM User WHERE first_name = ? AND last_name = ?"))
+		"SELECT id, first_name, last_name FROM User WHERE first_name = ? AND last_name = ? ALLOW FILTERING"))
 	mockQuery(session, query, cells(JamesBond))
 	users := &[]User{}
 	err = sql.SliceIt(users, db.ListValues(query))
@@ -81,7 +81,7 @@ func TestListValues_IN(t *testing.T) {
 		sql.Field(&UserTable.FirstName), sql.IN("James", "Peter")))
 	sqlStr, _ /*binding*/, err := cassandra.SelectExpToString(query)
 	gomega.Expect(sqlStr).Should(gomega.BeEquivalentTo(
-		"SELECT id, first_name, last_name FROM User WHERE last_name = ? AND first_name IN(?,?)"))
+		"SELECT id, first_name, last_name FROM User WHERE last_name = ? AND first_name IN(?,?) ALLOW FILTERING"))
 	mockQuery(session, query, cells(JamesBond), cells(PeterBond))
 	users := &[]User{}
 	err = sql.SliceIt(users, db.ListValues(query))
