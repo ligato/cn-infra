@@ -242,9 +242,16 @@ func (mux *Multiplexer) AddPartitionConsumer(consumer *sarama.PartitionConsumer)
 	mux.partitionConsumers = append(mux.partitionConsumers, consumer)
 }
 
-// NewBytesConnection creates instance of the BytesConnection that provides access to shared Multiplexer's clients.
-func (mux *Multiplexer) NewBytesConnection(name string) *BytesConnection {
-	return &BytesConnection{multiplexer: mux, name: name}
+// NewBytesConnection creates instance of the BytesConnectionStr that provides access to shared
+// Multiplexer's clients with hash partitioner.
+func (mux *Multiplexer) NewBytesConnection(name string) *BytesConnectionStr {
+	return &BytesConnectionStr{BytesConnectionFields{multiplexer: mux, name: name}}
+}
+
+// NewBytesManualConnection creates instance of the BytesManualConnectionStr that provides access to shared
+// Multiplexer's clients with manual partitioner.
+func (mux *Multiplexer) NewBytesManualConnection(name string) *BytesManualConnectionStr {
+	return &BytesManualConnectionStr{BytesConnectionFields{multiplexer: mux, name: name}}
 }
 
 // NewProtoConnection creates instance of the ProtoConnection that provides access to shared

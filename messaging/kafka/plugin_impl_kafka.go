@@ -137,15 +137,15 @@ func (plugin *Plugin) Close() error {
 
 // NewBytesConnection returns a new instance of a connection to access kafka brokers. The connection allows to create
 // new kafka providers/consumers on multiplexer with hash partitioner.
-func (plugin *Plugin) NewBytesConnection(name string) *mux.BytesConnection {
+func (plugin *Plugin) NewBytesConnection(name string) *mux.BytesConnectionStr {
 	return plugin.mux.NewBytesConnection(name)
 }
 
 // NewBytesConnectionToPartition returns a new instance of a connection to access kafka brokers. The connection allows to create
 // new kafka providers/consumers on multiplexer with manual partitioner which allows to send messages to specific partition
 // in kafka cluster and watch on partition/offset.
-func (plugin *Plugin) NewBytesConnectionToPartition(name string) *mux.BytesConnection {
-	return plugin.mux.NewBytesConnection(name)
+func (plugin *Plugin) NewBytesConnectionToPartition(name string) *mux.BytesManualConnectionStr {
+	return plugin.mux.NewBytesManualConnection(name)
 }
 
 // NewProtoConnection returns a new instance of a connection to access kafka brokers. The connection allows to create

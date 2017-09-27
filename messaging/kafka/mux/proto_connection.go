@@ -54,13 +54,11 @@ type ProtoConnectionFields struct {
 type protoSyncPublisherKafka struct {
 	conn      *ProtoConnection
 	topic     string
-	partition int32
 }
 
 type protoAsyncPublisherKafka struct {
 	conn         *ProtoConnection
 	topic        string
-	partition    int32
 	succCallback func(messaging.ProtoMessage)
 	errCallback  func(messaging.ProtoMessageErr)
 }
@@ -81,12 +79,12 @@ type protoManualAsyncPublisherKafka struct {
 
 // NewSyncPublisher creates a new instance of protoSyncPublisherKafka that allows to publish sync kafka messages using common messaging API
 func (conn *ProtoConnection) NewSyncPublisher(topic string) (messaging.ProtoPublisher, error) {
-	return &protoSyncPublisherKafka{conn, topic, DefPartition}, nil
+	return &protoSyncPublisherKafka{conn, topic}, nil
 }
 
 // NewAsyncPublisher creates a new instance of protoAsyncPublisherKafka that allows to publish sync kafka messages using common messaging API
 func (conn *ProtoConnection) NewAsyncPublisher(topic string, successClb func(messaging.ProtoMessage), errorClb func(messaging.ProtoMessageErr)) (messaging.ProtoPublisher, error) {
-	return &protoAsyncPublisherKafka{conn, topic, DefPartition, successClb, errorClb}, nil
+	return &protoAsyncPublisherKafka{conn, topic, successClb, errorClb}, nil
 }
 
 // NewSyncPublisherToPartition creates a new instance of protoManualSyncPublisherKafka that allows to publish sync kafka messages using common messaging API
@@ -208,14 +206,14 @@ func (conn *ProtoManualConnection) ConsumePartition(msgClb func(messaging.ProtoM
 
 	if conn.multiplexer.started {
 		conn.multiplexer.Infof("Starting 'post-init' manual Consumer")
-		return conn.StartPostInitConsumer(msgClb, topic, partition, offset)
+		return conn.StartPostInitConsumer(topic, partition, offset)
 	}
 
 	return nil
 }
 
 // StartPostInitConsumer allows to start a new partition consumer after mux is initialized
-func (conn *ProtoConnectionFields) StartPostInitConsumer(msgClb func(messaging.ProtoMessage), topic string, partition int32, offset int64) error {
+func (conn *ProtoManualConnection) StartPostInitConsumer(topic string, partition int32, offset int64) error {
 	multiplexer := conn.multiplexer
 	multiplexer.WithFields(logging.Fields{"topic": topic}).Debugf("Post-init consuming started")
 
@@ -257,13 +255,13 @@ func (conn *ProtoConnectionFields) StopConsumingPartition(topic string, partitio
 
 // Put publishes a message into kafka
 func (p *protoSyncPublisherKafka) Put(key string, message proto.Message, opts ...datasync.PutOption) error {
-	_, err := p.conn.sendSyncMessage(p.topic, p.partition, key, message, false)
+	_, err := p.conn.sendSyncMessage(p.topic, DefPartition, key, message, false)
 	return err
 }
 
 // Put publishes a message into kafka
 func (p *protoAsyncPublisherKafka) Put(key string, message proto.Message, opts ...datasync.PutOption) error {
-	return p.conn.sendAsyncMessage(p.topic, p.partition, key, message, false, nil, p.succCallback, p.errCallback)
+	return p.conn.sendAsyncMessage(p.topic, DefPartition, key, message, false, nil, p.succCallback, p.errCallback)
 }
 
 // Put publishes a message into kafka

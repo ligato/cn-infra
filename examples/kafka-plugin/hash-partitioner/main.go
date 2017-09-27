@@ -11,6 +11,7 @@ import (
 	"github.com/namsral/flag"
 	"os"
 	"strconv"
+	"github.com/prometheus/common/log"
 )
 
 //********************************************************************
@@ -80,6 +81,10 @@ func (plugin *ExamplePlugin) Init() (err error) {
 		messageCountNum, err = resolveMsgCount(*messageCount)
 		if err != nil {
 			return fmt.Errorf("'messageCount' has to be a number, not %v", *messageCount)
+		}
+		if messageCountNum < 0 {
+			plugin.Log.Warnf("'messageCount' %v is not a positive number, defaulting to 0")
+			messageCountNum = 0
 		}
 	} else {
 		plugin.Log.Info("messageCount arg not set, using default value")
