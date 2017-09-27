@@ -87,7 +87,8 @@ func (plugin *Plugin) Init() (err error) {
 
 	// Initialize both multiplexers to allow both, dynamic and manual mode
 	if plugin.mux == nil {
-		name := plugin.ServiceLabel.GetAgentLabel() + "-hash"
+		name := clientCfg.GroupID
+		plugin.Log.Infof("Group ID is set to %v", name)
 		plugin.mux, err = mux.InitMultiplexerWithConfig(clientCfg, plugin.hsClient, plugin.manClient, name, plugin.Log)
 		if err != nil {
 			return err
@@ -209,7 +210,12 @@ func (plugin *Plugin) getClientConfig(config *mux.Config, logger logging.Logger,
 	} else {
 		clientCfg.SetBrokers(mux.DefAddress)
 	}
-	clientCfg.SetGroup(plugin.ServiceLabel.GetAgentLabel())
+	// Set group ID obtained from kafka config. In case there is none, use a service label
+	if config.GroupID != "" {
+		clientCfg.SetGroup(config.GroupID)
+	} else {
+		clientCfg.SetGroup(plugin.ServiceLabel.GetAgentLabel())
+	}
 	clientCfg.SetRecvMessageChan(plugin.subscription)
 	clientCfg.SetInitialOffset(sarama.OffsetNewest)
 	clientCfg.SetTopics(topic)

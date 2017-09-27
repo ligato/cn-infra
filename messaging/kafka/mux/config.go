@@ -22,6 +22,7 @@ const (
 // Config holds the settings for kafka multiplexer.
 type Config struct {
 	Addrs []string `json:"addrs"`
+	GroupID string `json:"group-id"`
 }
 
 // ConsumerFactory produces a consumer for the selected topics in a specified consumer group.
@@ -60,7 +61,7 @@ func getConsumerFactory(config *client.Config) ConsumerFactory {
 // a groupId. This is leveraged to deliver unread messages after restart.
 func InitMultiplexer(configFile string, name string, log logging.Logger) (*Multiplexer, error) {
 	var err error
-	cfg := &Config{[]string{DefAddress}}
+	cfg := &Config{[]string{DefAddress}, ""}
 	if configFile != "" {
 		cfg, err = ConfigFromFile(configFile)
 		if err != nil {

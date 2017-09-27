@@ -53,6 +53,8 @@ type ExamplePlugin struct {
 	asyncErrorChannel   chan (messaging.ProtoMessageErr)
 	// Fields below are used to properly finish the example.
 	messagesSent bool
+	syncRecv bool
+	asyncRecv bool
 	asyncSuccess bool
 	closeChannel *chan struct{}
 }
@@ -146,7 +148,7 @@ func (plugin *ExamplePlugin) Init() (err error) {
 
 func (plugin *ExamplePlugin) closeExample() {
 	for {
-		if plugin.messagesSent && plugin.asyncSuccess {
+		if plugin.messagesSent && plugin.asyncSuccess && plugin.syncRecv && plugin.asyncRecv {
 			time.Sleep(2 * time.Second)
 			err := plugin.kafkaWatcher.StopWatch(topic1)
 			if err != nil {
@@ -224,6 +226,11 @@ func (plugin *ExamplePlugin) producer() {
 // matching this destination criteria, the consumer will receive it.
 func (plugin *ExamplePlugin) syncEventHandler() {
 	plugin.Log.Info("Started Kafka event handler...")
+	msgCounter := 0
+	if messageCountNum == 0 {
+		// Set as done
+		plugin.syncRecv = true
+	}
 
 	// Watch on message channel for sync kafka events
 	for message := range plugin.subscription {
@@ -231,6 +238,10 @@ func (plugin *ExamplePlugin) syncEventHandler() {
 			message.GetTopic(), message.GetPartition(), message.GetOffset(), message.GetKey())
 		// mark the offset
 		plugin.kafkaWatcher.MarkOffset(message, "")
+		msgCounter++
+		if msgCounter == messageCountNum {
+			plugin.syncRecv = true
+		}
 	}
 }
 
@@ -239,9 +250,12 @@ func (plugin *ExamplePlugin) syncEventHandler() {
 // matching this destination criteria, the consumer will receive it.
 func (plugin *ExamplePlugin) asyncEventHandler() {
 	plugin.Log.Info("Started Kafka async event handler...")
-	asyncSuccessCounter := 0
+	msgCounter := 0
+	asyncMsgSucc := 0
 	if messageCountNum == 0 {
+		// Set as done
 		plugin.asyncSuccess = true
+		plugin.asyncRecv = true
 	}
 	for {
 		select {
@@ -251,11 +265,15 @@ func (plugin *ExamplePlugin) asyncEventHandler() {
 				message.GetTopic(), message.GetPartition(), message.GetOffset(), message.GetKey())
 			// mark the offset
 			plugin.kafkaWatcher.MarkOffset(message, "")
+			msgCounter++
+			if msgCounter == messageCountNum {
+				plugin.asyncRecv = true
+			}
 		case message := <-plugin.asyncSuccessChannel:
 			plugin.Log.Infof("Async message successfully delivered, topic '%s', partition '%v', offset '%v', key: '%s', ",
 				message.GetTopic(), message.GetPartition(), message.GetOffset(), message.GetKey())
-			asyncSuccessCounter++
-			if asyncSuccessCounter == messageCountNum {
+			asyncMsgSucc++
+			if asyncMsgSucc == messageCountNum {
 				plugin.asyncSuccess = true
 			}
 			// Error callback channel
