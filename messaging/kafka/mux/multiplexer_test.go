@@ -478,3 +478,35 @@ func TestSendProtoAsyncToCustomPartition(t *testing.T) {
 
 	mock.Mux.Close()
 }
+
+func TestCustomPartition(t *testing.T) {
+	gomega.RegisterTestingT(t)
+	mock := Mock(t)
+	gomega.Expect(mock.Mux).NotTo(gomega.BeNil())
+
+	c1 := mock.Mux.NewBytesManualConnection("c1")
+	gomega.Expect(c1).NotTo(gomega.BeNil())
+	mock.Mux.Start()
+	gomega.Expect(mock.Mux.started).To(gomega.BeTrue())
+
+	asyncSubscription := make(chan *client.ConsumerMessage)
+
+	err := c1.ConsumePartition(ToBytesMsgChan(asyncSubscription), "test", 1, OffsetOldest)
+	gomega.Expect(err).To(gomega.BeNil())
+}
+
+func TestProtoCustomPartition(t *testing.T) {
+	gomega.RegisterTestingT(t)
+	mock := Mock(t)
+	gomega.Expect(mock.Mux).NotTo(gomega.BeNil())
+
+	c1 := mock.Mux.NewProtoManualConnection("c1", &keyval.SerializerJSON{})
+	gomega.Expect(c1).NotTo(gomega.BeNil())
+	mock.Mux.Start()
+	gomega.Expect(mock.Mux.started).To(gomega.BeTrue())
+
+	asyncSubscription := make(chan messaging.ProtoMessage)
+
+	err := c1.WatchPartition(messaging.ToProtoMsgChan(asyncSubscription), "test", 1, OffsetOldest)
+	gomega.Expect(err).To(gomega.BeNil())
+}
