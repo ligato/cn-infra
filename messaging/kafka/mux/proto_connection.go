@@ -282,6 +282,30 @@ func (p *protoManualAsyncPublisherKafka) Put(key string, message proto.Message, 
 	return p.conn.sendAsyncMessage(p.topic, p.partition, key, message, true, nil, p.succCallback, p.errCallback)
 }
 
+// MarkOffset marks the specified message as read
+func (conn *ProtoConnectionFields) MarkOffset(msg messaging.ProtoMessage, metadata string) {
+	if conn.multiplexer != nil && conn.multiplexer.Consumer != nil {
+		if msg == nil {
+			return
+		}
+		consumerMsg := &client.ConsumerMessage{
+			Topic:     msg.GetTopic(),
+			Partition: msg.GetPartition(),
+			Offset:    msg.GetOffset(),
+		}
+
+		conn.multiplexer.Consumer.MarkOffset(consumerMsg, metadata)
+	}
+}
+
+// CommitOffsets manually commits message offsets
+func (conn *ProtoConnectionFields) CommitOffsets() error {
+	if conn.multiplexer != nil && conn.multiplexer.Consumer != nil {
+		return conn.multiplexer.Consumer.CommitOffsets()
+	}
+	return fmt.Errorf("cannot commit offsets, consumer not available")
+}
+
 // sendSyncMessage sends a message using the sync API. If manual mode is chosen, the appropriate producer will be used.
 func (conn *ProtoConnectionFields) sendSyncMessage(topic string, partition int32, key string, value proto.Message, manualMode bool) (offset int64, err error) {
 	data, err := conn.serializer.Marshal(value)

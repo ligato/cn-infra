@@ -306,3 +306,18 @@ func (p *bytesManualAsyncPublisherKafka) Put(key string, data []byte) error {
 	p.conn.SendAsyncMessageToPartition(p.topic, p.partition, sarama.StringEncoder(key), sarama.ByteEncoder(data), nil, p.succCallback, p.errCallback)
 	return nil
 }
+
+// MarkOffset marks the specified message as read
+func (conn *BytesConnectionFields) MarkOffset(msg client.ConsumerMessage, metadata string) {
+	if conn.multiplexer != nil && conn.multiplexer.Consumer != nil {
+		conn.multiplexer.Consumer.MarkOffset(&msg, metadata)
+	}
+}
+
+// CommitOffsets manually commits message offsets
+func (conn *BytesConnectionFields) CommitOffsets() error {
+	if conn.multiplexer != nil && conn.multiplexer.Consumer != nil {
+		return conn.multiplexer.Consumer.CommitOffsets()
+	}
+	return fmt.Errorf("cannot commit offsets, consumer not available")
+}

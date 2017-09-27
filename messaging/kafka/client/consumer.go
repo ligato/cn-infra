@@ -42,7 +42,6 @@ type clusterConsumer interface {
 type Consumer struct {
 	logging.Logger
 	Config       *Config
-	Client       sarama.Client
 	SConsumer    sarama.Consumer
 	Consumer     clusterConsumer
 	closed       bool
@@ -88,7 +87,6 @@ func NewConsumer(config *Config, wg *sync.WaitGroup) (*Consumer, error) {
 	csmr := &Consumer{
 		Logger:       config.Logger,
 		Config:       config,
-		Client:       cClient,
 		SConsumer:    sConsumer,
 		Consumer:     consumer,
 		closed:       false,
@@ -215,17 +213,6 @@ func (ref *Consumer) Close() error {
 		return err
 	}
 	ref.Debug("consumer closed")
-
-	// close client
-	ref.Debug("closing client ...")
-	if ref.Client != nil {
-		err = ref.Client.Close()
-		if err != nil {
-			ref.Errorf("client close error: %v", err)
-			return err
-		}
-	}
-	ref.Debug("client closed")
 
 	return nil
 }

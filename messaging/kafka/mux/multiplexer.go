@@ -283,8 +283,6 @@ func (mux *Multiplexer) propagateMessage(msg *client.ConsumerMessage) {
 				// and report an error to avoid deadlock
 				mux.Debug("offset ", msg.Offset, string(msg.Value), string(msg.Key), msg.Partition)
 				subscription.byteConsMsg(msg)
-				// Mark offset
-				mux.Consumer.MarkOffset(msg, "")
 			}
 		}
 	}

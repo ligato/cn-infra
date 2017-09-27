@@ -229,6 +229,8 @@ func (plugin *ExamplePlugin) syncEventHandler() {
 	for message := range plugin.subscription {
 		plugin.Log.Infof("Received Kafka Message, topic '%s', partition '%v', offset '%v', key: '%s', ",
 			message.GetTopic(), message.GetPartition(), message.GetOffset(), message.GetKey())
+		// mark the offset
+		plugin.kafkaWatcher.MarkOffset(message, "")
 	}
 }
 
@@ -237,7 +239,6 @@ func (plugin *ExamplePlugin) syncEventHandler() {
 // matching this destination criteria, the consumer will receive it.
 func (plugin *ExamplePlugin) asyncEventHandler() {
 	plugin.Log.Info("Started Kafka async event handler...")
-	receivedMessageCounter := 0
 	asyncSuccessCounter := 0
 	if messageCountNum == 0 {
 		plugin.asyncSuccess = true
@@ -248,8 +249,8 @@ func (plugin *ExamplePlugin) asyncEventHandler() {
 		case message := <-plugin.asyncSubscription:
 			plugin.Log.Infof("Received async Kafka Message, topic '%s', partition '%v', offset '%v', key: '%s', ",
 				message.GetTopic(), message.GetPartition(), message.GetOffset(), message.GetKey())
-			receivedMessageCounter++
-			// Success callback channel
+			// mark the offset
+			plugin.kafkaWatcher.MarkOffset(message, "")
 		case message := <-plugin.asyncSuccessChannel:
 			plugin.Log.Infof("Async message successfully delivered, topic '%s', partition '%v', offset '%v', key: '%s', ",
 				message.GetTopic(), message.GetPartition(), message.GetOffset(), message.GetKey())
