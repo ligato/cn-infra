@@ -18,6 +18,8 @@ examples/logs-lib/basic/basic
 examples/logs-lib/custom/custom
 examples/logs-lib/http/http
 examples/logs-plugin/logs-plugin
+examples/redis-lib/airport/airport-linux
+examples/redis-lib/simple/simple-linux
 examples/redis-lib/airport/airport
 examples/redis-lib/simple/simple
 examples/redis-plugin/redis-plugin
@@ -25,10 +27,6 @@ examples/simple-agent/simple-agent
 db/keyval/etcdv3/examples/phonebook/editor/editor
 db/keyval/etcdv3/examples/phonebook/view/view
 db/keyval/etcdv3/examples/phonebook/watcher/watcher
-db/keyval/redis/examples/simple/simple
-db/keyval/redis/examples/simple/simple-linux
-db/keyval/redis/examples/airport/airport
-db/keyval/redis/examples/airport/airport-linux
 db/sql/cassandra/examples/simple/simple
 logging/logrus/examples/basic/basic
 logging/logrus/examples/custom/custom
