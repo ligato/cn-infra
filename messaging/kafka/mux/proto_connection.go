@@ -219,31 +219,18 @@ func (conn *ProtoConnectionFields) StartPostInitConsumer(msgClb func(messaging.P
 	multiplexer := conn.multiplexer
 	multiplexer.WithFields(logging.Fields{"topic": topic}).Debugf("Post-init consuming started")
 
-	if multiplexer.sConsumer == nil {
-		multiplexer.Warn("Unable to start post-init Consumer, client not available on the mux")
+	if multiplexer.Consumer == nil || multiplexer.Consumer.SConsumer == nil {
+		multiplexer.Warn("Unable to start post-init Consumer, client not available in the mux")
 		return nil
 	}
 
 	// Consumer that reads topic/partition/offset. Throws error if offset is 'in the future' (message with offset does not exist yet)
-	partitionConsumer, err := multiplexer.sConsumer.ConsumePartition(topic, partition, offset)
-	if err != nil {
-		return err
-	}
-	// Create client consumer but do not allow to start message handlers
-	consumer, err := client.NewConsumer(multiplexer.config, false, nil)
+	partitionConsumer, err := multiplexer.Consumer.SConsumer.ConsumePartition(topic, partition, offset)
 	if err != nil {
 		return err
 	}
 
-	// store newly created consumer in mux, so it can be closed properly
-	multiplexer.postInitConsumers = append(multiplexer.postInitConsumers, consumer)
-
-	// Start message handler
-	go consumer.MessageHandler(partitionConsumer.Messages())
-	// Start error handler
-	go consumer.ConsumerErrorHandler(partitionConsumer.Errors())
-	// Start consumer
-	go conn.multiplexer.laterStageConsumer(consumer)
+	multiplexer.Consumer.StartConsumerManualHandlers(partitionConsumer)
 
 	return nil
 }

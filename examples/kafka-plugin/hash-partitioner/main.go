@@ -85,7 +85,7 @@ func (plugin *ExamplePlugin) Init() (err error) {
 		plugin.Log.Info("messageCount arg not set, using default value")
 	}
 
-	plugin.Log.Infof("Message count: %v", messageCount)
+	plugin.Log.Infof("Message count: %v", *messageCount)
 
 	// Init channels required for async handler.
 	plugin.asyncSuccessChannel = make(chan messaging.ProtoMessage, 0)

@@ -112,7 +112,7 @@ func (plugin *Plugin) AfterInit() error {
 	if plugin.StatusCheck != nil && !plugin.disabled {
 		plugin.StatusCheck.Register(plugin.PluginName, func() (statuscheck.PluginState, error) {
 			if plugin.hsClient == nil || plugin.hsClient.Closed() {
-				return statuscheck.Error, fmt.Errorf("kafka client/consumer not initialized")
+				return statuscheck.Error, fmt.Errorf("kafka client/consumer not available")
 			}
 			// Method 'RefreshMetadata()' returns error if kafka server is unavailable
 			err := plugin.hsClient.RefreshMetadata(topic)

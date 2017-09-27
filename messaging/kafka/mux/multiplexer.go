@@ -20,17 +20,8 @@ import (
 type Multiplexer struct {
 	logging.Logger
 
-	// client with 'hash' partitioner
-	hsClient sarama.Client
-
-	// client with 'manual' partitioner
-	manClient sarama.Client
-
 	// consumer used by the Multiplexer (bsm/sarama cluster)
 	Consumer *client.Consumer
-
-	// consumer used by the Multiplexer (sarama)
-	sConsumer sarama.Consumer
 
 	// producers available for this mux
 	multiplexerProducers
@@ -53,8 +44,8 @@ type Multiplexer struct {
 	// as well as dynamic/manual mode flag
 	mapping []*consumerSubscription
 
-	// postInitConsumers are closed after mux.Close()
-	postInitConsumers []*client.Consumer
+	// partitionConsumers are consumers created from sarama client. Manual consumer can be started even after mux Init().
+	partitionConsumers []*sarama.PartitionConsumer
 
 	// factory that crates Consumer used in the Multiplexer
 	consumerFactory func(topics []string, groupId string) (*client.Consumer, error)
@@ -98,16 +89,16 @@ type multiplexerProducers struct {
 }
 
 // NewMultiplexer creates new instance of Kafka Multiplexer
-func NewMultiplexer(consumerFactory ConsumerFactory, sConsumer sarama.Consumer, producers multiplexerProducers, hsClient sarama.Client,
-	manClient sarama.Client, clientCfg *client.Config, name string, log logging.Logger) *Multiplexer {
+func NewMultiplexer(consumerFactory ConsumerFactory, producers multiplexerProducers, clientCfg *client.Config,
+	name string, log logging.Logger) *Multiplexer {
+	if clientCfg.Logger == nil {
+		clientCfg.Logger = log
+	}
 	cl := &Multiplexer{consumerFactory: consumerFactory,
 		Logger:               log,
-		sConsumer:            sConsumer,
 		name:                 name,
 		mapping:              []*consumerSubscription{},
 		closeCh:              make(chan struct{}),
-		hsClient:             hsClient,
-		manClient:            manClient,
 		multiplexerProducers: producers,
 		config:               clientCfg,
 	}
@@ -181,38 +172,74 @@ func (mux *Multiplexer) Start() error {
 	// block further Consumer consumers
 	mux.started = true
 
-	var topics []string
+	var hashTopics, manTopics []string
 
 	for _, subscription := range mux.mapping {
-		topics = append(topics, subscription.topic)
+		if subscription.manual {
+			manTopics = append(manTopics, subscription.topic)
+			continue
+		}
+		hashTopics = append(hashTopics, subscription.topic)
 	}
 
-	if len(topics) == 0 {
-		mux.Debug("No topics to be consumed")
-		return nil
-	}
+	mux.config.SetRecvMessageChan(make(chan *client.ConsumerMessage))
+	mux.config.GroupID = mux.name
+	mux.config.SetInitialOffset(sarama.OffsetOldest)
+	mux.config.Topics = append(hashTopics, manTopics...)
 
-	mux.WithFields(logging.Fields{"topics": topics}).Debugf("Consuming started")
-
-	mux.Consumer, err = mux.consumerFactory(topics, mux.name)
+	// create consumer
+	mux.WithFields(logging.Fields{"hashTopics": hashTopics, "manualTopics": manTopics}).Debugf("Consuming started")
+	mux.Consumer, err = client.NewConsumer(mux.config, nil)
 	if err != nil {
-		mux.Error(err)
 		return err
 	}
 
-	go mux.genericConsumer()
+	if len(hashTopics) == 0 {
+		mux.Debug("No topics for hash partitioner")
+	} else {
+		mux.WithFields(logging.Fields{"topics": hashTopics}).Debugf("Consuming (hash) started")
+		mux.Consumer.StartConsumerHandlers()
+	}
 
-	return nil
+	if len(manTopics) == 0 {
+		mux.Debug("No topics for manual partitioner")
+	} else {
+		mux.WithFields(logging.Fields{"topics": manTopics}).Debugf("Consuming (manual) started")
+		for _, sub := range mux.mapping {
+			if sub.manual {
+				sConsumer := mux.Consumer.SConsumer
+				if sConsumer == nil {
+					return fmt.Errorf("consumer for manual partition is not available")
+				}
+				partitionConsumer, err := sConsumer.ConsumePartition(sub.topic, sub.partition, sub.offset)
+				if err != nil {
+					return err
+				}
+				mux.Logger.WithFields(logging.Fields{"topic": sub.topic, "partition": sub.partition, "offset": sub.offset}).Info("Partition sConsumer started")
+				mux.Consumer.StartConsumerManualHandlers(partitionConsumer)
+			}
+		}
+
+	}
+
+	go mux.genericConsumer()
+	go mux.manualConsumer(mux.Consumer)
+
+	return err
 }
 
 // Close cleans up the resources used by the Multiplexer
 func (mux *Multiplexer) Close() {
 	close(mux.closeCh)
-	safeclose.CloseAll(mux.Consumer, mux.hashSyncProducer, mux.hashAsyncProducer, mux.manSyncProducer, mux.manAsyncProducer,
-		mux.hsClient, mux.manClient)
-	for _, postInitConsumer := range mux.postInitConsumers {
+	safeclose.CloseAll(mux.Consumer, mux.hashSyncProducer, mux.hashAsyncProducer, mux.manSyncProducer, mux.manAsyncProducer)
+	for _, postInitConsumer := range mux.partitionConsumers {
 		safeclose.Close(postInitConsumer)
 	}
+}
+
+// AddPartitionConsumer to the list 
+func (mux *Multiplexer) AddPartitionConsumer(consumer *sarama.PartitionConsumer) {
+	mux.partitionConsumers = append(mux.partitionConsumers, consumer)
 }
 
 // NewBytesConnection creates instance of the BytesConnection that provides access to shared Multiplexer's clients.
@@ -272,7 +299,6 @@ func (mux *Multiplexer) genericConsumer() {
 			mux.Debug("Closing Consumer")
 			return
 		case msg := <-mux.Consumer.Config.RecvMessageChan:
-			mux.Debug("Kafka message received")
 			// 'hash' partitioner messages will be marked
 			mux.propagateMessage(msg)
 		case err := <-mux.Consumer.Config.RecvErrorChan:
@@ -281,8 +307,8 @@ func (mux *Multiplexer) genericConsumer() {
 	}
 }
 
-// laterStageConsumer takes a later-created consumer and handles incoming messages for them.
-func (mux *Multiplexer) laterStageConsumer(consumer *client.Consumer) {
+// manualConsumer takes a consumer (even a post-init created) and handles incoming messages for them.
+func (mux *Multiplexer) manualConsumer(consumer *client.Consumer) {
 	mux.Debug("Generic Consumer started")
 	for {
 		select {

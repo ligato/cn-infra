@@ -68,7 +68,7 @@ const (
 // These vars are applied for both, sync and async case
 var (
 	// Offset for sync messages watcher
-	messageOffset int64 = 5
+	messageOffset int64
 	// How many messages will be sent
 	messageCountNum = 10
 )
@@ -104,7 +104,7 @@ func (plugin *ExamplePlugin) Init() (err error) {
 		plugin.Log.Info("messageCount arg not set, using default value")
 	}
 
-	plugin.Log.Infof("Offset: %v, message count: %v", messageOffset, messageCount)
+	plugin.Log.Infof("Offset: %v, message count: %v", messageOffset, messageCountNum)
 
 	// Create a synchronous and asynchronous publisher.
 	// In the manual mode, every publisher has selected its target partition.
