@@ -171,6 +171,18 @@ func (plugin *ExamplePlugin) closeExample() {
 	for {
 		if plugin.messagesSent && plugin.asyncSuccess {
 			time.Sleep(2 * time.Second)
+			err := plugin.kafkaWatcher.StopWatchPartition(topic1, syncMessagePartition, messageOffset)
+			if err != nil {
+				plugin.Log.Errorf("Error while stopping watcher: %v", err)
+			} else {
+				plugin.Log.Info("Sync watcher closed")
+			}
+			err = plugin.kafkaWatcher.StopWatchPartition(topic2, asyncMessagePartition, messageOffset)
+			if err != nil {
+				plugin.Log.Errorf("Error while stopping watcher: %v", err)
+			} else {
+				plugin.Log.Info("Async watcher closed")
+			}
 			plugin.Log.Info("kafka example finished, sending shutdown ...")
 			*plugin.closeChannel <- struct{}{}
 			break
@@ -180,9 +192,7 @@ func (plugin *ExamplePlugin) closeExample() {
 
 // Close closes the subscription and the channels used by the async producer.
 func (plugin *ExamplePlugin) Close() error {
-	safeclose.Close(plugin.subscription)
-	safeclose.Close(plugin.asyncErrorChannel)
-	safeclose.Close(plugin.asyncSuccessChannel)
+	safeclose.CloseAll(plugin.subscription, plugin.asyncErrorChannel, plugin.asyncSuccessChannel)
 	return nil
 }
 

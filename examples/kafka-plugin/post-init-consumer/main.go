@@ -90,6 +90,12 @@ func (plugin *ExamplePlugin) closeExample() {
 	for {
 		if plugin.syncCaseDone && plugin.messagesSent {
 			time.Sleep(2 * time.Second)
+			err := plugin.kafkaWatcher.StopWatchPartition(topic1, syncMessagePartition, syncMessageOffset)
+			if err != nil {
+				plugin.Log.Errorf("Error while stopping watcher: %v", err)
+			} else {
+				plugin.Log.Info("Post-init watcher closed")
+			}
 			plugin.Log.Info("kafka example finished, sending shutdown ...")
 			*plugin.closeChannel <- struct{}{}
 			break
@@ -178,5 +184,4 @@ func (plugin *ExamplePlugin) syncEventHandler() {
 			plugin.syncCaseDone = true
 		}
 	}
-
 }

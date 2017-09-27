@@ -11,7 +11,6 @@ import (
 	"github.com/namsral/flag"
 	"os"
 	"strconv"
-	"github.com/prometheus/common/log"
 )
 
 //********************************************************************
@@ -149,6 +148,18 @@ func (plugin *ExamplePlugin) closeExample() {
 	for {
 		if plugin.messagesSent && plugin.asyncSuccess {
 			time.Sleep(2 * time.Second)
+			err := plugin.kafkaWatcher.StopWatch(topic1)
+			if err != nil {
+				plugin.Log.Errorf("Error while stopping watcher: %v", err)
+			} else {
+				plugin.Log.Info("Sync watcher closed")
+			}
+			err = plugin.kafkaWatcher.StopWatch(topic2)
+			if err != nil {
+				plugin.Log.Errorf("Error while stopping watcher: %v", err)
+			} else {
+				plugin.Log.Info("Async watcher closed")
+			}
 			plugin.Log.Info("kafka example finished, sending shutdown ...")
 			*plugin.closeChannel <- struct{}{}
 			break

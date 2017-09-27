@@ -52,8 +52,8 @@ type ProtoConnectionFields struct {
 }
 
 type protoSyncPublisherKafka struct {
-	conn      *ProtoConnection
-	topic     string
+	conn  *ProtoConnection
+	topic string
 }
 
 type protoAsyncPublisherKafka struct {
@@ -166,11 +166,7 @@ func (conn *ProtoManualConnection) WatchPartition(msgClb func(messaging.ProtoMes
 func (conn *ProtoManualConnection) ConsumePartition(msgClb func(messaging.ProtoMessage), topic string, partition int32, offset int64) error {
 	conn.multiplexer.rwlock.Lock()
 	defer conn.multiplexer.rwlock.Unlock()
-
-	byteClb := func(bm *client.ConsumerMessage) {
-		pm := client.NewProtoConsumerMessage(bm, conn.serializer)
-		msgClb(pm)
-	}
+	var err error
 
 	// check if we have already consumed the topic on partition and offset
 	var found bool
@@ -186,6 +182,11 @@ func (conn *ProtoManualConnection) ConsumePartition(msgClb func(messaging.ProtoM
 			subs = subscription
 			break
 		}
+	}
+
+	byteClb := func(bm *client.ConsumerMessage) {
+		pm := client.NewProtoConsumerMessage(bm, conn.serializer)
+		msgClb(pm)
 	}
 
 	if !found {
@@ -206,31 +207,37 @@ func (conn *ProtoManualConnection) ConsumePartition(msgClb func(messaging.ProtoM
 
 	if conn.multiplexer.started {
 		conn.multiplexer.Infof("Starting 'post-init' manual Consumer")
-		return conn.StartPostInitConsumer(topic, partition, offset)
+		subs.partitionConsumer, err = conn.StartPostInitConsumer(topic, partition, offset)
+		if err != nil {
+			return err
+		}
+		if subs.partitionConsumer == nil {
+			return nil
+		}
 	}
 
 	return nil
 }
 
-// StartPostInitConsumer allows to start a new partition consumer after mux is initialized
-func (conn *ProtoManualConnection) StartPostInitConsumer(topic string, partition int32, offset int64) error {
+// StartPostInitConsumer allows to start a new partition consumer after mux is initialized. Created partition consumer
+// is returned so it can be stored in subscription and closed if needed
+func (conn *ProtoManualConnection) StartPostInitConsumer(topic string, partition int32, offset int64) (*sarama.PartitionConsumer, error) {
 	multiplexer := conn.multiplexer
 	multiplexer.WithFields(logging.Fields{"topic": topic}).Debugf("Post-init consuming started")
 
 	if multiplexer.Consumer == nil || multiplexer.Consumer.SConsumer == nil {
 		multiplexer.Warn("Unable to start post-init Consumer, client not available in the mux")
-		return nil
+		return nil, nil
 	}
 
 	// Consumer that reads topic/partition/offset. Throws error if offset is 'in the future' (message with offset does not exist yet)
 	partitionConsumer, err := multiplexer.Consumer.SConsumer.ConsumePartition(topic, partition, offset)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
 	multiplexer.Consumer.StartConsumerManualHandlers(partitionConsumer)
 
-	return nil
+	return &partitionConsumer, nil
 }
 
 // StopWatch is an alias for StopConsuming method. The alias was added in order to conform to messaging.Mux interface.

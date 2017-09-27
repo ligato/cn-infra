@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/Shopify/sarama"
-	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/messaging/kafka/client"
 )
 
 // BytesConnection is interface for multiplexer with dynamic partitioner.
@@ -48,8 +48,8 @@ type BytesPublisher interface {
 }
 
 type bytesSyncPublisherKafka struct {
-	conn      *BytesConnectionStr
-	topic     string
+	conn  *BytesConnectionStr
+	topic string
 }
 
 type bytesAsyncPublisherKafka struct {
@@ -145,6 +145,7 @@ func (conn *BytesConnectionStr) ConsumeTopic(msgClb func(message *client.Consume
 func (conn *BytesManualConnectionStr) ConsumePartition(msgClb func(message *client.ConsumerMessage), topic string, partition int32, offset int64) error {
 	conn.multiplexer.rwlock.Lock()
 	defer conn.multiplexer.rwlock.Unlock()
+	var err error
 
 	// check if we have already consumed the topic on partition and offset
 	var found bool
@@ -179,31 +180,37 @@ func (conn *BytesManualConnectionStr) ConsumePartition(msgClb func(message *clie
 	subs.byteConsMsg = msgClb
 
 	if conn.multiplexer.started {
-		return conn.StartPostInitConsumer(topic, partition, offset)
+		conn.multiplexer.Infof("Starting 'post-init' manual Consumer")
+		subs.partitionConsumer, err = conn.StartPostInitConsumer(topic, partition, offset)
+		if err != nil {
+			return err
+		}
+		if subs.partitionConsumer == nil {
+			return nil
+		}
 	}
 
 	return nil
 }
 
 // StartPostInitConsumer allows to start a new partition consumer after mux is initialized
-func (conn *BytesManualConnectionStr) StartPostInitConsumer(topic string, partition int32, offset int64) error {
+func (conn *BytesManualConnectionStr) StartPostInitConsumer(topic string, partition int32, offset int64) (*sarama.PartitionConsumer, error) {
 	multiplexer := conn.multiplexer
 	multiplexer.WithFields(logging.Fields{"topic": topic}).Debugf("Post-init consuming started")
 
 	if multiplexer.Consumer == nil || multiplexer.Consumer.SConsumer == nil {
 		multiplexer.Warn("Unable to start post-init Consumer, client not available in the mux")
-		return nil
+		return nil, nil
 	}
 
 	// Consumer that reads topic/partition/offset. Throws error if offset is 'in the future' (message with offset does not exist yet)
 	partitionConsumer, err := multiplexer.Consumer.SConsumer.ConsumePartition(topic, partition, offset)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
 	multiplexer.Consumer.StartConsumerManualHandlers(partitionConsumer)
 
-	return nil
+	return &partitionConsumer, nil
 }
 
 // StopConsuming cancels the previously created subscription for consuming the topic.

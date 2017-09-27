@@ -44,9 +44,6 @@ type Multiplexer struct {
 	// as well as dynamic/manual mode flag
 	mapping []*consumerSubscription
 
-	// partitionConsumers are consumers created from sarama client. Manual consumer can be started even after mux Init().
-	partitionConsumers []*sarama.PartitionConsumer
-
 	// factory that crates Consumer used in the Multiplexer
 	consumerFactory func(topics []string, groupId string) (*client.Consumer, error)
 	closeCh         chan struct{}
@@ -61,6 +58,8 @@ type consumerSubscription struct {
 	topic string
 	// partition to watch on in manual mode
 	partition int32
+	// partition consumer created in manual mode
+	partitionConsumer *sarama.PartitionConsumer
 	// offset to watch on in manual mode
 	offset int64
 	// name identifies the connection
@@ -215,6 +214,8 @@ func (mux *Multiplexer) Start() error {
 				if err != nil {
 					return err
 				}
+				// Store partition consumer in subscription so it can be closed lately
+				sub.partitionConsumer = &partitionConsumer
 				mux.Logger.WithFields(logging.Fields{"topic": sub.topic, "partition": sub.partition, "offset": sub.offset}).Info("Partition sConsumer started")
 				mux.Consumer.StartConsumerManualHandlers(partitionConsumer)
 			}
@@ -232,14 +233,6 @@ func (mux *Multiplexer) Start() error {
 func (mux *Multiplexer) Close() {
 	close(mux.closeCh)
 	safeclose.CloseAll(mux.Consumer, mux.hashSyncProducer, mux.hashAsyncProducer, mux.manSyncProducer, mux.manAsyncProducer)
-	for _, postInitConsumer := range mux.partitionConsumers {
-		safeclose.Close(postInitConsumer)
-	}
-}
-
-// AddPartitionConsumer to the list 
-func (mux *Multiplexer) AddPartitionConsumer(consumer *sarama.PartitionConsumer) {
-	mux.partitionConsumers = append(mux.partitionConsumers, consumer)
 }
 
 // NewBytesConnection creates instance of the BytesConnectionStr that provides access to shared
@@ -359,15 +352,19 @@ func (mux *Multiplexer) stopConsumingPartition(topic string, partition int32, of
 
 	var wasError error
 	var topicFound bool
+	// Remove consumer from subscription
 	for index, subs := range mux.mapping {
 		if subs.manual && subs.topic == topic && subs.partition == partition && subs.offset == offset && subs.connectionName == name {
 			topicFound = true
 			mux.mapping = append(mux.mapping[:index], mux.mapping[index+1:]...)
 		}
+		// Close the partition consumer related to the subscription
+		safeclose.Close(subs.partitionConsumer)
 	}
 	if !topicFound {
 		wasError = fmt.Errorf("topic %s, partition %v and offset %v was not consumed by '%s'",
 			topic, partition, offset, name)
 	}
+	// Stop partition consumer
 	return wasError
 }
