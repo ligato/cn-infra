@@ -58,7 +58,8 @@ type consumerSubscription struct {
 	topic string
 	// partition to watch on in manual mode
 	partition int32
-	// partition consumer created in manual mode
+	// partition consumer created only in manual mode. Its value is stored in subscription (after all required handlers
+	// are started) in order to be properly closed if required
 	partitionConsumer *sarama.PartitionConsumer
 	// offset to watch on in manual mode
 	offset int64

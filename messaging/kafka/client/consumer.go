@@ -323,7 +323,6 @@ func (ref *Consumer) errorHandler(in <-chan error) {
 	for {
 		select {
 		case err, more := <-in:
-			ref.Warn("ERROR")
 			if more {
 				ref.Errorf("message error: %T, %v", err, err)
 				ref.Config.RecvErrorChan <- err
