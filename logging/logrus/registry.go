@@ -19,6 +19,8 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/ligato/cn-infra/logging"
+	"sync"
+	"unsafe"
 	"sync/atomic"
 )
 
@@ -34,15 +36,17 @@ func NewLogRegistry() logging.Registry {
 
 // logRegistry contains logger map and rwlock guarding access to it
 type logRegistry struct {
+	access    sync.RWMutex
 	// loggers holds mapping of logger instances indexed by their names
+	mapping map[string] /*logger name*/ *Logger
 	loggers atomic.Value
 }
 
 // NewLogger creates new named Logger instance. Name can be subsequently used to
 // refer the logger in registry.
 func (lr *logRegistry) NewLogger(name string) logging.Logger {
-	mapping := lr.loggers.Load().(map[string]*Logger)
-	if _, exists := mapping[name]; exists {
+	existingLogger := lr.getLoggerFromMap(name)
+	if existingLogger != nil {
 		panic(fmt.Errorf("logger with name '%s' already exists", name))
 	}
 	if err := checkLoggerName(name); err != nil {
@@ -90,9 +94,6 @@ func (lr *logRegistry) SetLevel(logger, level string) error {
 		}
 
 	}
-	// Store the logger with changed mapping
-	mapping[logger] = lg
-	lr.loggers.Store(mapping)
 
 	return nil
 }
@@ -131,4 +132,32 @@ func (lr *logRegistry) put(logger *Logger) {
 	mapping[logger.name] = logger
 
 	lr.loggers.Store(mapping)
+}
+
+func (lr *logRegistry) getLoggerFromMap(logger string) *Logger {
+	lr.access.RLock()
+	defer lr.access.RUnlock()
+
+	loggerObj, ok := lr.mapping[logger]
+	if ok {
+		unsafeLogger := (*unsafe.Pointer)(unsafe.Pointer(&loggerObj))
+		return (*Logger)(atomic.LoadPointer(unsafeLogger))
+
+	}
+	return nil
+}
+
+func (lr *logRegistry) storeLoggerToMap(logger string, newVal *Logger) *Logger {
+	lr.access.RLock()
+	defer lr.access.RUnlock()
+
+	loggerObj, ok := lr.mapping[logger]
+	if ok {
+		unsafeLogger := (*unsafe.Pointer)(unsafe.Pointer(&loggerObj))
+		loggerVal := (*Logger)(atomic.LoadPointer(unsafeLogger))
+		old := loggerVal
+		atomic.CompareAndSwapPointer(unsafeLogger, unsafe.Pointer(old), unsafe.Pointer(loggerVal))
+
+	}
+	return nil
 }
