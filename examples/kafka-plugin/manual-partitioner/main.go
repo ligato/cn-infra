@@ -254,8 +254,7 @@ func (plugin *ExamplePlugin) syncEventHandler() {
 	for message := range plugin.subscription {
 		plugin.Log.Infof("Received sync Kafka Message, topic '%s', partition '%v', offset '%v', key: '%s', ",
 			message.GetTopic(), message.GetPartition(), message.GetOffset(), message.GetKey())
-		// Mark the offset
-		plugin.kafkaWatcher.MarkOffset(message, "")
+		// Note: mark the offset if required
 		receivedMessageCounter++
 		if message.GetPartition() != syncMessagePartition {
 			plugin.Log.Errorf("Received sync message with unexpected partition: %v", message.GetOffset())
