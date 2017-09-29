@@ -29,8 +29,8 @@ type Plugin struct {
 	access        sync.Mutex
 }
 
-// Deps is here to group injected dependencies of plugin
-// to not mix with other plugin fields.
+// Deps groups dependencies injected into the plugin so that they are
+// logically separated from other plugin fields.
 type Deps struct {
 	local.PluginLogDeps // inject
 }
@@ -65,7 +65,9 @@ func (plugin *Plugin) Close() error {
 }
 
 // Register function is supposed to be called in Init() by all VPP Agent plugins.
-// The plugins are supposed to load current state of their objects when newResync() is called.
+// The plugins are supposed to load current state of their objects when newResync() is called.// Deps groups dependencies injected into the plugin to logically separate
+// them from other plugin fields.
+
 // But the actual CreateNewObjects(), DeleteObsoleteObjects() and ModifyExistingObjects() will be orchestrated
 // to ensure there is proper order of that. If an error occurs during Resync than new Resync is planned.
 func (plugin *Plugin) Register(resyncName string) Registration {
