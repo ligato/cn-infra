@@ -20,7 +20,6 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/ligato/cn-infra/logging"
 	"sync"
-	"unsafe"
 	"sync/atomic"
 )
 
@@ -30,22 +29,21 @@ func NewLogRegistry() logging.Registry {
 	// Init mapping in loggers
 	registry.loggers.Store(make(map[string]*Logger))
 	// Put default logger loggers
-	registry.put(defaultLogger)
+	registry.putLoggerToMapping(defaultLogger)
 	return registry
 }
 
 // logRegistry contains logger map and rwlock guarding access to it
 type logRegistry struct {
-	access    sync.RWMutex
+	access sync.RWMutex
 	// loggers holds mapping of logger instances indexed by their names
-	mapping map[string] /*logger name*/ *Logger
 	loggers atomic.Value
 }
 
 // NewLogger creates new named Logger instance. Name can be subsequently used to
 // refer the logger in registry.
 func (lr *logRegistry) NewLogger(name string) logging.Logger {
-	existingLogger := lr.getLoggerFromMap(name)
+	existingLogger := lr.getLoggerFromMapping(name)
 	if existingLogger != nil {
 		panic(fmt.Errorf("logger with name '%s' already exists", name))
 	}
@@ -55,7 +53,7 @@ func (lr *logRegistry) NewLogger(name string) logging.Logger {
 
 	logger := NewLogger(name)
 
-	lr.put(logger)
+	lr.putLoggerToMapping(logger)
 	return logger
 }
 
@@ -71,28 +69,29 @@ func (lr *logRegistry) ListLoggers() map[string]string {
 
 // SetLevel modifies log level of selected logger in the registry
 func (lr *logRegistry) SetLevel(logger, level string) error {
-	mapping := lr.loggers.Load().(map[string]*Logger)
-	lg, ok := mapping[logger]
-	if !ok {
-		return fmt.Errorf("logger %s not found", logger)
-	}
 	lvl, err := logrus.ParseLevel(level)
+	if err != nil {
+		return err
+	}
+	logVal := lr.getLoggerFromMapping(logger)
+	if logVal == nil {
+		return fmt.Errorf("logger %v not found", logger)
+	}
 	if err == nil {
 		switch lvl {
 		case logrus.DebugLevel:
-			lg.SetLevel(logging.DebugLevel)
+			logVal.SetLevel(logging.DebugLevel)
 		case logrus.InfoLevel:
-			lg.SetLevel(logging.InfoLevel)
+			logVal.SetLevel(logging.InfoLevel)
 		case logrus.WarnLevel:
-			lg.SetLevel(logging.WarnLevel)
+			logVal.SetLevel(logging.WarnLevel)
 		case logrus.ErrorLevel:
-			lg.SetLevel(logging.ErrorLevel)
+			logVal.SetLevel(logging.ErrorLevel)
 		case logrus.PanicLevel:
-			lg.SetLevel(logging.PanicLevel)
+			logVal.SetLevel(logging.PanicLevel)
 		case logrus.FatalLevel:
-			lg.SetLevel(logging.FatalLevel)
+			logVal.SetLevel(logging.FatalLevel)
 		}
-
 	}
 
 	return nil
@@ -100,12 +99,11 @@ func (lr *logRegistry) SetLevel(logger, level string) error {
 
 // GetLevel returns the currently set log level of the logger
 func (lr *logRegistry) GetLevel(logger string) (string, error) {
-	mapping := lr.loggers.Load().(map[string]*Logger)
-	lg, ok := mapping[logger]
-	if !ok {
+	logVal := lr.getLoggerFromMapping(logger)
+	if logVal == nil {
 		return "", fmt.Errorf("logger %s not found", logger)
 	}
-	return lg.GetLevel().String(), nil
+	return logVal.GetLevel().String(), nil
 }
 
 // Lookup returns a logger instance identified by name from registry
@@ -126,38 +124,29 @@ func (lr *logRegistry) ClearRegistry() {
 	lr.loggers.Store(mapping)
 }
 
-// put writes logger into map of named loggers
-func (lr *logRegistry) put(logger *Logger) {
+// putLoggerToMapping writes logger into map of named loggers
+func (lr *logRegistry) putLoggerToMapping(logger *Logger) {
+	lr.access.RLock()
+	defer lr.access.RUnlock()
+
 	mapping := lr.loggers.Load().(map[string]*Logger)
 	mapping[logger.name] = logger
 
 	lr.loggers.Store(mapping)
 }
 
-func (lr *logRegistry) getLoggerFromMap(logger string) *Logger {
+// getLoggerFromMapping returns a logger by its name
+func (lr *logRegistry) getLoggerFromMapping(logger string) *Logger {
 	lr.access.RLock()
 	defer lr.access.RUnlock()
 
-	loggerObj, ok := lr.mapping[logger]
-	if ok {
-		unsafeLogger := (*unsafe.Pointer)(unsafe.Pointer(&loggerObj))
-		return (*Logger)(atomic.LoadPointer(unsafeLogger))
-
-	}
-	return nil
-}
-
-func (lr *logRegistry) storeLoggerToMap(logger string, newVal *Logger) *Logger {
-	lr.access.RLock()
-	defer lr.access.RUnlock()
-
-	loggerObj, ok := lr.mapping[logger]
-	if ok {
-		unsafeLogger := (*unsafe.Pointer)(unsafe.Pointer(&loggerObj))
-		loggerVal := (*Logger)(atomic.LoadPointer(unsafeLogger))
-		old := loggerVal
-		atomic.CompareAndSwapPointer(unsafeLogger, unsafe.Pointer(old), unsafe.Pointer(loggerVal))
-
+	mapping := lr.loggers.Load().(map[string]*Logger)
+	if mapping != nil {
+		loggerVal, ok := mapping[logger]
+		if ok {
+			return loggerVal
+		}
+		return nil
 	}
 	return nil
 }

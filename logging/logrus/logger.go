@@ -85,12 +85,6 @@ func NewLogger(name string) *Logger {
 		name:         name,
 	}
 
-	// init tagMap
-
-
-	// init static fields
-
-
 	tf := NewTextFormatter()
 	tf.TimestampFormat = "2006-01-02 15:04:05.00000"
 	logger.SetFormatter(tf)
@@ -234,7 +228,7 @@ func (logger *Logger) GetName() string {
 // SetOutput sets the standard logger output.
 func (logger *Logger) SetOutput(out io.Writer) {
 	unsafeStd := (*unsafe.Pointer)(unsafe.Pointer(&logger.std))
- 	old := logger.std
+	old := logger.std
 	logger.std.Out = out
 	atomic.CompareAndSwapPointer(unsafeStd, unsafe.Pointer(old), unsafe.Pointer(logger.std))
 
@@ -250,8 +244,8 @@ func (logger *Logger) SetFormatter(formatter lg.Formatter) {
 
 // SetLevel sets the standard logger level.
 func (logger *Logger) SetLevel(level logging.LogLevel) {
-	unsafeStd := (*unsafe.Pointer)(unsafe.Pointer(&logger.std))
-	old := logger.std
+	//unsafeStd := (*unsafe.Pointer)(unsafe.Pointer(&logger.std))
+	//stdVal := (*lg.Logger)(atomic.LoadPointer(unsafeStd))
 	switch level {
 	case logging.PanicLevel:
 		logger.std.Level = lg.PanicLevel
@@ -266,7 +260,6 @@ func (logger *Logger) SetLevel(level logging.LogLevel) {
 	case logging.DebugLevel:
 		logger.std.Level = lg.DebugLevel
 	}
-	atomic.CompareAndSwapPointer(unsafeStd, unsafe.Pointer(old), unsafe.Pointer(logger.std))
 }
 
 // GetLevel returns the standard logger level.
