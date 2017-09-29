@@ -175,14 +175,14 @@ func (p *PrometheusPlugin) getDependencyHealth(pluginName string, pluginMap plug
 
 	return func() float64 {
 		pluginStatus, ok := pluginMap.GetValue(pluginName)
+		health := float64(-1)
 		if ok {
-			health := float64(pluginStatus.State)
+			health = float64(pluginStatus.State)
 			p.Log.Infof("DependencyHealth for plugin %v: %v", pluginName, health)
-			return health
 		} else {
 			p.Log.Info("DependencyHealth for plugin %v not found", pluginName)
-			return float64(-1)
 		}
+		return health
 	}
 }
 
