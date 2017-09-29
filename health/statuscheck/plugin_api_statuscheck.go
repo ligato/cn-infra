@@ -52,9 +52,8 @@ type AgentStatusReader interface {
 	GetAgentStatus() status.AgentStatus
 }
 
-// PluginStatusReader allows to retrieve a map containing status of all plugins.
-type PluginStatusReader interface {
-	//TODO combine AgentStatusReader and PluginStatusReader in one interface
-	GetAllPluginStatus() map[string]*status.PluginStatus
-	GetPluginStatusMap() pluginstatusmap.PluginStatusIdxMap
+// StatusReader allows to lookup agent status and retrieve a map containing status of all plugins.
+type StatusReader interface {
+	AgentStatusReader
+	GetAllPluginStatus() pluginstatusmap.PluginStatusIdxMap
 }

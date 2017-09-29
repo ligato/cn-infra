@@ -17,7 +17,7 @@ package probe
 import (
 	"net/http"
 
-	"github.com/ligato/cn-infra/health/statuscheck/model/status"
+	"github.com/ligato/cn-infra/health/statuscheck/pluginstatusmap"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/unrolled/render"
@@ -121,11 +121,10 @@ func (p *PrometheusPlugin) AfterInit() error {
 		p.Log.Info("Unable to register Prometheus metrics handlers, HTTP is nil")
 	}
 
-	//TODO: Need improvement - instead of the exposing the map directly need to use in-memory mapping
-	if p.PluginStatusCheck != nil {
-		allPluginStatusMap := p.PluginStatusCheck.GetAllPluginStatus()
-		for k, v := range allPluginStatusMap {
-			p.Log.Infof("k=%v, v=%v, state=%v", k, v, v.State)
+	if p.StatusCheck != nil {
+		pluginStatusIdx := p.StatusCheck.GetAllPluginStatus()
+		allPluginNames := pluginStatusIdx.GetMapping().ListAllNames()
+		for _, v := range allPluginNames {
 			p.registerGauge(
 				Namespace,
 				Subsystem,
@@ -133,48 +132,15 @@ func (p *PrometheusPlugin) AfterInit() error {
 				DependencyHealthHelp,
 				prometheus.Labels{
 					ServiceLabel:    p.getServiceLabel(),
-					DependencyLabel: k,
+					DependencyLabel: v,
 				},
-				p.getDependencyHealth(k, v),
+				p.getDependencyHealth(v, pluginStatusIdx),
 			)
 		}
+
 	} else {
 		p.Log.Error("PluginStatusCheck is nil")
 	}
-
-	/*if p.PluginStatusCheck != nil {
-		if p.PluginStatusCheck.GetPluginStatusMap() != nil {
-			pluginStatusIdx := p.PluginStatusCheck.GetPluginStatusMap()
-			allPluginNames := pluginStatusIdx.GetMapping().ListAllNames()
-			for _, v := range allPluginNames {
-				p.registerGauge(
-					Namespace,
-					Subsystem,
-					DependencyHealthName,
-					DependencyHealthHelp,
-					prometheus.Labels{
-						ServiceLabel:    agentName,
-						DependencyLabel: v,
-					},
-					func() float64 {
-						p.Log.Infof("DependencyHealth for Plugin %v", v)
-						pluginStatus, ok := pluginStatusIdx.GetValue(v)
-						if ok {
-							p.Log.Infof("DependencyHealth: %v", float64(pluginStatus.State))
-							return float64(pluginStatus.State)
-						} else {
-							p.Log.Info("DependencyHealth not found")
-							return float64(-1)
-						}
-					},
-				)
-			}
-		} else {
-			p.Log.Error("Plugin map is nil")
-		}
-	} else {
-		p.Log.Error("PluginStatusCheck is nil")
-	}*/
 
 	return nil
 }
@@ -205,14 +171,18 @@ func (p *PrometheusPlugin) getServiceHealth() float64 {
 }
 
 // getDependencyHealth returns plugin health status
-func (p *PrometheusPlugin) getDependencyHealth(pluginName string, pluginStatus *status.PluginStatus) func() float64 {
-	p.Log.Infof("DependencyHealth for plugin %v: %v", pluginName, float64(pluginStatus.State))
+func (p *PrometheusPlugin) getDependencyHealth(pluginName string, pluginMap pluginstatusmap.PluginStatusIdxMap) func() float64 {
 
 	return func() float64 {
-		health := float64(pluginStatus.State)
-		depName := pluginName
-		p.Log.Infof("Dependency Health %v: %v", depName, health)
-		return health
+		pluginStatus, ok := pluginMap.GetValue(pluginName)
+		if ok {
+			health := float64(pluginStatus.State)
+			p.Log.Infof("DependencyHealth for plugin %v: %v", pluginName, health)
+			return health
+		} else {
+			p.Log.Info("DependencyHealth for plugin %v not found", pluginName)
+			return float64(-1)
+		}
 	}
 }
 

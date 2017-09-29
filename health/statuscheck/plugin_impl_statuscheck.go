@@ -300,16 +300,6 @@ func stateToProto(state PluginState) status.OperationalState {
 }
 
 // GetAllPluginStatus returns a map containing pluginname and its status, for all plugins
-func (p *Plugin) GetAllPluginStatus() map[string]*status.PluginStatus {
-	//TODO - used currently, will be removed after incoporating improvements for exposing map
-	p.access.Lock()
-	defer p.access.Unlock()
-
-	return p.pluginStat
-}
-
-// GetPluginStatusMap returns a read-only copy of a map containing pluginname and its status, for all plugins
-func (p *Plugin) GetPluginStatusMap() pluginstatusmap.PluginStatusIdxMap {
-	//TODO - will be used for exposing the map
+func (p *Plugin) GetAllPluginStatus() pluginstatusmap.PluginStatusIdxMap {
 	return p.pluginStatusIdx
 }
