@@ -31,8 +31,8 @@ type FlavorRPC struct {
 	//TODO GRPC (& enable/disable using config)
 	HTTPProbe rest.ForkPlugin
 
-	HealthRPC probe.Plugin
-	//TODO PrometheusRPC probe.PrometheusPlugin
+	HealthRPC     probe.Plugin
+	PrometheusRPC probe.PrometheusPlugin
 
 	GRPC grpc.Plugin
 
@@ -73,14 +73,14 @@ func (f *FlavorRPC) Inject() bool {
 	f.HTTPProbe.Deps.PluginName = httpProbeDeps.PluginName
 	f.HTTPProbe.Deps.DefaultHTTP = &f.HTTP
 
-	f.HealthRPC.Deps.PluginLogDeps = *f.LogDeps("health-rpc")
+	f.HealthRPC.Deps.PluginInfraDeps = *f.InfraDeps("health-rpc")
 	f.HealthRPC.Deps.HTTP = &f.HTTPProbe
 	f.HealthRPC.Deps.StatusCheck = &f.StatusCheck
 	//TODO f.HealthRPC.Transport inject restsync
 
-	//TODO f.PrometheusRPC.Deps.PluginLogDeps = *f.LogDeps("health-prometheus-rpc")
-	//f.PrometheusRPC.Deps.HTTP = &f.HTTPProbe
-	//f.PrometheusRPC.Deps.StatusCheck = &f.StatusCheck
+	f.PrometheusRPC.Deps.PluginInfraDeps = *f.InfraDeps("health-prometheus-rpc")
+	f.PrometheusRPC.Deps.HTTP = &f.HTTPProbe
+	f.PrometheusRPC.Deps.StatusCheck = &f.StatusCheck
 
 	return true
 }
