@@ -20,14 +20,13 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/ligato/cn-infra/logging"
 	"sync"
-	"sync/atomic"
 )
 
 // NewLogRegistry is a constructor
 func NewLogRegistry() logging.Registry {
 	registry := &logRegistry{}
 	// Init mapping in loggers
-	registry.loggers.Store(make(map[string]*Logger))
+	registry.loggers = make(map[string]*Logger)
 	// Put default logger loggers
 	registry.putLoggerToMapping(defaultLogger)
 	return registry
@@ -37,7 +36,7 @@ func NewLogRegistry() logging.Registry {
 type logRegistry struct {
 	access sync.RWMutex
 	// loggers holds mapping of logger instances indexed by their names
-	loggers atomic.Value
+	loggers map[string]*Logger
 }
 
 // NewLogger creates new named Logger instance. Name can be subsequently used to
@@ -59,9 +58,11 @@ func (lr *logRegistry) NewLogger(name string) logging.Logger {
 
 // ListLoggers returns a map (loggerName => log level)
 func (lr *logRegistry) ListLoggers() map[string]string {
-	mapping := lr.loggers.Load().(map[string]*Logger)
+	lr.access.RLock()
+	defer lr.access.RUnlock()
+
 	list := map[string]string{}
-	for k, v := range mapping {
+	for k, v := range lr.loggers {
 		list[k] = v.GetLevel().String()
 	}
 	return list
@@ -108,20 +109,23 @@ func (lr *logRegistry) GetLevel(logger string) (string, error) {
 
 // Lookup returns a logger instance identified by name from registry
 func (lr *logRegistry) Lookup(loggerName string) (logger logging.Logger, found bool) {
-	mapping := lr.loggers.Load().(map[string]*Logger)
-	logger, found = mapping[loggerName]
+	lr.access.RLock()
+	defer lr.access.RUnlock()
+
+	logger, found = lr.loggers[loggerName]
 	return
 }
 
 // ClearRegistry removes all loggers except the default one from registry
 func (lr *logRegistry) ClearRegistry() {
-	mapping := lr.loggers.Load().(map[string]*Logger)
-	for k := range mapping {
+	lr.access.RLock()
+	defer lr.access.RUnlock()
+
+	for k := range lr.loggers {
 		if k != DefaultLoggerName {
-			delete(mapping, k)
+			delete(lr.loggers, k)
 		}
 	}
-	lr.loggers.Store(mapping)
 }
 
 // putLoggerToMapping writes logger into map of named loggers
@@ -129,10 +133,7 @@ func (lr *logRegistry) putLoggerToMapping(logger *Logger) {
 	lr.access.RLock()
 	defer lr.access.RUnlock()
 
-	mapping := lr.loggers.Load().(map[string]*Logger)
-	mapping[logger.name] = logger
-
-	lr.loggers.Store(mapping)
+	lr.loggers[logger.name] = logger
 }
 
 // getLoggerFromMapping returns a logger by its name
@@ -140,9 +141,8 @@ func (lr *logRegistry) getLoggerFromMapping(logger string) *Logger {
 	lr.access.RLock()
 	defer lr.access.RUnlock()
 
-	mapping := lr.loggers.Load().(map[string]*Logger)
-	if mapping != nil {
-		loggerVal, ok := mapping[logger]
+	if lr.loggers != nil {
+		loggerVal, ok := lr.loggers[logger]
 		if ok {
 			return loggerVal
 		}
