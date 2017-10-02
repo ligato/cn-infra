@@ -218,10 +218,9 @@ testOutput "${cmd}" "${expected}"
 expected=("Invalid partition -1 - defaulting to 0
 offset arg not set, using default value
 messageCount arg not set, using default value
-Offset: 0, message count: 0
+Offset: 0, message count: 10
 Started Kafka sync event handler...
 Started Kafka async event handler...
-Starting message handlers for new consumer ...
 All plugins initialized successfully
 Sending 10 sync Kafka notifications (protobuf) ...
 Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '5', key: 'proto-key', 
@@ -245,10 +244,9 @@ testOutput "${cmd}" "${expected}"
 expected=("Invalid partition -1 - defaulting to 0
 offset arg not set, using default value
 messageCount arg not set, using default value
-Offset: 0, message count: 0
+Offset: 0, message count: 10
 Started Kafka sync event handler...
 Started Kafka async event handler...
-Starting message handlers for new consumer ...
 All plugins initialized successfully
 Received async Kafka Message, topic 'example-async-topic', partition '2', offset '5', key: 'async-proto-key', 
 Received async Kafka Message, topic 'example-async-topic', partition '2', offset '6', key: 'async-proto-key', 
@@ -294,7 +292,6 @@ offset arg not set, using default value
 Offset: 0, message count: 0
 Started Kafka sync event handler...
 Started Kafka async event handler...
-Starting message handlers for new consumer ...
 All plugins initialized successfully
 Received async Kafka Message, topic 'example-async-topic', partition '2', offset '5', key: 'async-proto-key', 
 Received async Kafka Message, topic 'example-async-topic', partition '2', offset '6', key: 'async-proto-key', 
@@ -350,7 +347,6 @@ offset arg not set, using default value
 Offset: 0, message count: 1
 Started Kafka sync event handler...
 Started Kafka async event handler...
-Starting message handlers for new consumer ...
 All plugins initialized successfully
 Received async Kafka Message, topic 'example-async-topic', partition '2', offset '5', key: 'async-proto-key', 
 Received async Kafka Message, topic 'example-async-topic', partition '2', offset '6', key: 'async-proto-key', 
@@ -405,7 +401,6 @@ expected=("Invalid partition -1 - defaulting to 0
 Offset: 18, message count: 1
 Started Kafka sync event handler...
 Started Kafka async event handler...
-Starting message handlers for new consumer ...
 All plugins initialized successfully
 Received async Kafka Message, topic 'example-async-topic', partition '2', offset '18', key: 'async-proto-key', 
 Received async Kafka Message, topic 'example-async-topic', partition '2', offset '19', key: 'async-proto-key', 
@@ -430,7 +425,6 @@ expected=("Invalid partition -1 - defaulting to 0
 Offset: 20, message count: 0
 Started Kafka sync event handler...
 Started Kafka async event handler...
-Starting message handlers for new consumer ...
 All plugins initialized successfully
 Received async Kafka Message, topic 'example-async-topic', partition '2', offset '20', key: 'async-proto-key', 
 Received async Kafka Message, topic 'example-async-topic', partition '2', offset '21', key: 'async-proto-key', 
@@ -449,52 +443,7 @@ expected=("Invalid partition -1 - defaulting to 0
 Offset: -1, message count: 0
 Started Kafka sync event handler...
 Started Kafka async event handler...
-Starting message handlers for new consumer ...
 All plugins initialized successfully
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '0', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '1', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '2', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '3', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '4', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '5', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '6', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '7', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '8', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '9', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '10', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '11', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '12', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '13', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '14', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '15', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '16', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '17', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '18', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '19', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '20', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '21', key: 'async-proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '0', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '1', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '2', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '3', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '4', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '5', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '6', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '7', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '8', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '9', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '10', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '11', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '12', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '13', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '14', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '15', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '16', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '17', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '18', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '19', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '20', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '21', key: 'proto-key', 
 Sending 0 sync Kafka notifications (protobuf) ...
 Sending 0 async Kafka notifications (protobuf) ...
 ")
@@ -510,7 +459,6 @@ expected=("Invalid partition -1 - defaulting to 0
 Offset: -2, message count: 0
 Started Kafka sync event handler...
 Started Kafka async event handler...
-Starting message handlers for new consumer ...
 All plugins initialized successfully
 Received async Kafka Message, topic 'example-async-topic', partition '2', offset '0', key: 'async-proto-key', 
 Received async Kafka Message, topic 'example-async-topic', partition '2', offset '1', key: 'async-proto-key', 
@@ -583,7 +531,7 @@ stopKafka
 startKafka
 
 # Let us test parameters display
-expected=("Usage of ./hash-partitioner:
+expected=("Usage of examples/kafka-plugin/hash-partitioner/hash-partitioner:
 -config-dir=\".\": Location of the configuration files; also set via 'CONFIG_DIR' env variable.
 -kafka-config=\"kafka.conf\": Location of the kafka Client configuration file; also set via 'KAFKA_CONFIG' env variable.
 -logs-config=\"logs.conf\": Location of the configuration files; also set via 'LOGS_CONFIG' env variable.
