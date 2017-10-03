@@ -25,9 +25,9 @@ import (
 // NewLogRegistry is a constructor
 func NewLogRegistry() logging.Registry {
 	registry := &logRegistry{}
-	// Init mapping in loggers
-	registry.loggers = make(map[string]*Logger)
-	// Put default logger loggers
+	// init new sync mapping in loggers
+	registry.loggers = new(sync.Map)
+	// put default logger
 	registry.putLoggerToMapping(defaultLogger)
 	return registry
 }
@@ -36,7 +36,7 @@ func NewLogRegistry() logging.Registry {
 type logRegistry struct {
 	access sync.RWMutex
 	// loggers holds mapping of logger instances indexed by their names
-	loggers map[string]*Logger
+	loggers *sync.Map
 }
 
 // NewLogger creates new named Logger instance. Name can be subsequently used to
@@ -58,13 +58,31 @@ func (lr *logRegistry) NewLogger(name string) logging.Logger {
 
 // ListLoggers returns a map (loggerName => log level)
 func (lr *logRegistry) ListLoggers() map[string]string {
-	lr.access.RLock()
-	defer lr.access.RUnlock()
+	list := make(map[string]string)
 
-	list := map[string]string{}
-	for k, v := range lr.loggers {
-		list[k] = v.GetLevel().String()
+	var wasErr error
+
+	lr.loggers.Range(func(k, v interface{}) bool {
+		key, ok := k.(string)
+		if !ok {
+			wasErr = fmt.Errorf("cannot cast log map key to string")
+			// false stops the iteration
+			return false
+		}
+		value, ok := v.(*Logger)
+		if !ok {
+			wasErr = fmt.Errorf("cannot cast log value to Logger obj")
+			return false
+		}
+		list[key] = value.GetLevel().String()
+		return true
+	})
+
+	// throw panic outside of logger.Range()
+	if wasErr != nil {
+		panic(wasErr)
 	}
+
 	return list
 }
 
@@ -109,44 +127,57 @@ func (lr *logRegistry) GetLevel(logger string) (string, error) {
 
 // Lookup returns a logger instance identified by name from registry
 func (lr *logRegistry) Lookup(loggerName string) (logger logging.Logger, found bool) {
-	lr.access.RLock()
-	defer lr.access.RUnlock()
-
-	logger, found = lr.loggers[loggerName]
-	return
+	loggerInt, found := lr.loggers.Load(loggerName)
+	if !found {
+		return nil, false
+	}
+	logger, ok := loggerInt.(*Logger)
+	if ok {
+		return logger, found
+	} else {
+		panic(fmt.Errorf("cannot cast log value to Logger obj"))
+	}
 }
 
 // ClearRegistry removes all loggers except the default one from registry
 func (lr *logRegistry) ClearRegistry() {
-	lr.access.RLock()
-	defer lr.access.RUnlock()
+	var wasErr error
 
-	for k := range lr.loggers {
-		if k != DefaultLoggerName {
-			delete(lr.loggers, k)
+	// range over logger map and store keys
+	lr.loggers.Range(func(k, v interface{}) bool {
+		key, ok := k.(string)
+		if !ok {
+			wasErr = fmt.Errorf("cannot cast log map key to string")
+			// false stops the iteration
+			return false
 		}
+		if key != DefaultLoggerName {
+			lr.loggers.Delete(key)
+		}
+		return true
+	})
+
+	if wasErr != nil {
+		panic(wasErr)
 	}
 }
 
 // putLoggerToMapping writes logger into map of named loggers
 func (lr *logRegistry) putLoggerToMapping(logger *Logger) {
-	lr.access.RLock()
-	defer lr.access.RUnlock()
-
-	lr.loggers[logger.name] = logger
+	lr.loggers.Store(logger.name, logger)
 }
 
 // getLoggerFromMapping returns a logger by its name
 func (lr *logRegistry) getLoggerFromMapping(logger string) *Logger {
-	lr.access.RLock()
-	defer lr.access.RUnlock()
-
-	if lr.loggers != nil {
-		loggerVal, ok := lr.loggers[logger]
-		if ok {
-			return loggerVal
-		}
+	loggerVal, found := lr.loggers.Load(logger)
+	if !found {
 		return nil
+	} else {
+		logger, ok := loggerVal.(*Logger)
+		if ok {
+			return logger
+		} else {
+			panic("cannot cast log value to Logger obj")
+		}
 	}
-	return nil
 }
