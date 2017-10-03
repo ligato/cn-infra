@@ -315,7 +315,7 @@ func (logger *Logger) AddHook(hook lg.Hook) {
 	atomic.CompareAndSwapPointer(unsafeStd, unsafe.Pointer(old), unsafe.Pointer(logger.std))
 }
 
-func (logger *Logger) withField(key string, value interface{}, depth ...int) *LogMsg {
+func (logger *Logger) withField(key string, value interface{}, depth ...int) *Entry {
 	d := 1
 	if depth != nil && len(depth) > 0 {
 		d += depth[0]
@@ -332,7 +332,7 @@ func (logger *Logger) WithField(key string, value interface{}) logging.LogWithLe
 	return logger.withField(key, value, 1)
 }
 
-func (logger *Logger) withFields(fields Fields, depth ...int) *LogMsg {
+func (logger *Logger) withFields(fields Fields, depth ...int) *Entry {
 	d := logger.depth
 	if depth != nil && len(depth) > 0 {
 		d += depth[0]
@@ -358,10 +358,10 @@ func (logger *Logger) withFields(fields Fields, depth ...int) *LogMsg {
 	}
 	f[loggerKey] = logger.name
 
-	entry := logger.std.WithFields(f)
-	return &LogMsg{
-		logger: logger,
-		Entry:  entry,
+	lgEntry := logger.std.WithFields(f)
+	return &Entry{
+		logger:  logger,
+		lgEntry: lgEntry,
 	}
 }
 
@@ -375,7 +375,7 @@ func (logger *Logger) WithFields(fields map[string]interface{}) logging.LogWithL
 	return logger.withFields(Fields(fields), 1)
 }
 
-func (logger *Logger) header(depth int) *LogMsg {
+func (logger *Logger) header(depth int) *Entry {
 	t := logger.GetTag()
 	l := logger.GetLineInfo(logger.depth + depth)
 	e := logger.withFields(Fields{
@@ -387,7 +387,9 @@ func (logger *Logger) header(depth int) *LogMsg {
 
 // Debug logs a message at level Debug on the standard logger.
 func (logger *Logger) Debug(args ...interface{}) {
-	logger.header(1).Debug(args...)
+	if logger.std.Level >= lg.DebugLevel {
+		logger.header(1).Debug(args...)
+	}
 }
 
 // Print logs a message at level Info on the standard logger.
@@ -401,37 +403,51 @@ func (logger *Logger) Print(args ...interface{}) {
 
 // Info logs a message at level Info on the standard logger.
 func (logger *Logger) Info(args ...interface{}) {
-	logger.header(1).Info(args...)
+	if logger.std.Level >= lg.InfoLevel {
+		logger.header(1).Info(args...)
+	}
 }
 
 // Warn logs a message at level Warn on the standard logger.
 func (logger *Logger) Warn(args ...interface{}) {
-	logger.header(1).Warn(args...)
+	if logger.std.Level >= lg.WarnLevel {
+		logger.header(1).Warn(args...)
+	}
 }
 
 // Warning logs a message at level Warn on the standard logger.
 func (logger *Logger) Warning(args ...interface{}) {
-	logger.header(1).Warning(args...)
+	if logger.std.Level >= lg.WarnLevel {
+		logger.header(1).Warning(args...)
+	}
 }
 
 // Error logs a message at level Error on the standard logger.
 func (logger *Logger) Error(args ...interface{}) {
-	logger.header(1).Error(args...)
+	if logger.std.Level >= lg.ErrorLevel {
+		logger.header(1).Error(args...)
+	}
 }
 
 // Panic logs a message at level Panic on the standard logger.
 func (logger *Logger) Panic(args ...interface{}) {
-	logger.header(1).Panic(args...)
+	if logger.std.Level >= lg.PanicLevel {
+		logger.header(1).Panic(args...)
+	}
 }
 
 // Fatal logs a message at level Fatal on the standard logger.
 func (logger *Logger) Fatal(args ...interface{}) {
-	logger.header(1).Fatal(args...)
+	if logger.std.Level >= lg.FatalLevel {
+		logger.header(1).Fatal(args...)
+	}
 }
 
 // Debugf logs a message at level Debug on the standard logger.
 func (logger *Logger) Debugf(format string, args ...interface{}) {
-	logger.header(1).Debugf(format, args...)
+	if logger.std.Level >= lg.DebugLevel {
+		logger.header(1).Debugf(format, args...)
+	}
 }
 
 // Printf logs a message at level Info on the standard logger.
@@ -441,37 +457,51 @@ func (logger *Logger) Printf(format string, args ...interface{}) {
 
 // Infof logs a message at level Info on the standard logger.
 func (logger *Logger) Infof(format string, args ...interface{}) {
-	logger.header(1).Infof(format, args...)
+	if logger.std.Level >= lg.InfoLevel {
+		logger.header(1).Infof(format, args...)
+	}
 }
 
 // Warnf logs a message at level Warn on the standard logger.
 func (logger *Logger) Warnf(format string, args ...interface{}) {
-	logger.header(1).Warnf(format, args...)
+	if logger.std.Level >= lg.WarnLevel {
+		logger.header(1).Warnf(format, args...)
+	}
 }
 
 // Warningf logs a message at level Warn on the standard logger.
 func (logger *Logger) Warningf(format string, args ...interface{}) {
-	logger.header(1).Warningf(format, args...)
+	if logger.std.Level >= lg.WarnLevel {
+		logger.header(1).Warningf(format, args...)
+	}
 }
 
 // Errorf logs a message at level Error on the standard logger.
 func (logger *Logger) Errorf(format string, args ...interface{}) {
-	logger.header(1).Errorf(format, args...)
+	if logger.std.Level >= lg.ErrorLevel {
+		logger.header(1).Errorf(format, args...)
+	}
 }
 
 // Panicf logs a message at level Panic on the standard logger.
 func (logger *Logger) Panicf(format string, args ...interface{}) {
-	logger.header(1).Panicf(format, args...)
+	if logger.std.Level >= lg.PanicLevel {
+		logger.header(1).Panicf(format, args...)
+	}
 }
 
 // Fatalf logs a message at level Fatal on the standard logger.
 func (logger *Logger) Fatalf(format string, args ...interface{}) {
-	logger.header(1).Fatalf(format, args...)
+	if logger.std.Level >= lg.FatalLevel {
+		logger.header(1).Fatalf(format, args...)
+	}
 }
 
 // Debugln logs a message at level Debug on the standard logger.
 func (logger *Logger) Debugln(args ...interface{}) {
-	logger.header(1).Debugln(args...)
+	if logger.std.Level >= lg.DebugLevel {
+		logger.header(1).Debugln(args...)
+	}
 }
 
 // Println logs a message at level Info on the standard logger.
@@ -481,32 +511,44 @@ func (logger *Logger) Println(args ...interface{}) {
 
 // Infoln logs a message at level Info on the standard logger.
 func (logger *Logger) Infoln(args ...interface{}) {
-	logger.header(1).Infoln(args...)
+	if logger.std.Level >= lg.InfoLevel {
+		logger.header(1).Infoln(args...)
+	}
 }
 
 // Warnln logs a message at level Warn on the standard logger.
 func (logger *Logger) Warnln(args ...interface{}) {
-	logger.header(1).Warnln(args...)
+	if logger.std.Level >= lg.WarnLevel {
+		logger.header(1).Warnln(args...)
+	}
 }
 
 // Warningln logs a message at level Warn on the standard logger.
 func (logger *Logger) Warningln(args ...interface{}) {
-	logger.header(1).Warningln(args...)
+	if logger.std.Level >= lg.WarnLevel {
+		logger.header(1).Warningln(args...)
+	}
 }
 
 // Errorln logs a message at level Error on the standard logger.
 func (logger *Logger) Errorln(args ...interface{}) {
-	logger.header(1).Errorln(args...)
+	if logger.std.Level >= lg.ErrorLevel {
+		logger.header(1).Errorln(args...)
+	}
 }
 
 // Panicln logs a message at level Panic on the standard logger.
 func (logger *Logger) Panicln(args ...interface{}) {
-	logger.header(1).Panicln(args...)
+	if logger.std.Level >= lg.PanicLevel {
+		logger.header(1).Panicln(args...)
+	}
 }
 
 // Fatalln logs a message at level Fatal on the standard logger.
 func (logger *Logger) Fatalln(args ...interface{}) {
-	logger.header(1).Fatalln(args...)
+	if logger.std.Level >= lg.FatalLevel {
+		logger.header(1).Fatalln(args...)
+	}
 }
 
 func (logger *Logger) curGoroutineID() uint64 {
