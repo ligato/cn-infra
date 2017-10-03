@@ -57,10 +57,8 @@ func DefaultLogger() *Logger {
 // go routines a tag (number that is based on the stack address) is computed. To achieve better readability
 // numeric value of a tag can be replaced by a string using SetTag function.
 type Logger struct {
-	access       sync.RWMutex
-	staticAccess sync.RWMutex
-	tagMap       map[uint64]string
-	staticFields map[string]interface{}
+	tagMap       *sync.Map
+	staticFields *sync.Map
 	std          *lg.Logger
 	depth        int
 	littleBuf    sync.Pool
@@ -78,8 +76,8 @@ type Logger struct {
 //
 func NewLogger(name string) *Logger {
 	logger := &Logger{
-		tagMap:       make(map[uint64]string, 64),
-		staticFields: make(map[string]interface{}),
+		tagMap:       new(sync.Map),
+		staticFields: new(sync.Map),
 		std:          lg.New(),
 		depth:        2,
 		name:         name,
@@ -157,35 +155,43 @@ func (logger *Logger) GetLineInfo(depth int) string {
 
 // InitTag sets the tag for the main thread.
 func (logger *Logger) InitTag(tag ...string) {
-	logger.access.Lock()
-	defer logger.access.Unlock()
 	var t string
+	var index uint64 // first index
 	if tag != nil || len(tag) > 0 {
 		t = tag[0]
 	} else {
 		t = uuid.NewV4().String()[0:8]
 	}
-	logger.tagMap[0] = t
+	lg.Infof("storing tag %v to index %v", t, index)
+	logger.tagMap.Store(index, t)
 }
 
 // GetTag returns the tag identifying the caller's go routine.
 func (logger *Logger) GetTag() string {
-	logger.access.RLock()
-	defer logger.access.RUnlock()
 	ti := logger.curGoroutineID()
-	tag, ok := logger.tagMap[ti]
-	if !ok {
-		tag = logger.tagMap[0]
+	tagVal, found := logger.tagMap.Load(ti)
+	if !found {
+		tagVal, found = logger.tagMap.Load(uint64(0))
+		if !found {
+			panic(fmt.Errorf("default tag was not found"))
+		} else {
+			tag, ok := tagVal.(string)
+			if ok {
+				return tag
+			}
+			panic(fmt.Errorf("cannot cast log map key to string"))
+		}
 	}
-
-	return tag
+	tag, ok := tagVal.(string)
+	if ok {
+		return tag
+	}
+	panic(fmt.Errorf("cannot cast log map key to string"))
 }
 
 // SetTag allows to define a string tag for the current go routine. Otherwise
 // numeric identification is used.
 func (logger *Logger) SetTag(tag ...string) {
-	logger.access.Lock()
-	defer logger.access.Unlock()
 	ti := logger.curGoroutineID()
 	var t string
 	if tag != nil || len(tag) > 0 {
@@ -193,31 +199,46 @@ func (logger *Logger) SetTag(tag ...string) {
 	} else {
 		t = uuid.NewV4().String()[0:8]
 	}
-	logger.tagMap[ti] = t
+	logger.tagMap.Store(ti, t)
 }
 
 // ClearTag removes the previously set string tag for the current go routine.
 func (logger *Logger) ClearTag() {
-	logger.access.Lock()
-	defer logger.access.Unlock()
 	ti := logger.curGoroutineID()
-	delete(logger.tagMap, ti)
+	logger.tagMap.Delete(ti)
 }
 
 // SetStaticFields sets a map of fields that will be part of the each subsequent
 // log entry of the logger
 func (logger *Logger) SetStaticFields(fields map[string]interface{}) {
-	logger.staticAccess.Lock()
-	defer logger.staticAccess.Unlock()
-	logger.staticFields = fields
+	for key, val := range fields {
+		logger.staticFields.Store(key, val)
+	}
 }
 
 // GetStaticFields returns currently set map of static fields - key-value pairs
 // that are automatically added into log entry
 func (logger *Logger) GetStaticFields() map[string]interface{} {
-	logger.staticAccess.Lock()
-	defer logger.staticAccess.Unlock()
-	return logger.staticFields
+	var wasErr error
+	staticFieldsMap := make(map[string]interface{})
+
+	logger.staticFields.Range(func(k, v interface{}) bool {
+		key, ok := k.(string)
+		if !ok {
+			wasErr = fmt.Errorf("cannot cast log map key to string")
+			// false stops the iteration
+			return false
+		}
+		staticFieldsMap[key] = v
+		return true
+	})
+
+	// throw panic outside of logger.Range()
+	if wasErr != nil {
+		panic(wasErr)
+	}
+
+	return staticFieldsMap
 }
 
 // GetName return the logger name
@@ -244,8 +265,6 @@ func (logger *Logger) SetFormatter(formatter lg.Formatter) {
 
 // SetLevel sets the standard logger level.
 func (logger *Logger) SetLevel(level logging.LogLevel) {
-	//unsafeStd := (*unsafe.Pointer)(unsafe.Pointer(&logger.std))
-	//stdVal := (*lg.Logger)(atomic.LoadPointer(unsafeStd))
 	switch level {
 	case logging.PanicLevel:
 		logger.std.Level = lg.PanicLevel

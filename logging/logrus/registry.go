@@ -134,9 +134,8 @@ func (lr *logRegistry) Lookup(loggerName string) (logger logging.Logger, found b
 	logger, ok := loggerInt.(*Logger)
 	if ok {
 		return logger, found
-	} else {
-		panic(fmt.Errorf("cannot cast log value to Logger obj"))
 	}
+	panic(fmt.Errorf("cannot cast log value to Logger obj"))
 }
 
 // ClearRegistry removes all loggers except the default one from registry
@@ -172,12 +171,11 @@ func (lr *logRegistry) getLoggerFromMapping(logger string) *Logger {
 	loggerVal, found := lr.loggers.Load(logger)
 	if !found {
 		return nil
-	} else {
-		logger, ok := loggerVal.(*Logger)
-		if ok {
-			return logger
-		} else {
-			panic("cannot cast log value to Logger obj")
-		}
 	}
+	log, ok := loggerVal.(*Logger)
+	if ok {
+		return log
+	}
+	panic("cannot cast log value to Logger obj")
+
 }
