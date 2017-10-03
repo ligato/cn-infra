@@ -17,7 +17,7 @@ package probe
 import (
 	"net/http"
 
-	"github.com/ligato/cn-infra/health/statuscheck/pluginstatusmap"
+	"github.com/ligato/cn-infra/health/statuscheck/model/status"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/unrolled/render"
@@ -121,10 +121,11 @@ func (p *PrometheusPlugin) AfterInit() error {
 		p.Log.Info("Unable to register Prometheus metrics handlers, HTTP is nil")
 	}
 
+	//TODO: Need improvement - instead of the exposing the map directly need to use in-memory mapping
 	if p.StatusCheck != nil {
-		pluginStatusIdx := p.StatusCheck.GetAllPluginStatus()
-		allPluginNames := pluginStatusIdx.GetMapping().ListAllNames()
-		for _, v := range allPluginNames {
+		allPluginStatusMap := p.StatusCheck.GetAllPluginStatus()
+		for k, v := range allPluginStatusMap {
+			p.Log.Infof("k=%v, v=%v, state=%v", k, v, v.State)
 			p.registerGauge(
 				Namespace,
 				Subsystem,
@@ -132,12 +133,11 @@ func (p *PrometheusPlugin) AfterInit() error {
 				DependencyHealthHelp,
 				prometheus.Labels{
 					ServiceLabel:    p.getServiceLabel(),
-					DependencyLabel: v,
+					DependencyLabel: k,
 				},
-				p.getDependencyHealth(v, pluginStatusIdx),
+				p.getDependencyHealth(k, v),
 			)
 		}
-
 	} else {
 		p.Log.Error("PluginStatusCheck is nil")
 	}
@@ -171,17 +171,13 @@ func (p *PrometheusPlugin) getServiceHealth() float64 {
 }
 
 // getDependencyHealth returns plugin health status
-func (p *PrometheusPlugin) getDependencyHealth(pluginName string, pluginMap pluginstatusmap.PluginStatusIdxMap) func() float64 {
+func (p *PrometheusPlugin) getDependencyHealth(pluginName string, pluginStatus *status.PluginStatus) func() float64 {
+	p.Log.Infof("DependencyHealth for plugin %v: %v", pluginName, float64(pluginStatus.State))
 
 	return func() float64 {
-		pluginStatus, ok := pluginMap.GetValue(pluginName)
-		health := float64(-1)
-		if ok {
-			health = float64(pluginStatus.State)
-			p.Log.Infof("DependencyHealth for plugin %v: %v", pluginName, health)
-		} else {
-			p.Log.Info("DependencyHealth for plugin %v not found", pluginName)
-		}
+		health := float64(pluginStatus.State)
+		depName := pluginName
+		p.Log.Infof("Dependency Health %v: %v", depName, health)
 		return health
 	}
 }
