@@ -57,8 +57,8 @@ func DefaultLogger() *Logger {
 // go routines a tag (number that is based on the stack address) is computed. To achieve better readability
 // numeric value of a tag can be replaced by a string using SetTag function.
 type Logger struct {
-	tagMap       *sync.Map
-	staticFields *sync.Map
+	tagMap       sync.Map
+	staticFields sync.Map
 	std          *lg.Logger
 	depth        int
 	littleBuf    sync.Pool
@@ -76,8 +76,8 @@ type Logger struct {
 //
 func NewLogger(name string) *Logger {
 	logger := &Logger{
-		tagMap:       new(sync.Map),
-		staticFields: new(sync.Map),
+		tagMap:       sync.Map{},
+		staticFields: sync.Map{},
 		std:          lg.New(),
 		depth:        2,
 		name:         name,
@@ -162,7 +162,6 @@ func (logger *Logger) InitTag(tag ...string) {
 	} else {
 		t = uuid.NewV4().String()[0:8]
 	}
-	lg.Infof("storing tag %v to index %v", t, index)
 	logger.tagMap.Store(index, t)
 }
 
@@ -173,14 +172,13 @@ func (logger *Logger) GetTag() string {
 	if !found {
 		tagVal, found = logger.tagMap.Load(uint64(0))
 		if !found {
-			panic(fmt.Errorf("default tag was not found"))
-		} else {
-			tag, ok := tagVal.(string)
-			if ok {
-				return tag
-			}
-			panic(fmt.Errorf("cannot cast log map key to string"))
+			return ""
 		}
+		tag, ok := tagVal.(string)
+		if ok {
+			return tag
+		}
+		panic(fmt.Errorf("cannot cast log map key to string"))
 	}
 	tag, ok := tagVal.(string)
 	if ok {
@@ -306,10 +304,14 @@ func (logger *Logger) GetLevel() logging.LogLevel {
 
 // AddHook adds a hook to the standard logger hooks.
 func (logger *Logger) AddHook(hook lg.Hook) {
+	mux := &sync.Mutex{}
+
 	unsafeStd := (*unsafe.Pointer)(unsafe.Pointer(&logger.std))
 	stdVal := (*lg.Logger)(atomic.LoadPointer(unsafeStd))
 	old := logger.std
+	mux.Lock()
 	stdVal.Hooks.Add(hook)
+	mux.Unlock()
 	atomic.CompareAndSwapPointer(unsafeStd, unsafe.Pointer(old), unsafe.Pointer(logger.std))
 }
 
