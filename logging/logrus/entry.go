@@ -29,6 +29,7 @@ const (
 // Entry is the logging entry. It has logrus' entry struct which is a final or intermediate Logrus logging entry
 type Entry struct {
 	logger  *Logger
+	fields  lg.Fields
 	lgEntry *lg.Entry
 }
 
@@ -51,44 +52,53 @@ func (entry *Entry) String() (string, error) {
 	return str, nil
 }
 
-// WithError calls logrus 'WithError' method
-func (entry *Entry) WithError(err error) *lg.Entry {
-	return entry.lgEntry.WithField("error", err)
+// WithError calls calls WithField with error key
+func (entry *Entry) WithError(err error) *Entry {
+	return entry.WithField("error", err)
 }
 
-// WithField calls logrus 'WithField' method
-func (entry *Entry) WithField(key string, value interface{}) *lg.Entry {
-	return entry.lgEntry.WithFields(lg.Fields{key: value})
+// WithField calls transforms key/value to field and passes to WithFields
+func (entry *Entry) WithField(key string, value interface{}) *Entry {
+	return entry.WithFields(lg.Fields{key: value})
 }
 
-// WithFields calls logrus 'WithFields' method
-func (entry *Entry) WithFields(fields lg.Fields) *lg.Entry {
-	return entry.lgEntry.WithFields(fields)
+// WithFields stores field entries. These entries are used later when log method (Info, Debug, etc) is called
+func (entry *Entry) WithFields(fields lg.Fields) *Entry {
+	data := make(lg.Fields, len(entry.fields)+len(fields))
+	for k, v := range entry.fields {
+		data[k] = v
+	}
+	for k, v := range fields {
+		data[k] = v
+	}
+	return &Entry{logger: entry.logger, fields: data, lgEntry: entry.lgEntry}
 }
 
 // Debug logs a message at level Debug on the standard logger.
 func (entry *Entry) Debug(args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lg.DebugLevel {
-		entry.lgEntry.Debug(args...)
+		entry.lgEntry.WithFields(entry.fields).Debug(args...)
 	}
 }
 
 // Print logs a message at level Info on the standard logger.
 func (entry *Entry) Print(args ...interface{}) {
-	entry.lgEntry.Info(args...)
+	if entry.lgEntry.Logger.Level >= lg.InfoLevel {
+		entry.lgEntry.WithFields(entry.fields).Info(args...)
+	}
 }
 
 // Info logs a message at level Info on the standard logger.
 func (entry *Entry) Info(args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lg.InfoLevel {
-		entry.lgEntry.Info(args...)
+		entry.lgEntry.WithFields(entry.fields).Info(args...)
 	}
 }
 
 // Warn logs a message at level Warn on the standard logger.
 func (entry *Entry) Warn(args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lg.WarnLevel {
-		entry.lgEntry.Warn(args...)
+		entry.lgEntry.WithFields(entry.fields).Warn(args...)
 	}
 }
 
@@ -100,129 +110,129 @@ func (entry *Entry) Warning(args ...interface{}) {
 // Error logs a message at level Error on the standard logger.
 func (entry *Entry) Error(args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lg.ErrorLevel {
-		entry.lgEntry.Error(args...)
+		entry.lgEntry.WithFields(entry.fields).Error(args...)
 	}
 }
 
 // Fatal logs a message at level Fatal on the standard logger.
 func (entry *Entry) Fatal(args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lg.FatalLevel {
-		entry.lgEntry.Fatal(args...)
+		entry.lgEntry.WithFields(entry.fields).Fatal(args...)
 	}
 }
 
 // Panic logs a message at level Panic on the standard logger.
 func (entry *Entry) Panic(args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lg.PanicLevel {
-		entry.lgEntry.Panic(args...)
+		entry.lgEntry.WithFields(entry.fields).Panic(args...)
 	}
 }
 
 // Debugf logs a message at level Debug on the standard logger.
 func (entry *Entry) Debugf(format string, args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lg.DebugLevel {
-		entry.lgEntry.Debugf(format, args...)
+		entry.lgEntry.WithFields(entry.fields).Debugf(format, args...)
 	}
 }
 
 // Infof logs a message at level Info on the standard logger.
 func (entry *Entry) Infof(format string, args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lg.InfoLevel {
-		entry.lgEntry.Infof(format, args...)
+		entry.lgEntry.WithFields(entry.fields).Infof(format, args...)
 	}
 }
 
 // Printf logs a message at level Info on the standard logger.
 func (entry *Entry) Printf(format string, args ...interface{}) {
-	entry.lgEntry.Printf(format, args...)
+	entry.lgEntry.WithFields(entry.fields).Printf(format, args...)
 }
 
 // Warnf logs a message at level Warn on the standard logger.
 func (entry *Entry) Warnf(format string, args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lg.WarnLevel {
-		entry.lgEntry.Warnf(format, args...)
+		entry.lgEntry.WithFields(entry.fields).Warnf(format, args...)
 	}
 }
 
 // Warningf logs a message at level Warn on the standard logger.
 func (entry *Entry) Warningf(format string, args ...interface{}) {
-	entry.lgEntry.Warningf(format, args...)
+	entry.lgEntry.WithFields(entry.fields).Warningf(format, args...)
 }
 
 // Errorf logs a message at level Error on the standard logger.
 func (entry *Entry) Errorf(format string, args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lg.ErrorLevel {
-		entry.lgEntry.Errorf(format, args...)
+		entry.lgEntry.WithFields(entry.fields).Errorf(format, args...)
 	}
 }
 
 // Fatalf logs a message at level Debug on the standard logger.
 func (entry *Entry) Fatalf(format string, args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lg.FatalLevel {
-		entry.lgEntry.Fatalf(format, args...)
+		entry.lgEntry.WithFields(entry.fields).Fatalf(format, args...)
 	}
 }
 
 // Panicf logs a message at level Panic on the standard logger.
 func (entry *Entry) Panicf(format string, args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lg.PanicLevel {
-		entry.lgEntry.Panicf(format, args...)
+		entry.lgEntry.WithFields(entry.fields).Panicf(format, args...)
 	}
 }
 
 // Debugln logs a message at level Debug on the standard logger.
 func (entry *Entry) Debugln(args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lg.DebugLevel {
-		entry.lgEntry.Debugln(entry.sprintlnn(args...))
+		entry.lgEntry.WithFields(entry.fields).Debugln(entry.sprintlnn(args...))
 	}
 }
 
 // Infoln logs a message at level Info on the standard logger.
 func (entry *Entry) Infoln(args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lg.InfoLevel {
-		entry.lgEntry.Infoln(entry.sprintlnn(args...))
+		entry.lgEntry.WithFields(entry.fields).Infoln(entry.sprintlnn(args...))
 	}
 }
 
 // Println logs a message at level Info on the standard logger.
 func (entry *Entry) Println(args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lg.InfoLevel {
-		entry.lgEntry.Println(entry.sprintlnn(args...))
+		entry.lgEntry.WithFields(entry.fields).Println(entry.sprintlnn(args...))
 	}
 }
 
 // Warnln logs a message at level Warn on the standard logger.
 func (entry *Entry) Warnln(args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lg.WarnLevel {
-		entry.lgEntry.Warnln(entry.sprintlnn(args...))
+		entry.lgEntry.WithFields(entry.fields).Warnln(entry.sprintlnn(args...))
 	}
 }
 
 // Warningln logs a message at level Warn on the standard logger.
 func (entry *Entry) Warningln(args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lg.WarnLevel {
-		entry.lgEntry.Warningln(entry.sprintlnn(args...))
+		entry.lgEntry.WithFields(entry.fields).Warningln(entry.sprintlnn(args...))
 	}
 }
 
 // Errorln logs a message at level Error on the standard logger.
 func (entry *Entry) Errorln(args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lg.ErrorLevel {
-		entry.lgEntry.Errorln(entry.sprintlnn(args...))
+		entry.lgEntry.WithFields(entry.fields).Errorln(entry.sprintlnn(args...))
 	}
 }
 
 // Fatalln logs a message at level Fatal on the standard logger.
 func (entry *Entry) Fatalln(args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lg.FatalLevel {
-		entry.lgEntry.Fatalln(entry.sprintlnn(args...))
+		entry.lgEntry.WithFields(entry.fields).Fatalln(entry.sprintlnn(args...))
 	}
 }
 
 // Panicln logs a message at level Panic on the standard logger.
 func (entry *Entry) Panicln(args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lg.PanicLevel {
-		entry.lgEntry.Panicln(entry.sprintlnn(args...))
+		entry.lgEntry.WithFields(entry.fields).Panicln(entry.sprintlnn(args...))
 	}
 }
 
