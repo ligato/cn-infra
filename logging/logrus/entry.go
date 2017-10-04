@@ -144,7 +144,9 @@ func (entry *Entry) Infof(format string, args ...interface{}) {
 
 // Printf logs a message at level Info on the standard logger.
 func (entry *Entry) Printf(format string, args ...interface{}) {
-	entry.lgEntry.WithFields(entry.fields).Printf(format, args...)
+	if entry.lgEntry.Logger.Level >= lg.InfoLevel {
+		entry.lgEntry.WithFields(entry.fields).Printf(format, args...)
+	}
 }
 
 // Warnf logs a message at level Warn on the standard logger.
@@ -156,7 +158,9 @@ func (entry *Entry) Warnf(format string, args ...interface{}) {
 
 // Warningf logs a message at level Warn on the standard logger.
 func (entry *Entry) Warningf(format string, args ...interface{}) {
-	entry.lgEntry.WithFields(entry.fields).Warningf(format, args...)
+	if entry.lgEntry.Logger.Level >= lg.WarnLevel {
+		entry.lgEntry.WithFields(entry.fields).Warningf(format, args...)
+	}
 }
 
 // Errorf logs a message at level Error on the standard logger.

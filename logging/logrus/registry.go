@@ -34,7 +34,6 @@ func NewLogRegistry() logging.Registry {
 
 // logRegistry contains logger map and rwlock guarding access to it
 type logRegistry struct {
-	access sync.RWMutex
 	// loggers holds mapping of logger instances indexed by their names
 	loggers *sync.Map
 }
