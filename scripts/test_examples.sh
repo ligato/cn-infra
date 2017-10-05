@@ -3,34 +3,20 @@
 TMP_FILE="/tmp/out"
 exitCode=0
 PREV_IFS="$IFS"
+RUNTIME_LIMIT=5
 
-# test whether output of the command contains expected lines
+# tests whether the output of the command contains expected lines
 # arguments
-# 1-st command to run
-# 2-nd array of expected strings in the command output
-# 3-rd argument is an optional array of unexpected strings in the command output
-# 4-th argument is an optional command runtime limit
-function testOutput {
-IFS="${PREV_IFS}"
-
-    #run the command
-    if [ $# -ge 4 ]; then
-        $1 > ${TMP_FILE} 2>&1 &
-        CMD_PID=$!
-        sleep $4
-        kill $CMD_PID
-    else
-        $1 > ${TMP_FILE} 2>&1
-    fi
-
+# 1st command to run
+# 2nd array of expected strings in the command output
+# 3rd argument is an optional array of unexpected strings in the command output
+function testExpectedMessage {
 IFS="
 "
-    echo "Testing $1"
     rv=0
     # loop through expected lines
-    for i in $2
-    do
-        if grep -- "${i}" /tmp/out > /dev/null ; then
+    for i in $2; do
+        if grep -- "${i}" "$TMP_FILE" > /dev/null ; then
             echo "OK - '$i'"
         else
             echo "Not found - '$i'"
@@ -39,9 +25,8 @@ IFS="
     done
     # loop through unexpected lines
     if [[ ! -z $3 ]] ; then
-        for i in $3
-        do
-            if grep -- "${i}" /tmp/out > /dev/null ; then
+        for i in $3; do
+            if grep -- "${i}" "$TMP_FILE" > /dev/null ; then
                 echo "IS NOT OK - '$i'"
                 rv=1
             fi
@@ -52,11 +37,47 @@ IFS="
     if [[ ! $rv -eq 0 ]] ; then
         cat ${TMP_FILE}
         exitCode=1
+    else
+        exitCode=0
     fi
+}
 
+
+# kills the process started by the command if it runs beyond runtime limit
+# tests whether the output of the command contains expected lines
+# arguments
+# 1st command to run
+# 2nd array of expected strings in the command output
+# 3rd argument is mandatory command runtime limit
+# 4th argument is an optional array of unexpected strings in the command output
+
+function testOutput {
+IFS="$PREV_IFS"
+    echo "Testing $1"
+
+    #run the command
+    $1 > $TMP_FILE 2>&1 &
+    CMD_PID=$!
+    sleep $3
+
+    if ps -p $CMD_PID > /dev/null; then
+        kill $CMD_PID
+        echo "Killed $1."
+        sleep 3
+        if ps -p $CMD_PID > /dev/null; then
+            kill -9 $CMD_PID
+            echo "Test $1 has not terminated before runtime limit."
+            exitCode=1
+        else
+            testExpectedMessage "$1" "$2" "$4"
+        fi
+    else
+        testExpectedMessage "$1" "$2" "$4"
+    fi
+    echo "##$exitCode"
     echo "================================================================"
-    rm ${TMP_FILE}
-    return ${rv}
+    rm $TMP_FILE
+    return $exitCode
 }
 
 function startEtcd {
@@ -137,9 +158,7 @@ Successfully queried with IN
 ")
 
 cmd="examples/cassandra-lib/cassandra-lib examples/cassandra-lib/client-config.yaml"
-testOutput "${cmd}" "${expected}"
-
-stopCassandra
+testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT
 
 #### Configs #############################################################
 
@@ -148,7 +167,7 @@ Plugin Config {Field1:external value, Sleep:0s}
 ")
 
 cmd="examples/configs-plugin/configs-plugin --config-dir=examples/configs-plugin --example-config=example.conf"
-testOutput "${cmd}" "${expected}"
+testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT
 
 #### Datasync ############################################################
 
@@ -162,7 +181,7 @@ Event arrived to etcd eventHandler, key /vnf-agent/vpp1/api/v1/example/db/simple
 ")
 
 cmd="examples/datasync-plugin/datasync-plugin --etcdv3-config=examples/datasync-plugin/etcd.conf"
-testOutput "${cmd}" "${expected}"
+testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT
 
 stopEtcd
 
@@ -174,7 +193,7 @@ expected=("Saving  /phonebook/Peter
 ")
 
 cmd="examples/etcdv3-lib/editor/editor --cfg examples/etcdv3-lib/etcd.conf  put  Peter Company 0907"
-testOutput "${cmd}" "${expected}"
+testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT
 
 stopEtcd
 
@@ -192,7 +211,7 @@ testFlagDur:'5s'
 ")
 
 cmd="examples/flags-lib/flags-lib --ep-string mystring --ep-uint 112"
-testOutput "${cmd}" "${expected}"
+testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT
 
 #### Kafka-lib ###########################################################
 
@@ -204,7 +223,7 @@ Sync published
 Message is stored in topic(test)/partition(0)/offset(1)
 ")
 
-testOutput examples/kafka-lib/mux/mux "${expected}"
+testOutput examples/kafka-lib/mux/mux "${expected}" $RUNTIME_LIMIT
 
 stopKafka
 
@@ -221,7 +240,7 @@ unexpected=("Error while stopping watcher
 ")
 
 cmd="examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf  --offsetMsg 18 --messageCount 0"
-testOutput "${cmd}" "${expected}" "${unexpected}"
+testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT "${unexpected}"
 
 # Let us test the running without parameters - in example are generated 10 Kafka Messages to both topics but the consumed is only 5 messages from each topic beginning with offset 5
 expected=("offset arg not set, using default value
@@ -246,7 +265,7 @@ unexpected=("Error while stopping watcher
 ")
 
 cmd="examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf"
-testOutput "${cmd}" "${expected}" "${unexpected}"
+testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT "${unexpected}"
 
 # Let us test - in example no new messages generated - we are consummed all beginning with offset 5 till 9  (which were generated before)
 expected=("offset arg not set, using default value
@@ -266,7 +285,7 @@ unexpected=("Error while stopping watcher
 ")
 
 cmd='examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf -messageCount=0'
-testOutput "${cmd}" "${expected}" "${unexpected}"
+testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT "${unexpected}"
 
 # Let us test - in example one new message generated
 expected=("offset arg not set, using default value
@@ -289,7 +308,7 @@ unexpected=("Error while stopping watcher
 ")
 
 cmd='examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf -messageCount=1'
-testOutput "${cmd}" "${expected}" "${unexpected}"
+testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT "${unexpected}"
 
 # Let us test - in example one new message generated - with offset 11 for both topics and we display all messages from offset 8
 expected=("Offset: 8, message count: 1
@@ -315,7 +334,7 @@ Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '
 ")
 
 cmd="examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf --messageCount 1 --offsetMsg 8"
-testOutput "${cmd}" "${expected}" "${unexpected}"
+testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT "${unexpected}"
 
 # Let us test - in example no new messages generated - we want to list all latest messages
 expected=("Offset: -1, message count: 0
@@ -331,8 +350,7 @@ unexpected=("Error while stopping watcher
 
 # this is not working  cmd="examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf --messageCount 0 -offsetMsg=\"latest\""
 cmd="examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf --messageCount 0 -offsetMsg=latest"
-testOutput "${cmd}" "${expected}" "${unexpected}"
-
+testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT "${unexpected}"
 
 # Let us test - in example no new messages generated - we want to list all oldest messages
 expected=("Offset: -2, message count: 0
@@ -351,7 +369,7 @@ unexpected=("Error while stopping watcher
 ")
 
 cmd="examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf --messageCount 0 -offsetMsg=oldest"
-testOutput "${cmd}" "${expected}" "${unexpected}"
+testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT "${unexpected}"
 
 
 # Let us test - in example no new messages generated - wrong value of parameter offsetMsg
@@ -363,14 +381,11 @@ unexpected=("Error while stopping watcher
 ")
 
 cmd="examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf --messageCount 0 -offsetMsg=wronginput"
-testOutput "${cmd}" "${expected}" "${unexpected}"
-
+testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT "${unexpected}"
 
 stopKafka
 
 #### Kafka-plugin hash-partitioner #######################################
-
-startKafka
 
 # Let us test the running without parameters - in example are generated 10 Kafka Messages to both topics
 expected=("messageCount arg not set, using default value
@@ -391,7 +406,7 @@ unexpected=("Error while stopping watcher
 ")
 
 cmd="examples/kafka-plugin/hash-partitioner/hash-partitioner --kafka-config examples/kafka-plugin/hash-partitioner/kafka.conf"
-testOutput "${cmd}" "${expected}" "${unexpected}"
+testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT "${unexpected}"
 
 # Let us test - now let us test the messageCount (it relates to both topics)
 expected=("Message count: 0
@@ -407,7 +422,7 @@ unexpected=("Error while stopping watcher
 ")
 
 cmd='examples/kafka-plugin/hash-partitioner/hash-partitioner --kafka-config examples/kafka-plugin/hash-partitioner/kafka.conf  -messageCount=0'
-testOutput "${cmd}" "${expected}" "${unexpected}"
+testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT "${unexpected}"
 
 # Let us test - now let us test the messageCount (it relates to both topics)
 expected=("Message count: 1
@@ -426,9 +441,7 @@ unexpected=("Error while stopping watcher
 ")
 
 cmd='examples/kafka-plugin/hash-partitioner/hash-partitioner --kafka-config examples/kafka-plugin/hash-partitioner/kafka.conf  -messageCount=1'
-testOutput "${cmd}" "${expected}" "${unexpected}"
-
-
+testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT "${unexpected}"
 
 stopKafka
 
@@ -451,7 +464,7 @@ unexpected=("Error while stopping watcher
 ")
 
 cmd="examples/kafka-plugin/post-init-consumer/post-init-consumer --kafka-config examples/kafka-plugin/post-init-consumer/kafka.conf"
-testOutput "${cmd}" "${expected}" "${unexpected}"
+testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT "${unexpected}"
 
 stopKafka
 
@@ -464,13 +477,13 @@ Temperature changes
 It's over 9000!
 The ice breaks!
 ")
-testOutput examples/logs-lib/basic/basic "${expected}"
+testOutput examples/logs-lib/basic/basic "${expected}" $RUNTIME_LIMIT
 
 expected=("DEBUG componentXY
 WARN componentXY
 ERROR componentXY
 ")
-testOutput examples/logs-lib/custom/custom "${expected}"
+testOutput examples/logs-lib/custom/custom "${expected}" $RUNTIME_LIMIT
 
 #### Logs-plugin #########################################################
 
@@ -481,7 +494,7 @@ Error log example
 Stopping agent...
 ")
 
-testOutput examples/logs-plugin/logs-plugin "${expected}"
+testOutput examples/logs-plugin/logs-plugin "${expected}" $RUNTIME_LIMIT
 
 #### Simple-agent ########################################################
 
@@ -494,7 +507,7 @@ All plugins initialized successfully
 
 unexpected=("")
 
-testOutput examples/simple-agent/simple-agent "${expected}" "${unexpected}" 5
+testOutput examples/simple-agent/simple-agent "${expected}" $RUNTIME_LIMIT "${unexpected}"
 
 #### Simple-agent with Kafka and ETCD ####################################
 
@@ -511,7 +524,7 @@ All plugins initialized successfully
 unexpected=("")
 
 cmd="examples/simple-agent/simple-agent --etcdv3-config=examples/datasync-plugin/etcd.conf --kafka-config examples/kafka-plugin/hash-partitioner/kafka.conf"
-testOutput "${cmd}" "${expected}" "${unexpected}" 5
+testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT "${unexpected}"
 
 stopEtcd
 stopKafka
