@@ -38,7 +38,7 @@ type Deps struct {
 	Cfg
 }
 
-// Deps groups configurations fields. It can be extended with other fields
+// Cfg groups configurations fields. It can be extended with other fields
 // (such as sync/async, partition...)
 type Cfg struct {
 	Topic string
