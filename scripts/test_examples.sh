@@ -42,7 +42,6 @@ IFS="
     fi
 }
 
-
 # kills the process started by the command if it runs beyond runtime limit
 # tests whether the output of the command contains expected lines
 # arguments
@@ -532,3 +531,7 @@ stopKafka
 ##########################################################################
 
 exit ${exitCode}
+
+
+
+
