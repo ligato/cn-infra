@@ -18,7 +18,7 @@ import (
 	"github.com/ligato/cn-infra/core"
 )
 
-// Subscriber is an API for plugins register for notifications from the
+// Subscriber is an API used by plugins to register for notifications from the
 // RESYNC Orcherstrator.
 type Subscriber interface {
 	// Register function is supposed to be called in Init() by all VPP Agent plugins.
