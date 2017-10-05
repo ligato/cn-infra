@@ -65,9 +65,7 @@ func (plugin *Plugin) Close() error {
 }
 
 // Register function is supposed to be called in Init() by all VPP Agent plugins.
-// The plugins are supposed to load current state of their objects when newResync() is called.// Deps groups dependencies injected into the plugin to logically separate
-// them from other plugin fields.
-
+// The plugins are supposed to load current state of their objects when newResync() is called.
 // But the actual CreateNewObjects(), DeleteObsoleteObjects() and ModifyExistingObjects() will be orchestrated
 // to ensure there is proper order of that. If an error occurs during Resync than new Resync is planned.
 func (plugin *Plugin) Register(resyncName string) Registration {
