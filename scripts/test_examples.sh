@@ -1,14 +1,72 @@
 #!/usr/bin/env bash
 
 TMP_FILE="/tmp/out"
+EXITCODE_FILE="/tmp/exit"
 exitCode=0
 PREV_IFS="$IFS"
+RUNTIME_LIMIT=10
 
 # test whether output of the command contains expected lines
 # arguments
 # 1-st command to run
 # 2-nd array of expected strings in the command output
-# 3-rd argument is an optional command runtime limit
+# 3-rd argument is a command runtime limit
+# function testExpectedMessage {
+# IFS="
+# "
+#     # loop through expected lines
+#     for i in $2; do
+#         if grep "$i" "$TMP_FILE" > /dev/null ; then
+#             exitCode=$?
+#             echo "$exitCode" >> $EXITCODE_FILE
+#             echo "OK - '$i'"
+#         else
+#             exitCode=$?
+#             echo "$exitCode" >> $EXITCODE_FILE
+#             echo "Not found - '$i'"
+#         fi
+#     done
+#
+#     # if an error occurred print the output
+#     if grep "1" "$EXITCODE_FILE" > /dev/null; then
+#         cat $TMP_FILE
+#         exitCode=1
+#     else
+#         exitCode=0
+#     fi
+#     rm $EXITCODE_FILE
+# }
+#
+# function testOutput {
+# IFS="$PREV_IFS"
+#     echo "Testing $1"
+#
+#     #run the command
+#     $1 > $TMP_FILE 2>&1 &
+#     CMD_PID=$!
+#     sleep $3
+#
+#     if ps -p $CMD_PID > /dev/null; then
+#         kill $CMD_PID
+#         echo "Killed $1."
+#         sleep 3
+#         if ps -p $CMD_PID > /dev/null; then
+#             kill -9 $CMD_PID
+#             echo "Test $1 has not terminated before runtime limit."
+#             exitCode=1
+#         else
+#             testExpectedMessage "$1" "$2"
+#         fi
+#     else
+#         testExpectedMessage "$1" "$2"
+#     fi
+#     echo "##$exitCode"
+#     echo "================================================================"
+#     rm $TMP_FILE
+#     return $exitCode
+# }
+#
+
 function testOutput {
 IFS="${PREV_IFS}"
 
