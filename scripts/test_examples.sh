@@ -265,18 +265,8 @@ Async watcher closed
 unexpected=("Error while stopping watcher
 ")
 
-#this is not working - I do not know why
-#cmd="examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf -messageCount=\"0\""
-#testOutput "${cmd}" "${expected}"
-#result is:
-#time="2017-09-29 14:23:04.54780" level=info msg="Agent AfterInit took 0s" durationInNs=0 loc="core/agent_core.go(124)" logger=core tag=00000000 
-#time="2017-09-29 14:23:04.54782" level=error msg="Error loading core: plugin KafkaExample: Init error ''messageCount' has to be a number, not "0"', took 44.642µs" loc="core/event_loop.go(28)" logger=core tag=00000000 
-#Testing examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf -messageCount="0"
-
-#workaround
-cmd='examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf --messageCount 0'
+cmd='examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf -messageCount=0'
 testOutput "${cmd}" "${expected}" "${unexpected}"
-
 
 # Let us test - in example one new message generated
 expected=("offset arg not set, using default value
@@ -298,8 +288,7 @@ Async watcher closed
 unexpected=("Error while stopping watcher
 ")
 
-# this does not work: cmd="examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf -messageCount=\"1\""
-cmd='examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf --messageCount 1'
+cmd='examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf -messageCount=1'
 testOutput "${cmd}" "${expected}" "${unexpected}"
 
 # Let us test - in example one new message generated - with offset 11 for both topics and we display all messages from offset 8
