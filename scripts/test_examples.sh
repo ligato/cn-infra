@@ -43,6 +43,7 @@ IFS="
     fi
 }
 
+
 # kills the process started by the command if it runs beyond runtime limit
 # tests whether the output of the command contains expected lines
 # arguments
@@ -79,6 +80,14 @@ IFS="$PREV_IFS"
     rm $TMP_FILE
     return $exitCode
 }
+
+
+
+
+
+
+
+
 
 function startEtcd {
     docker run -p 2379:2379 --name etcd -d -e ETCDCTL_API=3 \
@@ -532,6 +541,3 @@ stopKafka
 ##########################################################################
 
 exit ${exitCode}
-
-
-
