@@ -310,6 +310,8 @@ Async watcher closed
 ")
 
 unexpected=("Error while stopping watcher
+Received async Kafka Message, topic 'example-async-topic', partition '2', offset '7', key: 'async-proto-key', 
+Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '7', key: 'proto-key', 
 ")
 
 cmd="examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf --messageCount 1 --offsetMsg 8"
