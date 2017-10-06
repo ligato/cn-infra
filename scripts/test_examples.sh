@@ -17,7 +17,7 @@ IFS="${PREV_IFS}"
     if [ $# -ge 4 ]; then
         $1 > ${TMP_FILE} 2>&1 &
         CMD_PID=$!
-        sleep $3
+        sleep $4
         kill $CMD_PID
     else
         $1 > ${TMP_FILE} 2>&1
