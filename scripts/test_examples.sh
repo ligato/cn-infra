@@ -8,12 +8,13 @@ PREV_IFS="$IFS"
 # arguments
 # 1-st command to run
 # 2-nd array of expected strings in the command output
-# 3-rd argument is an optional command runtime limit
+# 3-rd argument is an optional array of unexpected strings in the command output
+# 4-th argument is an optional command runtime limit
 function testOutput {
 IFS="${PREV_IFS}"
 
     #run the command
-    if [ $# -ge 3 ]; then
+    if [ $# -ge 4 ]; then
         $1 > ${TMP_FILE} 2>&1 &
         CMD_PID=$!
         sleep $3
@@ -36,6 +37,16 @@ IFS="
             rv=1
         fi
     done
+    # loop through unexpected lines
+    if [[ ! -z $3 ]] ; then
+        for i in $3
+        do
+            if grep -- "${i}" /tmp/out > /dev/null ; then
+                echo "IS NOT OK - '$i'"
+                rv=1
+            fi
+        done
+    fi
 
     # if an error occurred print the output
     if [[ ! $rv -eq 0 ]] ; then
@@ -206,8 +217,11 @@ expected=("Offset: 18, message count: 0
 Error loading core: plugin Kafka: AfterInit error 'kafka server: The requested offset is outside the range of offsets maintained by the server for the given topic/partition.'
 ")
 
+unexpected=("Error while stopping watcher
+")
+
 cmd="examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf  --offsetMsg 18 --messageCount 0"
-testOutput "${cmd}" "${expected}"
+testOutput "${cmd}" "${expected}" "${unexpected}"
 
 # Let us test the running without parameters - in example are generated 10 Kafka Messages to both topics but the consumed is only 5 messages from each topic beginning with offset 5
 expected=("offset arg not set, using default value
@@ -228,8 +242,11 @@ Sync watcher closed
 Async watcher closed
 ")
 
+unexpected=("Error while stopping watcher
+")
+
 cmd="examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf"
-testOutput "${cmd}" "${expected}"
+testOutput "${cmd}" "${expected}" "${unexpected}"
 
 # Let us test - in example are generated next more 10 Kafka Messages to both topics
 expected=("offset arg not set, using default value
@@ -252,8 +269,11 @@ Sync watcher closed
 Async watcher closed
 ")
 
+unexpected=("Error while stopping watcher
+")
+
 cmd="examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf"
-testOutput "${cmd}" "${expected}"
+testOutput "${cmd}" "${expected}" "${unexpected}"
 
 # Let us test - in example no new messages generated - we are consummed all beginning with offset 5 till 19  (which were generated before)
 expected=("offset arg not set, using default value
@@ -277,9 +297,12 @@ Async watcher closed
 #time="2017-09-29 14:23:04.54782" level=error msg="Error loading core: plugin KafkaExample: Init error ''messageCount' has to be a number, not "0"', took 44.642µs" loc="core/event_loop.go(28)" logger=core tag=00000000 
 #Testing examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf -messageCount="0"
 
+unexpected=("Error while stopping watcher
+")
+
 #workaround
 cmd='examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf --messageCount 0'
-testOutput "${cmd}" "${expected}"
+testOutput "${cmd}" "${expected}" "${unexpected}"
 
 
 # Let us test - in example one new message generated
@@ -299,9 +322,12 @@ Sync watcher closed
 Async watcher closed
 ")
 
+unexpected=("Error while stopping watcher
+")
+
 # this does not work: cmd="examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf -messageCount=\"1\""
 cmd='examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf --messageCount 1'
-testOutput "${cmd}" "${expected}"
+testOutput "${cmd}" "${expected}" "${unexpected}"
 
 
 # Let us test - now let us test the offset (it relates to both topics) - till now we generated XX messages
@@ -328,9 +354,11 @@ Sync watcher closed
 Async watcher closed
 ")
 
+unexpected=("Error while stopping watcher
+")
 
 cmd="examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf --messageCount 1 --offsetMsg 18"
-testOutput "${cmd}" "${expected}"
+testOutput "${cmd}" "${expected}" "${unexpected}"
 
 
 # Let us test - in example no new message generated
@@ -346,9 +374,11 @@ Sync watcher closed
 Async watcher closed
 ")
 
+unexpected=("Error while stopping watcher
+")
 
 cmd="examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf --messageCount 0 --offsetMsg 20"
-testOutput "${cmd}" "${expected}"
+testOutput "${cmd}" "${expected}" "${unexpected}"
 
 # Let us test - in example no new messages generated - we want to list all latest messages
 expected=("Offset: -1, message count: 0
@@ -359,10 +389,12 @@ Sync watcher closed
 Async watcher closed
 ")
 
+unexpected=("Error while stopping watcher
+")
 
 # this is not working  cmd="examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf --messageCount 0 -offsetMsg=\"latest\""
 cmd="examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf --messageCount 0 -offsetMsg=latest"
-testOutput "${cmd}" "${expected}"
+testOutput "${cmd}" "${expected}" "${unexpected}"
 
 
 # Let us test - in example no new messages generated - we want to list all oldest messages
@@ -378,10 +410,11 @@ Sync watcher closed
 Async watcher closed
 ")
 
-
+unexpected=("Error while stopping watcher
+")
 
 cmd="examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf --messageCount 0 -offsetMsg=oldest"
-testOutput "${cmd}" "${expected}"
+testOutput "${cmd}" "${expected}" "${unexpected}"
 
 
 # Let us test - in example no new messages generated - wrong value of parameter offsetMsg
@@ -389,9 +422,11 @@ expected=("
 Error loading core: plugin KafkaExample: Init error 'incorrect sync offset value wronginput
 ")
 
+unexpected=("Error while stopping watcher
+")
 
 cmd="examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf --messageCount 0 -offsetMsg=wronginput"
-testOutput "${cmd}" "${expected}"
+testOutput "${cmd}" "${expected}" "${unexpected}"
 
 
 stopKafka
@@ -405,14 +440,6 @@ expected=("messageCount arg not set, using default value
 Sending 10 sync Kafka notifications (protobuf) ...
 Sending 10 async Kafka notifications (protobuf) ...
 Async message successfully delivered, topic 'example-async-topic', partition '0', offset '0', key: 'async-proto-key', 
-Async message successfully delivered, topic 'example-async-topic', partition '0', offset '2', key: 'async-proto-key', 
-Async message successfully delivered, topic 'example-async-topic', partition '0', offset '1', key: 'async-proto-key', 
-Async message successfully delivered, topic 'example-async-topic', partition '0', offset '4', key: 'async-proto-key', 
-Async message successfully delivered, topic 'example-async-topic', partition '0', offset '3', key: 'async-proto-key', 
-Async message successfully delivered, topic 'example-async-topic', partition '0', offset '6', key: 'async-proto-key', 
-Async message successfully delivered, topic 'example-async-topic', partition '0', offset '5', key: 'async-proto-key', 
-Async message successfully delivered, topic 'example-async-topic', partition '0', offset '8', key: 'async-proto-key', 
-Async message successfully delivered, topic 'example-async-topic', partition '0', offset '7', key: 'async-proto-key', 
 Async message successfully delivered, topic 'example-async-topic', partition '0', offset '9', key: 'async-proto-key', 
 All plugins initialized successfully
 Received Kafka Message, topic 'example-sync-topic', partition '0', offset '0', key: 'proto-key', 
@@ -423,8 +450,11 @@ Sync watcher closed
 Async watcher closed
 ")
 
+unexpected=("Error while stopping watcher
+")
+
 cmd="examples/kafka-plugin/hash-partitioner/hash-partitioner --kafka-config examples/kafka-plugin/hash-partitioner/kafka.conf"
-testOutput "${cmd}" "${expected}"
+testOutput "${cmd}" "${expected}" "${unexpected}"
 
 # Let us test - now let us test the messageCount (it relates to both topics)
 expected=("Message count: 0
@@ -436,8 +466,11 @@ Sync watcher closed
 Async watcher closed
 ")
 
+unexpected=("Error while stopping watcher
+")
+
 cmd='examples/kafka-plugin/hash-partitioner/hash-partitioner --kafka-config examples/kafka-plugin/hash-partitioner/kafka.conf  -messageCount=0'
-testOutput "${cmd}" "${expected}"
+testOutput "${cmd}" "${expected}" "${unexpected}"
 
 # Let us test - now let us test the messageCount (it relates to both topics)
 expected=("Message count: 1
@@ -452,8 +485,11 @@ Sync watcher closed
 Async watcher closed
 ")
 
+unexpected=("Error while stopping watcher
+")
+
 cmd='examples/kafka-plugin/hash-partitioner/hash-partitioner --kafka-config examples/kafka-plugin/hash-partitioner/kafka.conf  -messageCount=1'
-testOutput "${cmd}" "${expected}"
+testOutput "${cmd}" "${expected}" "${unexpected}"
 
 
 
@@ -474,8 +510,11 @@ Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '
 Post-init watcher closed
 ")
 
+unexpected=("Error while stopping watcher
+")
+
 cmd="examples/kafka-plugin/post-init-consumer/post-init-consumer --kafka-config examples/kafka-plugin/post-init-consumer/kafka.conf"
-testOutput "${cmd}" "${expected}"
+testOutput "${cmd}" "${expected}" "${unexpected}"
 
 stopKafka
 
@@ -516,7 +555,9 @@ cassandra client config not found  - skip loading this plugin
 All plugins initialized successfully
 ")
 
-testOutput examples/simple-agent/simple-agent "${expected}" 5
+unexpected=("")
+
+testOutput examples/simple-agent/simple-agent "${expected}" "${unexpected}" 5
 
 #### Simple-agent with Kafka and ETCD ####################################
 
@@ -530,8 +571,10 @@ cassandra client config not found  - skip loading this plugin
 All plugins initialized successfully
 ")
 
+unexpected=("")
+
 cmd="examples/simple-agent/simple-agent --etcdv3-config=examples/datasync-plugin/etcd.conf --kafka-config examples/kafka-plugin/hash-partitioner/kafka.conf"
-testOutput "${cmd}" "${expected}" 5
+testOutput "${cmd}" "${expected}" "${unexpected}" 5
 
 stopEtcd
 stopKafka
