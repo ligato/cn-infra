@@ -146,6 +146,7 @@ cassandra client config not found  - skip loading this plugin
 cmd="examples/simple-agent/simple-agent --etcdv3-config=examples/etcdv3-lib/etcd.conf --kafka-config=examples/kafka-plugin/manual-partitioner/kafka.conf  --redis-config=examples/redis-lib/node-client.yaml --cassandra-config=examples/cassandra-lib/client-config.yaml"
 testOutput "${cmd}" "${expected}" "${unexpected}" 0 # the cmd continues to run - we will kill it later
 
+# redis start/stop test
 stopRedis >> /dev/null
 sleep 10
 docker exec etcd etcdctl get --prefix "" | grep  redis
@@ -166,6 +167,56 @@ expected=("Agent plugin state update.*plugin=redis state=ok
 ")
 
 unexpected=("Agent plugin state update.*Get(/probe-redis-connection) failed: EOF.*status-check.*plugin=redis state=error 
+")
+
+testOutput "${cmd}" "${expected}" "${unexpected}" 0 # cmd unchanged - ASSERT connected AGAIN
+
+# cassandra start/stop test
+stopCassandra >> /dev/null
+sleep 10
+docker exec etcd etcdctl get --prefix "" | grep  gocql
+
+expected=("Agent plugin state update.*gocql: no hosts available in the pool.*status-check plugin=cassandra state=error
+")
+
+unexpected=("Agent plugin state update.*plugin=cassandra state=ok
+")
+
+testOutput "${cmd}" "${expected}" "${unexpected}" 0 # cmd unchanged - ASSERT disconnected
+
+startCassandra >> /dev/null
+sleep 10
+docker exec etcd etcdctl get --prefix "" | grep gocql
+
+expected=("Agent plugin state update.*plugin=cassandra state=ok
+")
+
+unexpected=("Agent plugin state update.*gocql: no hosts available in the pool.*status-check plugin=cassandra state=error 
+")
+
+testOutput "${cmd}" "${expected}" "${unexpected}" 0 # cmd unchanged - ASSERT connected AGAIN
+
+# kafka start/stop test
+stopKafka >> /dev/null
+sleep 10
+docker exec etcd etcdctl get --prefix "" | grep  kafka
+
+expected=("Agent plugin state update.*kafka: client has run out of available brokers to talk to (Is your cluster reachable?).*status-check plugin=kafka state=error
+")
+
+unexpected=("Agent plugin state update.*plugin=kafka state=ok
+")
+
+testOutput "${cmd}" "${expected}" "${unexpected}" 0 # cmd unchanged - ASSERT disconnected
+
+startKafka >> /dev/null
+sleep 10
+docker exec etcd etcdctl get --prefix "" | grep kafka
+
+expected=("Agent plugin state update.*plugin=kafka state=ok
+")
+
+unexpected=("Agent plugin state update.*kafka: client has run out of available brokers to talk to (Is your cluster reachable?).*status-check plugin=kafka state=error 
 ")
 
 testOutput "${cmd}" "${expected}" "${unexpected}" 0 # cmd unchanged - ASSERT connected AGAIN
