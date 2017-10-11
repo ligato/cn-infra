@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The package "addrs" contains helpers for ip and mac address conversion.
+// Package addrs contains helpers for ip and mac address conversion.
 package addrs

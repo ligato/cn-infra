@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The package "restsync" implements (in ALPHA VERSION) the datasync API for the
+// Package restsync implements (in ALPHA VERSION) the datasync API for the
 // HTTP/REST transport. This implementation is special (compared to dbsync
 // or bussync) because it does not use any intermediate persistence between
 // the client and the server. Therefore, the client does remote calls to each

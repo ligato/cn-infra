@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The package "datasync" defines the datasync API, which abstracts the data
+// Package datasync defines the datasync API, which abstracts the data
 // transport between app plugins and backend data sources. Data sources
 // may be data stores, clients connected to a message bus, or remote clients
 // connected to CN-Infra app. Transport may be, for example, HTTP or gRPC.

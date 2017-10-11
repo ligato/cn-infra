@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The package "msgsync" propagates protobuf messages to a particular topic.
+// Package msgsync propagates protobuf messages to a particular topic.
 package msgsync

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The package "kvdbsync" defines a key-value data store client API for unified
+// Package kvdbsync defines a key-value data store client API for unified
 // access among key-value datastore servers. The datasync API contains the
 // Data Broker & KeyValProtoWatcher APIs, which are just facades in front of
 // different key-value or SQL stores.

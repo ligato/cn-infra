@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The package "syncbase" defines common structures used in multiple datasync
+// Package syncbase defines common structures used in multiple datasync
 // transports. The following reusable structures are defined:
 //
 // - KeyValProtoWatcher maintains watch registrations/subscriptions.

@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The package "safeclose" provides utilities for safe closing of I/O resources.
+// Package safeclose provides utilities for safe closing of I/O resources.
 package safeclose
