@@ -17,7 +17,7 @@ IFS="${PREV_IFS}"
     #run the command
     if [ $# -ge 4 ]; then
         if [ -e ${TMP_FILE} ]; then
-	    # if exists file /tmp/out we assume that the command still runs, do not start it again
+            # if exists file /tmp/out we assume that the command still runs, do not start it again
             echo > /dev/null
         else
             $1 > ${TMP_FILE} 2>&1 &
@@ -28,13 +28,13 @@ IFS="${PREV_IFS}"
             sleep $4
             kill $CMD_PID
         else
-	    # The command continues to run - his PID is in the variable CMD_PID
+            # The command continues to run - his PID is in the variable CMD_PID
             sleep 20
         fi
-	cat ${TMP_FILE} | awk "NR > $processedLines" > ${TMP_FILE2}
+        cat ${TMP_FILE} | awk "NR > $processedLines" > ${TMP_FILE2}
     else
         $1 > ${TMP_FILE} 2>&1
-	cat ${TMP_FILE} > ${TMP_FILE2}
+        cat ${TMP_FILE} > ${TMP_FILE2}
     fi
 
 IFS="
@@ -69,13 +69,18 @@ IFS="
     fi
 
     echo "================================================================"
-    if [ $4 -ne 0 ]; then
-        rm ${TMP_FILE}
-	rm ${TMP_FILE2}
+    if [ $# -ge 4 ]; then
+        if [ $4 -ne 0 ]; then
+            rm ${TMP_FILE}
+            rm ${TMP_FILE2}
+        else
+            # The command continues to run - the output is still redirected to the file ${TMP_FILE}
+            # read -n1 -r -p "Press any key to continue..." key
+            processedLines=`wc -l ${TMP_FILE} | cut --delimiter=" " -f1`
+        fi
     else
-        # The command continues to run - the output is still redirected to the file ${TMP_FILE}
-	# read -n1 -r -p "Press any key to continue..." key
-	processedLines=`wc -l ${TMP_FILE} | cut --delimiter=" " -f1`
+        rm ${TMP_FILE}
+        rm ${TMP_FILE2}
     fi
     return ${rv}
 }
@@ -130,7 +135,7 @@ function startCassandra {
     docker run -p 9042:9042 --name cassandra01 -d cassandra > /dev/null 2> /dev/null
     # Wait until cassandra is ready to accept a connection.
     for attemptps in {1..20} ; do
-        sleep 5
+        sleep 1
         NODEINFO=$(docker exec -it cassandra01 nodetool info)
         if [ $? -eq 0 ]; then
             if [[ ${NODEINFO} == *"Native Transport active: true"* ]]; then
