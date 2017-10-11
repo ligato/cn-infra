@@ -66,3 +66,14 @@ function stopCassandra {
     docker rm cassandra01 > /dev/null
 }
 
+function startRedis {
+    docker run --name redis -p 6379:6379 -d redis > /dev/null 2> /dev/null
+    # sometimes Cassandra needs a bit more time to fully initialize
+    # sleep 2
+}
+
+function stopRedis {
+    docker stop redis > /dev/null
+    docker rm redis > /dev/null
+}
+
