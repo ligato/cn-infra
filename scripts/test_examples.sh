@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 TMP_FILE="/tmp/out"
+
 exitCode=0
 PREV_IFS="$IFS"
 RUNTIME_LIMIT=5
@@ -42,6 +43,7 @@ IFS="
     fi
 }
 
+
 # kills the process started by the command if it runs beyond runtime limit
 # tests whether the output of the command contains expected lines
 # arguments
@@ -78,7 +80,6 @@ IFS="$PREV_IFS"
     rm $TMP_FILE
     return $exitCode
 }
-
 function startEtcd {
     docker run -p 2379:2379 --name etcd -d -e ETCDCTL_API=3 \
         quay.io/coreos/etcd:v3.1.0 /usr/local/bin/etcd \
@@ -158,7 +159,6 @@ Successfully queried with IN
 
 cmd="examples/cassandra-lib/cassandra-lib examples/cassandra-lib/client-config.yaml"
 testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT
-
 #### Configs #############################################################
 
 expected=("Loaded plugin config - found external configuration examples/configs-plugin/example.conf
@@ -531,6 +531,3 @@ stopKafka
 ##########################################################################
 
 exit ${exitCode}
-
-
-
