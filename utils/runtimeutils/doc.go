@@ -1,2 +1,2 @@
-// Package runtimeutils contains utilities for inspecting Go's runtime system.
+// The package "runtimeutils" contains utilities for inspecting Go's runtime system.
 package runtimeutils

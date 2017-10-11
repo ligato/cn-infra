@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package local implements DB Transactions for the local "in memory"
-// transport. This implementation basically uses a collection of transaction
-// items that are propagated to registered GO channels.
+// The package "local" implements DB Transactions for the local "in memory"
+// transport. This implementation uses a collection of transaction items that
+// are propagated to registered GO channels.
 package local
