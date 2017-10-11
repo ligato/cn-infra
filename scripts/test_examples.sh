@@ -76,8 +76,6 @@ IFS="
         # The command continues to run - the output is still redirected to the file ${TMP_FILE}
 	# read -n1 -r -p "Press any key to continue..." key
 	processedLines=`wc -l ${TMP_FILE} | cut --delimiter=" " -f1`
-	echo $processedLines
-	read -n1 -r -p "Press any key to continue..." key
     fi
     return ${rv}
 }
