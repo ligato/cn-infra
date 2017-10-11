@@ -137,6 +137,13 @@ define test_examples
     @echo "# done"
 endef
 
+# run test examples2
+define test_examples2
+    @echo "# Testing examples 2"
+    @./scripts/test_examples2.sh
+    @echo "# done"
+endef
+
 # build all binaries
 build:
 	$(call build_examples_only)
@@ -157,6 +164,7 @@ test:
 # run smoke tests on examples
 test-examples:
 	$(call test_examples)
+	$(call test_examples2)
 
 # run tests with coverage report
 test-cover:
