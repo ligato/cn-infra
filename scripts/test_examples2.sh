@@ -148,7 +148,7 @@ testOutput "${cmd}" "${expected}" "${unexpected}" 0 # the cmd continues to run -
 
 # redis start/stop test
 stopRedis >> /dev/null
-sleep 10
+sleep 3
 docker exec etcd etcdctl get --prefix "" | grep  redis
 
 expected=("Agent plugin state update.*Get(/probe-redis-connection) failed: EOF.*status-check.*plugin=redis state=error
@@ -160,7 +160,7 @@ unexpected=("Agent plugin state update.*plugin=redis state=ok
 testOutput "${cmd}" "${expected}" "${unexpected}" 0 # cmd unchanged - ASSERT disconnected
 
 startRedis >> /dev/null
-sleep 10
+sleep 3
 docker exec etcd etcdctl get --prefix "" | grep redis
 
 expected=("Agent plugin state update.*plugin=redis state=ok
@@ -173,7 +173,7 @@ testOutput "${cmd}" "${expected}" "${unexpected}" 0 # cmd unchanged - ASSERT con
 
 # cassandra start/stop test
 stopCassandra >> /dev/null
-sleep 10
+sleep 3
 docker exec etcd etcdctl get --prefix "" | grep  gocql
 
 expected=("Agent plugin state update.*gocql: no hosts available in the pool.*status-check plugin=cassandra state=error
@@ -185,7 +185,7 @@ unexpected=("Agent plugin state update.*plugin=cassandra state=ok
 testOutput "${cmd}" "${expected}" "${unexpected}" 0 # cmd unchanged - ASSERT disconnected
 
 startCassandra >> /dev/null
-sleep 10
+sleep 3
 docker exec etcd etcdctl get --prefix "" | grep gocql
 
 expected=("Agent plugin state update.*plugin=cassandra state=ok
@@ -198,7 +198,7 @@ testOutput "${cmd}" "${expected}" "${unexpected}" 0 # cmd unchanged - ASSERT con
 
 # kafka start/stop test
 stopKafka >> /dev/null
-sleep 10
+sleep 3
 docker exec etcd etcdctl get --prefix "" | grep  kafka
 
 expected=("Agent plugin state update.*kafka: client has run out of available brokers to talk to (Is your cluster reachable?).*status-check plugin=kafka state=error
@@ -210,7 +210,7 @@ unexpected=("Agent plugin state update.*plugin=kafka state=ok
 testOutput "${cmd}" "${expected}" "${unexpected}" 0 # cmd unchanged - ASSERT disconnected
 
 startKafka >> /dev/null
-sleep 10
+sleep 3
 docker exec etcd etcdctl get --prefix "" | grep kafka
 
 expected=("Agent plugin state update.*plugin=kafka state=ok
