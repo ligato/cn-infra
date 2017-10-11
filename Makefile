@@ -140,7 +140,7 @@ endef
 # run test examples2
 define test_examples2
     @echo "# Testing examples 2"
-    @./scripts/test_examples2.sh
+    @./scripts/test_examples.sh
     @echo "# done"
 endef
 
