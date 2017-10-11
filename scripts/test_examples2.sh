@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#
+
 TMP_FILE="/tmp/out"
 TMP_FILE2="/tmp/unprocessed"
 processedLines=0 
@@ -87,4 +87,98 @@ IFS="
 }
 
 source scripts/docker_start_stop_functions.sh
-echo "som tu"
+
+#### Simple-agent ########################################################
+
+expected=("etcd config not found  - skip loading this plugin
+kafka config not found  - skip loading this plugin
+redis config not found  - skip loading this plugin
+cassandra client config not found  - skip loading this plugin
+All plugins initialized successfully
+")
+
+unexpected=("")
+
+testOutput examples/simple-agent/simple-agent "${expected}" "${unexpected}" 5
+
+#### Simple-agent with Kafka and ETCD ####################################
+
+startEtcd
+startKafka
+
+expected=("Plugin etcdv3: status check probe registered
+Plugin kafka: status check probe registered
+redis config not found  - skip loading this plugin
+cassandra client config not found  - skip loading this plugin
+All plugins initialized successfully
+")
+
+unexpected=("")
+
+cmd="examples/simple-agent/simple-agent --etcdv3-config=examples/datasync-plugin/etcd.conf --kafka-config examples/kafka-plugin/hash-partitioner/kafka.conf"
+testOutput "${cmd}" "${expected}" "${unexpected}" 5
+
+stopEtcd
+stopKafka
+
+#### Simple-agent with Cassandra and Redis and Kafka and ETCD ####################################
+
+startEtcd
+startCustomizedKafka examples/kafka-plugin/manual-partitioner/server.properties
+startRedis
+startCassandra
+
+expected=("Plugin etcdv3: status check probe registered
+Plugin redis: status check probe registered
+Plugin cassandra: status check probe registered
+Plugin kafka: status check probe registered
+All plugins initialized successfully
+Agent plugin state update.*plugin=etcdv3 state=ok
+Agent plugin state update.*plugin=redis state=ok
+Agent plugin state update.*plugin=cassandra state=ok
+Agent plugin state update.*plugin=kafka state=ok
+")
+
+unexpected=("redis config not found  - skip loading this plugin
+cassandra client config not found  - skip loading this plugin
+")
+
+cmd="examples/simple-agent/simple-agent --etcdv3-config=examples/etcdv3-lib/etcd.conf --kafka-config=examples/kafka-plugin/manual-partitioner/kafka.conf  --redis-config=examples/redis-lib/node-client.yaml --cassandra-config=examples/cassandra-lib/client-config.yaml"
+testOutput "${cmd}" "${expected}" "${unexpected}" 0 # the cmd continues to run - we will kill it later
+
+stopRedis >> /dev/null
+sleep 10
+docker exec etcd etcdctl get --prefix "" | grep  redis
+
+expected=("Agent plugin state update.*Get(/probe-redis-connection) failed: EOF.*status-check.*plugin=redis state=error
+")
+
+unexpected=("Agent plugin state update.*plugin=redis state=ok
+")
+
+testOutput "${cmd}" "${expected}" "${unexpected}" 0 # cmd unchanged - ASSERT disconnected
+
+startRedis >> /dev/null
+sleep 10
+docker exec etcd etcdctl get --prefix "" | grep redis
+
+expected=("Agent plugin state update.*plugin=redis state=ok
+")
+
+unexpected=("Agent plugin state update.*Get(/probe-redis-connection) failed: EOF.*status-check.*plugin=redis state=error 
+")
+
+testOutput "${cmd}" "${expected}" "${unexpected}" 0 # cmd unchanged - ASSERT connected AGAIN
+
+kill $CMD_PID > /dev/null
+rm ${TMP_FILE} > /dev/null
+rm ${TMP_FILE2} > /dev/null
+
+stopEtcd
+stopKafka
+stopRedis
+stopCassandra
+
+##########################################################################
+
+exit ${exitCode}
