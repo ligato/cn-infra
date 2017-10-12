@@ -46,8 +46,7 @@ func main() {
 	// Start Agent with ExampleFlavor
 	// (combination of ExamplePlugin & Local flavor)
 	flavor := ExampleFlavor{ExamplePlugin: ExamplePlugin{exampleFinished: exampleFinished}}
-	plugins := flavor.Plugins()
-	agent := core.NewAgent(flavor.LogRegistry().NewLogger("core"), 15*time.Second, plugins...)
+	agent := core.NewAgent(&flavor)
 	core.EventLoopWithInterrupt(agent, exampleFinished)
 }
 
