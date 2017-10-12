@@ -14,7 +14,27 @@
 * one instance of mux in kafka plugin 
 * new field `group-id` can be added to kafka.conf. This value is used as a Group ID in order to set it 
   manually. In case the value is not provided, the service label is used instead (just like before). 
-      
+
+## Agent, Flavors
+Input arguments of `core.NewAgent()` has been changed (for backward compatibility the is `core.NewAgentDeprecated()`):
+  * it can be called without any options `core.NewAgent(flavor)`
+  * you can pass options it can be called without any options `core.NewAgent(flavor, core.WithTimeout(1* time.Second))`
+
+This release contains utilities/options to avoid writing new flavor go structures (Inject, Plugins methods)
+for simple customizations:
+* if you just expose the RPCs you can write
+  ```
+  rpc.NewAgent(rpc.WithPlugins(func(flavor *rpc.FlavorRPC) []*core.NamedPlugin {
+    return []*core.NamedPlugin{"my-plugin", &MyPlugin{&flavor.GRPC}}
+  }))
+  ```
+* if you just want to add one simple plugin you can write:
+  ```
+  flavor := &local.FlavorLocal{}
+  flavor.Inject()
+  core.NewAgent(flavor, core.WithPlugin(&MyPlugin{&flavor.StatusCheck}))//or PluginInfraDeps
+  ```
+
 # Release v1.0.4 (2017-9-25)
 
 ## Documentation
