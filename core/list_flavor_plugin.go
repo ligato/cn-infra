@@ -180,18 +180,19 @@ func fieldPlugin(field reflect.StructField, fieldVal reflect.Value, pluginType r
 //   NewAgent(Inject(&Flavor1{}, &Flavor2{}))
 //
 func Inject(fs ...Flavor) Flavor {
-	var ret flavors
-	ret = flavors(fs)
+	ret := flavors{fs}
 	ret.Inject()
 	return ret
 }
 
-type flavors []Flavor
+type flavors struct {
+	fs []Flavor
+}
 
 // Plugins returns list of plugins af all flavors
 func (flavors flavors) Plugins() []*NamedPlugin {
 	ret := []*NamedPlugin{}
-	for _, f := range flavors {
+	for _, f := range flavors.fs {
 		ret = append(ret, f.Plugins()...)
 	}
 	return ret
@@ -200,7 +201,7 @@ func (flavors flavors) Plugins() []*NamedPlugin {
 // Inject returns true if at least one returned true
 func (flavors flavors) Inject() (firstRun bool) {
 	ret := false
-	for _, f := range flavors {
+	for _, f := range flavors.fs {
 		ret = ret || f.Inject()
 	}
 	return ret
@@ -208,8 +209,8 @@ func (flavors flavors) Inject() (firstRun bool) {
 
 // LogRegistry is a getter for accessing log registry of first flavor
 func (flavors flavors) LogRegistry() logging.Registry {
-	if len(flavors) > 0 {
-		flavors[0].LogRegistry()
+	if len(flavors.fs) > 0 {
+		flavors.fs[0].LogRegistry()
 	}
 
 	return nil
