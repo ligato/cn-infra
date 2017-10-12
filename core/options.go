@@ -81,7 +81,7 @@ type withPluginOpt struct {
 // OptionMarkerCore is just for marking implementation that it implements this interface
 func (opt *withPluginOpt) OptionMarkerCore() {}
 
-// OptionMarkerCore is just for marking implementation that it implements this interface
+// Plugins is just for marking implementation that it implements this interface
 func (opt *withPluginOpt) Plugins(...Flavor) []*NamedPlugin {
 	return []*NamedPlugin{opt.plugin}
 }
