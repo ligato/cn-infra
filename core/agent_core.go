@@ -92,7 +92,7 @@ func NewAgent(flavor Flavor, opts ...Option) *Agent {
 	maxStartup := 15 * time.Second
 
 	var flavors []Flavor
-	if fs, ok := flavor.(flavors); ok {
+	if fs, ok := flavor.(flavorAggregator); ok {
 		flavors = fs.fs
 	} else {
 		flavors = []Flavor{flavor}

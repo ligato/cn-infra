@@ -172,7 +172,7 @@ func fieldPlugin(field reflect.StructField, fieldVal reflect.Value, pluginType r
 	return nil, false
 }
 
-// Inject is a utility if you need to combine multiple flavors for in first parameter of NewAgent()
+// Inject is a utility if you need to combine multiple flavorAggregator for in first parameter of NewAgent()
 // It calls Inject() on every plugin.
 //
 // Example:
@@ -180,17 +180,17 @@ func fieldPlugin(field reflect.StructField, fieldVal reflect.Value, pluginType r
 //   NewAgent(Inject(&Flavor1{}, &Flavor2{}))
 //
 func Inject(fs ...Flavor) Flavor {
-	ret := flavors{fs}
+	ret := flavorAggregator{fs}
 	ret.Inject()
 	return ret
 }
 
-type flavors struct {
+type flavorAggregator struct {
 	fs []Flavor
 }
 
-// Plugins returns list of plugins af all flavors
-func (flavors flavors) Plugins() []*NamedPlugin {
+// Plugins returns list of plugins af all flavorAggregator
+func (flavors flavorAggregator) Plugins() []*NamedPlugin {
 	ret := []*NamedPlugin{}
 	for _, f := range flavors.fs {
 		ret = append(ret, f.Plugins()...)
@@ -199,7 +199,7 @@ func (flavors flavors) Plugins() []*NamedPlugin {
 }
 
 // Inject returns true if at least one returned true
-func (flavors flavors) Inject() (firstRun bool) {
+func (flavors flavorAggregator) Inject() (firstRun bool) {
 	ret := false
 	for _, f := range flavors.fs {
 		ret = ret || f.Inject()
@@ -208,7 +208,7 @@ func (flavors flavors) Inject() (firstRun bool) {
 }
 
 // LogRegistry is a getter for accessing log registry of first flavor
-func (flavors flavors) LogRegistry() logging.Registry {
+func (flavors flavorAggregator) LogRegistry() logging.Registry {
 	if len(flavors.fs) > 0 {
 		flavors.fs[0].LogRegistry()
 	}
