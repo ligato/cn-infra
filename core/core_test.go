@@ -27,7 +27,7 @@ import (
 func TestEmptyAgent(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
-	agent := NewAgent(Flavors(), WithTimeout(1*time.Second))
+	agent := NewAgent(Inject(), WithTimeout(1*time.Second))
 	gomega.Expect(agent).NotTo(gomega.BeNil())
 	err := agent.Start()
 	gomega.Expect(err).To(gomega.BeNil())

@@ -91,12 +91,19 @@ func NewAgent(flavor Flavor, opts ...Option) *Agent {
 	var agentCoreLogger logging.Logger
 	maxStartup := 15 * time.Second
 
+	var flavors []Flavor
+	if fs, ok := flavor.(flavors); ok {
+		flavors = fs
+	} else {
+		flavors = []Flavor{flavor}
+	}
+
 	flavor.Inject()
 
 	for _, opt := range opts {
 		switch opt.(type) {
 		case WithPluginsOpt:
-			plugins = append(plugins, opt.(WithPluginsOpt).Plugins(flavor)...)
+			plugins = append(plugins, opt.(WithPluginsOpt).Plugins(flavors...)...)
 		case *WithTimeoutOpt:
 			ms := opt.(*WithTimeoutOpt).Timeout
 			if ms > 0 {

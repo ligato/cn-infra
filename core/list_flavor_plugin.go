@@ -59,10 +59,10 @@ func ListPluginsInFlavor(flavor Flavor) (plugins []*NamedPlugin) {
 }
 
 // listPluginsInFlavor lists all plugins in a Flavor. A Flavor is composed
-// of one or more Plugins and (optionally) multiple Flavors. The composition
+// of one or more Plugins and (optionally) multiple Inject. The composition
 // is recursive: a component Flavor contains Plugin components and may
 // contain Flavor components as well. The function recursively lists
-// plugins contained in component Flavors.
+// plugins contained in component Inject.
 //
 // The function returns an error if the flavorValue argument does not
 // satisfy the Flavor interface. All components in the argument flavorValue
@@ -172,42 +172,44 @@ func fieldPlugin(field reflect.StructField, fieldVal reflect.Value, pluginType r
 	return nil, false
 }
 
-// Flavors is a utility if you need to combine multiple flavors for in first parameter of NewAgent()
+// Inject is a utility if you need to combine multiple flavors for in first parameter of NewAgent()
+// It calls Inject() on every plugin.
 //
 // Example:
 //
-//   NewAgent(Flavors(&Flavor1{}, &Flavor2{}))
+//   NewAgent(Inject(&Flavor1{}, &Flavor2{}))
 //
-func Flavors(flavors ...Flavor) Flavor {
-	return &flavorAgreg{flavors: flavors}
+func Inject(flavors ...Flavor) Flavor {
+	var ret flavors
+	ret = flavors
+	ret.Inject()
+	return ret
 }
 
-type flavorAgreg struct {
-	flavors []Flavor
-}
+type flavors []Flavor
 
 // Plugins returns list of plugins af all flavors
-func (a *flavorAgreg) Plugins() []*NamedPlugin {
+func (flavors flavors) Plugins() []*NamedPlugin {
 	ret := []*NamedPlugin{}
-	for _, f := range a.flavors {
+	for _, f := range flavors {
 		ret = append(ret, f.Plugins()...)
 	}
 	return ret
 }
 
 // Inject returns true if at leas one returned true
-func (a *flavorAgreg) Inject() (firstRun bool) {
+func (flavors flavors) Inject() (firstRun bool) {
 	ret := false
-	for _, f := range a.flavors {
+	for _, f := range flavors {
 		ret = ret || f.Inject()
 	}
 	return ret
 }
 
 // LogRegistry is a getter for accessing log registry of first flavor
-func (a *flavorAgreg) LogRegistry() logging.Registry {
-	if len(a.flavors) > 0 {
-		a.flavors[0].LogRegistry()
+func (flavors flavors) LogRegistry() logging.Registry {
+	if len(flavors) > 0 {
+		flavors[0].LogRegistry()
 	}
 
 	return nil

@@ -58,7 +58,7 @@ type WithPluginsOpt interface {
 
 	// return list named plugins with injected dependencies
 	// the order in list impacts the order of Init(), AfterInit(), Close() sequence
-	Plugins(Flavor) []*NamedPlugin
+	Plugins(...Flavor) []*NamedPlugin
 }
 
 // WithPlugin for adding a custom plugins to the Agent
