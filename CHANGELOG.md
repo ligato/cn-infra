@@ -25,14 +25,21 @@ for simple customizations:
 * if you just expose the RPCs you can write
   ```
   rpc.NewAgent(rpc.WithPlugins(func(flavor *rpc.FlavorRPC) []*core.NamedPlugin {
-    return []*core.NamedPlugin{"my-plugin", &MyPlugin{&flavor.GRPC}}
+    return []*core.NamedPlugin{{"myplugin1", &MyPlugin{&flavor.GRPC},
+                               {"myplugin2", &MyPlugin{&flavor.GRPC},}
   }))
   ```
-* if you just want to add one simple plugin you can write:
+* if you just want to use one simple plugin (without any client or server) you can write:
   ```
   flavor := &local.FlavorLocal{}
-  flavor.Inject()
-  core.NewAgent(flavor, core.WithPlugin(&MyPlugin{&flavor.StatusCheck}))//or PluginInfraDeps
+  core.NewAgent(core.Inject(flavor), core.WithPlugin("myplugin1", &MyPlugin{Deps: flavor.PluginInfraDeps("myplugin1")}))
+  ```
+* sometimes you want to combine multiple flavors to inject their plugins to new MyPlugin
+  ```
+  loc := &local.FlavorLocal{}
+  rpcs := &rpc.FlavorRPC{FlavorLocal: loc}
+  cons := &connectors.AllConnectorsFlavor{FlavorLocal: loc}
+  core.NewAgent(core.Inject(rpcs, cons), core.WithPlugin("myplugin", &MyPlugin{Deps: Deps{&rpcs.GRPC, &cons.ETCD}}))
   ```
 
 # Release v1.0.4 (2017-9-25)

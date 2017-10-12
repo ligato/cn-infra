@@ -114,9 +114,11 @@ func (opt *withPluginsOpt) OptionMarkerCore() {}
 // Plugins methods is here to implement core.WithPluginsOpt go interface
 // <flavor> is a callback that uses flavor input for dependency injection
 // for custom plugins (returned as NamedPlugin)
-func (opt *withPluginsOpt) Plugins(flavor core.Flavor) []*core.NamedPlugin {
-	if f, ok := flavor.(*AllConnectorsFlavor); ok {
-		return opt.callback(f)
+func (opt *withPluginsOpt) Plugins(flavors ...core.Flavor) []*core.NamedPlugin {
+	for _, flavor := range flavors {
+		if f, ok := flavor.(*AllConnectorsFlavor); ok {
+			return opt.callback(f)
+		}
 	}
 
 	panic("wrong usage of connectors.WithPlugin() for other than AllConnectorsFlavor")

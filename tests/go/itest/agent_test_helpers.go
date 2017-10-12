@@ -1,18 +1,16 @@
 package itest
 
 import (
-	"time"
+	"testing"
 
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/onsi/gomega"
-	"testing"
 )
 
 // AgentT is similar to what testing.T is in golang packages.
 type AgentT struct {
 	agent *core.Agent
-	t *testing.T
+	t     *testing.T
 }
 
 // Given is composition of multiple test step methods (see BDD Given keyword)
