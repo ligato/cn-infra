@@ -209,5 +209,4 @@ func (opt *withPluginsOpt) Plugins(flavors ...core.Flavor) []*core.NamedPlugin {
 	}
 
 	panic("wrong usage of local.WithPlugin() for other than FlavorLocal")
-	return nil
 }

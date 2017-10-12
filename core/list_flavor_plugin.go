@@ -180,8 +180,8 @@ func fieldPlugin(field reflect.StructField, fieldVal reflect.Value, pluginType r
 //   NewAgent(Inject(&Flavor1{}, &Flavor2{}))
 //
 func Inject(flavors ...Flavor) Flavor {
-	var ret flavors
-	ret = flavors
+	var ret Flavor
+	ret = Flavor(flavors)
 	ret.Inject()
 	return ret
 }
@@ -197,7 +197,7 @@ func (flavors flavors) Plugins() []*NamedPlugin {
 	return ret
 }
 
-// Inject returns true if at leas one returned true
+// Inject returns true if at least one returned true
 func (flavors flavors) Inject() (firstRun bool) {
 	ret := false
 	for _, f := range flavors {

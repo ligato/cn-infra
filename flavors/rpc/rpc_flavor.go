@@ -130,5 +130,4 @@ func (opt *withPluginsOpt) Plugins(flavors ...core.Flavor) []*core.NamedPlugin {
 	}
 
 	panic("wrong usage of rpc.WithPlugin() for other than FlavorRPC")
-	return nil
 }

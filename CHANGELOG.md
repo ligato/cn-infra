@@ -16,9 +16,10 @@
   manually. In case the value is not provided, the service label is used instead (just like before). 
 
 ## Agent, Flavors
-Input arguments of `core.NewAgent()` has been changed (for backward compatibility the is `core.NewAgentDeprecated()`):
-  * it can be called without any options `core.NewAgent(flavor)`
-  * you can pass options it can be called without any options `core.NewAgent(flavor, core.WithTimeout(1* time.Second))`
+Input arguments of `core.NewAgent()` has been changed:
+  * it can be called without any options like this: `core.NewAgent(flavor)`
+  * you can pass options like this: `core.NewAgent(flavor, core.WithTimeout(1* time.Second))`
+  * there is the is `core.NewAgentDeprecated()` for backward compatibility
 
 This release contains utilities/options to avoid writing new flavor go structures (Inject, Plugins methods)
 for simple customizations:
