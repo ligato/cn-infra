@@ -179,9 +179,9 @@ func fieldPlugin(field reflect.StructField, fieldVal reflect.Value, pluginType r
 //
 //   NewAgent(Inject(&Flavor1{}, &Flavor2{}))
 //
-func Inject(flavors ...Flavor) Flavor {
-	var ret Flavor
-	ret = Flavor(flavors)
+func Inject(fs ...Flavor) Flavor {
+	var ret flavors
+	ret = flavors(fs)
 	ret.Inject()
 	return ret
 }
