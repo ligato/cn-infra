@@ -1,3 +1,3 @@
 curlimage:
-	docker build -t gohttp2/curl .
-
+	docker build --force-rm=true -t gohttp2/curl .
+	
