@@ -117,7 +117,7 @@ type withPluginsOpt struct {
 }
 
 // OptionMarkerCore is just for marking implementation that it implements this interface
-func (marker *withPluginsOpt) OptionMarkerCore() {}
+func (opt *withPluginsOpt) OptionMarkerCore() {}
 
 // Plugins methods is here to implement core.WithPluginsOpt go interface
 // <flavor> is a callback that uses flavor input for dependency injection
@@ -125,9 +125,8 @@ func (marker *withPluginsOpt) OptionMarkerCore() {}
 func (opt *withPluginsOpt) Plugins(flavor core.Flavor) []*core.NamedPlugin {
 	if f, ok := flavor.(*FlavorRPC); ok {
 		return opt.callback(f)
-	} else {
-		panic("wrong usage of rpc.WithPlugin() for other than FlavorRPC")
 	}
 
+	panic("wrong usage of rpc.WithPlugin() for other than FlavorRPC")
 	return nil
 }

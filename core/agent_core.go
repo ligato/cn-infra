@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logroot"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
 )
@@ -35,23 +36,19 @@ type Agent struct {
 	// plugin list
 	plugins []*NamedPlugin
 	logging.Logger
-	// the field is set before initialization of every plugin with its name
-	currentlyProcessing string
-	// agent's stopwatch
-	timer Timer
+	// agent startup details
+	startup
 }
 
-// Timer holds all startup times
-type Timer struct {
+type startup struct {
 	// The startup/initialization must take no longer that maxStartup.
 	MaxStartupTime time.Duration
-	// timers
-	agentStart     time.Time
-	initStart      time.Time
-	afterInitStart time.Time
-	// durations
-	init      time.Duration
-	afterInit time.Duration
+	// successfully initialized plugins
+	initDuration time.Duration
+	// successfully after-initialized plugins
+	afterInitDuration time.Duration
+	// the field is set before initialization of every plugin with its name
+	currentlyProcessing string
 }
 
 const (
@@ -68,14 +65,69 @@ const (
 	defaultTimerValue = -1
 )
 
-// init result flags
-const (
-	done    = "done"
-	errStatus   = "error"
-	timeout = "timeout"
-)
+// NewAgent returns a new instance of the Agent with plugins. Use options if needed:
+// <WithLogger() option> will be used to log messages related to the agent life-cycle,
+// but not for the plugins themselves.
+// <WithTimeout() option> puts a time limit on initialization of all provided plugins.
+// Agent.Start() returns ErrPluginsInitTimeout error if one or more plugins fail
+// to initialize inside the specified time limit.
+// <WithPlugins() option> is a variable list of plugins to load. ListPluginsInFlavor() helper
+// method can be used to obtain the list from a given flavor.
+//
+// Example 1 (existing flavor - or use alias rpc.NewAgent()):
+//
+//    core.NewAgent(&FlavorRPC{}, core.WithTimeout(5 * time.Second), rpc.WithPlugins(func(flavor *FlavorRPC) []*core.NamedPlugins {
+//		return []*core.NamedPlugins{{"customization": &CustomPlugin{DependencyXY: &flavor.GRPC}}}
+//    })
+//
+// Example 2 (custom flavor):
+//
+//    core.NewAgent(&MyFlavor{}, core.WithTimeout(5 * time.Second), my.WithPlugins(func(flavor *MyFlavor) []*core.NamedPlugins {
+//		return []*core.NamedPlugins{{"customization": &CustomPlugin{DependencyXY: &flavor.XY}}}
+//    })
+func NewAgent(flavor Flavor, opts ...Option) *Agent {
+	plugins := flavor.Plugins()
 
-// NewAgent returns a new instance of the Agent with plugins.
+	var agentCoreLogger logging.Logger
+	maxStartup := 15 * time.Second
+
+	flavor.Inject()
+
+	for _, opt := range opts {
+		switch opt.(type) {
+		case WithPluginsOpt:
+			plugins = append(plugins, opt.(WithPluginsOpt).Plugins(flavor)...)
+		case *WithTimeoutOpt:
+			ms := opt.(*WithTimeoutOpt).Timeout
+			if ms > 0 {
+				maxStartup = ms
+			}
+		case *WithLoggerOpt:
+			agentCoreLogger = opt.(*WithLoggerOpt).Logger
+		}
+	}
+
+	if logRegGet, ok := flavor.(logRegistryGetter); ok && logRegGet != nil {
+		logReg := logRegGet.LogRegistry()
+
+		if logReg != nil {
+			agentCoreLogger = logReg.NewLogger("agent_core")
+		} else {
+			agentCoreLogger = logroot.StandardLogger()
+		}
+	} else {
+		agentCoreLogger = logroot.StandardLogger()
+	}
+
+	a := Agent{
+		plugins,
+		agentCoreLogger,
+		startup{MaxStartupTime: maxStartup},
+	}
+	return &a
+}
+
+// NewAgentDeprecated older & deprecated version of a constructor
 // <logger> will be used to log messages related to the agent life-cycle,
 // but not for the plugins themselves.
 // <maxStartup> puts a time limit on initialization of all provided plugins.
@@ -83,18 +135,18 @@ const (
 // to initialize inside the specified time limit.
 // <plugins> is a variable list of plugins to load. ListPluginsInFlavor() helper
 // method can be used to obtain the list from a given flavor.
-func NewAgent(logger logging.Logger, maxStartup time.Duration, plugins ...*NamedPlugin) *Agent {
+func NewAgentDeprecated(logger logging.Logger, maxStartup time.Duration, plugins ...*NamedPlugin) *Agent {
 	a := Agent{
 		plugins,
 		logger,
-		"",
-		Timer{
-			MaxStartupTime: maxStartup,
-			init:           defaultTimerValue,
-			afterInit:      defaultTimerValue,
-		},
+		startup{MaxStartupTime: maxStartup},
 	}
 	return &a
+}
+
+type logRegistryGetter interface {
+	// LogRegistry is a getter for log registry instance
+	LogRegistry() logging.Registry
 }
 
 // Start starts/initializes all selected plugins.
@@ -120,7 +172,6 @@ func (agent *Agent) Start() error {
 	}
 
 	go func() {
-		agent.timer.agentStart = time.Now()
 		err := agent.initPlugins()
 		if err != nil {
 			errChannel <- err
@@ -137,14 +188,24 @@ func (agent *Agent) Start() error {
 	//block until all Plugins are initialized or timeout expires
 	select {
 	case err := <-errChannel:
-
-		agent.printStatistics(errStatus)
+		agent.WithField("durationInNs", agent.initDuration.Nanoseconds()).Infof("Agent Init took %v", agent.initDuration)
+		agent.WithField("durationInNs", agent.afterInitDuration.Nanoseconds()).Infof("Agent AfterInit took %v", agent.afterInitDuration)
 		return err
 	case <-doneChannel:
-		agent.printStatistics(done)
+		agent.WithField("durationInNs", agent.initDuration.Nanoseconds()).Infof("Agent Init took %v", agent.initDuration)
+		agent.WithField("durationInNs", agent.afterInitDuration.Nanoseconds()).Infof("Agent AfterInit took %v", agent.afterInitDuration)
+		duration := agent.initDuration + agent.afterInitDuration
+		agent.WithField("durationInNs", duration.Nanoseconds()).Info(fmt.Sprintf("All plugins initialized successfully, took %v", duration))
 		return nil
-	case <-time.After(agent.timer.MaxStartupTime):
-		agent.printStatistics(timeout)
+	case <-time.After(agent.MaxStartupTime):
+		if agent.initDuration == defaultTimerValue {
+			agent.Infof("Agent Init took > %v", agent.MaxStartupTime)
+			agent.WithField("durationInNs", agent.afterInitDuration.Nanoseconds()).Infof("Agent AfterInit took %v", agent.afterInitDuration)
+		} else if agent.afterInitDuration == defaultTimerValue {
+			agent.WithField("durationInNs", agent.initDuration.Nanoseconds()).Infof("Agent Init took %v", agent.initDuration)
+			agent.Infof("Agent AfterInit took > %v", agent.MaxStartupTime)
+		}
+
 		return fmt.Errorf(logTimeoutFmt, agent.currentlyProcessing)
 	}
 }
@@ -185,8 +246,8 @@ func (agent *Agent) initPlugins() error {
 	var pluginFailed bool
 	var wasError error
 
-	//	agent.initDuration = defaultTimerValue
-	agent.timer.initStart = time.Now()
+	agent.initDuration = defaultTimerValue
+	initStartTime := time.Now()
 	for index, plugin := range agent.plugins {
 		initPluginCounter = index
 
@@ -212,7 +273,7 @@ func (agent *Agent) initPlugins() error {
 			agent.WithField("durationInNs", pluginSuccTime.Nanoseconds()).Infof(logSuccessFmt, plugin.PluginName, pluginSuccTime)
 		}
 	}
-	agent.timer.init = time.Since(agent.timer.initStart)
+	agent.initDuration = time.Since(initStartTime)
 
 	if wasError != nil {
 		//Stop the plugins that are initialized
@@ -235,8 +296,8 @@ func (agent *Agent) handleAfterInit() error {
 	var pluginFailed bool
 	var wasError error
 
-	//	agent.afterInitDuration = defaultTimerValue
-	agent.timer.afterInitStart = time.Now()
+	agent.afterInitDuration = defaultTimerValue
+	afterInitStartTime := time.Now()
 	for _, plug := range agent.plugins {
 		// set currently after-initialized plugin name
 		agent.currentlyProcessing = string(plug.PluginName)
@@ -265,34 +326,11 @@ func (agent *Agent) handleAfterInit() error {
 			agent.Info(fmt.Sprintf(logNoAfterInitFmt, plug.PluginName))
 		}
 	}
-	agent.timer.afterInit = time.Since(agent.timer.afterInitStart)
+	agent.afterInitDuration = time.Since(afterInitStartTime)
 
 	if wasError != nil {
 		agent.Stop()
 		return wasError
 	}
 	return nil
-}
-
-// Print detailed log entry about startup time
-func (agent *Agent) printStatistics(flag string) {
-	switch flag {
-	case done:
-		overall := agent.timer.init + agent.timer.afterInit
-		agent.WithField("durationInNs", overall.Nanoseconds()).Info(fmt.Sprintf("All plugins initialized successfully, took %v", overall))
-		agent.WithField("durationInNs", agent.timer.init.Nanoseconds()).Infof("Agent Init took %v", agent.timer.init)
-		agent.WithField("durationInNs", agent.timer.afterInit.Nanoseconds()).Infof("Agent AfterInit took %v", agent.timer.afterInit)
-	case errStatus:
-		agent.WithField("durationInNs", agent.timer.init.Nanoseconds()).Infof("Agent Init took %v", agent.timer.init)
-		agent.WithField("durationInNs", agent.timer.afterInit.Nanoseconds()).Infof("Agent AfterInit took %v", agent.timer.afterInit)
-	case timeout:
-		if agent.timer.init == defaultTimerValue {
-			agent.Infof("Agent Init took > %v", agent.timer.MaxStartupTime)
-			agent.WithField("durationInNs", agent.timer.afterInit.Nanoseconds()).Infof("Agent AfterInit took %v", agent.timer.afterInit)
-		} else if agent.timer.afterInit == defaultTimerValue {
-			agent.WithField("durationInNs", agent.timer.init.Nanoseconds()).Infof("Agent Init took %v", agent.timer.init)
-			agent.Infof("Agent AfterInit took > %v", agent.timer.MaxStartupTime)
-		}
-	}
-
 }
