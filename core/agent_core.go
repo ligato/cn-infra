@@ -93,7 +93,7 @@ func NewAgent(flavor Flavor, opts ...Option) *Agent {
 
 	var flavors []Flavor
 	if fs, ok := flavor.(flavors); ok {
-		flavors = fs
+		flavors = fs.fs
 	} else {
 		flavors = []Flavor{flavor}
 	}
