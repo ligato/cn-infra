@@ -122,5 +122,4 @@ func (opt *withPluginsOpt) Plugins(flavors ...core.Flavor) []*core.NamedPlugin {
 	}
 
 	panic("wrong usage of connectors.WithPlugin() for other than AllConnectorsFlavor")
-	return nil
 }
