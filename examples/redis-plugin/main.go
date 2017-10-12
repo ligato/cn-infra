@@ -16,7 +16,7 @@ func main() {
 
 	// Start Agent with ExampleFlavor (combination of ExamplePlugin & reused cn-infra plugins)
 	flavor := ExampleFlavor{closeChan: &exampleFinished}
-	agent := core.NewAgent(log.StandardLogger(), 15*time.Second, append(flavor.Plugins())...)
+	agent := core.NewAgent(&flavor)
 	core.EventLoopWithInterrupt(agent, exampleFinished)
 }
 

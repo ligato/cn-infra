@@ -31,13 +31,20 @@ type Flavor interface {
 
 	// Inject method is supposed to be implemented by each Flavor
 	// to inject dependencies between the plugins.
+	Injector
+
+	// LogRegistry is a getter for accessing log registry (that allows to create new loggers)
+	LogRegistry() logging.Registry
+}
+
+// Injector is simple interface reused at least on two places:
+// - Flavor
+// - NewAgent constructor WithPlugins() option
+type Injector interface {
 	// When this method is called for the first time it returns true
 	// (meaning the dependency injection ran at the first time).
 	// It is possible to call this method repeatedly (then it will return false).
 	Inject() (firstRun bool)
-
-	// LogRegistry is a getter for accessing log registry (that allows to create new loggers)
-	LogRegistry() logging.Registry
 }
 
 // ListPluginsInFlavor lists plugins in a Flavor.
@@ -163,4 +170,45 @@ func fieldPlugin(field reflect.StructField, fieldVal reflect.Value, pluginType r
 
 	}
 	return nil, false
+}
+
+// Flavors is a utility if you need to combine multiple flavors for in first parameter of NewAgent()
+//
+// Example:
+//
+//   NewAgent(Flavors(&Flavor1{}, &Flavor2{}))
+//
+func Flavors(flavors ...Flavor) Flavor {
+	return &flavorAgreg{flavors: flavors}
+}
+
+type flavorAgreg struct {
+	flavors []Flavor
+}
+
+// Plugins returns list of plugins af all flavors
+func (a *flavorAgreg) Plugins() []*NamedPlugin {
+	ret := []*NamedPlugin{}
+	for _, f := range a.flavors {
+		ret = append(ret, f.Plugins()...)
+	}
+	return ret
+}
+
+// Inject returns true if at leas one returned true
+func (a *flavorAgreg) Inject() (firstRun bool) {
+	ret := false
+	for _, f := range a.flavors {
+		ret = ret || f.Inject()
+	}
+	return ret
+}
+
+// LogRegistry is a getter for accessing log registry of first flavor
+func (a *flavorAgreg) LogRegistry() logging.Registry {
+	if len(a.flavors) > 0 {
+		a.flavors[0].LogRegistry()
+	}
+
+	return nil
 }

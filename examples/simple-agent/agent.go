@@ -16,7 +16,6 @@ package main
 
 import (
 	"os"
-	"time"
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/flavors/connectors"
@@ -30,8 +29,7 @@ func main() {
 
 	connectors := connectors.AllConnectorsFlavor{}
 	rpcs := rpc.FlavorRPC{}
-	agent := core.NewAgent(logroot.StandardLogger(), 15*time.Second, append(
-		connectors.Plugins(), rpcs.Plugins()...)...)
+	agent := core.NewAgent(core.Flavors(&connectors, &rpcs))
 
 	err := core.EventLoopWithInterrupt(agent, nil)
 	if err != nil {
