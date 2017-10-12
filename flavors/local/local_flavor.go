@@ -196,7 +196,7 @@ type withPluginsOpt struct {
 }
 
 // OptionMarkerCore is just for marking implementation that it implements this interface
-func (marker *withPluginsOpt) OptionMarkerCore() {}
+func (opt *withPluginsOpt) OptionMarkerCore() {}
 
 // Plugins methods is here to implement core.WithPluginsOpt go interface
 // <flavor> is a callback that uses flavor input for dependency injection
@@ -204,9 +204,8 @@ func (marker *withPluginsOpt) OptionMarkerCore() {}
 func (opt *withPluginsOpt) Plugins(flavor core.Flavor) []*core.NamedPlugin {
 	if f, ok := flavor.(*FlavorLocal); ok {
 		return opt.callback(f)
-	} else {
-		panic("wrong usage of local.WithPlugin() for other than FlavorLocal")
 	}
 
+	panic("wrong usage of local.WithPlugin() for other than FlavorLocal")
 	return nil
 }

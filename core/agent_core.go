@@ -127,7 +127,7 @@ func NewAgent(flavor Flavor, opts ...Option) *Agent {
 	return &a
 }
 
-// NewAgentDeprectated older & deprecated version of a constructor
+// NewAgentDeprecated older & deprecated version of a constructor
 // <logger> will be used to log messages related to the agent life-cycle,
 // but not for the plugins themselves.
 // <maxStartup> puts a time limit on initialization of all provided plugins.
