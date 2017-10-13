@@ -54,7 +54,7 @@ func main() {
 type ExamplePlugin struct {
 	local.PluginInfraDeps // this field is usually injected in flavor
 	*Conf                 // it is possible to set config value programmatically (can be overridden)
-	exampleFinished       chan struct{}
+	exampleFinished chan struct{}
 }
 
 // Conf - example config binding

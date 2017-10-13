@@ -4,14 +4,15 @@ import (
 	"time"
 
 	"fmt"
+	"os"
+	"strconv"
+
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/examples/model"
 	"github.com/ligato/cn-infra/messaging"
 	"github.com/ligato/cn-infra/messaging/kafka/mux"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
-	"os"
-	"strconv"
 )
 
 //********************************************************************
@@ -289,7 +290,7 @@ func (plugin *ExamplePlugin) asyncEventHandler() {
 			if message.GetOffset() < messageOffset {
 				plugin.Log.Errorf("Received async message with unexpected offset: %v", message.GetOffset())
 			}
-		// Success callback channel
+			// Success callback channel
 		case message := <-plugin.asyncSuccessChannel:
 			plugin.Log.Infof("Async message successfully delivered, topic '%s', partition '%v', offset '%v', key: '%s', ",
 				message.GetTopic(), message.GetPartition(), message.GetOffset(), message.GetKey())
@@ -298,7 +299,7 @@ func (plugin *ExamplePlugin) asyncEventHandler() {
 			if asyncSuccessCounter == messageCountNum {
 				plugin.asyncSuccess = true
 			}
-		// Error callback channel
+			// Error callback channel
 		case err := <-plugin.asyncErrorChannel:
 			plugin.Log.Errorf("Failed to publish async message, %v", err)
 		}

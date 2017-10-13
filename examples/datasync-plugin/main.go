@@ -134,11 +134,11 @@ func (plugin *ExamplePlugin) consumer() {
 			//
 			// if strings.HasPrefix(key, etcd prefix) { ... }
 
-		// Here you would also watch for resync events
-		// (not published in this example):
-		//
-		// case resyncEvent := <-plugin.ResyncEvent:
-		//   ...
+			// Here you would also watch for resync events
+			// (not published in this example):
+			//
+			// case resyncEvent := <-plugin.ResyncEvent:
+			//   ...
 
 		case <-plugin.context.Done():
 			plugin.Log.Warnf("Stop watching events")
