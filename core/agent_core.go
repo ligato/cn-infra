@@ -118,7 +118,7 @@ func NewAgent(flavor Flavor, opts ...Option) *Agent {
 		logReg := logRegGet.LogRegistry()
 
 		if logReg != nil {
-			agentCoreLogger = logReg.NewLogger("agent_core")
+			agentCoreLogger = logReg.NewLogger("agentcore")
 		} else {
 			agentCoreLogger = logroot.StandardLogger()
 		}
