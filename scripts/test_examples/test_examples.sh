@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-source scripts/docker_start_stop_functions.sh
+source scripts/test_examples/docker_start_stop_functions.sh
 
 # In this file there are tested the CN-infra examples.
 # These examples are located in the folder examples.
