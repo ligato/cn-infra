@@ -1,4 +1,22 @@
 #!/usr/bin/env bash
+source scripts/docker_start_stop_functions.sh
+
+# In this file there are tested the CN-infra examples.
+# These examples are located in the folder examples.
+# The function for testing output of executed example - testOutput - can be used
+# in three modes - depending on the way how executed exampes works:
+# - the executed example will stop its run itself (no need to use 4th parameter)
+# - the executed example does not stop itself (it has to be killed after some
+#   time - for this is used the 4th parameter of the function testOutput).
+# - the executed example does not stop itself (it has to be killed after some
+#   time). In contrast with previous case where the executed example is killed
+š   and the output is processed only once time we use the special value
+#   for the 4th parameter - value 0 - to postpone the killing of process which
+#   will alow to process output of executed example several times to monitor
+#   reactions of executed example to some outer influences (e.g. stop/start of
+#   some services executed before the tested example.)
+# In this file are preferentially stored the tests which are run in the third
+# mode.
 
 TMP_FILE="/tmp/out"
 TMP_FILE2="/tmp/unprocessed"
@@ -85,8 +103,6 @@ IFS="
     fi
     return ${rv}
 }
-
-source scripts/docker_start_stop_functions.sh
 
 #### Simple-agent with Cassandra and Redis and Kafka and ETCD ####################################
 
