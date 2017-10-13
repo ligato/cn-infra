@@ -1,10 +1,7 @@
 package main
 
 import (
-	"time"
-
 	"github.com/ligato/cn-infra/core"
-	log "github.com/ligato/cn-infra/logging/logroot"
 )
 
 // Main allows running Example Plugin as a statically linked binary with Agent Core Plugins. Close channel and plugins

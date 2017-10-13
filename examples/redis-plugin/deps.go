@@ -1,12 +1,12 @@
 package main
 
 import (
+	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync/kvdbsync"
 	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval/redis"
-	"github.com/ligato/cn-infra/flavors/local"
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/flavors/connectors"
+	"github.com/ligato/cn-infra/flavors/local"
 )
 
 // Deps is a helper struct which is grouping all dependencies injected to the plugin
@@ -21,7 +21,7 @@ type ExampleFlavor struct {
 	// Redis plugin
 	Redis         redis.Plugin
 	RedisDataSync kvdbsync.Plugin
-	ResyncOrch resync.Plugin
+	ResyncOrch    resync.Plugin
 	// Example plugin
 	RedisExample ExamplePlugin
 	// For example purposes, use channel when the example is finished

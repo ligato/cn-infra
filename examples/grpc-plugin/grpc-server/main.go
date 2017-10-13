@@ -1,12 +1,9 @@
 package main
 
 import (
-	"time"
-
 	"errors"
 
 	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/logging/logroot"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/examples/helloworld/helloworld"
 )

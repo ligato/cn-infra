@@ -9,8 +9,8 @@ import (
 
 // Deps lists dependencies of ExamplePlugin.
 type Deps struct {
-	Kafka               messaging.Mux // injected
-	local.PluginLogDeps               // injected
+	Kafka messaging.Mux // injected
+	local.PluginLogDeps // injected
 }
 
 // ExampleFlavor is a set of plugins required for the example.

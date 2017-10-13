@@ -4,13 +4,14 @@ import (
 	"time"
 
 	"fmt"
+	"os"
+	"strconv"
+
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/examples/model"
 	"github.com/ligato/cn-infra/messaging"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
-	"os"
-	"strconv"
 )
 
 //********************************************************************
@@ -52,8 +53,8 @@ type ExamplePlugin struct {
 	asyncErrorChannel   chan (messaging.ProtoMessageErr)
 	// Fields below are used to properly finish the example.
 	messagesSent bool
-	syncRecv bool
-	asyncRecv bool
+	syncRecv     bool
+	asyncRecv    bool
 	asyncSuccess bool
 	closeChannel *chan struct{}
 }
