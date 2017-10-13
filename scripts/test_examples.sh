@@ -66,6 +66,7 @@ IFS="$PREV_IFS"
         if ps -p $CMD_PID > /dev/null; then
             kill -9 $CMD_PID
             echo "Test $1 has not terminated before runtime limit."
+            cat ${TMP_FILE}
             exitCode=1
         else
             testExpectedMessage "$1" "$2" "$4"
