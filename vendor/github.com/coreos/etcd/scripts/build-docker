@@ -40,4 +40,4 @@ cp ${BINARYDIR}/etcd ${BINARYDIR}/etcdctl ${IMAGEDIR}
 
 cat ./${DOCKERFILE} > ${IMAGEDIR}/Dockerfile
 
-docker build --force-rm=true -t ${TAG}:${VERSION} ${IMAGEDIR}
+docker build -t ${TAG}:${VERSION} ${IMAGEDIR}
