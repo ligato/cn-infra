@@ -23,6 +23,7 @@ IFS="
             rv=1
         fi
     done
+
     # loop through unexpected lines
     if [[ ! -z $3 ]] ; then
         for i in $3; do
@@ -49,7 +50,6 @@ IFS="
 # 2nd array of expected strings in the command output
 # 3rd argument is mandatory command runtime limit
 # 4th argument is an optional array of unexpected strings in the command output
-
 function testOutput {
 IFS="$PREV_IFS"
     echo "Testing $1"
@@ -66,6 +66,7 @@ IFS="$PREV_IFS"
         if ps -p $CMD_PID > /dev/null; then
             kill -9 $CMD_PID
             echo "Test $1 has not terminated before runtime limit."
+            cat ${TMP_FILE}
             exitCode=1
         else
             testExpectedMessage "$1" "$2" "$4"
@@ -247,15 +248,15 @@ messageCount arg not set, using default value
 Offset: 0, message count: 10
 All plugins initialized successfully
 Sending 10 sync Kafka notifications (protobuf) ...
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '5', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '9', key: 'proto-key', 
+Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '5', key: 'proto-key',
+Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '9', key: 'proto-key',
 Sending 10 async Kafka notifications (protobuf) ...
 Async message successfully delivered, topic 'example-async-topic', partition '2', offset '0', key: 'async-proto-key'
 Async message successfully delivered, topic 'example-async-topic', partition '2', offset '4', key: 'async-proto-key'
 Async message successfully delivered, topic 'example-async-topic', partition '2', offset '5', key: 'async-proto-key'
 Async message successfully delivered, topic 'example-async-topic', partition '2', offset '9', key: 'async-proto-key'
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '5', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '9', key: 'async-proto-key', 
+Received async Kafka Message, topic 'example-async-topic', partition '2', offset '5', key: 'async-proto-key',
+Received async Kafka Message, topic 'example-async-topic', partition '2', offset '9', key: 'async-proto-key',
 Sync watcher closed
 Async watcher closed
 ")
@@ -270,10 +271,10 @@ testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT "${unexpected}"
 expected=("offset arg not set, using default value
 Offset: 0, message count: 0
 All plugins initialized successfully
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '5', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '9', key: 'async-proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '5', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '9', key: 'proto-key', 
+Received async Kafka Message, topic 'example-async-topic', partition '2', offset '5', key: 'async-proto-key',
+Received async Kafka Message, topic 'example-async-topic', partition '2', offset '9', key: 'async-proto-key',
+Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '5', key: 'proto-key',
+Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '9', key: 'proto-key',
 Sending 0 sync Kafka notifications (protobuf) ...
 Sending 0 async Kafka notifications (protobuf) ...
 Sync watcher closed
@@ -290,15 +291,15 @@ testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT "${unexpected}"
 expected=("offset arg not set, using default value
 Offset: 0, message count: 1
 All plugins initialized successfully
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '5', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '9', key: 'async-proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '5', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '9', key: 'proto-key', 
+Received async Kafka Message, topic 'example-async-topic', partition '2', offset '5', key: 'async-proto-key',
+Received async Kafka Message, topic 'example-async-topic', partition '2', offset '9', key: 'async-proto-key',
+Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '5', key: 'proto-key',
+Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '9', key: 'proto-key',
 Sending 1 sync Kafka notifications (protobuf) ...
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '10', key: 'proto-key', 
+Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '10', key: 'proto-key',
 Sending 1 async Kafka notifications (protobuf) ...
 Async message successfully delivered, topic 'example-async-topic', partition '2', offset '10', key: 'async-proto-key'
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '10', key: 'async-proto-key', 
+Received async Kafka Message, topic 'example-async-topic', partition '2', offset '10', key: 'async-proto-key',
 Sync watcher closed
 Async watcher closed
 ")
@@ -312,24 +313,24 @@ testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT "${unexpected}"
 # Let us test - in example one new message generated - with offset 11 for both topics and we display all messages from offset 8
 expected=("Offset: 8, message count: 1
 All plugins initialized successfully
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '8', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '9', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '10', key: 'async-proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '8', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '9', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '10', key: 'proto-key', 
+Received async Kafka Message, topic 'example-async-topic', partition '2', offset '8', key: 'async-proto-key',
+Received async Kafka Message, topic 'example-async-topic', partition '2', offset '9', key: 'async-proto-key',
+Received async Kafka Message, topic 'example-async-topic', partition '2', offset '10', key: 'async-proto-key',
+Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '8', key: 'proto-key',
+Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '9', key: 'proto-key',
+Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '10', key: 'proto-key',
 Sending 1 sync Kafka notifications (protobuf) ...
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '11', key: 'proto-key', 
+Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '11', key: 'proto-key',
 Sending 1 async Kafka notifications (protobuf) ...
 Async message successfully delivered, topic 'example-async-topic', partition '2', offset '11', key: 'async-proto-key'
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '11', key: 'async-proto-key', 
+Received async Kafka Message, topic 'example-async-topic', partition '2', offset '11', key: 'async-proto-key',
 Sync watcher closed
 Async watcher closed
 ")
 
 unexpected=("Error while stopping watcher
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '7', key: 'async-proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '7', key: 'proto-key', 
+Received async Kafka Message, topic 'example-async-topic', partition '2', offset '7', key: 'async-proto-key',
+Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '7', key: 'proto-key',
 ")
 
 cmd="examples/kafka-plugin/manual-partitioner/manual-partitioner --kafka-config examples/kafka-plugin/manual-partitioner/kafka.conf --messageCount 1 --offsetMsg 8"
@@ -354,10 +355,10 @@ testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT "${unexpected}"
 # Let us test - in example no new messages generated - we want to list all oldest messages
 expected=("Offset: -2, message count: 0
 All plugins initialized successfully
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '0', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '2', offset '11', key: 'async-proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '0', key: 'proto-key', 
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '11', key: 'proto-key', 
+Received async Kafka Message, topic 'example-async-topic', partition '2', offset '0', key: 'async-proto-key',
+Received async Kafka Message, topic 'example-async-topic', partition '2', offset '11', key: 'async-proto-key',
+Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '0', key: 'proto-key',
+Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '11', key: 'proto-key',
 Sending 0 sync Kafka notifications (protobuf) ...
 Sending 0 async Kafka notifications (protobuf) ...
 Sync watcher closed
@@ -390,13 +391,13 @@ stopKafka
 expected=("messageCount arg not set, using default value
 Sending 10 sync Kafka notifications (protobuf) ...
 Sending 10 async Kafka notifications (protobuf) ...
-Async message successfully delivered, topic 'example-async-topic', partition '0', offset '0', key: 'async-proto-key', 
-Async message successfully delivered, topic 'example-async-topic', partition '0', offset '9', key: 'async-proto-key', 
+Async message successfully delivered, topic 'example-async-topic', partition '0', offset '0', key: 'async-proto-key',
+Async message successfully delivered, topic 'example-async-topic', partition '0', offset '9', key: 'async-proto-key',
 All plugins initialized successfully
-Received Kafka Message, topic 'example-sync-topic', partition '0', offset '0', key: 'proto-key', 
-Received Kafka Message, topic 'example-sync-topic', partition '0', offset '9', key: 'proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '0', offset '0', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '0', offset '9', key: 'async-proto-key', 
+Received Kafka Message, topic 'example-sync-topic', partition '0', offset '0', key: 'proto-key',
+Received Kafka Message, topic 'example-sync-topic', partition '0', offset '9', key: 'proto-key',
+Received async Kafka Message, topic 'example-async-topic', partition '0', offset '0', key: 'async-proto-key',
+Received async Kafka Message, topic 'example-async-topic', partition '0', offset '9', key: 'async-proto-key',
 Sync watcher closed
 Async watcher closed
 ")
@@ -428,10 +429,10 @@ expected=("Message count: 1
 All plugins initialized successfully
 Sending Kafka notification (protobuf)
 Sending 1 sync Kafka notifications (protobuf) ...
-Received Kafka Message, topic 'example-sync-topic', partition '0', offset '10', key: 'proto-key', 
+Received Kafka Message, topic 'example-sync-topic', partition '0', offset '10', key: 'proto-key',
 Sending 1 async Kafka notifications (protobuf) ...
-Async message successfully delivered, topic 'example-async-topic', partition '0', offset '10', key: 'async-proto-key', 
-Received async Kafka Message, topic 'example-async-topic', partition '0', offset '10', key: 'async-proto-key', 
+Async message successfully delivered, topic 'example-async-topic', partition '0', offset '10', key: 'async-proto-key',
+Received async Kafka Message, topic 'example-async-topic', partition '0', offset '10', key: 'async-proto-key',
 Sync watcher closed
 Async watcher closed
 ")
@@ -452,7 +453,7 @@ startCustomizedKafka examples/kafka-plugin/manual-partitioner/server.properties
 expected=("All plugins initialized successfully
 Starting 'post-init' manual Consumer
 Sending 10 Kafka notifications (protobuf) ...
-Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '0', key: 'proto-key', 
+Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '0', key: 'proto-key',
 Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '1', key: 'proto-key',
 Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '8', key: 'proto-key',
 Received sync Kafka Message, topic 'example-sync-topic', partition '1', offset '9', key: 'proto-key',
