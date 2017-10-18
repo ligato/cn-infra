@@ -47,8 +47,6 @@ IFS="
     if [[ ! $rv -eq 0 ]] ; then
         cat ${TMP_FILE}
         exitCode=1
-    else
-        exitCode=0
     fi
 }
 
@@ -77,6 +75,7 @@ IFS="$PREV_IFS"
             echo "Test $1 has not terminated before runtime limit."
             cat ${TMP_FILE}
             exitCode=1
+            # suppose that there is not useful to check output
         else
             testExpectedMessage "$1" "$2" "$4"
         fi
@@ -479,7 +478,3 @@ stopKafka
 ##########################################################################
 
 exit ${exitCode}
-
-
-
-
