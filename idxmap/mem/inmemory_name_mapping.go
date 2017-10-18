@@ -77,10 +77,11 @@ func (mem *memNamedMapping) Put(name string, value interface{}) {
 // Delete removes an item associated with the given <name> from the mapping.
 func (mem *memNamedMapping) Delete(name string) (value interface{}, found bool) {
 	item, found := mem.removeNameIdxSync(name)
-
-	mem.publishDelToChannel(name, item.value) //TODO improve and not send nil
-
-	return value, found
+	if found {
+		mem.publishDelToChannel(name, item.value) //TODO improve and not send nil
+		return item.value, found
+	}
+	return nil, false
 }
 
 // GetRegistryTitle returns the title assigned to the registry.
@@ -188,11 +189,9 @@ func (mem *memNamedMapping) removeIndexes(item *mappingItem, name string) {
 func (mem *memNamedMapping) removeNameIdx(name string) (item *mappingItem, found bool) {
 	item, found = mem.nameToIdx[name]
 	if found {
-		item := mem.nameToIdx[name]
+		delete(mem.nameToIdx, name)
 		mem.removeIndexes(item, name)
 	}
-
-	delete(mem.nameToIdx, name)
 
 	return item, found
 }
