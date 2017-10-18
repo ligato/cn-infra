@@ -1,30 +1,10 @@
-# Release v1.0.5 (2017-10-17)
-
-## Profiling
-* new [logging/measure](logging/measure) - time measurement utility to measure duration of binary api calls 
-  or linuxplugin netlink during resync. The feature is disabled by default and it can be enabled in 
-  defaultplugins.conf and linuxplugin.conf file (see plugin's readme)
-
-## Kafka
-* proto_connection.go and bytes_connection.go consolidated, bytes_connection.go now mirrors all 
-  the functionality from proto_connection.go. 
-  * mux can create two types of connection, standard bytes connection and bytes manual connection.
-    This enables to call only respective methods on them (to use manual partitioning, it is needed to 
-    create manual connection, etc.)
-  * method ConsumeTopicOnPartition renamed to ConsumeTopic (similar naming as in the proto_connection.go).
-    The rest of the signature is not changed.     
-* post-init watcher enabled in bytes_connection.go api
-* added methods MarkOffset and CommitOffsets to both, proto and bytes connection. Automatic offset marking
-  was removed
-* one instance of mux in kafka plugin 
-* new field `group-id` can be added to kafka.conf. This value is used as a Group ID in order to set it 
-  manually. In case the value is not provided, the service label is used instead (just like before). 
+# Release v1.0.6 (NOT RELEASED)
 
 ## Agent, Flavors
 Input arguments of `core.NewAgent()` has been changed:
   * it can be called without any options like this: `core.NewAgent(flavor)`
   * you can pass options like this: `core.NewAgent(flavor, core.WithTimeout(1* time.Second))`
-  * there is the is `core.NewAgentDeprecated()` for backward compatibility
+  * there is `core.NewAgentDeprecated()` for backward compatibility
 
 This release contains utilities/options to avoid writing new flavor go structures (Inject, Plugins methods)
 for simple customizations:
@@ -47,6 +27,28 @@ for simple customizations:
   cons := &connectors.AllConnectorsFlavor{FlavorLocal: loc}
   core.NewAgent(core.Inject(rpcs, cons), core.WithPlugin("myplugin", &MyPlugin{Deps: Deps{&rpcs.GRPC, &cons.ETCD}}))
   ```
+
+# Release v1.0.5 (2017-10-17)
+
+## Profiling
+* new [logging/measure](logging/measure) - time measurement utility to measure duration of binary api calls 
+  or linuxplugin netlink during resync. The feature is disabled by default and it can be enabled in 
+  defaultplugins.conf and linuxplugin.conf file (see plugin's readme)
+
+## Kafka
+* proto_connection.go and bytes_connection.go consolidated, bytes_connection.go now mirrors all 
+  the functionality from proto_connection.go. 
+  * mux can create two types of connection, standard bytes connection and bytes manual connection.
+    This enables to call only respective methods on them (to use manual partitioning, it is needed to 
+    create manual connection, etc.)
+  * method ConsumeTopicOnPartition renamed to ConsumeTopic (similar naming as in the proto_connection.go).
+    The rest of the signature is not changed.     
+* post-init watcher enabled in bytes_connection.go api
+* added methods MarkOffset and CommitOffsets to both, proto and bytes connection. Automatic offset marking
+  was removed
+* one instance of mux in kafka plugin 
+* new field `group-id` can be added to kafka.conf. This value is used as a Group ID in order to set it 
+  manually. In case the value is not provided, the service label is used instead (just like before). 
 
 # Release v1.0.4 (2017-9-25)
 
