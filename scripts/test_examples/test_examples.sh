@@ -332,6 +332,8 @@ stopKafka
 
 #### Kafka-plugin hash-partitioner #######################################
 
+RUNTIME_LIMIT=10 # the test of hash-partitioner were killed prematurally
+
 startKafka
 
 # Let us test the running without parameters - in example are generated 10 Kafka Messages to both topics
