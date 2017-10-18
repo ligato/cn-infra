@@ -22,7 +22,6 @@ RUNTIME_LIMIT=5
 function testExpectedMessage {
 IFS="
 "
-    rv=0
     # loop through expected lines
     for i in $2; do
         if grep -- "${i}" "$TMP_FILE" > /dev/null ; then
@@ -66,6 +65,7 @@ IFS="$PREV_IFS"
     CMD_PID=$!
     sleep $3
 
+    rv=0
     if ps -p $CMD_PID > /dev/null; then
         kill $CMD_PID
         echo "Killed $1."
@@ -75,14 +75,13 @@ IFS="$PREV_IFS"
             echo "Test $1 has not terminated before runtime limit."
             cat ${TMP_FILE}
             exitCode=1
-            # suppose that there is not useful to check output
         else
             testExpectedMessage "$1" "$2" "$4"
         fi
     else
         testExpectedMessage "$1" "$2" "$4"
     fi
-    echo "##$exitCode"
+    echo "##$rv" # function testExpectedMessage modifies this variable ...
     echo "================================================================"
     rm $TMP_FILE
     return $exitCode
