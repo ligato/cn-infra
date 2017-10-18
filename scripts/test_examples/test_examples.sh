@@ -332,6 +332,8 @@ stopKafka
 
 #### Kafka-plugin hash-partitioner #######################################
 
+startKafka
+
 # Let us test the running without parameters - in example are generated 10 Kafka Messages to both topics
 expected=("messageCount arg not set, using default value
 Sending 10 sync Kafka notifications (protobuf) ...
