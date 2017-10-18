@@ -78,7 +78,7 @@ func (mem *memNamedMapping) Put(name string, value interface{}) {
 func (mem *memNamedMapping) Delete(name string) (value interface{}, found bool) {
 	item, found := mem.removeNameIdxSync(name)
 	if found {
-		mem.publishDelToChannel(name, item.value) //TODO improve and not send nil
+		mem.publishDelToChannel(name, item.value)
 		return item.value, found
 	}
 	return nil, false
