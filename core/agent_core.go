@@ -69,6 +69,13 @@ const (
 	defaultTimerValue = -1
 )
 
+// init result flags
+const (
+	done    = "done"
+	errStatus   = "error"
+	timeout = "timeout"
+)
+
 // NewAgent returns a new instance of the Agent with plugins. Use options if needed:
 // <WithLogger() option> will be used to log messages related to the agent life-cycle,
 // but not for the plugins themselves.
@@ -133,22 +140,18 @@ func NewAgent(flavor Flavor, opts ...Option) *Agent {
 	a := Agent{
 		plugins,
 		agentCoreLogger,
-		startup{MaxStartupTime: maxStartup},
+		"",
+		Timer{
+			MaxStartupTime: maxStartup,
+			init:           defaultTimerValue,
+			afterInit:      defaultTimerValue,
+		},
 	}
 	return &a
 }
 
 // NewAgentDeprecated older & deprecated version of a constructor
-
-// init result flags
-const (
-	done    = "done"
-	errStatus   = "error"
-	timeout = 
-  
-)
-
-// NewAgentDeprecated returns a new instance of the Agent with plugins.
+// Function returns a new instance of the Agent with plugins.
 // <logger> will be used to log messages related to the agent life-cycle,
 // but not for the plugins themselves.
 // <maxStartup> puts a time limit on initialization of all provided plugins.
