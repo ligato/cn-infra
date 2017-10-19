@@ -135,10 +135,12 @@ func (pdb *protoBroker) Delete(key string, opts ...datasync.DelOption) (existed 
 
 // Watch subscribes for changes in datastore associated with any of the <keys>.
 // Callback <resp> is used for delivery of watch events.
-func (db *ProtoWrapper) Watch(resp func(keyval.ProtoWatchResp), keys ...string) error {
+// Channel <closeChan> is used to close key-related goroutines
+// Any encountered error is returned as well
+func (db *ProtoWrapper) Watch(resp func(keyval.ProtoWatchResp), closeChan chan string, keys ...string) error {
 	return db.broker.Watch(func(msg keyval.BytesWatchResp) {
 		resp(NewWatchResp(db.serializer, msg))
-	}, keys...)
+	}, closeChan, keys...)
 }
 
 // GetValue retrieves one key-value item from the datastore. The item

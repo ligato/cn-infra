@@ -103,14 +103,16 @@ func (resp *BytesWatchDelResp) GetRevision() int64 {
 
 // Watch starts subscription for changes associated with the selected key. Watch events will be delivered to respChan.
 // Subscription can be canceled by StopWatch call.
-func (db *BytesConnectionRedis) Watch(resp func(keyval.BytesWatchResp), keys ...string) error {
+func (db *BytesConnectionRedis) Watch(resp func(keyval.BytesWatchResp), closeChan chan string, keys ...string) error {
 	if db.closed {
-		return fmt.Errorf("Watch(%v) called on a closed connection", keys)
+		return fmt.Errorf("watch(%v) called on a closed connection", keys)
 	}
+	db.closeCh = closeChan
+
 	return watch(db, resp, db.closeCh, nil, nil, keys...)
 }
 
-func watch(db *BytesConnectionRedis, resp func(keyval.BytesWatchResp), closeChan <-chan struct{},
+func watch(db *BytesConnectionRedis, resp func(keyval.BytesWatchResp), closeChan <-chan string,
 	addPrefix func(key string) string, trimPrefix func(key string) string, keys ...string) error {
 	patterns := make([]string, len(keys))
 	for i, k := range keys {
@@ -189,9 +191,9 @@ func startWatch(db *BytesConnectionRedis, pubSub *goredis.PubSub,
 }
 
 // Watch starts subscription for changes associated with the selected key. Watch events will be delivered to respChan.
-func (pdb *BytesBrokerWatcherRedis) Watch(resp func(keyval.BytesWatchResp), keys ...string) error {
+func (pdb *BytesBrokerWatcherRedis) Watch(resp func(keyval.BytesWatchResp), closeChan chan string, keys ...string) error {
 	if pdb.delegate.closed {
-		return fmt.Errorf("Watch(%v) called on a closed connection", keys)
+		return fmt.Errorf("watch(%v) called on a closed connection", keys)
 	}
-	return watch(pdb.delegate, resp, pdb.closeCh, pdb.addPrefix, pdb.trimPrefix, keys...)
+	return watch(pdb.delegate, resp, closeChan, pdb.addPrefix, pdb.trimPrefix, keys...)
 }

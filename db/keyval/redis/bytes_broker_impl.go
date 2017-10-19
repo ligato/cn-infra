@@ -35,7 +35,7 @@ type BytesConnectionRedis struct {
 
 	// closeCh will be closed when this connection is closed -- i.e., by the Close() method.
 	// It is used to give go routines a signal to stop.
-	closeCh chan struct{}
+	closeCh chan string
 
 	// Flag to indicate whether this connection is closed
 	closed bool
@@ -68,7 +68,7 @@ type bytesKeyVal struct {
 // NewBytesConnection creates a new instance of BytesConnectionRedis using the provided
 // Client (be it node, cluster, or sentinel client)
 func NewBytesConnection(client Client, log logging.Logger) (*BytesConnectionRedis, error) {
-	return &BytesConnectionRedis{log, client, make(chan struct{}), false}, nil
+	return &BytesConnectionRedis{log, client, make(chan string), false}, nil
 }
 
 // Close closes the connection to redis.
@@ -412,7 +412,7 @@ type BytesBrokerWatcherRedis struct {
 
 	// closeCh is a channel closed when Close method of data broker is closed.
 	// It is used for giving go routines a signal to stop.
-	closeCh chan struct{}
+	closeCh chan string
 }
 
 // NewBrokerWatcher creates a new CRUD + KeyValProtoWatcher proxy instance to redis using through BytesConnectionRedis.
