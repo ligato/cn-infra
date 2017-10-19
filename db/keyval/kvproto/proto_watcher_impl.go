@@ -56,3 +56,16 @@ func (wr *protoWatchResp) GetValue(msg proto.Message) error {
 	}
 	return nil
 }
+
+// GetPrevValue returns the previous value after the change.
+func (wr *protoWatchResp) GetPrevValue(msg proto.Message) (prevValueExist bool, err error) {
+	prevVal := wr.BytesWatchResp.GetPrevValue()
+	if prevVal == nil {
+		return  false, nil
+	}
+	err = wr.serializer.Unmarshal(prevVal, msg)
+	if err != nil {
+		return true, err
+	}
+	return true, nil
+}

@@ -261,6 +261,19 @@ func (kv *protoKeyVal) GetValue(msg proto.Message) error {
 	return nil
 }
 
+// GetPrevValue returns the previous value of the pair.
+func (kv *protoKeyVal) GetPrevValue(msg proto.Message) (prevValueExist bool, err error) {
+	prevVal := kv.pair.GetPrevValue()
+	if prevVal == nil {
+		return false, nil
+	}
+	err = kv.serializer.Unmarshal(prevVal, msg)
+	if err != nil {
+		return true, err
+	}
+	return true, nil
+}
+
 // GetKey returns the key of the pair.
 func (kv *protoKeyVal) GetKey() string {
 	return kv.pair.GetKey()

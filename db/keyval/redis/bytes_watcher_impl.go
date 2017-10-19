@@ -29,14 +29,15 @@ const keySpaceEventPrefix = "__keyspace@*__:"
 
 // BytesWatchPutResp is sent when new key-value pair has been inserted or the value is updated
 type BytesWatchPutResp struct {
-	key   string
-	value []byte
-	rev   int64 // TODO Does Redis data have revision?
+	key       string
+	value     []byte
+	prevValue []byte
+	rev       int64 // TODO Does Redis data have revision?
 }
 
 // NewBytesWatchPutResp creates an instance of BytesWatchPutResp
-func NewBytesWatchPutResp(key string, value []byte, revision int64) *BytesWatchPutResp {
-	return &BytesWatchPutResp{key: key, value: value, rev: revision}
+func NewBytesWatchPutResp(key string, value []byte, prevValue []byte, revision int64) *BytesWatchPutResp {
+	return &BytesWatchPutResp{key: key, value: value, prevValue: prevValue, rev: revision}
 }
 
 // GetChangeType returns "Put" for BytesWatchPutResp
@@ -52,6 +53,11 @@ func (resp *BytesWatchPutResp) GetKey() string {
 // GetValue returns the value that has been inserted
 func (resp *BytesWatchPutResp) GetValue() []byte {
 	return resp.value
+}
+
+// GetPrevValue returns the value that has been inserted
+func (resp *BytesWatchPutResp) GetPrevValue() []byte {
+	return resp.prevValue
 }
 
 // GetRevision returns the revision associated with create action
@@ -82,6 +88,11 @@ func (resp *BytesWatchDelResp) GetKey() string {
 
 // GetValue returns nil for BytesWatchDelResp
 func (resp *BytesWatchDelResp) GetValue() []byte {
+	return nil
+}
+
+// GetPrevValue returns nil for BytesWatchDelResp
+func (resp *BytesWatchDelResp) GetPrevValue() []byte {
 	return nil
 }
 
@@ -131,6 +142,8 @@ func startWatch(db *BytesConnectionRedis, pubSub *goredis.PubSub,
 	go func() {
 		defer func() { db.Debugf("Watch(%v) exited", patterns) }()
 		db.Debugf("start Watch(%v)", patterns)
+		// to store previous value
+		var prevVal []byte
 		for {
 			msg, err := pubSub.ReceiveMessage()
 			if db.closed {
@@ -161,7 +174,8 @@ func startWatch(db *BytesConnectionRedis, pubSub *goredis.PubSub,
 				if trimPrefix != nil {
 					key = trimPrefix(key)
 				}
-				resp(NewBytesWatchPutResp(key, val, rev))
+				resp(NewBytesWatchPutResp(key, val, prevVal, rev))
+				prevVal = val
 			case "del", "expired":
 				if trimPrefix != nil {
 					key = trimPrefix(key)

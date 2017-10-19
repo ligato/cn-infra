@@ -12,4 +12,5 @@ type KeyValIterator interface {
 type KeyVal interface {
 	WithKey
 	LazyValueWithRev
+	WithPrevValue
 }

@@ -42,13 +42,13 @@ func (it *ChangeIterator) GetNext() (kv datasync.KeyVal, changeType datasync.Put
 }
 
 // NewChange creates a new instance of Change.
-func NewChange(key string, value proto.Message, rev int64, changeType datasync.PutDel) *Change {
-	return &Change{changeType, &KeyVal{key, &lazyProto{value}, rev}}
+func NewChange(key string, value proto.Message, prevValue proto.Message, rev int64, changeType datasync.PutDel) *Change {
+	return &Change{changeType, &KeyVal{key, &lazyProto{value, prevValue}, rev}}
 }
 
 // NewChangeBytes creates a new instance of NewChangeBytes.
-func NewChangeBytes(key string, value []byte, rev int64, changeType datasync.PutDel) *Change {
-	return &Change{changeType, &KeyValBytes{key, value, rev}}
+func NewChangeBytes(key string, value []byte, prevValue []byte, rev int64, changeType datasync.PutDel) *Change {
+	return &Change{changeType, &KeyValBytes{key, value, prevValue, rev}}
 }
 
 // Change represents a single Key-value pair plus changeType

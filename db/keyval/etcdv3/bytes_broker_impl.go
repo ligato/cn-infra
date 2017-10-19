@@ -70,9 +70,10 @@ type bytesKeyIterator struct {
 
 // bytesKeyVal represents a single key-value pair.
 type bytesKeyVal struct {
-	key      string
-	value    []byte
-	revision int64
+	key       string
+	value     []byte
+	prevValue []byte
+	revision  int64
 }
 
 // NewEtcdConnectionWithBytes creates new connection to etcd based on the given
@@ -185,7 +186,11 @@ func handleWatchEvent(log logging.Logger, resp func(keyval.BytesWatchResp), ev *
 		resp(NewBytesWatchDelResp(string(ev.Kv.Key), ev.Kv.ModRevision))
 	} else if ev.IsCreate() || ev.IsModify() {
 		if ev.Kv.Value != nil {
-			resp(NewBytesWatchPutResp(string(ev.Kv.Key), ev.Kv.Value, ev.Kv.ModRevision))
+			var prevKvValue []byte
+			if ev.PrevKv != nil {
+				prevKvValue = ev.PrevKv.Value
+			}
+			resp(NewBytesWatchPutResp(string(ev.Kv.Key), ev.Kv.Value, prevKvValue, ev.Kv.ModRevision))
 			log.Debug("NewBytesWatchPutResp")
 		}
 	}
@@ -400,8 +405,15 @@ func (ctx *bytesKeyValIterator) GetNext() (val keyval.BytesKeyVal, stop bool) {
 	key := string(ctx.resp.Kvs[ctx.index].Key)
 	data := ctx.resp.Kvs[ctx.index].Value
 	rev := ctx.resp.Kvs[ctx.index].ModRevision
+
+	var prevValue []byte
+	if len(ctx.resp.Kvs) > 0 && ctx.index > 0 {
+		prevValue = ctx.resp.Kvs[ctx.index-1].Value
+	}
+
 	ctx.index++
-	return &bytesKeyVal{key, data, rev}, false
+
+	return &bytesKeyVal{key, data, prevValue, rev}, false
 }
 
 // GetNext returns the following key (+ revision) from the result set.
@@ -434,6 +446,11 @@ func (kv *bytesKeyVal) Close() error {
 // GetValue returns the value of the pair.
 func (kv *bytesKeyVal) GetValue() []byte {
 	return kv.value
+}
+
+// GetPrevValue returns the previous value of the pair.
+func (kv *bytesKeyVal) GetPrevValue() []byte {
+	return kv.prevValue
 }
 
 // GetKey returns the key of the pair.

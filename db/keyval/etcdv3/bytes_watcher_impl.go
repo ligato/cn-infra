@@ -22,9 +22,10 @@ import (
 // BytesWatchPutResp is sent when new key-value pair has been inserted
 // or the value has been updated.
 type BytesWatchPutResp struct {
-	key   string
-	value []byte
-	rev   int64
+	key       string
+	value     []byte
+	prevValue []byte
+	rev       int64
 }
 
 // Watch starts subscription for changes associated with the selected <keys>.
@@ -43,8 +44,8 @@ func (pdb *BytesBrokerWatcherEtcd) Watch(resp func(keyval.BytesWatchResp), keys 
 }
 
 // NewBytesWatchPutResp creates an instance of BytesWatchPutResp.
-func NewBytesWatchPutResp(key string, value []byte, revision int64) *BytesWatchPutResp {
-	return &BytesWatchPutResp{key: key, value: value, rev: revision}
+func NewBytesWatchPutResp(key string, value []byte, prevValue []byte, revision int64) *BytesWatchPutResp {
+	return &BytesWatchPutResp{key: key, value: value, prevValue: prevValue, rev: revision}
 }
 
 // GetChangeType returns "Put" for BytesWatchPutResp.
@@ -60,6 +61,11 @@ func (resp *BytesWatchPutResp) GetKey() string {
 // GetValue returns the value that has been inserted.
 func (resp *BytesWatchPutResp) GetValue() []byte {
 	return resp.value
+}
+
+// GetPrevValue returns the previous value that has been inserted.
+func (resp *BytesWatchPutResp) GetPrevValue() []byte {
+	return resp.prevValue
 }
 
 // GetRevision returns the revision associated with the 'put' operation.
@@ -90,6 +96,11 @@ func (resp *BytesWatchDelResp) GetKey() string {
 
 // GetValue returns nil for BytesWatchDelResp.
 func (resp *BytesWatchDelResp) GetValue() []byte {
+	return nil
+}
+
+// GetPrevValue returns nil for BytesWatchDelResp.
+func (resp *BytesWatchDelResp) GetPrevValue() []byte {
 	return nil
 }
 

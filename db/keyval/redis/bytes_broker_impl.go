@@ -60,8 +60,9 @@ type bytesKeyValIterator struct {
 
 // bytesKeyVal represents a single key-value pair
 type bytesKeyVal struct {
-	key   string
-	value []byte
+	key       string
+	value     []byte
+	prevValue []byte
 }
 
 // NewBytesConnection creates a new instance of BytesConnectionRedis using the provided
@@ -273,7 +274,13 @@ func (it *bytesKeyValIterator) GetNext() (kv keyval.BytesKeyVal, lastReceived bo
 		key = it.trimPrefix(key)
 	}
 
-	kv = &bytesKeyVal{key, it.values[it.index]}
+	value := it.values[it.index]
+	var prevValue []byte
+	if it.index > 0 {
+		prevValue = it.values[it.index-1]
+	}
+
+	kv = &bytesKeyVal{key, value, prevValue}
 	it.index++
 
 	return kv, false
@@ -282,6 +289,11 @@ func (it *bytesKeyValIterator) GetNext() (kv keyval.BytesKeyVal, lastReceived bo
 // GetValue returns the value of the pair
 func (kv *bytesKeyVal) GetValue() []byte {
 	return kv.value
+}
+
+// GetPrevValue returns the previous value of the pair
+func (kv *bytesKeyVal) GetPrevValue() []byte {
+	return kv.prevValue
 }
 
 // GetKey returns the key of the pair
