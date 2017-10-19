@@ -60,10 +60,12 @@ function testOutput {
     #run the command
     if [ -e ${TMP_FILE} ]; then
         # if exists file /tmp/out we assume that the command still runs, do not start it again
-        echo "Continue testing $1"
+        echo "Continue:"
+        echo "Testing $1"
         # The command continues to run - the output is still redirected to the file ${TMP_FILE}
     else
-        echo "Start testing $1"
+        echo "Start:"
+        echo "Testing $1"
 
         $1 > $TMP_FILE 2>&1 &
         CMD_PID=$!
@@ -79,7 +81,7 @@ function testOutput {
     # let us examine unprocessed lines in $TMP_FILE2
     testExpectedMessage "$1" "$2" "$3" # uses $TMP_FILE2
     echo "##$rv" # function testExpectedMessage modifies this variable ...
-    echo "================================================================"
+    echo "----------------------------------------------------------------"
 
     # this was processed till now
     processedLines=`wc -l ${TMP_FILE} | cut --delimiter=" " -f1`
@@ -89,8 +91,8 @@ function testOutput {
 #### Simple-agent with Cassandra and Redis and Kafka and ETCD ####################################
 
 processedLines=0
-rm ${TMP_FILE} > /dev/null
-rm ${TMP_FILE2} > /dev/null
+rm ${TMP_FILE} > /dev/null 2>&1
+rm ${TMP_FILE2} > /dev/null 2>&1
 
 startEtcd
 startCustomizedKafka examples/kafka-plugin/manual-partitioner/server.properties
@@ -118,9 +120,11 @@ testOutput "${cmd}" "${expected}" "${unexpected}"
 # we will kill it later after testing of all events ...
 
 # redis start/stop test
+echo "Redis is stopped - etcdctl output:"
 stopRedis >> /dev/null
 sleep 3
 docker exec -it etcd etcdctl get /vnf-agent/vpp1/check/status/v1/plugin/redis
+echo
 
 expected=("Agent plugin state update.*Get(/probe-redis-connection) failed: EOF.*status-check.*plugin=redis state=error
 ")
@@ -130,9 +134,11 @@ unexpected=("Agent plugin state update.*plugin=redis state=ok
 
 testOutput "${cmd}" "${expected}" "${unexpected}"  # cmd unchanged - ASSERT disconnected
 
+echo "Redis is started - etcdctl output:"
 startRedis >> /dev/null
 sleep 3
 docker exec -it etcd etcdctl get /vnf-agent/vpp1/check/status/v1/plugin/redis
+echo
 
 expected=("Agent plugin state update.*plugin=redis state=ok
 ")
@@ -143,9 +149,11 @@ unexpected=("Agent plugin state update.*Get(/probe-redis-connection) failed: EOF
 testOutput "${cmd}" "${expected}" "${unexpected}"  # cmd unchanged - ASSERT connected AGAIN
 
 # cassandra start/stop test
+echo "Cassandra is stopped - etcdctl output:"
 stopCassandra >> /dev/null
 sleep 3
 docker exec -it etcd etcdctl get /vnf-agent/vpp1/check/status/v1/plugin/cassandra
+echo
 
 expected=("Agent plugin state update.*gocql: no hosts available in the pool.*status-check plugin=cassandra state=error
 ")
@@ -155,9 +163,11 @@ unexpected=("Agent plugin state update.*plugin=cassandra state=ok
 
 testOutput "${cmd}" "${expected}" "${unexpected}"  # cmd unchanged - ASSERT disconnected
 
+echo "Cassandra is started - etcdctl output:"
 startCassandra >> /dev/null
 sleep 3
 docker exec -it etcd etcdctl get /vnf-agent/vpp1/check/status/v1/plugin/cassandra
+echo
 
 expected=("Agent plugin state update.*plugin=cassandra state=ok
 ")
@@ -168,9 +178,11 @@ unexpected=("Agent plugin state update.*gocql: no hosts available in the pool.*s
 testOutput "${cmd}" "${expected}" "${unexpected}"  # cmd unchanged - ASSERT connected AGAIN
 
 # kafka start/stop test
+echo "Kafka is stopped - etcdctl output:"
 stopKafka >> /dev/null
 sleep 3
 docker exec -it etcd etcdctl get /vnf-agent/vpp1/check/status/v1/plugin/kafka
+echo
 
 expected=("Agent plugin state update.*kafka: client has run out of available brokers to talk to (Is your cluster reachable?).*status-check plugin=kafka state=error
 ")
@@ -180,9 +192,11 @@ unexpected=("Agent plugin state update.*plugin=kafka state=ok
 
 testOutput "${cmd}" "${expected}" "${unexpected}"  # cmd unchanged - ASSERT disconnected
 
+echo "Kafka is started - etcdctl output:"
 startKafka >> /dev/null
 sleep 3
 docker exec -it etcd etcdctl get /vnf-agent/vpp1/check/status/v1/plugin/kafka
+echo
 
 expected=("Agent plugin state update.*plugin=kafka state=ok
 ")
@@ -192,7 +206,16 @@ unexpected=("Agent plugin state update.*kafka: client has run out of available b
 
 testOutput "${cmd}" "${expected}" "${unexpected}"  # cmd unchanged - ASSERT connected AGAIN
 
-kill $CMD_PID > /dev/null
+if ps -p $CMD_PID > /dev/null; then
+    kill $CMD_PID
+    echo "Killed $1 (SIGTERM)."
+    sleep 3
+    if ps -p $CMD_PID > /dev/null; then
+        kill -9 $CMD_PID
+        echo "Killed $1 (SIGKILL)."
+    fi
+fi
+
 rm ${TMP_FILE} > /dev/null
 rm ${TMP_FILE2} > /dev/null
 
@@ -200,6 +223,9 @@ stopEtcd
 stopKafka
 stopRedis
 stopCassandra
+
+echo "================================================================"
+
 
 ##########################################################################
 
