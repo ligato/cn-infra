@@ -57,7 +57,7 @@ IFS="
 # 3rd argument is mandatory command runtime limit
 # 4th argument is an optional array of unexpected strings in the command output
 function testOutput {
-IFS="$PREV_IFS"
+    IFS="$PREV_IFS"
     echo "Testing $1"
 
     #run the command
@@ -332,7 +332,7 @@ stopKafka
 
 #### Kafka-plugin hash-partitioner #######################################
 
-RUNTIME_LIMIT=10 # the test of hash-partitioner were killed prematurally
+RUNTIME_LIMIT=10 # the tests of hash-partitioner were killed prematurally
 
 startKafka
 

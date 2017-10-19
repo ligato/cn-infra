@@ -134,13 +134,8 @@ endef
 define test_examples
     @echo "# Testing examples"
     @./scripts/test_examples/test_examples.sh
-    @echo "# done"
-endef
-
-# run test examples2
-define test_examples2
-    @echo "# Testing examples: reactions to disconnect/reconnect of plugins redis, cassandra ..."
-    @./scripts/test_examples/reactions_to_reconnecting_of_plugins.sh
+		@echo "# Testing examples: reactions to disconnect/reconnect of plugins redis, cassandra ..."
+		@./scripts/test_examples/plugin_reconnect.sh
     @echo "# done"
 endef
 
@@ -164,7 +159,6 @@ test:
 # run smoke tests on examples
 test-examples:
 	$(call test_examples)
-	$(call test_examples2)
 
 # run tests with coverage report
 test-cover:
