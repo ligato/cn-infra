@@ -125,6 +125,9 @@ Event arrived to etcd eventHandler, key /vnf-agent/vpp1/api/v1/example/db/simple
 Event arrived to etcd eventHandler, key /vnf-agent/vpp1/api/v1/example/db/simple/index, update: true
 ")
 
+unexpected=("etcd/datasync example failed
+")
+
 cmd="examples/datasync-plugin/datasync-plugin --etcdv3-config=examples/datasync-plugin/etcd.conf"
 testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT
 
