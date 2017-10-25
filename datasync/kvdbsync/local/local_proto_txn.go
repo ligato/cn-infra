@@ -62,15 +62,13 @@ func (txn *ProtoTxn) Commit() error {
 	defer txn.access.Unlock()
 
 	kvs := map[string] /*key*/ datasync.ChangeValue{}
-	var prevVal proto.Message
 	for key, item := range txn.items {
 		changeType := datasync.Put
 		if item.Delete {
 			changeType = datasync.Delete
 		}
 
-		kvs[key] = syncbase.NewChange(key, item.Data, prevVal, 0, changeType)
-		prevVal = item.Data
+		kvs[key] = syncbase.NewChange(key, item.Data, 0, changeType)
 	}
 	return txn.commit(kvs)
 }

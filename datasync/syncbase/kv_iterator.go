@@ -39,14 +39,14 @@ func (it *KVIterator) GetNext() (kv datasync.KeyVal, allReceived bool) {
 }
 
 // NewKeyVal creates a new instance of KeyVal.
-func NewKeyVal(key string, value datasync.LazyValueWithPrevValue, rev int64) *KeyVal {
+func NewKeyVal(key string, value datasync.LazyValue, rev int64) *KeyVal {
 	return &KeyVal{key, value, rev}
 }
 
 // KeyVal represents a single Key-value pair
 type KeyVal struct {
 	key string
-	datasync.LazyValueWithPrevValue
+	datasync.LazyValue
 	rev int64
 }
 
@@ -61,8 +61,7 @@ func (kv *KeyVal) GetRevision() int64 {
 }
 
 type lazyProto struct {
-	val     proto.Message
-	prevVal proto.Message
+	val proto.Message
 }
 
 // GetValue returns the value of the pair
@@ -73,32 +72,21 @@ func (lazy *lazyProto) GetValue(out proto.Message) error {
 	return nil
 }
 
-// GetValue returns the value of the pair
-func (lazy *lazyProto) GetPrevValue(out proto.Message) (prevValueExist bool, err error) {
-	if lazy.prevVal == nil {
-		return false, err
-	}
-	proto.Merge(out, lazy.prevVal)
-
-	return true, nil
-}
-
 // NewKVIterator creates a new instance of KVIterator.
 func NewKVIterator(data []datasync.KeyVal) *KVIterator {
 	return &KVIterator{data: data}
 }
 
 // NewKeyValBytes creates a new instance of KeyValBytes.
-func NewKeyValBytes(key string, value []byte, prevValue []byte, rev int64) *KeyValBytes {
-	return &KeyValBytes{key, value, prevValue, rev}
+func NewKeyValBytes(key string, value []byte, rev int64) *KeyValBytes {
+	return &KeyValBytes{key, value, rev}
 }
 
 // KeyValBytes represents a single Key-value pair
 type KeyValBytes struct {
-	key     string
-	value   []byte
-	prevVal []byte
-	rev     int64
+	key   string
+	value []byte
+	rev   int64
 }
 
 // GetKey returns the Key of the pair
@@ -110,18 +98,6 @@ func (kv *KeyValBytes) GetKey() string {
 func (kv *KeyValBytes) GetValue(message proto.Message) error {
 	json.Unmarshal(kv.value, message)
 	return nil
-}
-
-// GetPrevValue returns the previous value of the pair
-func (kv *KeyValBytes) GetPrevValue(message proto.Message) (prevValueExist bool, err error) {
-	if kv.prevVal == nil {
-		return false, nil
-	}
-	err = json.Unmarshal(kv.value, message)
-	if err != nil {
-		return true, err
-	}
-	return true, nil
 }
 
 // GetRevision returns revision associated with the latest change in the Key-value pair

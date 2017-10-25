@@ -40,12 +40,12 @@ type CallbackResult interface {
 type ProtoWatchResp interface {
 	ChangeValue
 	WithKey
+	WithPrevValue
 }
 
 // ChangeValue represents single propagated change.
 type ChangeValue interface {
 	LazyValueWithRev
-	WithPrevValue
 	WithChangeType
 }
 
@@ -54,13 +54,6 @@ type ChangeValue interface {
 type LazyValueWithRev interface {
 	LazyValue
 	WithRevision
-}
-
-// LazyValueWithPrevValue defines value and previous value that are unmarshalled into
-// proto messages on demand
-type LazyValueWithPrevValue interface {
-	LazyValue
-	WithPrevValue
 }
 
 // WithKey is a simple helper interface embedded by all interfaces that require

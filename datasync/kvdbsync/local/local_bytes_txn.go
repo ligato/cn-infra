@@ -61,15 +61,13 @@ func (txn *BytesTxn) Commit() error {
 	defer txn.access.Unlock()
 
 	kvs := map[string] /*key*/ datasync.ChangeValue{}
-	var prevVal []byte
 	for key, item := range txn.items {
 		changeType := datasync.Put
 		if item.Delete {
 			changeType = datasync.Delete
 		}
 
-		kvs[key] = syncbase.NewChangeBytes(key, item.Data, prevVal, 0, changeType)
-		prevVal = item.Data
+		kvs[key] = syncbase.NewChangeBytes(key, item.Data, 0, changeType)
 	}
 	return txn.commit(kvs)
 }
