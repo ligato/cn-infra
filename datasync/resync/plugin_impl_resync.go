@@ -21,7 +21,7 @@ import (
 	"github.com/ligato/cn-infra/flavors/local"
 )
 
-// Plugin implements Plugin interface therefore can be loaded with other plugins
+// Plugin implements Plugin interface, therefore it can be loaded with other plugins.
 type Plugin struct {
 	Deps
 
@@ -35,7 +35,7 @@ type Deps struct {
 	local.PluginLogDeps // inject
 }
 
-// Init initializes variables
+// Init initializes variables.
 func (plugin *Plugin) Init() (err error) {
 	plugin.registrations = make(map[string]Registration)
 
@@ -46,7 +46,7 @@ func (plugin *Plugin) Init() (err error) {
 	return nil
 }
 
-// AfterInit method starts the resync
+// AfterInit method starts the resync.
 func (plugin *Plugin) AfterInit() (err error) {
 	plugin.startResync()
 
@@ -66,8 +66,8 @@ func (plugin *Plugin) Close() error {
 
 // Register function is supposed to be called in Init() by all VPP Agent plugins.
 // The plugins are supposed to load current state of their objects when newResync() is called.
-// But the actual CreateNewObjects(), DeleteObsoleteObjects() and ModifyExistingObjects() will be orchestrated
-// to ensure there is proper order of that. If an error occurs during Resync than new Resync is planned.
+// The actual CreateNewObjects(), DeleteObsoleteObjects() and ModifyExistingObjects() will be orchestrated
+// to ensure their proper order. If an error occurs during Resync, then new Resync is planned.
 func (plugin *Plugin) Register(resyncName string) Registration {
 	plugin.access.Lock()
 	defer plugin.access.Unlock()
@@ -82,7 +82,7 @@ func (plugin *Plugin) Register(resyncName string) Registration {
 	return reg
 }
 
-// call callback on plugins to create/delete/modify objects
+// Call callback on plugins to create/delete/modify objects.
 func (plugin *Plugin) startResync() {
 
 	startTime := time.Now()
