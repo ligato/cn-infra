@@ -1,6 +1,13 @@
-# Release v.1.0.6 (not released yet)
+# Release v1.0.6 (2017-10-30)
 
+## ETCD/Datasync
 * etcd new feature PutIfNotExists adds key-value pair if the key doesn't exist.
+* feature GetPrevValue() used to obtain previous value from key-value database was returned to API
+* watcher registration object has a new method to close single subscribed key. Key can be un-subscribed in runtime.
+  See example usage in [examples/datasync-plugin](examples/datasync-plugin) for more details  
+
+## Documentation
+* improved documentation/code comments in datasync, config and core packages 
 
 # Release v1.0.5 (2017-10-17)
 
