@@ -26,7 +26,7 @@ type Option interface {
 	OptionMarkerCore()
 }
 
-// Option defines the maximum time for which the notification delivery is attempted.
+// WithTimeoutOpt defines the maximum time for which the notification delivery is attempted.
 type WithTimeoutOpt struct {
 	Timeout time.Duration
 }
