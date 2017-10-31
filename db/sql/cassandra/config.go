@@ -23,12 +23,13 @@ import (
 	"github.com/gocql/gocql"
 )
 
+//TLS used to configure TLS
 type TLS struct {
-	Certfile               string `json:"cert_path"`
-	Keyfile                string `json:"key_path"`
-	CAfile                 string `json:"ca_path"`
-	EnableHostVerification bool   `json:"enable_host_verification"`
-	Enabled                bool   `json:"enabled"`
+	Certfile               string `json:"cert_path"`                // client certificate
+	Keyfile                string `json:"key_path"`                 // client private key
+	CAfile                 string `json:"ca_path"`                  // certificate authority
+	EnableHostVerification bool   `json:"enable_host_verification"` // whether to skip verification of server name & certificate
+	Enabled                bool   `json:"enabled"`                  // enable/disable TLS
 }
 
 // Config Configuration for Cassandra clients loaded from a configuration file
@@ -57,6 +58,7 @@ type Config struct {
 	// versions the protocol selected is not defined (ie, it can be any of the supported in the cluster)
 	ProtocolVersion int `json:"protocol_version"`
 
+	//TLS used to configure TLS
 	TLS TLS `json:"tls"`
 }
 
