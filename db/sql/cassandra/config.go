@@ -23,6 +23,14 @@ import (
 	"github.com/gocql/gocql"
 )
 
+type TLS struct {
+	Certfile               string `json:"cert_path"`
+	Keyfile                string `json:"key_path"`
+	CAfile                 string `json:"ca_path"`
+	EnableHostVerification bool   `json:"enable_host_verification"`
+	Enabled                bool   `json:"enabled"`
+}
+
 // Config Configuration for Cassandra clients loaded from a configuration file
 type Config struct {
 	// A list of host addresses of cluster nodes.
@@ -48,6 +56,8 @@ type Config struct {
 	// highest supported protocol for the cluster. In clusters with nodes of different
 	// versions the protocol selected is not defined (ie, it can be any of the supported in the cluster)
 	ProtocolVersion int `json:"protocol_version"`
+
+	TLS TLS `json:"tls"`
 }
 
 // ClientConfig wrapping gocql ClusterConfig
@@ -90,6 +100,16 @@ func ConfigToClientConfig(ymlConfig *Config) (*ClientConfig, error) {
 		return nil, err
 	}
 
+	var sslOpts *gocql.SslOptions
+	if ymlConfig.TLS.Enabled {
+		sslOpts = &gocql.SslOptions{
+			CaPath:                 ymlConfig.TLS.CAfile,
+			CertPath:               ymlConfig.TLS.Certfile,
+			KeyPath:                ymlConfig.TLS.Keyfile,
+			EnableHostVerification: ymlConfig.TLS.EnableHostVerification,
+		}
+	}
+
 	clientConfig := &gocql.ClusterConfig{
 		Hosts:             endpoints,
 		Port:              port,
@@ -97,6 +117,7 @@ func ConfigToClientConfig(ymlConfig *Config) (*ClientConfig, error) {
 		ConnectTimeout:    connectTimeout * time.Millisecond,
 		ReconnectInterval: reconnectInterval * time.Second,
 		ProtoVersion:      protoVersion,
+		SslOpts:           sslOpts,
 	}
 
 	cfg := &ClientConfig{ClusterConfig: clientConfig}
@@ -115,6 +136,7 @@ func CreateSessionFromConfig(config *ClientConfig) (*gocql.Session, error) {
 	gocqlClusterConfig.ReconnectInterval = config.ReconnectInterval
 	gocqlClusterConfig.Timeout = config.Timeout
 	gocqlClusterConfig.ProtoVersion = config.ProtoVersion
+	gocqlClusterConfig.SslOpts = config.SslOpts
 
 	session, err := gocqlClusterConfig.CreateSession()
 
