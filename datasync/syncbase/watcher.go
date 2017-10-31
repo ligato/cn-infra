@@ -53,7 +53,9 @@ func (reg *WatchDataReg) Close() error {
 	defer reg.adapter.access.Unlock()
 
 	for _, sub := range reg.adapter.subscriptions {
-		if sub.CloseChan != nil {
+		// subscription should have also change channel, otherwise it is not registered
+		// for change events
+		if sub.ChangeChan != nil && sub.CloseChan != nil {
 			// close all goroutines under subscription
 			sub.CloseChan <- ""
 			// close the channel
@@ -72,6 +74,12 @@ func (reg *WatchDataReg) Unregister(keyPrefix string) error {
 	defer reg.adapter.access.Unlock()
 
 	subs := reg.adapter.subscriptions[reg.ResyncName]
+	// verify if key is registered for change events
+	if subs.ChangeChan == nil {
+		// not an error
+		logroot.StandardLogger().Infof("key %v not registered for change events", keyPrefix)
+		return nil
+	}
 	if subs.CloseChan == nil {
 		return fmt.Errorf("unable to unregister key %v, close channel in subscription is nil", keyPrefix)
 	}
