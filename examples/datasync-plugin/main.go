@@ -41,7 +41,7 @@ func main() {
 		connectors.InjectKVDBSync(etcdDataSync, etcdPlug, etcdPlug.PluginName, flavor, resyncOrch)
 
 		examplePlug := &ExamplePlugin{closeChannel: &exampleFinished}
-		examplePlug.Deps.PluginLogDeps = *flavor.LogDeps("etcd-example")
+		examplePlug.Deps.PluginInfraDeps = *flavor.InfraDeps("etcd-example")
 		examplePlug.Deps.Publisher = etcdDataSync // Inject datasync Watcher to example plugin.
 		examplePlug.Deps.Watcher = etcdDataSync   // Inject datasync Publisher to example plugin.
 
