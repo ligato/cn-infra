@@ -232,8 +232,8 @@ func watchInternal(log logging.Logger, watcher clientv3.Watcher, closeCh chan st
 				for _, ev := range wresp.Events {
 					handleWatchEvent(log, resp, ev)
 				}
-			case closeVal := <-closeCh:
-				if closeVal == "" || registeredKey == closeVal {
+			case closeVal, ok := <-closeCh:
+				if !ok || registeredKey == closeVal {
 					log.WithField("key", key).Debug("Watch ended")
 					return
 				}

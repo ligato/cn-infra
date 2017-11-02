@@ -56,9 +56,7 @@ func (reg *WatchDataReg) Close() error {
 		// subscription should have also change channel, otherwise it is not registered
 		// for change events
 		if sub.ChangeChan != nil && sub.CloseChan != nil {
-			// close all goroutines under subscription
-			sub.CloseChan <- ""
-			// close the channel
+			// close the channel with all goroutines under subscription
 			safeclose.Close(sub.CloseChan)
 		}
 	}
