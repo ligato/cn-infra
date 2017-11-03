@@ -36,12 +36,12 @@ func main() {
 		etcdDataSync := &kvdbsync.Plugin{}
 		resyncOrch := &resync.Plugin{}
 
-		etcdPlug.Deps.PluginInfraDeps = *flavor.InfraDeps("etcd", local.WithConf())
-		resyncOrch.Deps.PluginLogDeps = *flavor.LogDeps("etcd-resync")
+		etcdPlug.Deps.PluginInfraDeps = *flavor.InfraDeps("etcdv3", local.WithConf())
+		resyncOrch.Deps.PluginLogDeps = *flavor.LogDeps("etcdv3-resync")
 		connectors.InjectKVDBSync(etcdDataSync, etcdPlug, etcdPlug.PluginName, flavor, resyncOrch)
 
 		examplePlug := &ExamplePlugin{closeChannel: &exampleFinished}
-		examplePlug.Deps.PluginLogDeps = *flavor.LogDeps("etcd-example")
+		examplePlug.Deps.PluginInfraDeps = *flavor.InfraDeps("etcdv3-example")
 		examplePlug.Deps.Publisher = etcdDataSync // Inject datasync Watcher to example plugin.
 		examplePlug.Deps.Watcher = etcdDataSync   // Inject datasync Publisher to example plugin.
 
@@ -166,6 +166,7 @@ func (plugin *ExamplePlugin) consumer() {
 
 				if plugin.eventCounter == 2 {
 					// After creating/updating data, unregister key
+					plugin.Log.Infof("Unregister key %v", etcdKeyPrefix(plugin.ServiceLabel.GetAgentLabel()))
 					plugin.watchDataReg.Unregister(etcdKeyPrefix(plugin.ServiceLabel.GetAgentLabel()))
 				}
 			}
@@ -179,7 +180,10 @@ func (plugin *ExamplePlugin) consumer() {
 			//
 			// case resyncEvent := <-plugin.ResyncEvent:
 			//   ...
-
+		case rs := <-plugin.resyncChannel:
+			// Resync event notification
+			plugin.Log.Infof("Resync event %v called", rs)
+			rs.Done(nil)
 		case <-plugin.context.Done():
 			plugin.Log.Warnf("Stop watching events")
 		}

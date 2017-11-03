@@ -192,7 +192,7 @@ type flavorAggregator struct {
 func (flavors flavorAggregator) Plugins() []*NamedPlugin {
 	ret := []*NamedPlugin{}
 	for _, f := range flavors.fs {
-		ret = append(ret, f.Plugins()...)
+		ret = appendDiff(ret, f.Plugins()...)
 	}
 	return ret
 }
@@ -213,4 +213,22 @@ func (flavors flavorAggregator) LogRegistry() logging.Registry {
 	}
 
 	return nil
+}
+
+// Do not append plugins contained in multiple flavors
+func appendDiff(existing []*NamedPlugin, new ...*NamedPlugin) []*NamedPlugin {
+	for _, newPlugin := range new {
+		exists := false
+		for _, existingPlugin := range existing {
+			if newPlugin.PluginName == existingPlugin.PluginName {
+				logroot.StandardLogger().Debugf("duplicate of plugin skipped %v", newPlugin.PluginName)
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			existing = append(existing, newPlugin)
+		}
+	}
+	return existing
 }
