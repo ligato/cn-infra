@@ -4,7 +4,7 @@ ARG AGENT_COMMIT="xxx"
 
 RUN apt-get update && apt-get install -y \
     sudo wget git build-essential gdb vim nano python \
-    iproute2 iputils-ping inetutils-traceroute libapr1 supervisor
+    iproute2 iputils-ping inetutils-traceroute libapr1 supervisor telnet
 
 RUN mkdir /opt/agent
 RUN mkdir /opt/agent/dev
