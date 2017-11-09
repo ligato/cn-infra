@@ -93,16 +93,33 @@ func (keys *watchBrokerKeys) watchResync(resyncReg resync.Registration) {
 
 // Resync fills the resyncChan with the most recent snapshot (db.ListValues).
 func (keys *watchBrokerKeys) resync() error {
-	its := map[string] /*keyPrefix*/ datasync.KeyValIterator{}
+	iterators := map[string] /*keyPrefix*/ datasync.KeyValIterator{}
 	for _, keyPrefix := range keys.prefixes {
 		it, err := keys.adapter.db.ListValues(keyPrefix)
 		if err != nil {
 			return err
 		}
-		its[keyPrefix] = NewIterator(it)
+		// copy of the iterator used to register revisions processed during resync
+		revIt, err := keys.adapter.db.ListValues(keyPrefix)
+		if err != nil {
+			return err
+		}
+
+		// if there are data for given prefix, register it
+		for {
+			data, stop := revIt.GetNext()
+			if stop {
+				break
+			}
+			logroot.StandardLogger().Debugf("registering resynced key %v", data.GetKey())
+			keys.adapter.base.LastRev().PutWithRevision(data.GetKey(), syncbase.NewKeyVal(data.GetKey(), data, data.GetRevision()))
+		}
+
+		// store to the map which will be sent as a resync event
+		iterators[keyPrefix] = NewIterator(it)
 	}
 
-	resyncEvent := syncbase.NewResyncEventDB(its)
+	resyncEvent := syncbase.NewResyncEventDB(iterators)
 	keys.resyncChan <- resyncEvent
 
 	select {
