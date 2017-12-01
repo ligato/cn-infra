@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/health/statuscheck/model/status"
@@ -46,9 +47,10 @@ type Plugin struct {
 
 	access sync.Mutex // lock for the Plugin data
 
-	agentStat   *status.AgentStatus             // overall agent status
-	pluginStat  map[string]*status.PluginStatus // plugin's status
-	pluginProbe map[string]PluginStateProbe     // registered status probes
+	agentStat     *status.AgentStatus             // overall agent status
+	interfaceStat *status.InterfaceStatus         // interfaces' overall status
+	pluginStat    map[string]*status.PluginStatus // plugin's status
+	pluginProbe   map[string]PluginStateProbe     // registered status probes
 
 	ctx    context.Context
 	cancel context.CancelFunc // cancel can be used to cancel all goroutines and their jobs inside of the plugin
@@ -72,6 +74,10 @@ func (p *Plugin) Init() error {
 		StartTime:    time.Now().Unix(),
 		LastChange:   time.Now().Unix(),
 	}
+
+	// initial empty interface status
+	var statusData []*status.InterfaceStatus_Interfaces
+	p.interfaceStat = &status.InterfaceStatus{Interfaces: statusData}
 
 	// init pluginStat map
 	p.pluginStat = make(map[string]*status.PluginStatus)
@@ -138,9 +144,25 @@ func (p *Plugin) Register(pluginName core.PluginName, probe PluginStateProbe) {
 	p.Log.Infof("Plugin %v: status check probe registered", pluginName)
 }
 
-// ReportStateChange can be used to report a change in the status
-// of a previously registered plugin.
+// ReportStateChange can be used to report a change in the status of a previously registered plugin.
 func (p *Plugin) ReportStateChange(pluginName core.PluginName, state PluginState, lastError error) {
+	p.reportStateChange(pluginName, state, lastError)
+}
+
+// ReportStateChange can be used to report a change in the status of a previously registered plugin and report
+// the specific metadata state
+func (p *Plugin) ReportStateChangeWithMeta(pluginName core.PluginName, state PluginState, lastError error, meta proto.Message) {
+	p.reportStateChange(pluginName, state, lastError)
+
+	switch data := meta.(type) {
+	case *status.InterfaceStatus_Interfaces:
+		p.reportInterfaceStateChange(data)
+	default:
+		p.Log.Debug("Unknown type of status metadata")
+	}
+}
+
+func (p *Plugin) reportStateChange(pluginName core.PluginName, state PluginState, lastError error) {
 	p.access.Lock()
 	defer p.access.Unlock()
 
@@ -192,6 +214,36 @@ func (p *Plugin) ReportStateChange(pluginName core.PluginName, state PluginState
 		p.agentStat.State = stateToProto(state)
 		p.agentStat.LastChange = time.Now().Unix()
 		p.publishAgentData()
+	}
+}
+
+func (p *Plugin) reportInterfaceStateChange(data *status.InterfaceStatus_Interfaces) {
+	// Filter interfaces without internal name
+	if data.InternalName == "" {
+		p.Log.Debugf("Interface without internal name skipped for global status. Data: %v", data)
+		return
+	}
+
+	var listIndex int
+	var existingData *status.InterfaceStatus_Interfaces
+	for index, ifState := range p.interfaceStat.Interfaces {
+		// check if interface with the internal name already exists
+		if data.InternalName == ifState.InternalName {
+			listIndex = index
+			existingData = ifState
+			break
+		}
+	}
+
+	if existingData == nil {
+		// new entry
+		p.interfaceStat.Interfaces = append(p.interfaceStat.Interfaces, data)
+		p.Log.Debugf("Global interface state data added: %v", data)
+	} else if existingData.Index != data.Index || existingData.Status != data.Status || existingData.MacAddress != data.MacAddress {
+		// updated entry - update only if state really changed
+		p.interfaceStat.Interfaces = append(p.interfaceStat.Interfaces[:listIndex], p.interfaceStat.Interfaces[listIndex+1:]...)
+		p.interfaceStat.Interfaces = append(p.interfaceStat.Interfaces, data)
+		p.Log.Debug("Global interface state data updated: %v", data)
 	}
 }
 
@@ -278,7 +330,7 @@ func (p *Plugin) getAgentState() status.OperationalState {
 func (p *Plugin) GetAgentStatus() status.AgentStatus {
 	p.access.Lock()
 	defer p.access.Unlock()
-	return *(p.agentStat)
+	return *p.agentStat
 }
 
 // stateToProto converts agent state type into protobuf agent state type.
@@ -300,4 +352,12 @@ func (p *Plugin) GetAllPluginStatus() map[string]*status.PluginStatus {
 	defer p.access.Unlock()
 
 	return p.pluginStat
+}
+
+// GetInterfaceStatus returns current global operational status of interfaces
+func (p *Plugin) GetInterfaceStatus() status.InterfaceStatus {
+	p.access.Lock()
+	defer p.access.Unlock()
+
+	return *p.interfaceStat
 }
