@@ -13,10 +13,11 @@ It is generated from these files:
 It has these top-level messages:
 	AgentStatus
 	PluginStatus
+	InterfaceStatus
 */
 package status
 
-import "github.com/gogo/protobuf/proto"
+import proto "github.com/gogo/protobuf/proto"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -45,17 +46,25 @@ func (x OperationalState) String() string {
 }
 
 type AgentStatus struct {
-	BuildVersion string           `protobuf:"bytes,1,opt,name=build_version,proto3" json:"build_version,omitempty"`
-	BuildDate    string           `protobuf:"bytes,2,opt,name=build_date,proto3" json:"build_date,omitempty"`
-	State        OperationalState `protobuf:"varint,3,opt,name=state,proto3,enum=status.OperationalState" json:"state,omitempty"`
-	StartTime    int64            `protobuf:"varint,4,opt,name=start_time,proto3" json:"start_time,omitempty"`
-	LastChange   int64            `protobuf:"varint,5,opt,name=last_change,proto3" json:"last_change,omitempty"`
-	LastUpdate   int64            `protobuf:"varint,6,opt,name=last_update,proto3" json:"last_update,omitempty"`
+	BuildVersion    string           `protobuf:"bytes,1,opt,name=build_version,proto3" json:"build_version,omitempty"`
+	BuildDate       string           `protobuf:"bytes,2,opt,name=build_date,proto3" json:"build_date,omitempty"`
+	State           OperationalState `protobuf:"varint,3,opt,name=state,proto3,enum=status.OperationalState" json:"state,omitempty"`
+	StartTime       int64            `protobuf:"varint,4,opt,name=start_time,proto3" json:"start_time,omitempty"`
+	LastChange      int64            `protobuf:"varint,5,opt,name=last_change,proto3" json:"last_change,omitempty"`
+	LastUpdate      int64            `protobuf:"varint,6,opt,name=last_update,proto3" json:"last_update,omitempty"`
+	InterfaceStatus *InterfaceStatus `protobuf:"bytes,7,opt,name=interface_status" json:"interface_status,omitempty"`
 }
 
 func (m *AgentStatus) Reset()         { *m = AgentStatus{} }
 func (m *AgentStatus) String() string { return proto.CompactTextString(m) }
 func (*AgentStatus) ProtoMessage()    {}
+
+func (m *AgentStatus) GetInterfaceStatus() *InterfaceStatus {
+	if m != nil {
+		return m.InterfaceStatus
+	}
+	return nil
+}
 
 type PluginStatus struct {
 	State      OperationalState `protobuf:"varint,1,opt,name=state,proto3,enum=status.OperationalState" json:"state,omitempty"`
@@ -67,6 +76,33 @@ type PluginStatus struct {
 func (m *PluginStatus) Reset()         { *m = PluginStatus{} }
 func (m *PluginStatus) String() string { return proto.CompactTextString(m) }
 func (*PluginStatus) ProtoMessage()    {}
+
+type InterfaceStatus struct {
+	Interfaces []*InterfaceStatus_Interfaces `protobuf:"bytes,1,rep,name=interfaces" json:"interfaces,omitempty"`
+}
+
+func (m *InterfaceStatus) Reset()         { *m = InterfaceStatus{} }
+func (m *InterfaceStatus) String() string { return proto.CompactTextString(m) }
+func (*InterfaceStatus) ProtoMessage()    {}
+
+func (m *InterfaceStatus) GetInterfaces() []*InterfaceStatus_Interfaces {
+	if m != nil {
+		return m.Interfaces
+	}
+	return nil
+}
+
+type InterfaceStatus_Interfaces struct {
+	InternalName string `protobuf:"bytes,1,opt,name=internal_name,proto3" json:"internal_name,omitempty"`
+	Index        uint32 `protobuf:"varint,3,opt,name=index,proto3" json:"index,omitempty"`
+	Status       string `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
+	IpAddress    string `protobuf:"bytes,5,opt,name=ip_address,proto3" json:"ip_address,omitempty"`
+	MacAddress   string `protobuf:"bytes,6,opt,name=mac_address,proto3" json:"mac_address,omitempty"`
+}
+
+func (m *InterfaceStatus_Interfaces) Reset()         { *m = InterfaceStatus_Interfaces{} }
+func (m *InterfaceStatus_Interfaces) String() string { return proto.CompactTextString(m) }
+func (*InterfaceStatus_Interfaces) ProtoMessage()    {}
 
 func init() {
 	proto.RegisterEnum("status.OperationalState", OperationalState_name, OperationalState_value)
