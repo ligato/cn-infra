@@ -149,7 +149,7 @@ func (p *Plugin) ReportStateChange(pluginName core.PluginName, state PluginState
 	p.reportStateChange(pluginName, state, lastError)
 }
 
-// ReportStateChange can be used to report a change in the status of a previously registered plugin and report
+// ReportStateChangeWithMeta can be used to report a change in the status of a previously registered plugin and report
 // the specific metadata state
 func (p *Plugin) ReportStateChangeWithMeta(pluginName core.PluginName, state PluginState, lastError error, meta proto.Message) {
 	p.reportStateChange(pluginName, state, lastError)
