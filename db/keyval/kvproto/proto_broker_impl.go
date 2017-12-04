@@ -137,9 +137,13 @@ func (pdb *protoBroker) Delete(key string, opts ...datasync.DelOption) (existed 
 // Callback <resp> is used for delivery of watch events.
 // Channel <closeChan> is used to close key-related goroutines
 // Any encountered error is returned as well
-func (db *ProtoWrapper) Watch(resp func(keyval.ProtoWatchResp), closeChan chan string, keys ...string) error {
-	return db.broker.Watch(func(msg keyval.BytesWatchResp) {
-		resp(NewWatchResp(db.serializer, msg))
+func (db *ProtoWrapper) Watch(resp func([]keyval.ProtoWatchResp), closeChan chan string, keys ...string) error {
+	return db.broker.Watch(func(msg []keyval.BytesWatchResp) {
+		var responses []keyval.ProtoWatchResp
+		for _, bytesResp := range msg {
+			responses = append(responses, NewWatchResp(db.serializer, bytesResp))
+		}
+		resp(responses)
 	}, closeChan, keys...)
 }
 

@@ -21,18 +21,22 @@ import (
 
 // BytesWatchPutResp is sent when new key-value pair has been inserted
 // or the value has been updated.
-type BytesWatchPutResp struct {
+type BytesWatchPutRespItem struct {
 	key       string
 	value     []byte
 	prevValue []byte
 	rev       int64
 }
 
+type BytesWatchPutResp struct {
+	response []*BytesWatchPutRespItem
+}
+
 // Watch starts subscription for changes associated with the selected <keys>.
 // KeyPrefix defined in constructor is prepended to all <keys> in the argument
 // list. The prefix is removed from the keys returned in watch events.
 // Watch events will be delivered to <resp> callback.
-func (pdb *BytesBrokerWatcherEtcd) Watch(resp func(keyval.BytesWatchResp), closeChan chan string, keys ...string) error {
+func (pdb *BytesBrokerWatcherEtcd) Watch(resp func([]keyval.BytesWatchResp), closeChan chan string, keys ...string) error {
 	var err error
 	for _, k := range keys {
 		err = watchInternal(pdb.Logger, pdb.watcher, closeChan, k, resp)
@@ -43,68 +47,77 @@ func (pdb *BytesBrokerWatcherEtcd) Watch(resp func(keyval.BytesWatchResp), close
 	return err
 }
 
+func NewBytesWatchPutResp() *BytesWatchPutResp{
+	var response []*BytesWatchPutRespItem
+	return &BytesWatchPutResp{response}
+}
+
 // NewBytesWatchPutResp creates an instance of BytesWatchPutResp.
-func NewBytesWatchPutResp(key string, value []byte, prevValue []byte, revision int64) *BytesWatchPutResp {
-	return &BytesWatchPutResp{key: key, value: value, prevValue: prevValue, rev: revision}
+func NewBytesWatchPutRespItem(key string, value []byte, prevValue []byte, revision int64) *BytesWatchPutRespItem {
+	return &BytesWatchPutRespItem{key: key, value: value, prevValue: prevValue, rev: revision}
 }
 
 // GetChangeType returns "Put" for BytesWatchPutResp.
-func (resp *BytesWatchPutResp) GetChangeType() datasync.PutDel {
+func (resp *BytesWatchPutRespItem) GetChangeType() datasync.PutDel {
 	return datasync.Put
 }
 
 // GetKey returns the key that the value has been inserted under.
-func (resp *BytesWatchPutResp) GetKey() string {
+func (resp *BytesWatchPutRespItem) GetKey() string {
 	return resp.key
 }
 
 // GetValue returns the value that has been inserted.
-func (resp *BytesWatchPutResp) GetValue() []byte {
+func (resp *BytesWatchPutRespItem) GetValue() []byte {
 	return resp.value
 }
 
 // GetPrevValue returns the previous value that has been inserted.
-func (resp *BytesWatchPutResp) GetPrevValue() []byte {
+func (resp *BytesWatchPutRespItem) GetPrevValue() []byte {
 	return resp.prevValue
 }
 
 // GetRevision returns the revision associated with the 'put' operation.
-func (resp *BytesWatchPutResp) GetRevision() int64 {
+func (resp *BytesWatchPutRespItem) GetRevision() int64 {
 	return resp.rev
 }
 
+type NewBytesWatchDelResp struct {
+	response []*BytesWatchPutRespItem
+}
+
 // BytesWatchDelResp is sent when a key-value pair has been removed.
-type BytesWatchDelResp struct {
+type BytesWatchDelRespItem struct {
 	key string
 	rev int64
 }
 
 // NewBytesWatchDelResp creates an instance of BytesWatchDelResp.
-func NewBytesWatchDelResp(key string, revision int64) *BytesWatchDelResp {
-	return &BytesWatchDelResp{key: key, rev: revision}
+func NewBytesWatchDelRespItem(key string, revision int64) *BytesWatchDelRespItem {
+	return &BytesWatchDelRespItem{key: key, rev: revision}
 }
 
 // GetChangeType returns "Delete" for BytesWatchPutResp.
-func (resp *BytesWatchDelResp) GetChangeType() datasync.PutDel {
+func (resp *BytesWatchDelRespItem) GetChangeType() datasync.PutDel {
 	return datasync.Delete
 }
 
 // GetKey returns the key that a value has been deleted from.
-func (resp *BytesWatchDelResp) GetKey() string {
+func (resp *BytesWatchDelRespItem) GetKey() string {
 	return resp.key
 }
 
 // GetValue returns nil for BytesWatchDelResp.
-func (resp *BytesWatchDelResp) GetValue() []byte {
+func (resp *BytesWatchDelRespItem) GetValue() []byte {
 	return nil
 }
 
 // GetPrevValue returns nil for BytesWatchDelResp.
-func (resp *BytesWatchDelResp) GetPrevValue() []byte {
+func (resp *BytesWatchDelRespItem) GetPrevValue() []byte {
 	return nil
 }
 
 // GetRevision returns the revision associated with the 'delete' operation.
-func (resp *BytesWatchDelResp) GetRevision() int64 {
+func (resp *BytesWatchDelRespItem) GetRevision() int64 {
 	return resp.rev
 }

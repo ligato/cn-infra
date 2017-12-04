@@ -107,7 +107,7 @@ func (plugin *Plugin) AfterInit() error {
 // This method is supposed to be called in Plugin.Init().
 // Calling this method later than kvdbsync.Plugin.AfterInit() will have no effect
 // (no notifications will be received).
-func (plugin *Plugin) Watch(resyncName string, changeChan chan datasync.ChangeEvent,
+func (plugin *Plugin) Watch(resyncName string, changeChan chan []datasync.ChangeEvent,
 	resyncChan chan datasync.ResyncEvent, keyPrefixes ...string) (datasync.WatchRegistration, error) {
 
 	return plugin.registry.Watch(resyncName, changeChan, resyncChan, keyPrefixes...)

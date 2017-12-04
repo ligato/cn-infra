@@ -17,7 +17,7 @@ type CacheHelper struct {
 // DoWatching reflects data change and data resync events received from
 // <watcher> into the idxmap.
 func (helper *CacheHelper) DoWatching(resyncName string, watcher datasync.KeyValProtoWatcher) {
-	changeChan := make(chan datasync.ChangeEvent, 100)
+	changeChan := make(chan []datasync.ChangeEvent, 100)
 	resyncChan := make(chan datasync.ResyncEvent, 100)
 
 	watcher.Watch(resyncName, changeChan, resyncChan, helper.Prefix)
@@ -27,9 +27,11 @@ func (helper *CacheHelper) DoWatching(resyncName string, watcher datasync.KeyVal
 		case resyncEv := <-resyncChan:
 			err := helper.DoResync(resyncEv)
 			resyncEv.Done(err)
-		case dataChng := <-changeChan:
-			err := helper.DoChange(dataChng)
-			dataChng.Done(err)
+		case dataChngs := <-changeChan:
+			for _, dataChng := range dataChngs {
+				err := helper.DoChange(dataChng)
+				dataChng.Done(err)
+			}
 		}
 	}
 }

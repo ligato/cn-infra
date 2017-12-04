@@ -44,7 +44,7 @@ type AggregatedRegistration struct {
 
 // Watch subscribes to every transport available within transport aggregator.
 // The function implements KeyValProtoWatcher.Watch().
-func (ta *CompositeKVProtoWatcher) Watch(resyncName string, changeChan chan ChangeEvent,
+func (ta *CompositeKVProtoWatcher) Watch(resyncName string, changeChan chan []ChangeEvent,
 	resyncChan chan ResyncEvent, keyPrefixes ...string) (WatchRegistration, error) {
 	registrations := []WatchRegistration{}
 	for _, transport := range ta.Adapters {

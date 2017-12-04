@@ -27,7 +27,7 @@ import (
 // WatchBrokerKeys implements go routines on top of Change & Resync channels.
 type watchBrokerKeys struct {
 	resyncReg  resync.Registration
-	changeChan chan datasync.ChangeEvent
+	changeChan chan []datasync.ChangeEvent
 	resyncChan chan datasync.ResyncEvent
 	prefixes   []string
 	adapter    *watcher
@@ -41,7 +41,7 @@ type watcher struct {
 
 // WatchAndResyncBrokerKeys calls keyval watcher Watch() & resync Register().
 // This creates go routines for each tuple changeChan + resyncChan.
-func watchAndResyncBrokerKeys(resyncReg resync.Registration, changeChan chan datasync.ChangeEvent, resyncChan chan datasync.ResyncEvent,
+func watchAndResyncBrokerKeys(resyncReg resync.Registration, changeChan chan []datasync.ChangeEvent, resyncChan chan datasync.ResyncEvent,
 	closeChan chan string, adapter *watcher, keyPrefixes ...string) (keys *watchBrokerKeys, err error) {
 	keys = &watchBrokerKeys{
 		resyncReg:  resyncReg,
@@ -66,21 +66,26 @@ func watchAndResyncBrokerKeys(resyncReg resync.Registration, changeChan chan dat
 	return keys, wasErr
 }
 
-func (keys *watchBrokerKeys) watchChanges(x keyval.ProtoWatchResp) {
-	var prev datasync.LazyValue
-	if datasync.Delete == x.GetChangeType() {
-		_, prev = keys.adapter.base.LastRev().Del(x.GetKey())
-	} else {
-		_, prev = keys.adapter.base.LastRev().PutWithRevision(x.GetKey(),
-			syncbase.NewKeyVal(x.GetKey(), x, x.GetRevision()))
+func (keys *watchBrokerKeys) watchChanges(x []keyval.ProtoWatchResp) {
+	var changes []datasync.ChangeEvent
+	for _, change := range x {
+		var prev datasync.LazyValue
+		if datasync.Delete == change.GetChangeType() {
+			_, prev = keys.adapter.base.LastRev().Del(change.GetKey())
+		} else {
+			_, prev = keys.adapter.base.LastRev().PutWithRevision(change.GetKey(),
+				syncbase.NewKeyVal(change.GetKey(), change, change.GetRevision()))
+		}
+
+		ch := NewChangeWatchResp(change, prev)
+
+		logrus.DefaultLogger().Debug("dbAdapter x:", x)
+		logrus.DefaultLogger().Debug("dbAdapter ch:", *ch)
+
+		changes = append(changes, ch)
 	}
 
-	ch := NewChangeWatchResp(x, prev)
-
-	logrus.DefaultLogger().Debug("dbAdapter x:", x)
-	logrus.DefaultLogger().Debug("dbAdapter ch:", *ch)
-
-	keys.changeChan <- ch
+	keys.changeChan <- changes
 	// TODO NICE-to-HAVE publish the err using the transport asynchronously
 }
 

@@ -103,14 +103,14 @@ func (reg *WatchDataReg) Unregister(keyPrefix string) error {
 // Subscription TODO
 type Subscription struct {
 	ResyncName  string
-	ChangeChan  chan datasync.ChangeEvent
+	ChangeChan  chan []datasync.ChangeEvent
 	ResyncChan  chan datasync.ResyncEvent
 	CloseChan   chan string
 	KeyPrefixes []string
 }
 
 // WatchDataBase only appends channels.
-func (adapter *Registry) WatchDataBase(resyncName string, changeChan chan datasync.ChangeEvent,
+func (adapter *Registry) WatchDataBase(resyncName string, changeChan chan []datasync.ChangeEvent,
 	resyncChan chan datasync.ResyncEvent, keyPrefixes ...string) (*WatchDataReg, error) {
 
 	adapter.access.Lock()
@@ -134,7 +134,7 @@ func (adapter *Registry) WatchDataBase(resyncName string, changeChan chan datasy
 }
 
 // Watch only appends channels.
-func (adapter *Registry) Watch(resyncName string, changeChan chan datasync.ChangeEvent,
+func (adapter *Registry) Watch(resyncName string, changeChan chan []datasync.ChangeEvent,
 	resyncChan chan datasync.ResyncEvent, keyPrefixes ...string) (datasync.WatchRegistration, error) {
 	return adapter.WatchDataBase(resyncName, changeChan, resyncChan, keyPrefixes...)
 }
@@ -171,8 +171,9 @@ func (adapter *Registry) PropagateChanges(txData map[string] /*key*/ datasync.Ch
 					events = append(events,
 						func(sub *Subscription, key string, val datasync.ChangeValue) func(done chan error) {
 							return func(done chan error) {
-								sub.ChangeChan <- &ChangeEvent{key, val.GetChangeType(),
-									val, curRev, prev, NewDoneChannel(done)}
+								var events []datasync.ChangeEvent
+								sub.ChangeChan <- append(events, &ChangeEvent{key, val.GetChangeType(),
+									val, curRev, prev, NewDoneChannel(done)})
 							}
 						}(sub, key, val))
 				}

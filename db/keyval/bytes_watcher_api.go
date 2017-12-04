@@ -28,7 +28,7 @@ type BytesWatcher interface {
 	// Watch starts subscription for changes associated with the selected keys.
 	// Watch events will be delivered to callback (not channel) <respChan>.
 	// Channel <closeChan> can be used to close watching on respective key
-	Watch(respChan func(BytesWatchResp), closeChan chan string, keys ...string) error
+	Watch(respChan func([]BytesWatchResp), closeChan chan string, keys ...string) error
 }
 
 // BytesWatchResp represents a notification about data change.
@@ -42,7 +42,7 @@ type BytesWatchResp interface {
 // ToChan creates a callback that can be passed to the Watch function in order
 // to receive notifications through a channel. If the notification cannot be
 // delivered until timeout, it is dropped.
-func ToChan(ch chan BytesWatchResp, opts ...interface{}) func(dto BytesWatchResp) {
+func ToChan(ch chan []BytesWatchResp, opts ...interface{}) func(dto []BytesWatchResp) {
 
 	timeout := datasync.DefaultNotifTimeout
 	var logger logging.Logger = logrus.DefaultLogger()
@@ -56,7 +56,7 @@ func ToChan(ch chan BytesWatchResp, opts ...interface{}) func(dto BytesWatchResp
 		}
 	}
 
-	return func(dto BytesWatchResp) {
+	return func(dto []BytesWatchResp) {
 		select {
 		case ch <- dto:
 		case <-time.After(timeout):
