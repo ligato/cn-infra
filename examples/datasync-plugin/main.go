@@ -58,7 +58,7 @@ func main() {
 type ExamplePlugin struct {
 	Deps
 
-	changeChannel chan datasync.ChangeEvent  // Channel used by the watcher for change events.
+	changeChannel chan []datasync.ChangeEvent  // Channel used by the watcher for change events.
 	resyncChannel chan datasync.ResyncEvent  // Channel used by the watcher for resync events.
 	context       context.Context            // Used to cancel watching.
 	watchDataReg  datasync.WatchRegistration // To subscribe on data change/resync events.
@@ -72,7 +72,7 @@ type ExamplePlugin struct {
 func (plugin *ExamplePlugin) Init() error {
 	// Initialize plugin fields.
 	plugin.resyncChannel = make(chan datasync.ResyncEvent)
-	plugin.changeChannel = make(chan datasync.ChangeEvent)
+	plugin.changeChannel = make(chan []datasync.ChangeEvent)
 	plugin.context = context.Background()
 
 	// Start the consumer (ETCD watcher).
@@ -143,43 +143,45 @@ func (plugin *ExamplePlugin) consumer() {
 	for {
 		select {
 		// WATCH: demonstrate how to receive data change events.
-		case dataChng := <-plugin.changeChannel:
-			plugin.Log.Printf("Received event: %v", dataChng)
-			// If event arrives, the key is extracted and used together with
-			// the expected prefix to identify item.
-			key := dataChng.GetKey()
-			if strings.HasPrefix(key, etcdKeyPrefix(plugin.ServiceLabel.GetAgentLabel())) {
-				var value, previousValue etcdexample.EtcdExample
-				// The first return value is diff - boolean flag whether previous value exists or not
-				err := dataChng.GetValue(&value)
-				if err != nil {
-					plugin.Log.Error(err)
-				}
-				diff, err := dataChng.GetPrevValue(&previousValue)
-				if err != nil {
-					plugin.Log.Error(err)
-				}
-				plugin.Log.Infof("Event arrived to etcd eventHandler, key %v, update: %v, change type: %v,",
-					dataChng.GetKey(), diff, dataChng.GetChangeType())
-				// Increase event counter (expecting two events).
-				plugin.eventCounter++
+		case dataChngs := <-plugin.changeChannel:
+			for _, dataChng := range dataChngs {
+				plugin.Log.Printf("Received event: %v", dataChng)
+				// If event arrives, the key is extracted and used together with
+				// the expected prefix to identify item.
+				key := dataChng.GetKey()
+				if strings.HasPrefix(key, etcdKeyPrefix(plugin.ServiceLabel.GetAgentLabel())) {
+					var value, previousValue etcdexample.EtcdExample
+					// The first return value is diff - boolean flag whether previous value exists or not
+					err := dataChng.GetValue(&value)
+					if err != nil {
+						plugin.Log.Error(err)
+					}
+					diff, err := dataChng.GetPrevValue(&previousValue)
+					if err != nil {
+						plugin.Log.Error(err)
+					}
+					plugin.Log.Infof("Event arrived to etcd eventHandler, key %v, update: %v, change type: %v,",
+						dataChng.GetKey(), diff, dataChng.GetChangeType())
+					// Increase event counter (expecting two events).
+					plugin.eventCounter++
 
-				if plugin.eventCounter == 2 {
-					// After creating/updating data, unregister key
-					plugin.Log.Infof("Unregister key %v", etcdKeyPrefix(plugin.ServiceLabel.GetAgentLabel()))
-					plugin.watchDataReg.Unregister(etcdKeyPrefix(plugin.ServiceLabel.GetAgentLabel()))
+					if plugin.eventCounter == 2 {
+						// After creating/updating data, unregister key
+						plugin.Log.Infof("Unregister key %v", etcdKeyPrefix(plugin.ServiceLabel.GetAgentLabel()))
+						plugin.watchDataReg.Unregister(etcdKeyPrefix(plugin.ServiceLabel.GetAgentLabel()))
+					}
 				}
+				// Here you would test for other event types with one if statement
+				// for each key prefix:
+				//
+				// if strings.HasPrefix(key, etcd prefix) { ... }
+
+				// Here you would also watch for resync events
+				// (not published in this example):
+				//
+				// case resyncEvent := <-plugin.ResyncEvent:
+				//   ...
 			}
-			// Here you would test for other event types with one if statement
-			// for each key prefix:
-			//
-			// if strings.HasPrefix(key, etcd prefix) { ... }
-
-			// Here you would also watch for resync events
-			// (not published in this example):
-			//
-			// case resyncEvent := <-plugin.ResyncEvent:
-			//   ...
 		case rs := <-plugin.resyncChannel:
 			// Resync event notification
 			plugin.Log.Infof("Resync event %v called", rs)

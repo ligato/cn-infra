@@ -89,9 +89,9 @@ var priority uint32
 
 type priorities []uint32
 
-var arrivalChan = make(chan keyval.ProtoWatchResp, flightSlotCount)
-var departureChan = make(chan keyval.ProtoWatchResp, flightSlotCount)
-var hangarChan = make(chan keyval.ProtoWatchResp, hangarSlotCount)
+var arrivalChan = make(chan []keyval.ProtoWatchResp, flightSlotCount)
+var departureChan = make(chan []keyval.ProtoWatchResp, flightSlotCount)
+var hangarChan = make(chan []keyval.ProtoWatchResp, hangarSlotCount)
 var runwayChan = make(chan flight.Info, flightSlotCount)
 
 var redisConn *redis.BytesConnectionRedis
@@ -299,9 +299,11 @@ func runArrivals() {
 
 	go func() {
 		for {
-			r, ok := <-arrivalChan
+			resp, ok := <-arrivalChan
 			if ok {
-				processArrival(r)
+				for _, r := range resp {
+					processArrival(r)
+				}
 			} else {
 				log.Errorf("<-arrivalChan returned false")
 			}
@@ -312,9 +314,11 @@ func runArrivals() {
 func runDepartures() {
 	go func() {
 		for {
-			r, ok := <-departureChan
+			resp, ok := <-departureChan
 			if ok {
-				processDeparture(r)
+				for _, r := range resp {
+					processDeparture(r)
+				}
 			} else {
 				log.Errorf("<-departureChan returned false")
 			}
@@ -325,9 +329,11 @@ func runDepartures() {
 func runHangar() {
 	go func() {
 		for {
-			r, ok := <-hangarChan
+			resp, ok := <-hangarChan
 			if ok {
-				processHangar(r)
+				for _, r := range resp {
+					processHangar(r)
+				}
 			} else {
 				log.Errorf("<-hangarChan returned false")
 			}

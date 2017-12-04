@@ -61,7 +61,7 @@ func main() {
 	// Initialize proto decorator.
 	protoBroker := kvproto.NewProtoWrapper(broker)
 
-	respChan := make(chan keyval.ProtoWatchResp, 0)
+	respChan := make(chan []keyval.ProtoWatchResp, 0)
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt)
 
@@ -78,27 +78,29 @@ func main() {
 watcherLoop:
 	for {
 		select {
-		case resp := <-respChan:
-			switch resp.GetChangeType() {
-			case datasync.Put:
-				contact := &phonebook.Contact{}
-				prevContact := &phonebook.Contact{}
-				fmt.Println("Creating ", resp.GetKey())
-				resp.GetValue(contact)
-				exists, err := resp.GetPrevValue(prevContact)
-				if err != nil {
-					logrus.DefaultLogger().Errorf("err: %v", err)
+		case resps := <-respChan:
+			for _, resp := range resps {
+				switch resp.GetChangeType() {
+				case datasync.Put:
+					contact := &phonebook.Contact{}
+					prevContact := &phonebook.Contact{}
+					fmt.Println("Creating ", resp.GetKey())
+					resp.GetValue(contact)
+					exists, err := resp.GetPrevValue(prevContact)
+					if err != nil {
+						logrus.DefaultLogger().Errorf("err: %v", err)
+					}
+					printContact(contact)
+					if exists {
+						printPrevContact(prevContact)
+					} else {
+						fmt.Printf("Previous value does not exist\n")
+					}
+				case datasync.Delete:
+					fmt.Println("Removing ", resp.GetKey())
 				}
-				printContact(contact)
-				if exists {
-					printPrevContact(prevContact)
-				} else {
-					fmt.Printf("Previous value does not exist\n")
-				}
-			case datasync.Delete:
-				fmt.Println("Removing ", resp.GetKey())
+				fmt.Println("============================================")
 			}
-			fmt.Println("============================================")
 		case <-sigChan:
 			break watcherLoop
 		}
