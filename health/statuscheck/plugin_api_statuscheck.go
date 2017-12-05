@@ -59,7 +59,7 @@ type AgentStatusReader interface {
 
 // InterfaceStatusReader looks up the interface state and returns updated state data
 type InterfaceStatusReader interface {
-	GetInterfaceStatus() status.InterfaceStatus
+	GetInterfaceStats() status.InterfaceStats
 }
 
 // StatusReader allows to lookup agent status and retrieve a map containing status of all plugins.

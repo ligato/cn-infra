@@ -16,7 +16,7 @@ message AgentStatus {
     int64 start_time = 4;
     int64 last_change = 5;  /* last change of the state */
     int64 last_update = 6;  /* last update of the state by some plugin */
-    InterfaceStatus interface_status = 7;
+    InterfaceStats interface_stats = 7;
 }
 
 message PluginStatus {
@@ -26,13 +26,13 @@ message PluginStatus {
     string error = 6;       /* last seen error */
 }
 
-message InterfaceStatus {
-    message Interfaces {
+message InterfaceStats {
+    message Interface {
         string internal_name = 1;          /* interface name used in VPP */
         uint32 index = 3;                  /* sw interface index */
         string status = 4;                 /* status (UP, DOWN, DELETED, ...) */
         string ip_address = 5;
         string mac_address = 6;
     }
-    repeated Interfaces interfaces = 1;
+    repeated Interface interface = 1;
 }

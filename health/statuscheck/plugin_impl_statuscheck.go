@@ -48,7 +48,7 @@ type Plugin struct {
 	access sync.Mutex // lock for the Plugin data
 
 	agentStat     *status.AgentStatus             // overall agent status
-	interfaceStat *status.InterfaceStatus         // interfaces' overall status
+	interfaceStat *status.InterfaceStats          // interfaces' overall status
 	pluginStat    map[string]*status.PluginStatus // plugin's status
 	pluginProbe   map[string]PluginStateProbe     // registered status probes
 
@@ -76,8 +76,7 @@ func (p *Plugin) Init() error {
 	}
 
 	// initial empty interface status
-	var statusData []*status.InterfaceStatus_Interfaces
-	p.interfaceStat = &status.InterfaceStatus{Interfaces: statusData}
+	p.interfaceStat = &status.InterfaceStats{}
 
 	// init pluginStat map
 	p.pluginStat = make(map[string]*status.PluginStatus)
@@ -155,7 +154,7 @@ func (p *Plugin) ReportStateChangeWithMeta(pluginName core.PluginName, state Plu
 	p.reportStateChange(pluginName, state, lastError)
 
 	switch data := meta.(type) {
-	case *status.InterfaceStatus_Interfaces:
+	case *status.InterfaceStats_Interface:
 		p.reportInterfaceStateChange(data)
 	default:
 		p.Log.Debug("Unknown type of status metadata")
@@ -217,19 +216,23 @@ func (p *Plugin) reportStateChange(pluginName core.PluginName, state PluginState
 	}
 }
 
-func (p *Plugin) reportInterfaceStateChange(data *status.InterfaceStatus_Interfaces) {
+func (p *Plugin) reportInterfaceStateChange(data *status.InterfaceStats_Interface) {
+	p.access.Lock()
+	defer p.access.Unlock()
+
 	// Filter interfaces without internal name
 	if data.InternalName == "" {
 		p.Log.Debugf("Interface without internal name skipped for global status. Data: %v", data)
 		return
 	}
 
-	var listIndex int
-	var existingData *status.InterfaceStatus_Interfaces
-	for index, ifState := range p.interfaceStat.Interfaces {
+	// update only if state really changed
+	var ifIndex int
+	var existingData *status.InterfaceStats_Interface
+	for index, ifState := range p.interfaceStat.Interface {
 		// check if interface with the internal name already exists
 		if data.InternalName == ifState.InternalName {
-			listIndex = index
+			ifIndex = index
 			existingData = ifState
 			break
 		}
@@ -237,12 +240,11 @@ func (p *Plugin) reportInterfaceStateChange(data *status.InterfaceStatus_Interfa
 
 	if existingData == nil {
 		// new entry
-		p.interfaceStat.Interfaces = append(p.interfaceStat.Interfaces, data)
+		p.interfaceStat.Interface = append(p.interfaceStat.Interface, data)
 		p.Log.Debugf("Global interface state data added: %v", data)
 	} else if existingData.Index != data.Index || existingData.Status != data.Status || existingData.MacAddress != data.MacAddress {
 		// updated entry - update only if state really changed
-		p.interfaceStat.Interfaces = append(p.interfaceStat.Interfaces[:listIndex], p.interfaceStat.Interfaces[listIndex+1:]...)
-		p.interfaceStat.Interfaces = append(p.interfaceStat.Interfaces, data)
+		p.interfaceStat.Interface = append(append(p.interfaceStat.Interface[:ifIndex], data), p.interfaceStat.Interface[ifIndex+1:]...)
 		p.Log.Debug("Global interface state data updated: %v", data)
 	}
 }
@@ -354,8 +356,8 @@ func (p *Plugin) GetAllPluginStatus() map[string]*status.PluginStatus {
 	return p.pluginStat
 }
 
-// GetInterfaceStatus returns current global operational status of interfaces
-func (p *Plugin) GetInterfaceStatus() status.InterfaceStatus {
+// GetInterfaceStats returns current global operational status of interfaces
+func (p *Plugin) GetInterfaceStats() status.InterfaceStats {
 	p.access.Lock()
 	defer p.access.Unlock()
 

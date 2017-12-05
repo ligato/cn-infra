@@ -13,7 +13,7 @@ It is generated from these files:
 It has these top-level messages:
 	AgentStatus
 	PluginStatus
-	InterfaceStatus
+	InterfaceStats
 */
 package status
 
@@ -46,22 +46,22 @@ func (x OperationalState) String() string {
 }
 
 type AgentStatus struct {
-	BuildVersion    string           `protobuf:"bytes,1,opt,name=build_version,proto3" json:"build_version,omitempty"`
-	BuildDate       string           `protobuf:"bytes,2,opt,name=build_date,proto3" json:"build_date,omitempty"`
-	State           OperationalState `protobuf:"varint,3,opt,name=state,proto3,enum=status.OperationalState" json:"state,omitempty"`
-	StartTime       int64            `protobuf:"varint,4,opt,name=start_time,proto3" json:"start_time,omitempty"`
-	LastChange      int64            `protobuf:"varint,5,opt,name=last_change,proto3" json:"last_change,omitempty"`
-	LastUpdate      int64            `protobuf:"varint,6,opt,name=last_update,proto3" json:"last_update,omitempty"`
-	InterfaceStatus *InterfaceStatus `protobuf:"bytes,7,opt,name=interface_status" json:"interface_status,omitempty"`
+	BuildVersion   string           `protobuf:"bytes,1,opt,name=build_version,proto3" json:"build_version,omitempty"`
+	BuildDate      string           `protobuf:"bytes,2,opt,name=build_date,proto3" json:"build_date,omitempty"`
+	State          OperationalState `protobuf:"varint,3,opt,name=state,proto3,enum=status.OperationalState" json:"state,omitempty"`
+	StartTime      int64            `protobuf:"varint,4,opt,name=start_time,proto3" json:"start_time,omitempty"`
+	LastChange     int64            `protobuf:"varint,5,opt,name=last_change,proto3" json:"last_change,omitempty"`
+	LastUpdate     int64            `protobuf:"varint,6,opt,name=last_update,proto3" json:"last_update,omitempty"`
+	InterfaceStats *InterfaceStats  `protobuf:"bytes,7,opt,name=interface_stats" json:"interface_stats,omitempty"`
 }
 
 func (m *AgentStatus) Reset()         { *m = AgentStatus{} }
 func (m *AgentStatus) String() string { return proto.CompactTextString(m) }
 func (*AgentStatus) ProtoMessage()    {}
 
-func (m *AgentStatus) GetInterfaceStatus() *InterfaceStatus {
+func (m *AgentStatus) GetInterfaceStats() *InterfaceStats {
 	if m != nil {
-		return m.InterfaceStatus
+		return m.InterfaceStats
 	}
 	return nil
 }
@@ -77,22 +77,22 @@ func (m *PluginStatus) Reset()         { *m = PluginStatus{} }
 func (m *PluginStatus) String() string { return proto.CompactTextString(m) }
 func (*PluginStatus) ProtoMessage()    {}
 
-type InterfaceStatus struct {
-	Interfaces []*InterfaceStatus_Interfaces `protobuf:"bytes,1,rep,name=interfaces" json:"interfaces,omitempty"`
+type InterfaceStats struct {
+	Interface []*InterfaceStats_Interface `protobuf:"bytes,1,rep,name=interface" json:"interface,omitempty"`
 }
 
-func (m *InterfaceStatus) Reset()         { *m = InterfaceStatus{} }
-func (m *InterfaceStatus) String() string { return proto.CompactTextString(m) }
-func (*InterfaceStatus) ProtoMessage()    {}
+func (m *InterfaceStats) Reset()         { *m = InterfaceStats{} }
+func (m *InterfaceStats) String() string { return proto.CompactTextString(m) }
+func (*InterfaceStats) ProtoMessage()    {}
 
-func (m *InterfaceStatus) GetInterfaces() []*InterfaceStatus_Interfaces {
+func (m *InterfaceStats) GetInterface() []*InterfaceStats_Interface {
 	if m != nil {
-		return m.Interfaces
+		return m.Interface
 	}
 	return nil
 }
 
-type InterfaceStatus_Interfaces struct {
+type InterfaceStats_Interface struct {
 	InternalName string `protobuf:"bytes,1,opt,name=internal_name,proto3" json:"internal_name,omitempty"`
 	Index        uint32 `protobuf:"varint,3,opt,name=index,proto3" json:"index,omitempty"`
 	Status       string `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
@@ -100,9 +100,9 @@ type InterfaceStatus_Interfaces struct {
 	MacAddress   string `protobuf:"bytes,6,opt,name=mac_address,proto3" json:"mac_address,omitempty"`
 }
 
-func (m *InterfaceStatus_Interfaces) Reset()         { *m = InterfaceStatus_Interfaces{} }
-func (m *InterfaceStatus_Interfaces) String() string { return proto.CompactTextString(m) }
-func (*InterfaceStatus_Interfaces) ProtoMessage()    {}
+func (m *InterfaceStats_Interface) Reset()         { *m = InterfaceStats_Interface{} }
+func (m *InterfaceStats_Interface) String() string { return proto.CompactTextString(m) }
+func (*InterfaceStats_Interface) ProtoMessage()    {}
 
 func init() {
 	proto.RegisterEnum("status.OperationalState", OperationalState_name, OperationalState_value)
