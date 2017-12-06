@@ -229,7 +229,7 @@ func (p *Plugin) reportInterfaceStateChange(data *status.InterfaceStats_Interfac
 	// update only if state really changed
 	var ifIndex int
 	var existingData *status.InterfaceStats_Interface
-	for index, ifState := range p.interfaceStat.Interface {
+	for index, ifState := range p.interfaceStat.Interfaces {
 		// check if interface with the internal name already exists
 		if data.InternalName == ifState.InternalName {
 			ifIndex = index
@@ -240,11 +240,11 @@ func (p *Plugin) reportInterfaceStateChange(data *status.InterfaceStats_Interfac
 
 	if existingData == nil {
 		// new entry
-		p.interfaceStat.Interface = append(p.interfaceStat.Interface, data)
+		p.interfaceStat.Interfaces = append(p.interfaceStat.Interfaces, data)
 		p.Log.Debugf("Global interface state data added: %v", data)
 	} else if existingData.Index != data.Index || existingData.Status != data.Status || existingData.MacAddress != data.MacAddress {
 		// updated entry - update only if state really changed
-		p.interfaceStat.Interface = append(append(p.interfaceStat.Interface[:ifIndex], data), p.interfaceStat.Interface[ifIndex+1:]...)
+		p.interfaceStat.Interfaces = append(append(p.interfaceStat.Interfaces[:ifIndex], data), p.interfaceStat.Interfaces[ifIndex+1:]...)
 		p.Log.Debug("Global interface state data updated: %v", data)
 	}
 }

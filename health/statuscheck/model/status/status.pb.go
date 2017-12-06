@@ -78,16 +78,16 @@ func (m *PluginStatus) String() string { return proto.CompactTextString(m) }
 func (*PluginStatus) ProtoMessage()    {}
 
 type InterfaceStats struct {
-	Interface []*InterfaceStats_Interface `protobuf:"bytes,1,rep,name=interface" json:"interface,omitempty"`
+	Interfaces []*InterfaceStats_Interface `protobuf:"bytes,1,rep,name=interfaces" json:"interfaces,omitempty"`
 }
 
 func (m *InterfaceStats) Reset()         { *m = InterfaceStats{} }
 func (m *InterfaceStats) String() string { return proto.CompactTextString(m) }
 func (*InterfaceStats) ProtoMessage()    {}
 
-func (m *InterfaceStats) GetInterface() []*InterfaceStats_Interface {
+func (m *InterfaceStats) GetInterfaces() []*InterfaceStats_Interface {
 	if m != nil {
-		return m.Interface
+		return m.Interfaces
 	}
 	return nil
 }

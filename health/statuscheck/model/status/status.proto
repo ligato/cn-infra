@@ -34,5 +34,5 @@ message InterfaceStats {
         string ip_address = 5;
         string mac_address = 6;
     }
-    repeated Interface interface = 1;
+    repeated Interface interfaces = 1;
 }
