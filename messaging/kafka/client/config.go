@@ -19,6 +19,7 @@ import (
 	"errors"
 	"strings"
 
+	"crypto/tls"
 	"github.com/Shopify/sarama"
 	"github.com/bsm/sarama-cluster"
 	"github.com/ligato/cn-infra/logging"
@@ -254,6 +255,16 @@ func (ref *Config) SetPartitioner(val string) {
 			ref.Partition = 0
 		}
 	}
+}
+
+func (ref *Config) SetTLS(tlsConfig *tls.Config) (err error) {
+	ref.Net.TLS.Enable = true
+	ref.Net.TLS.Config = tlsConfig
+
+	//ref.Config.Config.Net.TLS.Enable = true
+	//ref.Config.Config.Net.TLS.Config = tlsConfig
+
+	return nil
 }
 
 // ValidateAsyncProducerConfig validates config for an Async Producer
