@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package tls provides tls utilities.
+// Package clienttls provides tls utilities.
 package clienttls
 
 import (
@@ -22,6 +22,7 @@ import (
 	"github.com/coreos/etcd/pkg/tlsutil"
 )
 
+// TLS stores the client side TLS settings
 type TLS struct {
 	Enabled    bool   `json:"enabled"`     // enable/disable TLS
 	SkipVerify bool   `json:"skip-verify"` // whether to skip verification of server name & certificate
@@ -30,6 +31,7 @@ type TLS struct {
 	CAfile     string `json:"ca-file"`     // certificate authority
 }
 
+// CreateTLSConfig used to generate the crypto/tls Config
 func CreateTLSConfig(config TLS) (*tls.Config, error) {
 	var (
 		cert *tls.Certificate

@@ -257,12 +257,10 @@ func (ref *Config) SetPartitioner(val string) {
 	}
 }
 
+// SetTLS sets the TLS configuration
 func (ref *Config) SetTLS(tlsConfig *tls.Config) (err error) {
 	ref.Net.TLS.Enable = true
 	ref.Net.TLS.Config = tlsConfig
-
-	//ref.Config.Config.Net.TLS.Enable = true
-	//ref.Config.Config.Net.TLS.Config = tlsConfig
 
 	return nil
 }

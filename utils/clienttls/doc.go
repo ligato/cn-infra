@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package tls provides tls utilities.
+// Package clienttls provides tls utilities.
 package clienttls
