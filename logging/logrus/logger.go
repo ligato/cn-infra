@@ -25,7 +25,6 @@ import (
 	"strings"
 	"sync"
 
-	"regexp"
 	"sync/atomic"
 
 	"unsafe"
@@ -39,6 +38,8 @@ import (
 const DefaultLoggerName = "defaultLogger"
 
 var (
+	DefaultTimestampFormat = "2006-01-02 15:04:05.00000"
+
 	defaultLogger = NewLogger(DefaultLoggerName)
 )
 
@@ -55,10 +56,10 @@ func DefaultLogger() *Logger {
 // numeric value of a tag can be replaced by a string using SetTag function.
 type Logger struct {
 	name         string
-	tagMap       sync.Map
-	staticFields sync.Map
 	std          *lg.Logger
 	depth        int
+	tagMap       sync.Map
+	staticFields sync.Map
 	littleBuf    sync.Pool
 }
 
@@ -81,7 +82,7 @@ func NewLogger(name string) *Logger {
 	}
 
 	tf := NewTextFormatter()
-	tf.TimestampFormat = "2006-01-02 15:04:05.00000"
+	tf.TimestampFormat = DefaultTimestampFormat
 	logger.SetFormatter(tf)
 
 	logger.littleBuf.New = func() interface{} {
@@ -89,15 +90,6 @@ func NewLogger(name string) *Logger {
 		return &buf
 	}
 	return logger
-}
-
-var validLoggerName = regexp.MustCompile(`^[a-zA-Z0-9.-]+$`).MatchString
-
-func checkLoggerName(name string) error {
-	if !validLoggerName(name) {
-		return fmt.Errorf("logger name can contain only alphanum characters, dash and comma")
-	}
-	return nil
 }
 
 // NewJSONFormatter creates a new instance of JSONFormatter
@@ -124,7 +116,7 @@ func (logger *Logger) StandardLogger() *lg.Logger {
 func (logger *Logger) InitTag(tag ...string) {
 	var t string
 	var index uint64 // first index
-	if tag != nil || len(tag) > 0 {
+	if len(tag) > 0 {
 		t = tag[0]
 	} else {
 		t = uuid.NewV4().String()[0:8]
@@ -134,43 +126,32 @@ func (logger *Logger) InitTag(tag ...string) {
 
 // GetTag returns the tag identifying the caller's go routine.
 func (logger *Logger) GetTag() string {
-	ti := logger.curGoroutineID()
-	tagVal, found := logger.tagMap.Load(ti)
-	if !found {
-		tagVal, found = logger.tagMap.Load(uint64(0))
-		if !found {
-			return ""
-		}
-		tag, ok := tagVal.(string)
-		if ok {
-			return tag
-		}
-		panic(fmt.Errorf("cannot cast log map key to string"))
-	}
-	tag, ok := tagVal.(string)
-	if ok {
+	goID := logger.curGoroutineID()
+	if tagVal, found := logger.tagMap.Load(goID); !found {
+		return ""
+	} else if tag, ok := tagVal.(string); ok {
 		return tag
 	}
-	panic(fmt.Errorf("cannot cast log map key to string"))
+	panic(fmt.Errorf("cannot cast log tag from map to string"))
 }
 
 // SetTag allows to define a string tag for the current go routine. Otherwise
 // numeric identification is used.
 func (logger *Logger) SetTag(tag ...string) {
-	ti := logger.curGoroutineID()
+	goID := logger.curGoroutineID()
 	var t string
-	if tag != nil || len(tag) > 0 {
+	if len(tag) > 0 {
 		t = tag[0]
 	} else {
 		t = uuid.NewV4().String()[0:8]
 	}
-	logger.tagMap.Store(ti, t)
+	logger.tagMap.Store(goID, t)
 }
 
 // ClearTag removes the previously set string tag for the current go routine.
 func (logger *Logger) ClearTag() {
-	ti := logger.curGoroutineID()
-	logger.tagMap.Delete(ti)
+	goID := logger.curGoroutineID()
+	logger.tagMap.Delete(goID)
 }
 
 // SetStaticFields sets a map of fields that will be part of the each subsequent
