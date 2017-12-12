@@ -22,9 +22,9 @@ import (
 	"sync"
 	"testing"
 
-	lg "github.com/sirupsen/logrus"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/onsi/gomega"
+	lg "github.com/sirupsen/logrus"
 )
 
 func LogAndAssertJSON(t *testing.T, log func(*Logger), assertions func(fields lg.Fields)) {
@@ -152,7 +152,7 @@ func TestInfoShouldNotAddSpacesBetweenStrings(t *testing.T) {
 
 func TestWithFieldsShouldAllowAssignments(t *testing.T) {
 	var buffer bytes.Buffer
-	var fields Fields
+	var fields logging.Fields
 
 	logger := NewLogger("testLogger")
 	logger.SetOutput(&buffer)
@@ -171,7 +171,7 @@ func TestWithFieldsShouldAllowAssignments(t *testing.T) {
 	gomega.Expect("value1").To(gomega.BeEquivalentTo(fields["key1"]))
 
 	buffer = bytes.Buffer{}
-	fields = Fields{}
+	fields = logging.Fields{}
 	entry2.Info("test")
 	err = json.Unmarshal(buffer.Bytes(), &fields)
 	gomega.Expect(err).To(gomega.BeNil())
@@ -232,7 +232,7 @@ func TestDefaultFieldsAreNotPrefixed(t *testing.T) {
 func TestDoubleLoggingDoesntPrefixPreviousFields(t *testing.T) {
 
 	var buffer bytes.Buffer
-	var fields Fields
+	var fields logging.Fields
 
 	logger := NewLogger("testLogger")
 	logger.SetOutput(&buffer)
@@ -308,8 +308,8 @@ func TestLogInterface(t *testing.T) {
 	fn(logger)
 
 	// test Entry
-	e := logger.withField("another", "value")
-	fn(e.logger)
+	e := logger.WithField("another", "value")
+	fn(e.(*Entry).logger)
 }
 
 func TestSetTag(t *testing.T) {
