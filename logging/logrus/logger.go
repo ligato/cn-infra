@@ -38,8 +38,6 @@ import (
 const DefaultLoggerName = "defaultLogger"
 
 var (
-	DefaultTimestampFormat = "2006-01-02 15:04:05.00000"
-
 	defaultLogger = NewLogger(DefaultLoggerName)
 )
 
@@ -82,7 +80,7 @@ func NewLogger(name string) *Logger {
 	}
 
 	tf := NewTextFormatter()
-	tf.TimestampFormat = DefaultTimestampFormat
+	tf.TimestampFormat = "2006-01-02 15:04:05.00000"
 	logger.SetFormatter(tf)
 
 	logger.littleBuf.New = func() interface{} {
