@@ -15,8 +15,6 @@
 package datasync
 
 import (
-	"fmt"
-
 	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/utils/safeclose"
 )
