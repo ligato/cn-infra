@@ -34,7 +34,7 @@ type KeyValProtoWatcher interface {
 	// <changeChan> channel is used for delivery of data CHANGE events.
 	// <resyncChan> channel is used for delivery of data RESYNC events.
 	// <keyPrefix> is a variable list of keys to watch on.
-	Watch(resyncName string, changeChan chan ChangeEvent, resyncChan chan ResyncEvent,
+	Watch(resyncName string, changeChan chan []ChangeEvent, resyncChan chan ResyncEvent,
 		keyPrefixes ...string) (WatchRegistration, error)
 }
 

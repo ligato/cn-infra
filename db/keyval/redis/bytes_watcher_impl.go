@@ -27,8 +27,12 @@ import (
 
 const keySpaceEventPrefix = "__keyspace@*__:"
 
-// BytesWatchPutResp is sent when new key-value pair has been inserted or the value is updated.
 type BytesWatchPutResp struct {
+	response []*BytesWatchPutRespItem
+}
+
+// BytesWatchPutResp is sent when new key-value pair has been inserted or the value is updated.
+type BytesWatchPutRespItem struct {
 	key       string
 	value     []byte
 	prevValue []byte
@@ -36,74 +40,78 @@ type BytesWatchPutResp struct {
 }
 
 // NewBytesWatchPutResp creates an instance of BytesWatchPutResp.
-func NewBytesWatchPutResp(key string, value []byte, prevValue []byte, revision int64) *BytesWatchPutResp {
-	return &BytesWatchPutResp{key: key, value: value, prevValue: prevValue, rev: revision}
+func NewBytesWatchPutResp(key string, value []byte, prevValue []byte, revision int64) *BytesWatchPutRespItem {
+	return &BytesWatchPutRespItem{key: key, value: value, prevValue: prevValue, rev: revision}
 }
 
 // GetChangeType returns "Put" for BytesWatchPutResp.
-func (resp *BytesWatchPutResp) GetChangeType() datasync.PutDel {
+func (resp *BytesWatchPutRespItem) GetChangeType() datasync.PutDel {
 	return datasync.Put
 }
 
 // GetKey returns the key that has been inserted.
-func (resp *BytesWatchPutResp) GetKey() string {
+func (resp *BytesWatchPutRespItem) GetKey() string {
 	return resp.key
 }
 
 // GetValue returns the value that has been inserted.
-func (resp *BytesWatchPutResp) GetValue() []byte {
+func (resp *BytesWatchPutRespItem) GetValue() []byte {
 	return resp.value
 }
 
 // GetPrevValue returns the value that has been inserted.
-func (resp *BytesWatchPutResp) GetPrevValue() []byte {
+func (resp *BytesWatchPutRespItem) GetPrevValue() []byte {
 	return resp.prevValue
 }
 
 // GetRevision returns the revision associated with create action.
-func (resp *BytesWatchPutResp) GetRevision() int64 {
+func (resp *BytesWatchPutRespItem) GetRevision() int64 {
 	return resp.rev
 }
 
-// BytesWatchDelResp is sent when a key-value pair has been removed.
 type BytesWatchDelResp struct {
+	response []*BytesWatchDelRespItem
+}
+
+// BytesWatchDelResp is sent when a key-value pair has been removed.
+type BytesWatchDelRespItem struct {
 	key string
 	rev int64 // TODO Does Redis data have revision?
 }
 
 // NewBytesWatchDelResp creates an instance of BytesWatchDelResp.
-func NewBytesWatchDelResp(key string, revision int64) *BytesWatchDelResp {
-	return &BytesWatchDelResp{key: key, rev: revision}
+func NewBytesWatchDelResp(key string, revision int64) *BytesWatchDelRespItem {
+	return &BytesWatchDelRespItem{key: key, rev: revision}
 }
 
 // GetChangeType returns "Delete" for BytesWatchPutResp.
-func (resp *BytesWatchDelResp) GetChangeType() datasync.PutDel {
+func (resp *BytesWatchDelRespItem) GetChangeType() datasync.PutDel {
 	return datasync.Delete
 }
 
 // GetKey returns the key that has been deleted.
-func (resp *BytesWatchDelResp) GetKey() string {
+func (resp *BytesWatchDelRespItem) GetKey() string {
 	return resp.key
 }
 
 // GetValue returns nil for BytesWatchDelResp.
-func (resp *BytesWatchDelResp) GetValue() []byte {
+func (resp *BytesWatchDelRespItem) GetValue() []byte {
 	return nil
 }
 
 // GetPrevValue returns nil for BytesWatchDelResp
-func (resp *BytesWatchDelResp) GetPrevValue() []byte {
+func (resp *BytesWatchDelRespItem) GetPrevValue() []byte {
 	return nil
 }
 
 // GetRevision returns the revision associated with the delete operation.
-func (resp *BytesWatchDelResp) GetRevision() int64 {
+func (resp *BytesWatchDelRespItem) GetRevision() int64 {
 	return resp.rev
 }
 
 // Watch starts subscription for changes associated with the selected key. Watch events will be delivered to respChan.
 // Subscription can be canceled by StopWatch call.
-func (db *BytesConnectionRedis) Watch(resp func(keyval.BytesWatchResp), closeChan chan string, keys ...string) error {
+func (db *BytesConnectionRedis) Watch(resp func([]keyval.BytesWatchResp), closeChan chan string, keys ...string) error {
 	if db.closed {
 		return fmt.Errorf("watch(%v) called on a closed connection", keys)
 	}
@@ -112,7 +120,7 @@ func (db *BytesConnectionRedis) Watch(resp func(keyval.BytesWatchResp), closeCha
 	return watch(db, resp, db.closeCh, nil, nil, keys...)
 }
 
-func watch(db *BytesConnectionRedis, resp func(keyval.BytesWatchResp), closeChan <-chan string,
+func watch(db *BytesConnectionRedis, resp func([]keyval.BytesWatchResp), closeChan <-chan string,
 	addPrefix func(key string) string, trimPrefix func(key string) string, keys ...string) error {
 	patterns := make([]string, len(keys))
 	for i, k := range keys {
@@ -140,7 +148,7 @@ func watch(db *BytesConnectionRedis, resp func(keyval.BytesWatchResp), closeChan
 }
 
 func startWatch(db *BytesConnectionRedis, pubSub *goredis.PubSub,
-	resp func(keyval.BytesWatchResp), trimPrefix func(key string) string, patterns ...string) {
+	resp func([]keyval.BytesWatchResp), trimPrefix func(key string) string, patterns ...string) {
 	go func() {
 		defer func() { db.Debugf("Watch(%v) exited", patterns) }()
 		db.Debugf("start Watch(%v)", patterns)
@@ -163,6 +171,7 @@ func startWatch(db *BytesConnectionRedis, pubSub *goredis.PubSub,
 			db.Debugf("Receive %T: %s %s %s", msg, msg.Pattern, msg.Channel, msg.Payload)
 			key := msg.Channel[strings.Index(msg.Channel, ":")+1:]
 			db.Debugf("key = %s", key)
+			var putResps []keyval.BytesWatchResp
 			switch msg.Payload {
 			case "set":
 				// keyspace event does not carry value.  Need to retrieve it.
@@ -176,13 +185,13 @@ func startWatch(db *BytesConnectionRedis, pubSub *goredis.PubSub,
 				if trimPrefix != nil {
 					key = trimPrefix(key)
 				}
-				resp(NewBytesWatchPutResp(key, val, prevVal, rev))
+				resp(append(putResps, NewBytesWatchPutResp(key, val, prevVal, rev)))
 				prevVal = val
 			case "del", "expired":
 				if trimPrefix != nil {
 					key = trimPrefix(key)
 				}
-				resp(NewBytesWatchDelResp(key, 0))
+				resp(append(putResps, NewBytesWatchDelResp(key, 0)))
 			default:
 				db.Debugf("%T: %s %s %s -- not handled", msg, msg.Pattern, msg.Channel, msg.Payload)
 			}
@@ -191,7 +200,7 @@ func startWatch(db *BytesConnectionRedis, pubSub *goredis.PubSub,
 }
 
 // Watch starts subscription for changes associated with the selected key. Watch events will be delivered to respChan.
-func (pdb *BytesBrokerWatcherRedis) Watch(resp func(keyval.BytesWatchResp), closeChan chan string, keys ...string) error {
+func (pdb *BytesBrokerWatcherRedis) Watch(resp func([]keyval.BytesWatchResp), closeChan chan string, keys ...string) error {
 	if pdb.delegate.closed {
 		return fmt.Errorf("watch(%v) called on a closed connection", keys)
 	}

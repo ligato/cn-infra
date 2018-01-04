@@ -119,7 +119,7 @@ func runSimpleExmple() {
 		keyPrefix + "3",
 	}
 
-	respChan := make(chan keyval.BytesWatchResp, 10)
+	respChan := make(chan []keyval.BytesWatchResp, 10)
 	err = watcher.Watch(keyval.ToChan(respChan), make(chan string), keyPrefix)
 	if err != nil {
 		log.Error(err.Error())
@@ -127,13 +127,15 @@ func runSimpleExmple() {
 	go func() {
 		for {
 			select {
-			case r, ok := <-respChan:
+			case resp, ok := <-respChan:
 				if ok {
-					switch r.GetChangeType() {
-					case datasync.Put:
-						log.Infof("KeyValProtoWatcher received %v: %s=%s", r.GetChangeType(), r.GetKey(), string(r.GetValue()))
-					case datasync.Delete:
-						log.Infof("KeyValProtoWatcher received %v: %s", r.GetChangeType(), r.GetKey())
+					for _, r := range resp {
+						switch r.GetChangeType() {
+						case datasync.Put:
+							log.Infof("KeyValProtoWatcher received %v: %s=%s", r.GetChangeType(), r.GetKey(), string(r.GetValue()))
+						case datasync.Delete:
+							log.Infof("KeyValProtoWatcher received %v: %s", r.GetChangeType(), r.GetKey())
+						}
 					}
 				} else {
 					log.Error("Something wrong with respChan... bail out")

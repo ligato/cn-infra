@@ -29,7 +29,7 @@ type ProtoWatcher interface {
 	// Watch starts monitoring changes associated with the keys.
 	// Watch events will be delivered to callback (not channel) <respChan>.
 	// Channel <closeChan> can be used to close watching on respective key
-	Watch(respChan func(ProtoWatchResp), closeChan chan string, key ...string) error
+	Watch(respChan func([]ProtoWatchResp), closeChan chan string, key ...string) error
 }
 
 // ProtoWatchResp represents a notification about data change.
@@ -43,8 +43,7 @@ type ProtoWatchResp interface {
 // ToChanProto creates a callback that can be passed to the Watch function
 // in order to receive JSON/protobuf-formatted notifications through a channel.
 // If the notification cannot be delivered until timeout, it is dropped.
-func ToChanProto(ch chan ProtoWatchResp, opts ...interface{}) func(dto ProtoWatchResp) {
-
+func ToChanProto(ch chan []ProtoWatchResp, opts ...interface{}) func(dto []ProtoWatchResp) {
 	timeout := datasync.DefaultNotifTimeout
 	var logger logging.Logger = logrus.DefaultLogger()
 
@@ -57,7 +56,7 @@ func ToChanProto(ch chan ProtoWatchResp, opts ...interface{}) func(dto ProtoWatc
 		}
 	}
 
-	return func(dto ProtoWatchResp) {
+	return func(dto []ProtoWatchResp) {
 		select {
 		case ch <- dto:
 		case <-time.After(timeout):

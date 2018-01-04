@@ -27,7 +27,7 @@ type Adapter struct {
 }
 
 // Watch uses Kafka KeyValProtoWatcher Topic KeyValProtoWatcher.
-func (adapter *Adapter) Watch(resyncName string, changeChan chan datasync.ChangeEvent,
+func (adapter *Adapter) Watch(resyncName string, changeChan chan []datasync.ChangeEvent,
 	resyncChan chan datasync.ResyncEvent, keyPrefixes ...string) (datasync.WatchRegistration, error) {
 
 	if adapter.Watcher != nil {

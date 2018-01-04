@@ -175,19 +175,20 @@ func (pdb *BytesBrokerWatcherEtcd) Delete(key string, opts ...datasync.DelOption
 	return deleteInternal(pdb.Logger, pdb.kv, pdb.opTimeout, key, opts...)
 }
 
-func handleWatchEvent(log logging.Logger, resp func(keyval.BytesWatchResp), ev *clientv3.Event) {
+func handleWatchEvent(log logging.Logger, ev *clientv3.Event)  keyval.BytesWatchResp {
 	if ev.Type == mvccpb.DELETE {
-		resp(NewBytesWatchDelResp(string(ev.Kv.Key), ev.Kv.ModRevision))
+		return NewBytesWatchDelRespItem(string(ev.Kv.Key), ev.Kv.ModRevision)
 	} else if ev.IsCreate() || ev.IsModify() {
 		if ev.Kv.Value != nil {
 			var prevKvValue []byte
 			if ev.PrevKv != nil {
 				prevKvValue = ev.PrevKv.Value
 			}
-			resp(NewBytesWatchPutResp(string(ev.Kv.Key), ev.Kv.Value, prevKvValue, ev.Kv.ModRevision))
-			log.Debug("NewBytesWatchPutResp")
+			return NewBytesWatchPutRespItem(string(ev.Kv.Key), ev.Kv.Value, prevKvValue, ev.Kv.ModRevision)
 		}
 	}
+
+	return nil
 }
 
 // NewTxn creates a new transaction. A transaction can hold multiple operations
@@ -209,7 +210,7 @@ func newTxnInternal(kv clientv3.KV) keyval.BytesTxn {
 // closeCh is a channel closed when Close method is called.It is leveraged
 // to stop go routines from specific subscription, or only goroutine with
 // provided key prefix
-func (db *BytesConnectionEtcd) Watch(resp func(keyval.BytesWatchResp), closeChan chan string, keys ...string) error {
+func (db *BytesConnectionEtcd) Watch(resp func([]keyval.BytesWatchResp), closeChan chan string, keys ...string) error {
 	var err error
 	for _, k := range keys {
 		err = watchInternal(db.Logger, db.etcdClient, closeChan, k, resp)
@@ -221,7 +222,7 @@ func (db *BytesConnectionEtcd) Watch(resp func(keyval.BytesWatchResp), closeChan
 }
 
 // watchInternal starts the watch subscription for the key.
-func watchInternal(log logging.Logger, watcher clientv3.Watcher, closeCh chan string, key string, resp func(keyval.BytesWatchResp)) error {
+func watchInternal(log logging.Logger, watcher clientv3.Watcher, closeCh chan string, key string, resp func([]keyval.BytesWatchResp)) error {
 	recvChan := watcher.Watch(context.Background(), key, clientv3.WithPrefix(), clientv3.WithPrevKV())
 
 	go func() {
@@ -229,9 +230,17 @@ func watchInternal(log logging.Logger, watcher clientv3.Watcher, closeCh chan st
 		for {
 			select {
 			case wresp := <-recvChan:
+
+
+				var processedResponses []keyval.BytesWatchResp
+
+
 				for _, ev := range wresp.Events {
-					handleWatchEvent(log, resp, ev)
+					processedResponses = append(processedResponses, handleWatchEvent(log, ev))
 				}
+
+				resp(processedResponses)
+
 			case closeVal, ok := <-closeCh:
 				if !ok || registeredKey == closeVal {
 					log.WithField("key", key).Debug("Watch ended")
