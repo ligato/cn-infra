@@ -81,7 +81,7 @@ func (f *FlavorRPC) Inject() bool {
 	f.Logs.HTTP = &f.HTTP
 
 	f.Prometheus.Deps.PluginInfraDeps = *f.InfraDeps("prometheus")
-	f.Prometheus.HTTP = &f.HTTP
+	f.Prometheus.HTTP = &f.HTTPProbe
 
 	grpc.DeclareGRPCPortFlag("grpc")
 	grpcPlugDeps := *f.InfraDeps("grpc", local.WithConf())
