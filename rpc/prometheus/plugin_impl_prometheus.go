@@ -77,6 +77,8 @@ func (p *Plugin) Init() (err error) {
 // AfterInit registers HTTP handlers.
 func (p *Plugin) AfterInit() error {
 	if p.HTTP != nil {
+		p.Lock()
+		defer p.Unlock()
 		for path, reg := range p.regs {
 			p.HTTP.RegisterHTTPHandler(path, p.createHandlerHandler(reg.Gatherer), "GET")
 			p.Log.Infof("Serving %s on port %d", path, p.HTTP.GetPort())
