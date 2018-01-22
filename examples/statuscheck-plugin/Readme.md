@@ -6,7 +6,7 @@ To start the example you have to have ETCD running first.
 if you don't have it installed locally you can use the following docker
 image.
 ```
-sudo docker run -p 2379:2379 --name etcd --rm \
+sudo docker run -p 22379:2379 --name etcd --rm \
     quay.io/coreos/etcd:v3.0.16 /usr/local/bin/etcd \
     -advertise-client-urls http://0.0.0.0:2379 \
     -listen-client-urls http://0.0.0.0:2379
@@ -27,7 +27,7 @@ not execute in its entirety.
 
 To run the example, type:
 ```
-go run main.go deps.go [-etcdv3-config <config-filepath>]
+go run main.go [-etcdv3-config <config-filepath>]
 ```
 
 The status of connection to etcd is printed once per second. You can stop
