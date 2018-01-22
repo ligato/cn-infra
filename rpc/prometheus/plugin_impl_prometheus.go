@@ -26,16 +26,16 @@ import (
 	"sync"
 )
 
-// DefaultMetricsPath default Prometheus metrics URL
+// DefaultRegistry default Prometheus metrics URL
 const DefaultRegistry = "/metrics"
 
 var (
-	// PathInvalidFormatError is returned if the path doesn't start with slash
-	PathInvalidFormatError = errors.New("path is invalid, it must start with '/' character")
-	// PathAlreadyRegistryError is returned on attempt to register a path used by a registry
-	PathAlreadyRegistryError = errors.New("registry with the path is already registered")
-	// RegistryNotFoundError is returned on attempt to use register that has not been created
-	RegistryNotFoundError = errors.New("registry was not found")
+	// ErrPathInvalidFormat is returned if the path doesn't start with slash
+	ErrPathInvalidFormat = errors.New("path is invalid, it must start with '/' character")
+	// ErrPathAlreadyRegistry is returned on attempt to register a path used by a registry
+	ErrPathAlreadyRegistry = errors.New("registry with the path is already registered")
+	// ErrRegistryNotFound is returned on attempt to use register that has not been created
+	ErrRegistryNotFound = errors.New("registry was not found")
 )
 
 // Plugin struct holds all plugin-related data.
@@ -105,10 +105,10 @@ func (p *Plugin) NewRegistry(path string, opts promhttp.HandlerOpts) error {
 	defer p.Unlock()
 
 	if !strings.HasPrefix(path, "/") {
-		return PathInvalidFormatError
+		return ErrPathInvalidFormat
 	}
 	if _, found := p.regs[path]; found {
-		return PathAlreadyRegistryError
+		return ErrPathAlreadyRegistry
 	}
 	newReg := prometheus.NewRegistry()
 	p.regs[path] = &registry{
@@ -127,13 +127,13 @@ func (p *Plugin) Register(registryPath string, collector prometheus.Collector) e
 
 	reg, found := p.regs[registryPath]
 	if !found {
-		return RegistryNotFoundError
+		return ErrRegistryNotFound
 	}
 	return reg.Register(collector)
 }
 
-// RegisterGauge registers custom gauge with specific valueFunc to report status when invoked. RegistryPath identifies
-// the registry where gauge is added.
+// RegisterGaugeFunc registers custom gauge with specific valueFunc to report status when invoked.
+// RegistryPath identifies the registry where gauge is added.
 func (p *Plugin) RegisterGaugeFunc(registryPath string, namespace string, subsystem string, name string, help string,
 	labels prometheus.Labels, valueFunc func() float64) error {
 
@@ -142,7 +142,7 @@ func (p *Plugin) RegisterGaugeFunc(registryPath string, namespace string, subsys
 
 	reg, found := p.regs[registryPath]
 	if !found {
-		return RegistryNotFoundError
+		return ErrRegistryNotFound
 	}
 
 	gaugeName := name
