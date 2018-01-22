@@ -1,4 +1,4 @@
-# Release v1.0.8 (2018-1-X)
+# Release v1.0.8 (2018-1-22)
 
 ## Kafka
   * Added support for Kafka TLS.
