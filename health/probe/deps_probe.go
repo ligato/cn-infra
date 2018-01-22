@@ -29,7 +29,7 @@ type Deps struct {
 	StatusCheck           statuscheck.StatusReader // inject
 }
 
-// Deps lists dependencies of Prometheus plugin.
+// PrometheusDeps lists dependencies of Prometheus plugin.
 type PrometheusDeps struct {
 	local.PluginInfraDeps                          // inject
 	HTTP                  rest.HTTPHandlers        // inject

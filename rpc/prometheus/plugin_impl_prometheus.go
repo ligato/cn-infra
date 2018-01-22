@@ -105,9 +105,11 @@ func (p *Plugin) NewRegistry(path string, opts promhttp.HandlerOpts) error {
 	defer p.Unlock()
 
 	if !strings.HasPrefix(path, "/") {
+		p.Log.WithField("path", path).Error(ErrPathInvalidFormat)
 		return ErrPathInvalidFormat
 	}
 	if _, found := p.regs[path]; found {
+		p.Log.WithField("path", path).Error(ErrPathAlreadyRegistry)
 		return ErrPathAlreadyRegistry
 	}
 	newReg := prometheus.NewRegistry()
@@ -127,6 +129,7 @@ func (p *Plugin) Register(registryPath string, collector prometheus.Collector) e
 
 	reg, found := p.regs[registryPath]
 	if !found {
+		p.Log.WithField("path", registryPath).Error(ErrRegistryNotFound)
 		return ErrRegistryNotFound
 	}
 	return reg.Register(collector)
@@ -142,6 +145,7 @@ func (p *Plugin) RegisterGaugeFunc(registryPath string, namespace string, subsys
 
 	reg, found := p.regs[registryPath]
 	if !found {
+		p.Log.WithField("path", registryPath).Error(ErrRegistryNotFound)
 		return ErrRegistryNotFound
 	}
 
