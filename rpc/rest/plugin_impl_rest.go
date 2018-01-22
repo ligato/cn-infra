@@ -50,9 +50,9 @@ type Plugin struct {
 
 // Deps lists the dependencies of the Rest plugin.
 type Deps struct {
-	Log        logging.PluginLogger //inject
-	PluginName core.PluginName      //inject
-	config.PluginConfig             //inject
+	Log                 logging.PluginLogger //inject
+	PluginName          core.PluginName      //inject
+	config.PluginConfig                      //inject
 }
 
 // Init is the plugin entry point called by Agent Core
@@ -93,6 +93,7 @@ func (plugin *Plugin) GetPort() int {
 // AfterInit starts the HTTP server.
 func (plugin *Plugin) AfterInit() (err error) {
 	cfgCopy := *plugin.Config
+	plugin.Log.Info("hey!!!", cfgCopy)
 
 	if plugin.listenAndServe != nil {
 		plugin.server, err = plugin.listenAndServe(cfgCopy, plugin.mx)
