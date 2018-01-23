@@ -80,7 +80,7 @@ func (p *Plugin) AfterInit() error {
 		p.Lock()
 		defer p.Unlock()
 		for path, reg := range p.regs {
-			p.HTTP.RegisterHTTPHandler(path, p.createHandlerHandler(reg.Gatherer), "GET")
+			p.HTTP.RegisterHTTPHandler(path, p.createHandlerHandler(reg.Gatherer, reg.httpOpts), "GET")
 			p.Log.Infof("Serving %s on port %d", path, p.HTTP.GetPort())
 
 		}
@@ -175,8 +175,8 @@ func (p *Plugin) RegisterGaugeFunc(registryPath string, namespace string, subsys
 	return nil
 }
 
-func (p *Plugin) createHandlerHandler(gatherer prometheus.Gatherer) func(formatter *render.Render) http.HandlerFunc {
+func (p *Plugin) createHandlerHandler(gatherer prometheus.Gatherer, opts promhttp.HandlerOpts) func(formatter *render.Render) http.HandlerFunc {
 	return func(formatter *render.Render) http.HandlerFunc {
-		return promhttp.HandlerFor(gatherer, promhttp.HandlerOpts{}).ServeHTTP
+		return promhttp.HandlerFor(gatherer, opts).ServeHTTP
 	}
 }
