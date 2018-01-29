@@ -54,6 +54,7 @@ func main() {
 	core.EventLoopWithInterrupt(agent, exampleFinished)
 }
 
+// Deps group dependencies of the ExamplePlugin
 type Deps struct {
 	local.PluginInfraDeps
 	Prometheus prom.API
