@@ -35,7 +35,7 @@ examples-plugin:
 	cd examples/redis-plugin && go build -i -v ${LDFLAGS}
 	cd examples/simple-agent && go build -i -v ${LDFLAGS}
 	cd examples/statuscheck-plugin && go build -i -v ${LDFLAGS}
-        cd examples/prometheus-plugin && go build -i -v ${LDFLAGS}
+	cd examples/prometheus-plugin && go build -i -v ${LDFLAGS}
 
 # Clean examples
 clean-examples:
@@ -59,7 +59,7 @@ clean-examples-plugin:
 	rm -f examples/redis-plugin/redis-plugin
 	rm -f examples/simple-agent/simple-agent
 	rm -f examples/statuscheck-plugin/statuscheck-plugin
-        rm -f examples/prometheus-plugin/prometheus-plugin
+	rm -f examples/prometheus-plugin/prometheus-plugin
 
 # Run tests
 test:
