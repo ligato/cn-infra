@@ -12,15 +12,14 @@ echo "export PATH=$PATH" >> ~/.bashrc
 mkdir $GOPATH
 
 # install golint, gvt & Glide
-go get -u github.com/golang/lint/golint
-go get -u github.com/FiloSottile/gvt
-curl https://glide.sh/get | sh
+#go get -u github.com/golang/lint/golint
+#go get -u github.com/FiloSottile/gvt
+#curl https://glide.sh/get | sh
 
 # checkout agent code
 mkdir -p $GOPATH/src/github.com/ligato
 cd $GOPATH/src/github.com/ligato
 git clone https://github.com/ligato/cn-infra.git
-
 
 # build the agent
 cd $GOPATH/src/github.com/ligato/cn-infra
