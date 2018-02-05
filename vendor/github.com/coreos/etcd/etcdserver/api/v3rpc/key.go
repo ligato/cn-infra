@@ -252,8 +252,8 @@ func checkRequestOp(u *pb.RequestOp) error {
 			return checkDeleteRequest(uv.RequestDeleteRange)
 		}
 	default:
-		// empty op / nil entry
-		return rpctypes.ErrGRPCKeyNotFound
+		// empty op
+		return nil
 	}
 	return nil
 }
