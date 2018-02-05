@@ -32,6 +32,12 @@
   revision = "4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9"
 
 [[projects]]
+  name = "github.com/boltdb/bolt"
+  packages = ["."]
+  revision = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8"
+  version = "v1.3.1"
+
+[[projects]]
   name = "github.com/bsm/sarama-cluster"
   packages = ["."]
   revision = "24016d206c730276dfb58f802999066f2f4bfeaa"
@@ -42,12 +48,6 @@
   name = "github.com/cockroachdb/cmux"
   packages = ["."]
   revision = "30d10be492927e2dcae0089c374c455d42414fcb"
-
-[[projects]]
-  name = "github.com/coreos/bbolt"
-  packages = ["."]
-  revision = "583e8937c61f1af6513608ccc75c97b6abdf4ff9"
-  version = "v1.3.0"
 
 [[projects]]
   name = "github.com/coreos/etcd"
@@ -65,7 +65,6 @@
     "error",
     "etcdserver",
     "etcdserver/api",
-    "etcdserver/api/etcdhttp",
     "etcdserver/api/v2http",
     "etcdserver/api/v2http/httptypes",
     "etcdserver/api/v3client",
@@ -121,8 +120,8 @@
     "wal",
     "wal/walpb"
   ]
-  revision = "1b3ac99e8a431b381e633802cc42fe70e663baf5"
-  version = "v3.2.15"
+  revision = "66722b1ada68fcd5227db853ee92003169a975c8"
+  version = "v3.2.0"
 
 [[projects]]
   name = "github.com/coreos/go-semver"
@@ -223,12 +222,7 @@
   packages = [
     "jsonpb",
     "proto",
-    "protoc-gen-go/descriptor",
-    "ptypes",
-    "ptypes/any",
-    "ptypes/duration",
-    "ptypes/struct",
-    "ptypes/timestamp"
+    "ptypes/struct"
   ]
   revision = "c65a0412e71e8b9b3bfd22925720d23c0f054237"
 
@@ -269,8 +263,8 @@
     "runtime/internal",
     "utilities"
   ]
-  revision = "07f5e79768022f9a3265235f0db4ac8c3f675fec"
-  version = "v1.3.1"
+  revision = "18d159699f2e83fc5bb9ef2f79465ca3f3122676"
+  version = "v1.2.0"
 
 [[projects]]
   branch = "master"
@@ -521,44 +515,24 @@
   revision = "e19ae1496984b1c655b8044a65c0300a3c878dd3"
 
 [[projects]]
-  branch = "master"
-  name = "google.golang.org/genproto"
-  packages = [
-    "googleapis/api/annotations",
-    "googleapis/rpc/status"
-  ]
-  revision = "14790a1795ea4c3387aaf24aed670ddb51f18292"
-
-[[projects]]
   name = "google.golang.org/grpc"
   packages = [
     ".",
-    "balancer",
-    "balancer/base",
-    "balancer/roundrobin",
     "codes",
-    "connectivity",
     "credentials",
-    "encoding",
     "examples/helloworld/helloworld",
-    "grpclb/grpc_lb_v1/messages",
     "grpclog",
-    "health/grpc_health_v1",
     "internal",
     "keepalive",
     "metadata",
     "naming",
     "peer",
-    "resolver",
-    "resolver/dns",
-    "resolver/passthrough",
     "stats",
-    "status",
     "tap",
     "transport"
   ]
-  revision = "6b51017f791ae1cfbec89c52efdf444b13b550ef"
-  version = "v1.9.2"
+  revision = "8050b9cbc271307e5a716a9d782803d09b0d6f2d"
+  version = "v1.2.1"
 
 [[projects]]
   name = "gopkg.in/inf.v0"
@@ -575,6 +549,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1224c93a01c02e44fcd822ad460076420b356f00a257cc475f0045e9bb921b19"
+  inputs-digest = "a0cf1ea3b79acde514c1448951bf905876490d16619ec3f966c481c9aaeac1a4"
   solver-name = "gps-cdcl"
   solver-version = 1
