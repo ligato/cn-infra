@@ -27,20 +27,14 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/etcdserver"
-	"github.com/coreos/etcd/etcdserver/api/etcdhttp"
 	"github.com/coreos/etcd/etcdserver/api/v2http"
-	"github.com/coreos/etcd/etcdserver/api/v3rpc"
 	"github.com/coreos/etcd/pkg/cors"
 	"github.com/coreos/etcd/pkg/debugutil"
 	runtimeutil "github.com/coreos/etcd/pkg/runtime"
 	"github.com/coreos/etcd/pkg/transport"
 	"github.com/coreos/etcd/pkg/types"
 	"github.com/coreos/etcd/rafthttp"
-
-	"github.com/cockroachdb/cmux"
 	"github.com/coreos/pkg/capnslog"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/keepalive"
 )
 
 var plog = capnslog.NewPackageLogger("github.com/coreos/etcd", "embed")
@@ -63,14 +57,12 @@ const (
 type Etcd struct {
 	Peers   []*peerListener
 	Clients []net.Listener
-	// a map of contexts for the servers that serves client requests.
-	sctxs map[string]*serveCtx
-
-	Server *etcdserver.EtcdServer
+	Server  *etcdserver.EtcdServer
 
 	cfg   Config
 	stopc chan struct{}
 	errc  chan error
+	sctxs map[string]*serveCtx
 
 	closeOnce sync.Once
 }
@@ -96,9 +88,9 @@ func StartEtcd(inCfg *Config) (e *Etcd, err error) {
 			return
 		}
 		if !serving {
-			// errored before starting gRPC server for serveCtx.serversC
+			// errored before starting gRPC server for serveCtx.grpcServerC
 			for _, sctx := range e.sctxs {
-				close(sctx.serversC)
+				close(sctx.grpcServerC)
 			}
 		}
 		e.Close()
@@ -106,10 +98,10 @@ func StartEtcd(inCfg *Config) (e *Etcd, err error) {
 	}()
 
 	if e.Peers, err = startPeerListeners(cfg); err != nil {
-		return e, err
+		return
 	}
 	if e.sctxs, err = startClientListeners(cfg); err != nil {
-		return e, err
+		return
 	}
 	for _, sctx := range e.sctxs {
 		e.Clients = append(e.Clients, sctx.l)
@@ -147,31 +139,43 @@ func StartEtcd(inCfg *Config) (e *Etcd, err error) {
 		ElectionTicks:           cfg.ElectionTicks(),
 		AutoCompactionRetention: cfg.AutoCompactionRetention,
 		QuotaBackendBytes:       cfg.QuotaBackendBytes,
-		MaxRequestBytes:         cfg.MaxRequestBytes,
 		StrictReconfigCheck:     cfg.StrictReconfigCheck,
 		ClientCertAuthEnabled:   cfg.ClientTLSInfo.ClientCertAuth,
 		AuthToken:               cfg.AuthToken,
-		Debug:                   cfg.Debug,
 	}
 
 	if e.Server, err = etcdserver.NewServer(srvcfg); err != nil {
-		return e, err
+		return
+	}
+
+	// configure peer handlers after rafthttp.Transport started
+	ph := v2http.NewPeerHandler(e.Server)
+	for i := range e.Peers {
+		srv := &http.Server{
+			Handler:     ph,
+			ReadTimeout: 5 * time.Minute,
+			ErrorLog:    defaultLog.New(ioutil.Discard, "", 0), // do not log user error
+		}
+		e.Peers[i].serve = func() error {
+			return srv.Serve(e.Peers[i].Listener)
+		}
+		e.Peers[i].close = func(ctx context.Context) error {
+			// gracefully shutdown http.Server
+			// close open listeners, idle connections
+			// until context cancel or time-out
+			return srv.Shutdown(ctx)
+		}
 	}
 
 	// buffer channel so goroutines on closed connections won't wait forever
 	e.errc = make(chan error, len(e.Peers)+len(e.Clients)+2*len(e.sctxs))
 
 	e.Server.Start()
-
-	if err = e.servePeers(); err != nil {
-		return e, err
+	if err = e.serve(); err != nil {
+		return
 	}
-	if err = e.serveClients(); err != nil {
-		return e, err
-	}
-
 	serving = true
-	return e, nil
+	return
 }
 
 // Config returns the current configuration.
@@ -179,29 +183,20 @@ func (e *Etcd) Config() Config {
 	return e.cfg
 }
 
-// Close gracefully shuts down all servers/listeners.
-// Client requests will be terminated with request timeout.
-// After timeout, enforce remaning requests be closed immediately.
 func (e *Etcd) Close() {
 	e.closeOnce.Do(func() { close(e.stopc) })
 
-	// close client requests with request timeout
-	timeout := 2 * time.Second
-	if e.Server != nil {
-		timeout = e.Server.Cfg.ReqTimeout()
-	}
+	// (gRPC server) stops accepting new connections,
+	// RPCs, and blocks until all pending RPCs are finished
 	for _, sctx := range e.sctxs {
-		for ss := range sctx.serversC {
-			ctx, cancel := context.WithTimeout(context.Background(), timeout)
-			stopServers(ctx, ss)
-			cancel()
+		for gs := range sctx.grpcServerC {
+			gs.GracefulStop()
 		}
 	}
 
 	for _, sctx := range e.sctxs {
 		sctx.cancel()
 	}
-
 	for i := range e.Clients {
 		if e.Clients[i] != nil {
 			e.Clients[i].Close()
@@ -220,43 +215,6 @@ func (e *Etcd) Close() {
 			e.Peers[i].close(ctx)
 			cancel()
 		}
-	}
-}
-
-func stopServers(ctx context.Context, ss *servers) {
-	shutdownNow := func() {
-		// first, close the http.Server
-		ss.http.Shutdown(ctx)
-		// then close grpc.Server; cancels all active RPCs
-		ss.grpc.Stop()
-	}
-
-	// do not grpc.Server.GracefulStop with TLS enabled etcd server
-	// See https://github.com/grpc/grpc-go/issues/1384#issuecomment-317124531
-	// and https://github.com/coreos/etcd/issues/8916
-	if ss.secure {
-		shutdownNow()
-		return
-	}
-
-	ch := make(chan struct{})
-	go func() {
-		defer close(ch)
-		// close listeners to stop accepting new connections,
-		// will block on any existing transports
-		ss.grpc.GracefulStop()
-	}()
-
-	// wait until all pending RPCs are finished
-	select {
-	case <-ch:
-	case <-ctx.Done():
-		// took too long, manually close open transports
-		// e.g. watch streams
-		shutdownNow()
-
-		// concurrent GracefulStop should be interrupted
-		<-ch
 	}
 }
 
@@ -288,9 +246,7 @@ func startPeerListeners(cfg *Config) (peers []*peerListener, err error) {
 		for i := range peers {
 			if peers[i] != nil && peers[i].close != nil {
 				plog.Info("stopping listening for peers on ", cfg.LPUrls[i].String())
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-				peers[i].close(ctx)
-				cancel()
+				peers[i].close(context.Background())
 			}
 		}
 	}()
@@ -316,45 +272,6 @@ func startPeerListeners(cfg *Config) (peers []*peerListener, err error) {
 		plog.Info("listening for peers on ", u.String())
 	}
 	return peers, nil
-}
-
-// configure peer handlers after rafthttp.Transport started
-func (e *Etcd) servePeers() (err error) {
-	ph := etcdhttp.NewPeerHandler(e.Server)
-	var peerTLScfg *tls.Config
-	if !e.cfg.PeerTLSInfo.Empty() {
-		if peerTLScfg, err = e.cfg.PeerTLSInfo.ServerConfig(); err != nil {
-			return err
-		}
-	}
-
-	for _, p := range e.Peers {
-		gs := v3rpc.Server(e.Server, peerTLScfg)
-		m := cmux.New(p.Listener)
-		go gs.Serve(m.Match(cmux.HTTP2()))
-		srv := &http.Server{
-			Handler:     grpcHandlerFunc(gs, ph),
-			ReadTimeout: 5 * time.Minute,
-			ErrorLog:    defaultLog.New(ioutil.Discard, "", 0), // do not log user error
-		}
-		go srv.Serve(m.Match(cmux.Any()))
-		p.serve = func() error { return m.Serve() }
-		p.close = func(ctx context.Context) error {
-			// gracefully shutdown http.Server
-			// close open listeners, idle connections
-			// until context cancel or time-out
-			stopServers(ctx, &servers{secure: peerTLScfg != nil, grpc: gs, http: srv})
-			return nil
-		}
-	}
-
-	// start peer servers in a goroutine
-	for _, pl := range e.Peers {
-		go func(l *peerListener) {
-			e.errHandler(l.serve())
-		}(pl)
-	}
-	return nil
 }
 
 func startClientListeners(cfg *Config) (sctxs map[string]*serveCtx, err error) {
@@ -409,9 +326,6 @@ func startClientListeners(cfg *Config) (sctxs map[string]*serveCtx, err error) {
 		if sctx.l, err = net.Listen(proto, addr); err != nil {
 			return nil, err
 		}
-		// net.Listener will rewrite ipv4 0.0.0.0 to ipv6 [::], breaking
-		// hosts that disable ipv6. So, use the address given by the user.
-		sctx.addr = addr
 
 		if fdLimit, fderr := runtimeutil.FDLimit(); fderr == nil {
 			if fdLimit <= reservedInternalFDNum {
@@ -448,7 +362,7 @@ func startClientListeners(cfg *Config) (sctxs map[string]*serveCtx, err error) {
 	return sctxs, nil
 }
 
-func (e *Etcd) serveClients() (err error) {
+func (e *Etcd) serve() (err error) {
 	var ctlscfg *tls.Config
 	if !e.cfg.ClientTLSInfo.Empty() {
 		plog.Infof("ClientTLS: %s", e.cfg.ClientTLSInfo)
@@ -461,36 +375,24 @@ func (e *Etcd) serveClients() (err error) {
 		plog.Infof("cors = %s", e.cfg.CorsInfo)
 	}
 
+	// Start the peer server in a goroutine
+	for _, pl := range e.Peers {
+		go func(l *peerListener) {
+			e.errHandler(l.serve())
+		}(pl)
+	}
+
 	// Start a client server goroutine for each listen address
-	var h http.Handler
+	var v2h http.Handler
 	if e.Config().EnableV2 {
-		h = v2http.NewClientHandler(e.Server, e.Server.Cfg.ReqTimeout())
-	} else {
-		mux := http.NewServeMux()
-		etcdhttp.HandleBasic(mux, e.Server)
-		h = mux
+		v2h = http.Handler(&cors.CORSHandler{
+			Handler: v2http.NewClientHandler(e.Server, e.Server.Cfg.ReqTimeout()),
+			Info:    e.cfg.CorsInfo,
+		})
 	}
-	h = http.Handler(&cors.CORSHandler{Handler: h, Info: e.cfg.CorsInfo})
-
-	gopts := []grpc.ServerOption{}
-	if e.cfg.GRPCKeepAliveMinTime > time.Duration(0) {
-		gopts = append(gopts, grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
-			MinTime:             e.cfg.GRPCKeepAliveMinTime,
-			PermitWithoutStream: false,
-		}))
-	}
-	if e.cfg.GRPCKeepAliveInterval > time.Duration(0) &&
-		e.cfg.GRPCKeepAliveTimeout > time.Duration(0) {
-		gopts = append(gopts, grpc.KeepaliveParams(keepalive.ServerParameters{
-			Time:    e.cfg.GRPCKeepAliveInterval,
-			Timeout: e.cfg.GRPCKeepAliveTimeout,
-		}))
-	}
-
-	// start client servers in a goroutine
 	for _, sctx := range e.sctxs {
 		go func(s *serveCtx) {
-			e.errHandler(s.serve(e.Server, ctlscfg, h, e.errHandler, gopts...))
+			e.errHandler(s.serve(e.Server, ctlscfg, v2h, e.errHandler))
 		}(sctx)
 	}
 	return nil
