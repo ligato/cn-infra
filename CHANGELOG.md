@@ -1,4 +1,12 @@
-# Release v1.0.8 (2018-1-22)
+# Release v1.1 (2018-02-07)
+
+## Dependencies
+  * Migrated from glide to dep
+
+## Prometheus
+  * Introduced Prometheus plugin with examples
+
+# Release v1.0.8 (2018-01-22)
 
 ## Kafka
   * Added support for Kafka TLS.
@@ -86,7 +94,7 @@ Added TLS support
 * new field `group-id` can be added to kafka.conf. This value is used as a Group ID in order to set it
   manually. In case the value is not provided, the service label is used instead (just like before).
 
-# Release v1.0.4 (2017-9-25)
+# Release v1.0.4 (2017-09-25)
 
 ## Documentation
 * Improved documentation of public APIs (comments)
