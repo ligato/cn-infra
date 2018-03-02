@@ -87,7 +87,7 @@ watcherLoop:
 				resp.GetValue(contact)
 				exists, err := resp.GetPrevValue(prevContact)
 				if err != nil {
-					logrus.DefaultLogger().Errorf("err: %v", err)
+					logrus.DefaultLogger().Errorf("err: %v\n", err)
 				}
 				printContact(contact)
 				if exists {
@@ -97,6 +97,16 @@ watcherLoop:
 				}
 			case datasync.Delete:
 				fmt.Println("Removing ", resp.GetKey())
+				prevContact := &phonebook.Contact{}
+				exists, err := resp.GetPrevValue(prevContact)
+				if err != nil {
+					logrus.DefaultLogger().Errorf("err: %v\n", err)
+				}
+				if exists {
+					printPrevContact(prevContact)
+				} else {
+					fmt.Printf("Previous value does not exist\n")
+				}
 			}
 			fmt.Println("============================================")
 		case <-sigChan:
