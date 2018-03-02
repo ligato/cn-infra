@@ -274,12 +274,14 @@ func TestWatchPutResp(t *testing.T) {
 func TestWatchDeleteResp(t *testing.T) {
 	var rev int64 = 1
 	key := "key"
+	prevVal := []byte("prevVal")
 	gomega.RegisterTestingT(t)
-	createResp := NewBytesWatchDelResp(key, rev)
+	createResp := NewBytesWatchDelResp(key, prevVal, rev)
 	gomega.Expect(createResp).NotTo(gomega.BeNil())
 	gomega.Expect(createResp.GetChangeType()).To(gomega.BeEquivalentTo(datasync.Delete))
 	gomega.Expect(createResp.GetKey()).To(gomega.BeEquivalentTo(key))
 	gomega.Expect(createResp.GetValue()).To(gomega.BeNil())
+	gomega.Expect(createResp.GetPrevValue()).To(gomega.BeEquivalentTo(prevVal))
 	gomega.Expect(createResp.GetRevision()).To(gomega.BeEquivalentTo(rev))
 }
 
