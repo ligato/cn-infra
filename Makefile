@@ -100,7 +100,7 @@ test-cover: get-covtools
 	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit8.out ./messaging/kafka/mux
 	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit9.out ./utils/addrs
 	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit10.out ./tests/gotests/itest
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit11.out ./datsync/syncbase
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit11.out ./datasync/syncbase
 	@echo "# merging coverage results"
 	gocovmerge \
 			${COVER_DIR}coverage_unit1.out \
