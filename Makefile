@@ -74,6 +74,7 @@ test:
 	go test ./messaging/kafka/mux
 	go test ./utils/addrs
 	go test ./tests/gotests/itest
+	go test ./datasync/syncbase
 
 # Run script for testing examples
 test-examples:
@@ -99,6 +100,7 @@ test-cover: get-covtools
 	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit8.out ./messaging/kafka/mux
 	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit9.out ./utils/addrs
 	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit10.out ./tests/gotests/itest
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit11.out ./datasync/syncbase
 	@echo "# merging coverage results"
 	gocovmerge \
 			${COVER_DIR}coverage_unit1.out \
@@ -111,6 +113,7 @@ test-cover: get-covtools
 			${COVER_DIR}coverage_unit8.out \
 			${COVER_DIR}coverage_unit9.out \
 			${COVER_DIR}coverage_unit10.out \
+			${COVER_DIR}coverage_unit11.out \
 		> ${COVER_DIR}coverage.out
 	@echo "# coverage data generated into ${COVER_DIR}coverage.out"
 
