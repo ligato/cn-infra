@@ -1,3 +1,8 @@
+# Release (not released yet)
+
+  * fix syncbase issue where delete request for non-existing item
+   used to trigger a change notification
+
 # Release v1.1 (2018-02-07)
 
 ## Dependencies
