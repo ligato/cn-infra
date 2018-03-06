@@ -9,7 +9,7 @@ export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 echo "export GOROOT=$GOROOT" >> ~/.bashrc
 echo "export GOPATH=$GOPATH" >> ~/.bashrc
 echo "export PATH=$PATH" >> ~/.bashrc
-mkdir $GOPATH
+mkdir -p $GOPATH/{bin,pkg,src}
 
 # install golint, gvt & Glide
 #go get -u github.com/golang/lint/golint
@@ -26,7 +26,7 @@ cd $GOPATH/src/github.com/ligato/cn-infra
 git checkout $1
 make
 
-cp examples/simple-agent/simple-agent $GOPATH/bin
+cp examples/simple-agent/simple-agent $GOPATH/bin/
 #make install
 #make test
 #make generate
