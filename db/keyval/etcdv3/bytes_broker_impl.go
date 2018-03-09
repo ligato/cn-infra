@@ -437,22 +437,37 @@ func listValuesRangeInternal(log logging.Logger, kv clientv3.KV, opTimeout time.
 	return &bytesKeyValIterator{len: len(resp.Kvs), resp: resp}, nil
 }
 
-func (db *BytesConnectionEtcd) Compact(rev int64) error {
-	return compactInternal(db.Logger, db.etcdClient, db.opTimeout, rev)
+// Compact compacts the ETCD database to specific revision
+func (db *BytesConnectionEtcd) Compact(rev ...int64) (int64, error) {
+	return compactInternal(db.Logger, db.etcdClient, db.opTimeout, rev...)
 }
 
-func compactInternal(log logging.Logger, kv clientv3.KV, opTimeout time.Duration, rev int64) error {
+func compactInternal(log logging.Logger, kv clientv3.KV, opTimeout time.Duration, rev ...int64) (int64, error) {
 	deadline := time.Now().Add(opTimeout)
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
 	defer cancel()
 
-	if _, err := kv.Compact(ctx, rev, clientv3.WithCompactPhysical()); err != nil {
-		log.Error("etcdv3 compact error: ", err)
-		return err
+	var toRev int64
+	if len(rev) == 0 {
+		resp, err := kv.Get(ctx, "\x00")
+		if err != nil {
+			log.Error("etcdv3 error: ", err)
+			return 0, err
+		}
+		toRev = resp.Header.Revision
+	} else {
+		toRev = rev[0]
 	}
 
-	return nil
+	if _, err := kv.Compact(ctx, toRev, clientv3.WithCompactPhysical()); err != nil {
+		log.Error("etcdv3 compact error: ", err)
+		return 0, err
+	}
+
+	return toRev, nil
 }
+
+// GetRevision returns current revision of ETCD database
 func (db *BytesConnectionEtcd) GetRevision() (revision int64, err error) {
 	return getRevisionInternal(db.Logger, db.etcdClient, db.opTimeout)
 }
@@ -462,7 +477,6 @@ func getRevisionInternal(log logging.Logger, kv clientv3.KV, opTimeout time.Dura
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
 	defer cancel()
 
-	// get data from etcdv3
 	resp, err := kv.Get(ctx, "\x00")
 	if err != nil {
 		log.Error("etcdv3 error: ", err)

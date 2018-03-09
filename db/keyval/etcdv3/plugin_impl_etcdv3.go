@@ -145,3 +145,11 @@ func (p *Plugin) PutIfNotExists(key string, value []byte) (succeeded bool, err e
 	}
 	return false, fmt.Errorf("connection is not established")
 }
+
+// Compact compatcs the ETCD database to the specific revision
+func (p *Plugin) Compact(rev ...int64) (toRev int64, err error) {
+	if p.connection != nil {
+		return p.connection.Compact(rev...)
+	}
+	return 0, fmt.Errorf("connection is not established")
+}

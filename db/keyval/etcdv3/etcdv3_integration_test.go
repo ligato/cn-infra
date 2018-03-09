@@ -61,6 +61,21 @@ func TestDataBroker(t *testing.T) {
 	t.Run("compact", testCompact)
 }
 
+func setupBrokers(t *testing.T) {
+	RegisterTestingT(t)
+
+	var err error
+	broker, err = NewEtcdConnectionUsingClient(v3client.New(embd.ETCD.Server), logrus.DefaultLogger())
+
+	Expect(err).To(BeNil())
+	Expect(broker).NotTo(BeNil())
+	// Create BytesBrokerWatcherEtcd with prefix.
+	prefixedBroker = broker.NewBroker(prefix)
+	prefixedWatcher = broker.NewWatcher(prefix)
+	Expect(prefixedBroker).NotTo(BeNil())
+	Expect(prefixedWatcher).NotTo(BeNil())
+}
+
 func teardownBrokers() {
 	broker.Close()
 	broker = nil
@@ -318,9 +333,9 @@ func testCompact(t *testing.T) {
 	t.Log("current revision:", revision)
 
 	// compact to current revision
-	err = broker.Compact(revision)
+	toRev, err := broker.Compact()
 	Expect(err).To(BeNil())
-	t.Log("compacted to revision:", revision)
+	t.Log("compacted to revision:", toRev)
 
 	// try retrieving previous revision
 	retData, found, modRev, err = broker.GetValueRev(prefix+mykey, firsRev)
@@ -339,20 +354,4 @@ func expectWatchEvent(t *testing.T, wg *sync.WaitGroup, watchCh chan keyval.Byte
 		t.FailNow()
 	}
 	wg.Done()
-}
-
-func setupBrokers(t *testing.T) {
-	RegisterTestingT(t)
-
-	var err error
-	broker, err = NewEtcdConnectionUsingClient(v3client.New(embd.ETCD.Server), logrus.DefaultLogger())
-
-	Expect(err).To(BeNil())
-	Expect(broker).NotTo(BeNil())
-	// Create BytesBrokerWatcherEtcd with prefix.
-	prefixedBroker = broker.NewBroker(prefix)
-	prefixedWatcher = broker.NewWatcher(prefix)
-	Expect(prefixedBroker).NotTo(BeNil())
-	Expect(prefixedWatcher).NotTo(BeNil())
-
 }
