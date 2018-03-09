@@ -38,6 +38,7 @@ type Config struct {
 	Certfile              string        `json:"cert-file"`
 	Keyfile               string        `json:"key-file"`
 	CAfile                string        `json:"ca-file"`
+	AutoCompact           time.Duration `json:"auto-compact"`
 }
 
 // ClientConfig extends clientv3.Config with configuration options introduced

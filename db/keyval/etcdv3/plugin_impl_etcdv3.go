@@ -16,6 +16,7 @@ package etcdv3
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/keyval/plugin"
@@ -34,8 +35,9 @@ const (
 type Plugin struct {
 	Deps // inject
 	*plugin.Skeleton
-	disabled   bool
-	connection *BytesConnectionEtcd
+	disabled        bool
+	connection      *BytesConnectionEtcd
+	autoCompactDone chan struct{}
 }
 
 // Deps lists dependencies of the etcdv3 plugin.
@@ -76,6 +78,13 @@ func (p *Plugin) Init() (err error) {
 			return err
 		}
 
+		if cfg.AutoCompact > 0 {
+			if cfg.AutoCompact < time.Duration(time.Minute*60) {
+				p.Log.Warnf("auto compact option for ETCD is set to less than 60 minutes!")
+			}
+			p.startPeriodicAutoCompact(cfg.AutoCompact)
+		}
+
 		p.Skeleton = plugin.NewSkeleton(p.String(),
 			p.ServiceLabel,
 			p.connection,
@@ -108,6 +117,26 @@ func (p *Plugin) AfterInit() error {
 	return nil
 }
 
+func (p *Plugin) startPeriodicAutoCompact(period time.Duration) {
+	p.autoCompactDone = make(chan struct{})
+	go func() {
+		p.Log.Infof("Starting periodic auto compacting every %v", period)
+		for {
+			select {
+			case <-time.After(period):
+				p.Log.Debugf("Executing auto compact")
+				if toRev, err := p.connection.Compact(); err != nil {
+					p.Log.Errorf("Periodic auto compacting failed: %v", err)
+				} else {
+					p.Log.Infof("Auto compacting finished (to revision %v)", toRev)
+				}
+			case <-p.autoCompactDone:
+				return
+			}
+		}
+	}()
+}
+
 // FromExistingConnection is used mainly for testing of existing connection
 // injection into the plugin.
 // Note, need to set Deps for returned value!
@@ -118,7 +147,7 @@ func FromExistingConnection(connection *BytesConnectionEtcd, sl servicelabel.Rea
 
 // Close shutdowns the connection.
 func (p *Plugin) Close() error {
-	_, err := safeclose.CloseAll(p.Skeleton)
+	_, err := safeclose.CloseAll(p.Skeleton, p.autoCompactDone)
 	return err
 }
 

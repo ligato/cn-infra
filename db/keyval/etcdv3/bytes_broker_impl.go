@@ -459,10 +459,13 @@ func compactInternal(log logging.Logger, kv clientv3.KV, opTimeout time.Duration
 		toRev = rev[0]
 	}
 
+	log.Debugf("compacting ETCD to revision %v", toRev)
+	t := time.Now()
 	if _, err := kv.Compact(ctx, toRev, clientv3.WithCompactPhysical()); err != nil {
 		log.Error("etcdv3 compact error: ", err)
 		return 0, err
 	}
+	log.Debugf("compacting ETCD took %v", time.Since(t))
 
 	return toRev, nil
 }
