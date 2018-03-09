@@ -24,7 +24,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3/mocks"
 	"github.com/ligato/cn-infra/logging/logrus"
-	"github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 )
 
 const (
@@ -41,11 +41,10 @@ var (
 )
 
 func TestDataBroker(t *testing.T) {
-
 	//setup
 	embd.Start(t)
 	defer embd.Stop()
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 
 	t.Run("putGetValue", testPutGetValuePrefixed)
 	embd.CleanDs()
@@ -58,6 +57,8 @@ func TestDataBroker(t *testing.T) {
 	t.Run("testDelWithPrefix", testDelWithPrefix)
 	embd.CleanDs()
 	t.Run("testPutIfNotExist", testPutIfNotExists)
+	embd.CleanDs()
+	t.Run("compact", testCompact)
 }
 
 func teardownBrokers() {
@@ -75,19 +76,18 @@ func testPutGetValuePrefixed(t *testing.T) {
 
 	// Insert key-value pair using databroker.
 	err := broker.Put(prefix+key, data)
-	gomega.Expect(err).To(gomega.BeNil())
+	Expect(err).To(BeNil())
 
 	returnedData, found, _, err := prefixedBroker.GetValue(key)
-
-	gomega.Expect(returnedData).NotTo(gomega.BeNil())
-	gomega.Expect(found).To(gomega.BeTrue())
-	gomega.Expect(err).To(gomega.BeNil())
+	Expect(returnedData).NotTo(BeNil())
+	Expect(found).To(BeTrue())
+	Expect(err).To(BeNil())
 
 	// not existing value
 	returnedData, found, _, err = prefixedBroker.GetValue("unknown")
-	gomega.Expect(returnedData).To(gomega.BeNil())
-	gomega.Expect(found).To(gomega.BeFalse())
-	gomega.Expect(err).To(gomega.BeNil())
+	Expect(returnedData).To(BeNil())
+	Expect(found).To(BeFalse())
+	Expect(err).To(BeNil())
 
 }
 
@@ -97,7 +97,7 @@ func testPrefixedWatcher(t *testing.T) {
 
 	watchCh := make(chan keyval.BytesWatchResp)
 	err := prefixedWatcher.Watch(keyval.ToChan(watchCh), nil, watchKey)
-	gomega.Expect(err).To(gomega.BeNil())
+	Expect(err).To(BeNil())
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -117,7 +117,7 @@ func testPrefixedTxn(t *testing.T) {
 	defer teardownBrokers()
 
 	tx := prefixedBroker.NewTxn()
-	gomega.Expect(tx).NotTo(gomega.BeNil())
+	Expect(tx).NotTo(BeNil())
 
 	tx.Put("b/val1", []byte{0, 1})
 	tx.Put("b/val2", []byte{0, 1})
@@ -125,15 +125,15 @@ func testPrefixedTxn(t *testing.T) {
 	tx.Commit()
 
 	kvi, err := broker.ListValues(prefix + "b")
-	gomega.Expect(err).To(gomega.BeNil())
-	gomega.Expect(kvi).NotTo(gomega.BeNil())
+	Expect(err).To(BeNil())
+	Expect(kvi).NotTo(BeNil())
 
 	expectedKeys := []string{prefix + "b/val1", prefix + "b/val2", prefix + "b/val3"}
 	for i := 0; i < 3; i++ {
 		kv, all := kvi.GetNext()
-		gomega.Expect(kv).NotTo(gomega.BeNil())
-		gomega.Expect(all).To(gomega.BeFalse())
-		gomega.Expect(kv.GetKey()).To(gomega.BeEquivalentTo(expectedKeys[i]))
+		Expect(kv).NotTo(BeNil())
+		Expect(all).To(BeFalse())
+		Expect(kv.GetKey()).To(BeEquivalentTo(expectedKeys[i]))
 	}
 }
 
@@ -144,24 +144,24 @@ func testPrefixedListValues(t *testing.T) {
 	var err error
 	// Insert values using databroker.
 	err = broker.Put(prefix+"a/val1", []byte{0, 0, 7})
-	gomega.Expect(err).To(gomega.BeNil())
+	Expect(err).To(BeNil())
 	err = broker.Put(prefix+"a/val2", []byte{0, 0, 7})
-	gomega.Expect(err).To(gomega.BeNil())
+	Expect(err).To(BeNil())
 	err = broker.Put(prefix+"a/val3", []byte{0, 0, 7})
-	gomega.Expect(err).To(gomega.BeNil())
+	Expect(err).To(BeNil())
 
 	// List values using pluginDatabroker.
 	kvi, err := prefixedBroker.ListValues("a")
-	gomega.Expect(err).To(gomega.BeNil())
-	gomega.Expect(kvi).NotTo(gomega.BeNil())
+	Expect(err).To(BeNil())
+	Expect(kvi).NotTo(BeNil())
 
 	expectedKeys := []string{"a/val1", "a/val2", "a/val3"}
 	for i := 0; i < 3; i++ {
 		kv, all := kvi.GetNext()
-		gomega.Expect(kv).NotTo(gomega.BeNil())
-		gomega.Expect(all).To(gomega.BeFalse())
+		Expect(kv).NotTo(BeNil())
+		Expect(all).To(BeFalse())
 		// verify that prefix of BytesBrokerWatcherEtcd is trimmed
-		gomega.Expect(kv.GetKey()).To(gomega.BeEquivalentTo(expectedKeys[i]))
+		Expect(kv.GetKey()).To(BeEquivalentTo(expectedKeys[i]))
 	}
 }
 
@@ -170,47 +170,48 @@ func testDelWithPrefix(t *testing.T) {
 	defer teardownBrokers()
 
 	err := broker.Put("something/a/val1", []byte{0, 0, 7})
-	gomega.Expect(err).To(gomega.BeNil())
+	Expect(err).To(BeNil())
 	err = broker.Put("something/a/val2", []byte{0, 0, 7})
-	gomega.Expect(err).To(gomega.BeNil())
+	Expect(err).To(BeNil())
 	err = broker.Put("something/a/val3", []byte{0, 0, 7})
-	gomega.Expect(err).To(gomega.BeNil())
+	Expect(err).To(BeNil())
 
 	_, found, _, err := broker.GetValue("something/a/val1")
-	gomega.Expect(found).To(gomega.BeTrue())
-	gomega.Expect(err).To(gomega.BeNil())
+	Expect(found).To(BeTrue())
+	Expect(err).To(BeNil())
 
 	_, found, _, err = broker.GetValue("something/a/val2")
-	gomega.Expect(found).To(gomega.BeTrue())
-	gomega.Expect(err).To(gomega.BeNil())
+	Expect(found).To(BeTrue())
+	Expect(err).To(BeNil())
 
 	_, found, _, err = broker.GetValue("something/a/val3")
-	gomega.Expect(found).To(gomega.BeTrue())
-	gomega.Expect(err).To(gomega.BeNil())
+	Expect(found).To(BeTrue())
+	Expect(err).To(BeNil())
 
 	_, err = broker.Delete("something/a", datasync.WithPrefix())
-	gomega.Expect(err).To(gomega.BeNil())
+	Expect(err).To(BeNil())
 
 	_, found, _, err = broker.GetValue("something/a/val1")
-	gomega.Expect(found).To(gomega.BeFalse())
-	gomega.Expect(err).To(gomega.BeNil())
+	Expect(found).To(BeFalse())
+	Expect(err).To(BeNil())
 
 	_, found, _, err = broker.GetValue("something/a/val2")
-	gomega.Expect(found).To(gomega.BeFalse())
-	gomega.Expect(err).To(gomega.BeNil())
+	Expect(found).To(BeFalse())
+	Expect(err).To(BeNil())
 
 	_, found, _, err = broker.GetValue("something/a/val3")
-	gomega.Expect(found).To(gomega.BeFalse())
-	gomega.Expect(err).To(gomega.BeNil())
+	Expect(found).To(BeFalse())
+	Expect(err).To(BeNil())
 
 }
 
 func testPutIfNotExists(t *testing.T) {
+	RegisterTestingT(t)
 
 	conn, err := NewEtcdConnectionUsingClient(v3client.New(embd.ETCD.Server), logrus.DefaultLogger())
 
-	gomega.Expect(err).To(gomega.BeNil())
-	gomega.Expect(conn).NotTo(gomega.BeNil())
+	Expect(err).To(BeNil())
+	Expect(conn).NotTo(BeNil())
 
 	const key = "myKey"
 	var (
@@ -219,46 +220,111 @@ func testPutIfNotExists(t *testing.T) {
 	)
 
 	_, found, _, err := conn.GetValue(key)
-	gomega.Expect(err).To(gomega.BeNil())
-	gomega.Expect(found).To(gomega.BeFalse())
+	Expect(err).To(BeNil())
+	Expect(found).To(BeFalse())
 
 	inserted, err := conn.PutIfNotExists(key, intialValue)
-	gomega.Expect(err).To(gomega.BeNil())
-	gomega.Expect(inserted).To(gomega.BeTrue())
+	Expect(err).To(BeNil())
+	Expect(inserted).To(BeTrue())
 
 	data, found, _, err := conn.GetValue(key)
-	gomega.Expect(err).To(gomega.BeNil())
-	gomega.Expect(found).To(gomega.BeTrue())
-	gomega.Expect(string(data)).To(gomega.BeEquivalentTo(string(intialValue)))
+	Expect(err).To(BeNil())
+	Expect(found).To(BeTrue())
+	Expect(string(data)).To(BeEquivalentTo(string(intialValue)))
 
 	inserted, err = conn.PutIfNotExists(key, changedValue)
-	gomega.Expect(err).To(gomega.BeNil())
-	gomega.Expect(inserted).To(gomega.BeFalse())
+	Expect(err).To(BeNil())
+	Expect(inserted).To(BeFalse())
 
 	data, found, _, err = conn.GetValue(key)
-	gomega.Expect(err).To(gomega.BeNil())
-	gomega.Expect(found).To(gomega.BeTrue())
-	gomega.Expect(string(data)).To(gomega.BeEquivalentTo(string(intialValue)))
+	Expect(err).To(BeNil())
+	Expect(found).To(BeTrue())
+	Expect(string(data)).To(BeEquivalentTo(string(intialValue)))
 
 	_, err = conn.Delete(key)
-	gomega.Expect(err).To(gomega.BeNil())
+	Expect(err).To(BeNil())
 
 	inserted, err = conn.PutIfNotExists(key, changedValue)
-	gomega.Expect(err).To(gomega.BeNil())
-	gomega.Expect(inserted).To(gomega.BeTrue())
+	Expect(err).To(BeNil())
+	Expect(inserted).To(BeTrue())
 
 	data, found, _, err = conn.GetValue(key)
-	gomega.Expect(err).To(gomega.BeNil())
-	gomega.Expect(found).To(gomega.BeTrue())
-	gomega.Expect(string(data)).To(gomega.BeEquivalentTo(string(changedValue)))
+	Expect(err).To(BeNil())
+	Expect(found).To(BeTrue())
+	Expect(string(data)).To(BeEquivalentTo(string(changedValue)))
 
+}
+
+func testCompact(t *testing.T) {
+	setupBrokers(t)
+	defer teardownBrokers()
+
+	mykey := "mykey"
+	data := []byte{1, 2, 3}
+	data2 := []byte{4, 5, 6}
+
+	//broker.etcdClient.Maintenance.Status(context.TODO())
+	revision, err := broker.GetRevision()
+	Expect(err).To(BeNil())
+	t.Log("current revision:", revision)
+
+	// insert some data
+	err = broker.Put(prefix+mykey, data)
+	Expect(err).To(BeNil())
+
+	// retrieve the data
+	retData, found, modRev, err := prefixedBroker.GetValue(mykey)
+	Expect(retData).NotTo(BeNil())
+	Expect(found).To(BeTrue())
+	Expect(err).To(BeNil())
+	//Expect(rev).To(Equal(1))
+	t.Log("data:", retData, "modrev:", modRev)
+
+	// store its mod revision
+	firsRev := modRev
+
+	// overwrite the data with new data
+	err = broker.Put(prefix+mykey, data2)
+	Expect(err).To(BeNil())
+
+	// retrieve the new data
+	retData, found, modRev, err = prefixedBroker.GetValue(mykey)
+	Expect(retData).NotTo(BeNil())
+	Expect(found).To(BeTrue())
+	Expect(err).To(BeNil())
+	//Expect(rev).To(Equal(1))
+	t.Log("data:", retData, "modrev:", modRev)
+
+	// retrieve the previous revision
+	retData, found, modRev, err = broker.GetValueRev(prefix+mykey, firsRev)
+	Expect(retData).NotTo(BeNil())
+	Expect(found).To(BeTrue())
+	Expect(err).To(BeNil())
+	//Expect(rev).To(Equal(1))
+	t.Log("data:", retData, "modrev:", modRev)
+
+	// get current revision
+	revision, err = broker.GetRevision()
+	Expect(err).To(BeNil())
+	t.Log("current revision:", revision)
+
+	// compact to current revision
+	err = broker.Compact(revision)
+	Expect(err).To(BeNil())
+	t.Log("compacted to revision:", revision)
+
+	// try retrieving previous revision
+	retData, found, modRev, err = broker.GetValueRev(prefix+mykey, firsRev)
+	Expect(retData).To(BeNil())
+	Expect(found).NotTo(BeTrue())
+	Expect(err).NotTo(BeNil())
 }
 
 func expectWatchEvent(t *testing.T, wg *sync.WaitGroup, watchCh chan keyval.BytesWatchResp, expectedKey string) {
 	select {
 	case resp := <-watchCh:
-		gomega.Expect(resp).NotTo(gomega.BeNil())
-		gomega.Expect(resp.GetKey()).To(gomega.BeEquivalentTo(expectedKey))
+		Expect(resp).NotTo(BeNil())
+		Expect(resp.GetKey()).To(BeEquivalentTo(expectedKey))
 	case <-time.After(1 * time.Second):
 		t.Error("Watch resp not received")
 		t.FailNow()
@@ -267,15 +333,17 @@ func expectWatchEvent(t *testing.T, wg *sync.WaitGroup, watchCh chan keyval.Byte
 }
 
 func setupBrokers(t *testing.T) {
+	RegisterTestingT(t)
+
 	var err error
 	broker, err = NewEtcdConnectionUsingClient(v3client.New(embd.ETCD.Server), logrus.DefaultLogger())
 
-	gomega.Expect(err).To(gomega.BeNil())
-	gomega.Expect(broker).NotTo(gomega.BeNil())
+	Expect(err).To(BeNil())
+	Expect(broker).NotTo(BeNil())
 	// Create BytesBrokerWatcherEtcd with prefix.
 	prefixedBroker = broker.NewBroker(prefix)
 	prefixedWatcher = broker.NewWatcher(prefix)
-	gomega.Expect(prefixedBroker).NotTo(gomega.BeNil())
-	gomega.Expect(prefixedWatcher).NotTo(gomega.BeNil())
+	Expect(prefixedBroker).NotTo(BeNil())
+	Expect(prefixedWatcher).NotTo(BeNil())
 
 }

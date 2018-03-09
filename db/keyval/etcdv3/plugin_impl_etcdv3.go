@@ -16,6 +16,7 @@ package etcdv3
 
 import (
 	"fmt"
+
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/keyval/plugin"
 	"github.com/ligato/cn-infra/flavors/local"
@@ -26,7 +27,7 @@ import (
 
 const (
 	// healthCheckProbeKey is a key used to probe Etcd state
-	healthCheckProbeKey string = "/probe-etcd-connection"
+	healthCheckProbeKey = "/probe-etcd-connection"
 )
 
 // Plugin implements etcdv3 plugin.
@@ -57,15 +58,14 @@ func (p *Plugin) Init() (err error) {
 	if p.Skeleton == nil {
 		// Retrieve config
 		var cfg Config
-		found, err := p.PluginConfig.GetValue(&cfg)
-		if !found {
+		if found, err := p.PluginConfig.GetValue(&cfg); err != nil {
+			return err
+		} else if !found {
 			p.Log.Info("etcd config not found ", p.PluginConfig.GetConfigName(), " - skip loading this plugin")
 			p.disabled = true
 			return nil
 		}
-		if err != nil {
-			return err
-		}
+
 		etcdConfig, err := ConfigToClientv3(&cfg)
 		if err != nil {
 			return err
@@ -81,8 +81,8 @@ func (p *Plugin) Init() (err error) {
 			p.connection,
 		)
 	}
-	err = p.Skeleton.Init()
-	if err != nil {
+
+	if err := p.Skeleton.Init(); err != nil {
 		return err
 	}
 
@@ -105,10 +105,6 @@ func (p *Plugin) Init() (err error) {
 // AfterInit registers status polling function with StatusCheck plugin
 // (if injected).
 func (p *Plugin) AfterInit() error {
-	if p.disabled {
-		return nil
-	}
-
 	return nil
 }
 
@@ -147,5 +143,5 @@ func (p *Plugin) PutIfNotExists(key string, value []byte) (succeeded bool, err e
 	if p.connection != nil {
 		return p.connection.PutIfNotExists(key, value)
 	}
-	return false, fmt.Errorf("The connection is not established")
+	return false, fmt.Errorf("connection is not established")
 }

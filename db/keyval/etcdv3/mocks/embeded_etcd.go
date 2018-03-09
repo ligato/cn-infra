@@ -2,6 +2,7 @@ package mocks
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -59,7 +60,11 @@ func (embd *Embedded) Stop() {
 // CleanDs deletes all stored key-value pairs.
 func (embd *Embedded) CleanDs() {
 	if embd.client != nil {
-		embd.client.Delete(context.Background(), "", clientv3.WithPrefix())
+		resp, err := embd.client.Delete(context.Background(), "", clientv3.WithPrefix())
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("resp: %+v\n", resp)
 	}
 }
 
