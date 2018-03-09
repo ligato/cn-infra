@@ -259,6 +259,15 @@ func testCompact(t *testing.T) {
 	setupBrokers(t)
 	defer teardownBrokers()
 
+	/*
+		This test runs following scenario:
+		- store some data to key
+		- overwrite with new data 		=> expect mod revision to increment
+		- get previous revision			=> expect original data to return
+		- compact to current revision
+		- try to retrieve original data	=> expect to fail
+	*/
+
 	mykey := "mykey"
 	data := []byte{1, 2, 3}
 	data2 := []byte{4, 5, 6}
