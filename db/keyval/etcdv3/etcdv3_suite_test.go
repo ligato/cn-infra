@@ -17,7 +17,6 @@ package etcdv3
 import (
 	"errors"
 	"testing"
-
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
@@ -25,7 +24,7 @@ import (
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/logging/logrus"
-	"github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 	"golang.org/x/net/context"
 )
 
@@ -145,115 +144,115 @@ func init() {
 }
 
 func TestNewTxn(t *testing.T) {
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 	newTxn := dataBroker.NewTxn()
-	gomega.Expect(newTxn).NotTo(gomega.BeNil())
+	Expect(newTxn).NotTo(BeNil())
 }
 
 func TestTxnPut(t *testing.T) {
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 	newTxn := dataBroker.NewTxn()
 	result := newTxn.Put("key", []byte("data"))
-	gomega.Expect(result).NotTo(gomega.BeNil())
+	Expect(result).NotTo(BeNil())
 }
 
 func TestTxnDelete(t *testing.T) {
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 	newTxn := dataBroker.NewTxn()
-	gomega.Expect(newTxn).NotTo(gomega.BeNil())
+	Expect(newTxn).NotTo(BeNil())
 	result := newTxn.Delete("key")
-	gomega.Expect(result).NotTo(gomega.BeNil())
+	Expect(result).NotTo(BeNil())
 }
 
 func TestTxnCommit(t *testing.T) {
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 	newTxn := dataBroker.NewTxn()
 	result := newTxn.Commit()
-	gomega.Expect(result).To(gomega.BeNil())
+	Expect(result).To(BeNil())
 }
 
 func TestPut(t *testing.T) {
 	// regular case
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 	err := dataBroker.Put("key", []byte("data"))
-	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+	Expect(err).ShouldNot(HaveOccurred())
 	// error case
 	err = dataBrokerErr.Put("key", []byte("data"))
-	gomega.Expect(err).Should(gomega.HaveOccurred())
-	gomega.Expect(err.Error()).To(gomega.BeEquivalentTo("test-error"))
+	Expect(err).Should(HaveOccurred())
+	Expect(err.Error()).To(BeEquivalentTo("test-error"))
 }
 
 func TestGetValue(t *testing.T) {
 	// regular case
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 	result, found, _, err := dataBroker.GetValue("key")
-	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-	gomega.Expect(result).NotTo(gomega.BeNil())
+	Expect(err).ShouldNot(HaveOccurred())
+	Expect(result).NotTo(BeNil())
 	// error case
 	result, found, _, err = dataBrokerErr.GetValue("key")
-	gomega.Expect(err).Should(gomega.HaveOccurred())
-	gomega.Expect(found).To(gomega.BeFalse())
-	gomega.Expect(result).To(gomega.BeNil())
-	gomega.Expect(err.Error()).To(gomega.BeEquivalentTo("test-error"))
+	Expect(err).Should(HaveOccurred())
+	Expect(found).To(BeFalse())
+	Expect(result).To(BeNil())
+	Expect(err.Error()).To(BeEquivalentTo("test-error"))
 }
 
 func TestListValues(t *testing.T) {
 	// regular case
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 	result, err := dataBroker.ListValues("key")
-	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-	gomega.Expect(result).ToNot(gomega.BeNil())
+	Expect(err).ShouldNot(HaveOccurred())
+	Expect(result).ToNot(BeNil())
 
 	// error case
 	result, err = dataBrokerErr.ListValues("key")
-	gomega.Expect(err).Should(gomega.HaveOccurred())
-	gomega.Expect(result).To(gomega.BeNil())
-	gomega.Expect(err.Error()).To(gomega.BeEquivalentTo("test-error"))
+	Expect(err).Should(HaveOccurred())
+	Expect(result).To(BeNil())
+	Expect(err.Error()).To(BeEquivalentTo("test-error"))
 }
 
 func TestListValuesRange(t *testing.T) {
 	// regular case
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 	result, err := dataBroker.ListValuesRange("AKey", "ZKey")
-	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-	gomega.Expect(result).ToNot(gomega.BeNil())
+	Expect(err).ShouldNot(HaveOccurred())
+	Expect(result).ToNot(BeNil())
 
 	// error case
 	result, err = dataBrokerErr.ListValuesRange("AKey", "ZKey")
-	gomega.Expect(err).Should(gomega.HaveOccurred())
-	gomega.Expect(result).To(gomega.BeNil())
-	gomega.Expect(err.Error()).To(gomega.BeEquivalentTo("test-error"))
+	Expect(err).Should(HaveOccurred())
+	Expect(result).To(BeNil())
+	Expect(err.Error()).To(BeEquivalentTo("test-error"))
 }
 
 func TestDelete(t *testing.T) {
 	// regular case
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 	response, err := dataBroker.Delete("vnf")
-	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-	gomega.Expect(response).To(gomega.BeFalse())
+	Expect(err).ShouldNot(HaveOccurred())
+	Expect(response).To(BeFalse())
 	// error case
 	response, err = dataBrokerErr.Delete("vnf")
-	gomega.Expect(err).Should(gomega.HaveOccurred())
-	gomega.Expect(response).To(gomega.BeFalse())
-	gomega.Expect(err.Error()).To(gomega.BeEquivalentTo("test-error"))
+	Expect(err).Should(HaveOccurred())
+	Expect(response).To(BeFalse())
+	Expect(err.Error()).To(BeEquivalentTo("test-error"))
 }
 
 func TestNewBroker(t *testing.T) {
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 	pdb := dataBroker.NewBroker("/pluginname")
-	gomega.Expect(pdb).NotTo(gomega.BeNil())
+	Expect(pdb).NotTo(BeNil())
 }
 
 func TestNewWatcher(t *testing.T) {
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 	pdb := dataBroker.NewWatcher("/pluginname")
-	gomega.Expect(pdb).NotTo(gomega.BeNil())
+	Expect(pdb).NotTo(BeNil())
 }
 
 func TestWatch(t *testing.T) {
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 	err := pluginDataBroker.Watch(func(keyval.BytesWatchResp) {}, nil, "key")
-	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+	Expect(err).ShouldNot(HaveOccurred())
 }
 
 func TestWatchPutResp(t *testing.T) {
@@ -261,37 +260,37 @@ func TestWatchPutResp(t *testing.T) {
 	value := []byte("data")
 	prevVal := []byte("prevData")
 	key := "key"
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 	createResp := NewBytesWatchPutResp(key, value, prevVal, rev)
-	gomega.Expect(createResp).NotTo(gomega.BeNil())
-	gomega.Expect(createResp.GetChangeType()).To(gomega.BeEquivalentTo(datasync.Put))
-	gomega.Expect(createResp.GetKey()).To(gomega.BeEquivalentTo(key))
-	gomega.Expect(createResp.GetValue()).To(gomega.BeEquivalentTo(value))
-	gomega.Expect(createResp.GetPrevValue()).To(gomega.BeEquivalentTo(prevVal))
-	gomega.Expect(createResp.GetRevision()).To(gomega.BeEquivalentTo(rev))
+	Expect(createResp).NotTo(BeNil())
+	Expect(createResp.GetChangeType()).To(BeEquivalentTo(datasync.Put))
+	Expect(createResp.GetKey()).To(BeEquivalentTo(key))
+	Expect(createResp.GetValue()).To(BeEquivalentTo(value))
+	Expect(createResp.GetPrevValue()).To(BeEquivalentTo(prevVal))
+	Expect(createResp.GetRevision()).To(BeEquivalentTo(rev))
 }
 
 func TestWatchDeleteResp(t *testing.T) {
 	var rev int64 = 1
 	key := "key"
 	prevVal := []byte("prevVal")
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 	createResp := NewBytesWatchDelResp(key, prevVal, rev)
-	gomega.Expect(createResp).NotTo(gomega.BeNil())
-	gomega.Expect(createResp.GetChangeType()).To(gomega.BeEquivalentTo(datasync.Delete))
-	gomega.Expect(createResp.GetKey()).To(gomega.BeEquivalentTo(key))
-	gomega.Expect(createResp.GetValue()).To(gomega.BeNil())
-	gomega.Expect(createResp.GetPrevValue()).To(gomega.BeEquivalentTo(prevVal))
-	gomega.Expect(createResp.GetRevision()).To(gomega.BeEquivalentTo(rev))
+	Expect(createResp).NotTo(BeNil())
+	Expect(createResp.GetChangeType()).To(BeEquivalentTo(datasync.Delete))
+	Expect(createResp.GetKey()).To(BeEquivalentTo(key))
+	Expect(createResp.GetValue()).To(BeNil())
+	Expect(createResp.GetPrevValue()).To(BeEquivalentTo(prevVal))
+	Expect(createResp.GetRevision()).To(BeEquivalentTo(rev))
 }
 
 func TestConfig(t *testing.T) {
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 	cfg := &Config{DialTimeout: time.Second, OpTimeout: time.Second}
 	etcdCfg, err := ConfigToClientv3(cfg)
-	gomega.Expect(err).To(gomega.BeNil())
-	gomega.Expect(etcdCfg).NotTo(gomega.BeNil())
-	gomega.Expect(etcdCfg.OpTimeout).To(gomega.BeEquivalentTo(time.Second))
-	gomega.Expect(etcdCfg.DialTimeout).To(gomega.BeEquivalentTo(time.Second))
-	gomega.Expect(etcdCfg.TLS).To(gomega.BeNil())
+	Expect(err).To(BeNil())
+	Expect(etcdCfg).NotTo(BeNil())
+	Expect(etcdCfg.OpTimeout).To(BeEquivalentTo(time.Second))
+	Expect(etcdCfg.DialTimeout).To(BeEquivalentTo(time.Second))
+	Expect(etcdCfg.TLS).To(BeNil())
 }
