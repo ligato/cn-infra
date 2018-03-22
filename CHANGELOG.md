@@ -1,4 +1,4 @@
-# Release v1.2 (2018-XX-XX)
+# Release v1.2 (2018-03-22)
 
 ## New Features
   * Added support for ETCD compacting. Information about how to use 
