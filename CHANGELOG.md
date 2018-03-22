@@ -1,7 +1,17 @@
-# Release (not released yet)
+# Release v1.2 (2018-03-22)
 
-  * fix syncbase issue where delete request for non-existing item
-   used to trigger a change notification
+## New Features
+  * Added support for ETCD compacting. Information about how to use 
+    it can be found in the [readme](db/keyval/etcdv3/README.md)
+  * Name-to-index mapping API was extended with new method 'Update'.
+    The purpose of the method is to update metadata value under specific
+    key without triggering events, so mapping entry can be kept up to date. 
+
+## Bugfix
+  * Fixed syncbase issue where delete request for a non-existing item
+    used to trigger a change notification
+  * Getting of previous value for ProtoWatchResp 'delete' event now
+    returns correct data  
 
 # Release v1.1 (2018-02-07)
 
