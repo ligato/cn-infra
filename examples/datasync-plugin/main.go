@@ -63,9 +63,9 @@ type ExamplePlugin struct {
 	context       context.Context            // Used to cancel watching.
 	watchDataReg  datasync.WatchRegistration // To subscribe on data change/resync events.
 	// Fields below are used to properly finish the example.
-	eventCounter uint8
+	eventCounter  uint8
 	publisherDone bool
-	closeChannel *chan struct{}
+	closeChannel  *chan struct{}
 }
 
 // Init starts the consumer.
@@ -130,7 +130,7 @@ func (plugin *ExamplePlugin) etcdPublisher() {
 	plugin.Publisher.Put(label, exampleData)
 
 	// Wait for the consumer (change should not be passed to listener)
-	time.Sleep(2* time.Second)
+	time.Sleep(2 * time.Second)
 
 	plugin.publisherDone = true
 }

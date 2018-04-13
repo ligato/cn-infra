@@ -1,10 +1,10 @@
 package itest
 
 import (
-	"github.com/ligato/cn-infra/flavors/local"
-	"testing"
-	"github.com/onsi/gomega"
 	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/onsi/gomega"
+	"testing"
 )
 
 type suiteFlavorLocal struct {
