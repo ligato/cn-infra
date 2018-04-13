@@ -42,7 +42,7 @@ func TestListPlugins02OnePluginInFlavor(t *testing.T) {
 	flavor := &FlavorOnePlugin{}
 	plugs := flavor.Plugins()
 	t.Log("plugs ", plugs)
-	gomega.Expect(plugs).To(gomega.Equal([]*NamedPlugin{&NamedPlugin{
+	gomega.Expect(plugs).To(gomega.Equal([]*NamedPlugin{{
 		PluginName("Plugin2"), &flavor.Plugin2}}))
 }
 

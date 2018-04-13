@@ -4,10 +4,6 @@ Put all examples under [/examples/*](../../examples) folder.
 This folder should contain minimalistic examples, each ideally focused
 on a single feature only.
 
-Examples that are really just a skeleton (or archetype) for a specific
-type of microservice should be pushed into a dedicated GIT repository
-[ligato/cn-sample-service](https://github.com/ligato/cn-sample-service).
-
 ## Layout
 
 Each example is stored in its own directory under

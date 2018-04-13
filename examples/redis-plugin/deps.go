@@ -8,7 +8,7 @@ import (
 
 // Deps is a helper struct which is grouping all dependencies injected to the plugin
 type Deps struct {
-	local.PluginLogDeps                 // injected
-	Watcher datasync.KeyValProtoWatcher // injected
-	DB      keyval.KvProtoPlugin        // injected
+	local.PluginLogDeps                             // injected
+	Watcher             datasync.KeyValProtoWatcher // injected
+	DB                  keyval.KvProtoPlugin        // injected
 }
