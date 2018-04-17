@@ -52,7 +52,7 @@ type WatchRegistration interface {
 	// Add <keyPrefix> to adapter subscription under specific <resyncName>.
 	// If called on registration returned by composite watcher, register
 	// <keyPrefix> to all adapters. Returns error if there is no subscription
-	// with provided resync name
+	// with provided resync name or prefix already exists
 	Register(resyncName string, keyPrefix string) error
 
 	// Unregister <keyPrefix> from adapter subscription. If called on registration

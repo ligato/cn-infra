@@ -203,13 +203,19 @@ func (reg *WatchDataReg) Close() error {
 }
 
 // Register starts watching of particular key prefix. Method returns error if key which should be added
-// aleready exists
+// already exists
 func (reg *WatchDataReg) Register(resyncName, keyPrefix string) error {
 	reg.adapter.access.Lock()
 	defer reg.adapter.access.Unlock()
 
 	for resName, sub := range reg.adapter.subscriptions {
 		if resName == resyncName {
+			// Verify that prefix does not exist yet
+			for _, regPrefix := range sub.KeyPrefixes {
+				if regPrefix == keyPrefix {
+					return fmt.Errorf("prefix %s already exists", keyPrefix)
+				}
+			}
 			sub.KeyPrefixes = append(sub.KeyPrefixes, keyPrefix)
 			return nil
 		}
