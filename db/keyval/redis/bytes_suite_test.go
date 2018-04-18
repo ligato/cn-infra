@@ -179,7 +179,7 @@ func TestConfig(t *testing.T) {
 	configs := []interface{}{nodeConfig, sentinelConfig, clusterConfig}
 	yamlFile := "./redis_client-unit_test.yaml"
 	for _, c := range configs {
-		client, err := CreateClient(c)
+		client, err := ConfigToClient(c)
 		gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 		gomega.Expect(client).ShouldNot(gomega.BeNil())
 
@@ -187,7 +187,7 @@ func TestConfig(t *testing.T) {
 		c, err = LoadConfig(yamlFile)
 		gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 		gomega.Expect(c).ShouldNot(gomega.BeNil())
-		client, err = CreateClient(c)
+		client, err = ConfigToClient(c)
 		gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 		gomega.Expect(client).ShouldNot(gomega.BeNil())
 	}
@@ -206,22 +206,22 @@ func TestBadConfig(t *testing.T) {
 	}
 
 	var cfg *NodeConfig
-	client, err := CreateClient(cfg)
+	client, err := ConfigToClient(cfg)
 	gomega.Expect(err).Should(gomega.HaveOccurred())
 	gomega.Expect(client).Should(gomega.BeNil())
-	client, err = CreateClient(nil)
+	client, err = ConfigToClient(nil)
 	gomega.Expect(err).Should(gomega.HaveOccurred())
 	gomega.Expect(client).Should(gomega.BeNil())
 
 	nodeConfig.TLS.Enabled = true
 	nodeConfig.TLS.CAfile = "bad CA file"
-	client, err = CreateClient(nodeConfig)
+	client, err = ConfigToClient(nodeConfig)
 	gomega.Expect(err).Should(gomega.HaveOccurred())
 	gomega.Expect(client).Should(gomega.BeNil())
 
 	nodeConfig.TLS.Certfile = "bad cert file"
 	nodeConfig.TLS.Keyfile = "bad key file"
-	client, err = CreateClient(nodeConfig)
+	client, err = ConfigToClient(nodeConfig)
 	gomega.Expect(err).Should(gomega.HaveOccurred())
 	gomega.Expect(client).Should(gomega.BeNil())
 }

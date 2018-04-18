@@ -195,7 +195,7 @@ func loadConfig() interface{} {
 }
 
 func createConnection(cfg interface{}) *redis.BytesConnectionRedis {
-	client, err := redis.CreateClient(cfg)
+	client, err := redis.ConfigToClient(cfg)
 	if err != nil {
 		log.Panicf("CreateNodeClient() failed: %s", err)
 	}

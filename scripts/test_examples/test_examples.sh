@@ -450,9 +450,9 @@ testOutput examples/logs-plugin/logs-plugin "${expected}" $RUNTIME_LIMIT
 
 #### Simple-agent ########################################################
 
-expected=("etcd config not found  - skip loading this plugin
+expected=("ETCD config not found, skip loading this plugin
 kafka config not found  - skip loading this plugin
-redis config not found  - skip loading this plugin
+Redis config not found, skip loading this plugin
 cassandra client config not found  - skip loading this plugin
 All plugins initialized successfully
 ")
@@ -468,7 +468,7 @@ startKafka
 
 expected=("Plugin etcdv3: status check probe registered
 Plugin kafka: status check probe registered
-redis config not found  - skip loading this plugin
+Redis config not found, skip loading this plugin
 cassandra client config not found  - skip loading this plugin
 All plugins initialized successfully
 ")

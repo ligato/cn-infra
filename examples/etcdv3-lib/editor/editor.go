@@ -36,7 +36,7 @@ func processArgs() (cfg *etcdv3.ClientConfig, op int, data []string, err error) 
 			if err != nil {
 				return
 			}
-			cfg, err = etcdv3.ConfigToClientv3(fileConfig)
+			cfg, err = etcdv3.ConfigToClient(fileConfig)
 			if err != nil {
 				return
 			}

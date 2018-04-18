@@ -110,7 +110,7 @@ Agent plugin state update.*plugin=cassandra state=ok
 Agent plugin state update.*plugin=kafka state=ok
 ")
 
-unexpected=("redis config not found  - skip loading this plugin
+unexpected=("Redis config not found, skip loading this plugin
 cassandra client config not found  - skip loading this plugin
 ")
 
