@@ -29,8 +29,11 @@ const (
 // Plugin implements redis plugin.
 type Plugin struct {
 	Deps
+	// Plugin is disabled if there is no config file available
 	disabled     bool
+	// Redis connection encapsulation
 	connection   *BytesConnectionRedis
+	// Read/Write proto modelled data
 	protoWrapper *kvproto.ProtoWrapper
 }
 
