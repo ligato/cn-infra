@@ -69,8 +69,8 @@ func (plugin *Plugin) Init() (err error) {
 	if err != nil || plugin.disabled {
 		return err
 	}
-	// 	Transforms .yaml config to ETCD client configuration
-	etcdClientCfg, err := ConfigToClientv3(&etcdCfg)
+	// Transforms .yaml config to ETCD client configuration
+	etcdClientCfg, err := ConfigToClient(&etcdCfg)
 	if err != nil {
 		return err
 	}

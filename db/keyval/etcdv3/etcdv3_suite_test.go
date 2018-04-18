@@ -287,7 +287,7 @@ func TestWatchDeleteResp(t *testing.T) {
 func TestConfig(t *testing.T) {
 	RegisterTestingT(t)
 	cfg := &Config{DialTimeout: time.Second, OpTimeout: time.Second}
-	etcdCfg, err := ConfigToClientv3(cfg)
+	etcdCfg, err := ConfigToClient(cfg)
 	Expect(err).To(BeNil())
 	Expect(etcdCfg).NotTo(BeNil())
 	Expect(etcdCfg.OpTimeout).To(BeEquivalentTo(time.Second))

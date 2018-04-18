@@ -30,7 +30,7 @@ func processArgs() (*etcdv3.ClientConfig, error) {
 		}
 	}
 
-	return etcdv3.ConfigToClientv3(fileConfig)
+	return etcdv3.ConfigToClient(fileConfig)
 }
 
 func printUsage() {
