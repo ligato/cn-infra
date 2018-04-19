@@ -118,8 +118,13 @@ func (db *BytesConnectionEtcd) Close() error {
 // BytesBrokerWatcherEtcd. To avoid using a prefix, pass keyval.Root constant as
 // an argument.
 func (db *BytesConnectionEtcd) NewBroker(prefix string) keyval.BytesBroker {
-	return &BytesBrokerWatcherEtcd{Logger: db.Logger, kv: namespace.NewKV(db.etcdClient, prefix), lessor: db.lessor,
-		opTimeout: db.opTimeout, watcher: namespace.NewWatcher(db.etcdClient, prefix)}
+	return &BytesBrokerWatcherEtcd{
+		Logger:    db.Logger,
+		kv:        namespace.NewKV(db.etcdClient, prefix),
+		lessor:    db.lessor,
+		opTimeout: db.opTimeout,
+		watcher:   namespace.NewWatcher(db.etcdClient, prefix),
+	}
 }
 
 // NewWatcher creates a new instance of a proxy that provides
@@ -128,8 +133,13 @@ func (db *BytesConnectionEtcd) NewBroker(prefix string) keyval.BytesBroker {
 // BytesBrokerWatcherEtcd. To avoid using a prefix, pass keyval.Root constant as
 // an argument.
 func (db *BytesConnectionEtcd) NewWatcher(prefix string) keyval.BytesWatcher {
-	return &BytesBrokerWatcherEtcd{Logger: db.Logger, kv: namespace.NewKV(db.etcdClient, prefix), lessor: db.lessor,
-		opTimeout: db.opTimeout, watcher: namespace.NewWatcher(db.etcdClient, prefix)}
+	return &BytesBrokerWatcherEtcd{
+		Logger:    db.Logger,
+		kv:        namespace.NewKV(db.etcdClient, prefix),
+		lessor:    db.lessor,
+		opTimeout: db.opTimeout,
+		watcher:   namespace.NewWatcher(db.etcdClient, prefix),
+	}
 }
 
 // Put calls 'Put' function of the underlying BytesConnectionEtcd.
