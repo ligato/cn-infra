@@ -2,10 +2,12 @@ package consul
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/consul/api"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ligato/cn-infra/logging/logrus"
 )
 
 type ConsulStore struct {
@@ -21,15 +23,25 @@ func NewConsulStore(addr string) (store *ConsulStore, err error) {
 		return nil, fmt.Errorf("failed to create Consul client %s", err)
 	}
 
+	peers, err := c.Status().Peers()
+	if err != nil {
+		return nil, err
+	}
+	logrus.DefaultLogger().Debugf("consul peers: %v", peers)
+
 	return &ConsulStore{
 		client: c,
 	}, nil
 
 }
 
+func transformKey(key string) string {
+	return strings.TrimPrefix(key, "/")
+}
+
 func (c *ConsulStore) Put(key string, data []byte, opts ...datasync.PutOption) error {
 	fmt.Printf("put: %q\n", key)
-	p := &api.KVPair{Key: key, Value: data}
+	p := &api.KVPair{Key: transformKey(key), Value: data}
 	_, err := c.client.KV().Put(p, nil)
 	if err != nil {
 		return err
@@ -44,7 +56,7 @@ func (c *ConsulStore) NewTxn() keyval.BytesTxn {
 
 func (c *ConsulStore) GetValue(key string) (data []byte, found bool, revision int64, err error) {
 	fmt.Printf("get value: %q\n", key)
-	pair, _, err := c.client.KV().Get(key, nil)
+	pair, _, err := c.client.KV().Get(transformKey(key), nil)
 	if err != nil {
 		return nil, false, 0, err
 	} else if pair == nil {
@@ -55,12 +67,41 @@ func (c *ConsulStore) GetValue(key string) (data []byte, found bool, revision in
 }
 
 func (c *ConsulStore) ListValues(key string) (keyval.BytesKeyValIterator, error) {
-	pairs, _, err := c.client.KV().List(key, nil)
+	pairs, _, err := c.client.KV().List(transformKey(key), nil)
 	if err != nil {
 		return nil, err
 	}
 
 	return &bytesKeyValIterator{len: len(pairs), pairs: pairs}, nil
+}
+
+func (c *ConsulStore) ListKeys(prefix string) (keyval.BytesKeyIterator, error) {
+	panic("implement me")
+}
+
+func (c *ConsulStore) Delete(key string, opts ...datasync.DelOption) (existed bool, err error) {
+	fmt.Printf("delete: %q\n", key)
+	if _, err := c.client.KV().Delete(transformKey(key), nil); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (c *ConsulStore) Watch(respChan func(keyval.BytesWatchResp), closeChan chan string, keys ...string) error {
+	panic("implement me")
+}
+
+func (c *ConsulStore) NewBroker(prefix string) keyval.BytesBroker {
+	panic("implement me")
+}
+
+func (c *ConsulStore) NewWatcher(prefix string) keyval.BytesWatcher {
+	panic("implement me")
+}
+
+func (c *ConsulStore) Close() error {
+	return nil
 }
 
 type bytesKeyValIterator struct {
@@ -123,28 +164,4 @@ func (kv *bytesKeyVal) GetKey() string {
 // GetRevision returns the revision associated with the pair.
 func (kv *bytesKeyVal) GetRevision() int64 {
 	return kv.revision
-}
-
-func (c *ConsulStore) ListKeys(prefix string) (keyval.BytesKeyIterator, error) {
-	panic("implement me")
-}
-
-func (c *ConsulStore) Delete(key string, opts ...datasync.DelOption) (existed bool, err error) {
-	panic("implement me")
-}
-
-func (c *ConsulStore) Watch(respChan func(keyval.BytesWatchResp), closeChan chan string, keys ...string) error {
-	panic("implement me")
-}
-
-func (c *ConsulStore) NewBroker(prefix string) keyval.BytesBroker {
-	panic("implement me")
-}
-
-func (c *ConsulStore) NewWatcher(prefix string) keyval.BytesWatcher {
-	panic("implement me")
-}
-
-func (c *ConsulStore) Close() error {
-	return nil
 }

@@ -2,8 +2,7 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"strings"
+	"log"
 
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/consul"
@@ -14,20 +13,25 @@ import (
 func main() {
 	db, err := consul.NewConsulStore("127.0.0.1:8500")
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	protoDb := kvproto.NewProtoWrapper(db)
 	defer protoDb.Close()
 
+	list(protoDb)
 	put(protoDb, []string{"TheName", "TheCompany", "123456"})
-	get(protoDb, []string{"TheName"})
+	get(protoDb, "TheName")
+	list(protoDb)
+	del(protoDb, "TheName")
+	list(protoDb)
 
-	resp, err := protoDb.ListValues(phonebook.EtcdPath())
+}
+
+func list(db keyval.ProtoBroker) {
+	resp, err := db.ListValues(phonebook.EtcdPath())
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	var revision int64
@@ -43,43 +47,37 @@ func main() {
 		}
 		err = kv.GetValue(c)
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 
 		fmt.Printf("\t%s\n\t\t%s\n\t\t%s\n", c.Name, c.Company, c.Phonenumber)
 
 	}
 	fmt.Println("Revision", revision)
-
 }
 
 func put(db keyval.ProtoBroker, data []string) {
 	c := &phonebook.Contact{Name: data[0], Company: data[1], Phonenumber: data[2]}
 
-	key := KeyContactPath(c)
+	key := phonebook.EtcdContactPath(c)
 
 	err := db.Put(key, c)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	fmt.Println("Saved:", key)
 }
 
-func get(db keyval.ProtoBroker, data []string) {
-	c := &phonebook.Contact{Name: data[0]}
+func get(db keyval.ProtoBroker, data string) {
+	c := &phonebook.Contact{Name: data}
 
-	key := KeyContactPath(c)
+	key := phonebook.EtcdContactPath(c)
 
 	found, _, err := db.GetValue(key, c)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	if !found {
+		log.Fatal(err)
+	} else if !found {
 		fmt.Println("Not found")
 		return
 	}
@@ -87,12 +85,18 @@ func get(db keyval.ProtoBroker, data []string) {
 	fmt.Println("Loaded:", key, c)
 }
 
-// EtcdPath returns the base path were the phonebook records are stored.
-func KeyPath() string {
-	return "phonebook/"
-}
+func del(db keyval.ProtoBroker, data string) {
+	c := &phonebook.Contact{Name: data}
 
-// EtcdContactPath returns the path for a given contact.
-func KeyContactPath(contact *phonebook.Contact) string {
-	return KeyPath() + strings.Replace(contact.Name, " ", "", -1)
+	key := phonebook.EtcdContactPath(c)
+
+	existed, err := db.Delete(key)
+	if err != nil {
+		log.Fatal(err)
+	} else if !existed {
+		fmt.Println("Not existed")
+		return
+	}
+
+	fmt.Println("Deleted:", key)
 }
