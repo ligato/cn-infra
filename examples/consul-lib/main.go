@@ -20,12 +20,32 @@ func main() {
 	defer protoDb.Close()
 
 	list(protoDb)
-	put(protoDb, []string{"TheName", "TheCompany", "123456"})
-	get(protoDb, "TheName")
+	put(protoDb, []string{"Me", "TheCompany", "123456"})
+	get(protoDb, "Me")
+	put(protoDb, []string{"You", "TheCompany", "666"})
 	list(protoDb)
-	del(protoDb, "TheName")
+	listKeys(protoDb)
+	del(protoDb, "Me")
 	list(protoDb)
 
+}
+
+func listKeys(db keyval.ProtoBroker) {
+	resp, err := db.ListKeys(phonebook.EtcdPath())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Phonebook keys:")
+	for {
+		key, _, stop := resp.GetNext()
+		if stop {
+			break
+		}
+
+		fmt.Printf("- %s\n", key)
+
+	}
 }
 
 func list(db keyval.ProtoBroker) {

@@ -76,7 +76,12 @@ func (c *ConsulStore) ListValues(key string) (keyval.BytesKeyValIterator, error)
 }
 
 func (c *ConsulStore) ListKeys(prefix string) (keyval.BytesKeyIterator, error) {
-	panic("implement me")
+	keys, _, err := c.client.KV().Keys(transformKey(prefix), "", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return &bytesKeyIterator{len: len(keys), keys: keys}, nil
 }
 
 func (c *ConsulStore) Delete(key string, opts ...datasync.DelOption) (existed bool, err error) {
@@ -104,6 +109,35 @@ func (c *ConsulStore) Close() error {
 	return nil
 }
 
+// bytesKeyIterator is an iterator returned by ListKeys call.
+type bytesKeyIterator struct {
+	index int
+	len   int
+	keys  []string
+}
+
+// GetNext returns the following key (+ revision) from the result set.
+// When there are no more keys to get, <stop> is returned as *true*
+// and <key> and <rev> are default values.
+func (ctx *bytesKeyIterator) GetNext() (key string, rev int64, stop bool) {
+	if ctx.index >= ctx.len {
+		return "", 0, true
+	}
+
+	key = string(ctx.keys[ctx.index])
+	rev = 0 //ctx.keys[ctx.index].mod
+	ctx.index++
+
+	return key, rev, false
+}
+
+// Close does nothing since db cursors are not needed.
+// The method is required by the code since it implements Iterator API.
+func (ctx *bytesKeyIterator) Close() error {
+	return nil
+}
+
+// bytesKeyValIterator is an iterator returned by ListValues call.
 type bytesKeyValIterator struct {
 	index int
 	len   int
@@ -133,6 +167,7 @@ func (ctx *bytesKeyValIterator) Close() error {
 	return nil
 }
 
+// bytesKeyVal represents a single key-value pair.
 type bytesKeyVal struct {
 	key       string
 	value     []byte

@@ -14,16 +14,9 @@
 
 package msg
 
-import (
-	"strings"
-
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/datasync/syncbase"
-)
-
 // DataMsgRequestToKVs TODO
-func DataMsgRequestToKVs(req *DataMsgRequest, keyPrefixes []string) map[string] /*keyPrefix*/ []datasync.KeyVal {
-	ret := map[string] /*keyPrefix*/ []datasync.KeyVal{}
+/*func DataMsgRequestToKVs(req *DataMsgRequest, keyPrefixes []string) map[string][]datasync.KeyVal {
+	ret := map[string][]datasync.KeyVal{}
 	for _, dataResync := range req.GetDataResyncs() {
 		for _, keyPrefix := range keyPrefixes {
 			if strings.HasPrefix(dataResync.Key, keyPrefix) {
@@ -40,4 +33,4 @@ func DataMsgRequestToKVs(req *DataMsgRequest, keyPrefixes []string) map[string] 
 	}
 
 	return ret
-}
+}*/

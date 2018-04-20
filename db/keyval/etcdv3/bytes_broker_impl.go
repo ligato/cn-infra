@@ -61,7 +61,6 @@ type bytesKeyIterator struct {
 	index int
 	len   int
 	resp  *clientv3.GetResponse
-	db    *BytesConnectionEtcd
 }
 
 // bytesKeyVal represents a single key-value pair.
