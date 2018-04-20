@@ -17,12 +17,13 @@ package etcdv3
 import (
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/clientv3/namespace"
-	"github.com/coreos/etcd/mvcc/mvccpb"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/logging"
+
+	"github.com/coreos/etcd/clientv3"
+	"github.com/coreos/etcd/clientv3/namespace"
+	"github.com/coreos/etcd/mvcc/mvccpb"
 	"golang.org/x/net/context"
 )
 
@@ -42,7 +43,6 @@ type BytesConnectionEtcd struct {
 // to all keys in its methods in order to shorten keys used in arguments.
 type BytesBrokerWatcherEtcd struct {
 	logging.Logger
-	closeCh   chan string
 	lessor    clientv3.Lease
 	kv        clientv3.KV
 	watcher   clientv3.Watcher
@@ -114,7 +114,7 @@ func (db *BytesConnectionEtcd) Close() error {
 // NewBroker creates a new instance of a proxy that provides
 // access to etcd. The proxy will reuse the connection from BytesConnectionEtcd.
 // <prefix> will be prepended to the key argument in all calls from the created
-// BytesBrokerWatcherEtcd. To avoid using a prefix, pass keyval.Root constant as
+// BytesBrokerWatcherEtcd. To avoid using a prefix, pass keyval. Root constant as
 // an argument.
 func (db *BytesConnectionEtcd) NewBroker(prefix string) keyval.BytesBroker {
 	return &BytesBrokerWatcherEtcd{
@@ -129,7 +129,7 @@ func (db *BytesConnectionEtcd) NewBroker(prefix string) keyval.BytesBroker {
 // NewWatcher creates a new instance of a proxy that provides
 // access to etcd. The proxy will reuse the connection from BytesConnectionEtcd.
 // <prefix> will be prepended to the key argument in all calls on created
-// BytesBrokerWatcherEtcd. To avoid using a prefix, pass keyval.Root constant as
+// BytesBrokerWatcherEtcd. To avoid using a prefix, pass keyval. Root constant as
 // an argument.
 func (db *BytesConnectionEtcd) NewWatcher(prefix string) keyval.BytesWatcher {
 	return &BytesBrokerWatcherEtcd{
@@ -165,13 +165,6 @@ func (pdb *BytesBrokerWatcherEtcd) GetValue(key string) (data []byte, found bool
 // The prefix is removed from the keys of the returned values.
 func (pdb *BytesBrokerWatcherEtcd) ListValues(key string) (keyval.BytesKeyValIterator, error) {
 	return listValuesInternal(pdb.Logger, pdb.kv, pdb.opTimeout, key)
-}
-
-// ListValuesRange calls 'ListValuesRange' function of the underlying
-// BytesConnectionEtcd. KeyPrefix defined in constructor is prepended
-// to the arguments. The prefix is removed from the keys of the returned values.
-func (pdb *BytesBrokerWatcherEtcd) ListValuesRange(fromPrefix string, toPrefix string) (keyval.BytesKeyValIterator, error) {
-	return listValuesRangeInternal(pdb.Logger, pdb.kv, pdb.opTimeout, fromPrefix, toPrefix)
 }
 
 // ListKeys calls 'ListKeys' function of the underlying BytesConnectionEtcd.

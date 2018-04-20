@@ -19,11 +19,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/etcd/etcdserver/api/v3client"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3/mocks"
 	"github.com/ligato/cn-infra/logging/logrus"
+
+	"github.com/coreos/etcd/etcdserver/api/v3client"
 	. "github.com/onsi/gomega"
 )
 
@@ -114,9 +115,20 @@ func testPrefixedWatcher(t *testing.T) {
 	err := prefixedWatcher.Watch(keyval.ToChan(watchCh), nil, watchKey)
 	Expect(err).To(BeNil())
 
-	wg := sync.WaitGroup{}
+	var wg sync.WaitGroup
 	wg.Add(1)
-	go expectWatchEvent(t, &wg, watchCh, watchKey+"val1")
+
+	go func(expectedKey string) {
+		select {
+		case resp := <-watchCh:
+			Expect(resp).NotTo(BeNil())
+			Expect(resp.GetKey()).To(BeEquivalentTo(expectedKey))
+		case <-time.After(1 * time.Second):
+			t.Error("Watch resp not received")
+			t.FailNow()
+		}
+		wg.Done()
+	}(watchKey + "val1")
 
 	// Insert kv that doesn't match the watcher subscription.
 	broker.Put(prefix+"/something/else/val1", []byte{0, 0, 7})
@@ -342,16 +354,4 @@ func testCompact(t *testing.T) {
 	Expect(retData).To(BeNil())
 	Expect(found).NotTo(BeTrue())
 	Expect(err).NotTo(BeNil())
-}
-
-func expectWatchEvent(t *testing.T, wg *sync.WaitGroup, watchCh chan keyval.BytesWatchResp, expectedKey string) {
-	select {
-	case resp := <-watchCh:
-		Expect(resp).NotTo(BeNil())
-		Expect(resp.GetKey()).To(BeEquivalentTo(expectedKey))
-	case <-time.After(1 * time.Second):
-		t.Error("Watch resp not received")
-		t.FailNow()
-	}
-	wg.Done()
 }
