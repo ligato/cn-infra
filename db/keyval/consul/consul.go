@@ -10,11 +10,13 @@ import (
 	"github.com/ligato/cn-infra/logging/logrus"
 )
 
-type ConsulStore struct {
+// Store serves as a client for Consul KV storage and implements keyval.CoreBrokerWatcher interface.
+type Store struct {
 	client *api.Client
 }
 
-func NewConsulStore(addr string) (store *ConsulStore, err error) {
+// NewConsulStore creates new client for Consul using given address.
+func NewConsulStore(addr string) (store *Store, err error) {
 	cfg := api.DefaultConfig()
 	cfg.Address = addr
 
@@ -29,7 +31,7 @@ func NewConsulStore(addr string) (store *ConsulStore, err error) {
 	}
 	logrus.DefaultLogger().Debugf("consul peers: %v", peers)
 
-	return &ConsulStore{
+	return &Store{
 		client: c,
 	}, nil
 
@@ -39,7 +41,8 @@ func transformKey(key string) string {
 	return strings.TrimPrefix(key, "/")
 }
 
-func (c *ConsulStore) Put(key string, data []byte, opts ...datasync.PutOption) error {
+// Put stores given data for the key.
+func (c *Store) Put(key string, data []byte, opts ...datasync.PutOption) error {
 	fmt.Printf("put: %q\n", key)
 	p := &api.KVPair{Key: transformKey(key), Value: data}
 	_, err := c.client.KV().Put(p, nil)
@@ -50,11 +53,13 @@ func (c *ConsulStore) Put(key string, data []byte, opts ...datasync.PutOption) e
 	return nil
 }
 
-func (c *ConsulStore) NewTxn() keyval.BytesTxn {
+// NewTxn creates new transaction.
+func (c *Store) NewTxn() keyval.BytesTxn {
 	panic("implement me")
 }
 
-func (c *ConsulStore) GetValue(key string) (data []byte, found bool, revision int64, err error) {
+// GetValue returns data for the given key.
+func (c *Store) GetValue(key string) (data []byte, found bool, revision int64, err error) {
 	fmt.Printf("get value: %q\n", key)
 	pair, _, err := c.client.KV().Get(transformKey(key), nil)
 	if err != nil {
@@ -66,7 +71,8 @@ func (c *ConsulStore) GetValue(key string) (data []byte, found bool, revision in
 	return pair.Value, true, int64(pair.ModifyIndex), nil
 }
 
-func (c *ConsulStore) ListValues(key string) (keyval.BytesKeyValIterator, error) {
+// ListValues returns interator with key-value pairs for given key prefix.
+func (c *Store) ListValues(key string) (keyval.BytesKeyValIterator, error) {
 	pairs, _, err := c.client.KV().List(transformKey(key), nil)
 	if err != nil {
 		return nil, err
@@ -75,7 +81,8 @@ func (c *ConsulStore) ListValues(key string) (keyval.BytesKeyValIterator, error)
 	return &bytesKeyValIterator{len: len(pairs), pairs: pairs}, nil
 }
 
-func (c *ConsulStore) ListKeys(prefix string) (keyval.BytesKeyIterator, error) {
+// ListKeys returns interator with keys for given key prefix.
+func (c *Store) ListKeys(prefix string) (keyval.BytesKeyIterator, error) {
 	keys, _, err := c.client.KV().Keys(transformKey(prefix), "", nil)
 	if err != nil {
 		return nil, err
@@ -84,7 +91,8 @@ func (c *ConsulStore) ListKeys(prefix string) (keyval.BytesKeyIterator, error) {
 	return &bytesKeyIterator{len: len(keys), keys: keys}, nil
 }
 
-func (c *ConsulStore) Delete(key string, opts ...datasync.DelOption) (existed bool, err error) {
+// Delete deletes given key.
+func (c *Store) Delete(key string, opts ...datasync.DelOption) (existed bool, err error) {
 	fmt.Printf("delete: %q\n", key)
 	if _, err := c.client.KV().Delete(transformKey(key), nil); err != nil {
 		return false, err
@@ -93,19 +101,23 @@ func (c *ConsulStore) Delete(key string, opts ...datasync.DelOption) (existed bo
 	return true, nil
 }
 
-func (c *ConsulStore) Watch(respChan func(keyval.BytesWatchResp), closeChan chan string, keys ...string) error {
+// Watch watches given list of key prefixes.
+func (c *Store) Watch(respChan func(keyval.BytesWatchResp), closeChan chan string, keys ...string) error {
 	panic("implement me")
 }
 
-func (c *ConsulStore) NewBroker(prefix string) keyval.BytesBroker {
+// NewBroker returns new broker.
+func (c *Store) NewBroker(prefix string) keyval.BytesBroker {
 	panic("implement me")
 }
 
-func (c *ConsulStore) NewWatcher(prefix string) keyval.BytesWatcher {
+// NewWatcher returns new watcher.
+func (c *Store) NewWatcher(prefix string) keyval.BytesWatcher {
 	panic("implement me")
 }
 
-func (c *ConsulStore) Close() error {
+// Close returns nil.
+func (c *Store) Close() error {
 	return nil
 }
 
@@ -144,6 +156,9 @@ type bytesKeyValIterator struct {
 	pairs api.KVPairs
 }
 
+// GetNext returns the following item from the result set.
+// When there are no more items to get, <stop> is returned as *true* and <val>
+// is simply *nil*.
 func (ctx *bytesKeyValIterator) GetNext() (val keyval.BytesKeyVal, stop bool) {
 	if ctx.index >= ctx.len {
 		return nil, true
@@ -163,6 +178,8 @@ func (ctx *bytesKeyValIterator) GetNext() (val keyval.BytesKeyVal, stop bool) {
 	return &bytesKeyVal{key, data, prevValue, rev}, false
 }
 
+// Close does nothing since db cursors are not needed.
+// The method is required by the code since it implements Iterator API.
 func (ctx *bytesKeyValIterator) Close() error {
 	return nil
 }
