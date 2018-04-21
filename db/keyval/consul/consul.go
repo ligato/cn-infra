@@ -2,13 +2,20 @@ package consul
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
-	"github.com/hashicorp/consul/api"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/logging/logrus"
+
+	"github.com/hashicorp/consul/api"
 )
+
+func transformKey(key string) string {
+	return strings.TrimPrefix(key, "/")
+}
 
 // Store serves as a client for Consul KV storage and implements keyval.CoreBrokerWatcher interface.
 type Store struct {
@@ -35,10 +42,6 @@ func NewConsulStore(addr string) (store *Store, err error) {
 		client: c,
 	}, nil
 
-}
-
-func transformKey(key string) string {
-	return strings.TrimPrefix(key, "/")
 }
 
 // Put stores given data for the key.
@@ -102,23 +105,185 @@ func (c *Store) Delete(key string, opts ...datasync.DelOption) (existed bool, er
 }
 
 // Watch watches given list of key prefixes.
-func (c *Store) Watch(respChan func(keyval.BytesWatchResp), closeChan chan string, keys ...string) error {
-	panic("implement me")
+func (c *Store) Watch(resp func(keyval.BytesWatchResp), closeChan chan string, keys ...string) error {
+	for _, k := range keys {
+		if err := c.watchKey(resp, closeChan, k); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-// NewBroker returns new broker.
-func (c *Store) NewBroker(prefix string) keyval.BytesBroker {
-	panic("implement me")
-}
+func (c *Store) watchKey(resp func(watchResp keyval.BytesWatchResp), closeCh chan string, prefix string) error {
+	logrus.DefaultLogger().Debug("WATCH:", prefix)
 
-// NewWatcher returns new watcher.
-func (c *Store) NewWatcher(prefix string) keyval.BytesWatcher {
-	panic("implement me")
+	// Retrieve KV pairs and latest index
+	oldPairs, qm, err := c.client.KV().List(prefix, nil)
+	if err != nil {
+		return nil
+	}
+
+	oldIndex := qm.LastIndex
+	oldPairsMap := make(map[string]*api.KVPair)
+
+	logrus.DefaultLogger().Debugf("..waiting: %v old pairs (old index: %v)\n", len(oldPairs), oldIndex)
+	for _, pair := range oldPairs {
+		logrus.DefaultLogger().Debugf(" - key: %q create: %v modify: %v\n", pair.Key, pair.CreateIndex, pair.ModifyIndex)
+		oldPairsMap[pair.Key] = pair
+	}
+
+	for {
+		select {
+		case <-closeCh:
+			return nil
+		default:
+		}
+
+		// Wait for an update to occur since the last index
+		var newPairs api.KVPairs
+		qOpt := &api.QueryOptions{
+			WaitIndex: oldIndex,
+			//WaitTime:  time.Second * 2,
+		}
+		newPairs, qm, err = c.client.KV().List(prefix, qOpt)
+		if err != nil {
+			return err
+		}
+		newIndex := qm.LastIndex
+
+		// If the index is same as old one, request probably timed out, so we start again
+		if oldIndex == newIndex {
+			continue
+		}
+
+		logrus.DefaultLogger().Debugf("..waited: %v new pairs (new index: %v) %+v\n", len(newPairs), newIndex, qm)
+		for _, pair := range newPairs {
+			logrus.DefaultLogger().Debugf(" + key: %q create: %v modify: %v\n", pair.Key, pair.CreateIndex, pair.ModifyIndex)
+		}
+
+		var evs []keyval.BytesWatchResp
+
+		// Search for all created and modified KV
+		for _, pair := range newPairs {
+			if pair.ModifyIndex > oldIndex {
+				var prevVal []byte
+				if oldPair, ok := oldPairsMap[pair.Key]; ok {
+					prevVal = oldPair.Value
+				}
+				r := etcdv3.NewBytesWatchPutResp(pair.Key, pair.Value, prevVal, int64(pair.ModifyIndex))
+				evs = append(evs, r)
+			}
+			delete(oldPairsMap, pair.Key)
+		}
+		// Search for all deleted KV
+		for _, pair := range oldPairsMap {
+			r := etcdv3.NewBytesWatchDelResp(pair.Key, pair.Value, int64(pair.ModifyIndex))
+			evs = append(evs, r)
+		}
+
+		// Prepare latest KV pairs and last index for next round
+		oldIndex = newIndex
+		oldPairsMap = make(map[string]*api.KVPair)
+		for _, pair := range newPairs {
+			oldPairsMap[pair.Key] = pair
+		}
+		for _, ev := range evs {
+			resp(ev)
+		}
+	}
 }
 
 // Close returns nil.
 func (c *Store) Close() error {
 	return nil
+}
+
+// NewBroker creates a new instance of a proxy that provides
+// access to etcd. The proxy will reuse the connection from Store.
+// <prefix> will be prepended to the key argument in all calls from the created
+// BrokerWatcher. To avoid using a prefix, pass keyval. Root constant as
+// an argument.
+func (c *Store) NewBroker(prefix string) keyval.BytesBroker {
+	return &BrokerWatcher{
+		Store:  c,
+		prefix: prefix,
+	}
+}
+
+// NewWatcher creates a new instance of a proxy that provides
+// access to etcd. The proxy will reuse the connection from Store.
+// <prefix> will be prepended to the key argument in all calls on created
+// BrokerWatcher. To avoid using a prefix, pass keyval. Root constant as
+// an argument.
+func (c *Store) NewWatcher(prefix string) keyval.BytesWatcher {
+	return &BrokerWatcher{
+		Store:  c,
+		prefix: prefix,
+	}
+}
+
+// BrokerWatcher uses Store to access the datastore.
+// The connection can be shared among multiple BrokerWatcher.
+// In case of accessing a particular subtree in Consul only,
+// BrokerWatcher allows defining a keyPrefix that is prepended
+// to all keys in its methods in order to shorten keys used in arguments.
+type BrokerWatcher struct {
+	*Store
+	prefix string
+}
+
+func (pdb *BrokerWatcher) prefixKey(key string) string {
+	return filepath.Join(pdb.prefix, key)
+}
+
+// Put calls 'Put' function of the underlying BytesConnectionEtcd.
+// KeyPrefix defined in constructor is prepended to the key argument.
+func (pdb *BrokerWatcher) Put(key string, data []byte, opts ...datasync.PutOption) error {
+	return pdb.Store.Put(pdb.prefixKey(key), data, opts...)
+}
+
+// NewTxn creates a new transaction.
+// KeyPrefix defined in constructor will be prepended to all key arguments
+// in the transaction.
+func (pdb *BrokerWatcher) NewTxn() keyval.BytesTxn {
+	return pdb.Store.NewTxn()
+}
+
+// GetValue calls 'GetValue' function of the underlying BytesConnectionEtcd.
+// KeyPrefix defined in constructor is prepended to the key argument.
+func (pdb *BrokerWatcher) GetValue(key string) (data []byte, found bool, revision int64, err error) {
+	return pdb.Store.GetValue(pdb.prefixKey(key))
+}
+
+// ListValues calls 'ListValues' function of the underlying BytesConnectionEtcd.
+// KeyPrefix defined in constructor is prepended to the key argument.
+// The prefix is removed from the keys of the returned values.
+func (pdb *BrokerWatcher) ListValues(key string) (keyval.BytesKeyValIterator, error) {
+	return pdb.Store.ListValues(pdb.prefixKey(key))
+}
+
+// ListKeys calls 'ListKeys' function of the underlying BytesConnectionEtcd.
+// KeyPrefix defined in constructor is prepended to the argument.
+func (pdb *BrokerWatcher) ListKeys(prefix string) (keyval.BytesKeyIterator, error) {
+	return pdb.Store.ListKeys(pdb.prefixKey(prefix))
+}
+
+// Delete calls 'Delete' function of the underlying BytesConnectionEtcd.
+// KeyPrefix defined in constructor is prepended to the key argument.
+func (pdb *BrokerWatcher) Delete(key string, opts ...datasync.DelOption) (existed bool, err error) {
+	return pdb.Store.Delete(pdb.prefixKey(key), opts...)
+}
+
+// Watch starts subscription for changes associated with the selected <keys>.
+// KeyPrefix defined in constructor is prepended to all <keys> in the argument
+// list. The prefix is removed from the keys returned in watch events.
+// Watch events will be delivered to <resp> callback.
+func (pdb *BrokerWatcher) Watch(resp func(keyval.BytesWatchResp), closeChan chan string, keys ...string) error {
+	var prefixedKeys []string
+	for _, key := range keys {
+		prefixedKeys = append(prefixedKeys, pdb.prefixKey(key))
+	}
+	return pdb.Store.Watch(resp, closeChan, prefixedKeys...)
 }
 
 // bytesKeyIterator is an iterator returned by ListKeys call.
