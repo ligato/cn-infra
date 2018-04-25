@@ -225,25 +225,28 @@ func (db *BytesConnectionEtcd) Watch(resp func(keyval.BytesWatchResp), closeChan
 }
 
 // watchInternal starts the watch subscription for the key.
-func watchInternal(log logging.Logger, watcher clientv3.Watcher, closeCh chan string, key string, resp func(keyval.BytesWatchResp)) error {
-	recvChan := watcher.Watch(context.Background(), key, clientv3.WithPrefix(), clientv3.WithPrevKV())
+func watchInternal(log logging.Logger, watcher clientv3.Watcher, closeCh chan string, prefix string, resp func(keyval.BytesWatchResp)) error {
+	recvChan := watcher.Watch(context.Background(), prefix, clientv3.WithPrefix(), clientv3.WithPrevKV())
 
-	go func() {
-		registeredKey := key
+	go func(registeredKey string) {
 		for {
 			select {
-			case wresp := <-recvChan:
+			case wresp, ok := <-recvChan:
+				if !ok {
+					log.WithField("prefix", prefix).Debug("Watch recv chan was closed")
+					return
+				}
 				for _, ev := range wresp.Events {
 					handleWatchEvent(log, resp, ev)
 				}
 			case closeVal, ok := <-closeCh:
-				if !ok || registeredKey == closeVal {
-					log.WithField("key", key).Debug("Watch ended")
+				if !ok || closeVal == registeredKey {
+					log.WithField("prefix", prefix).Debug("Watch ended")
 					return
 				}
 			}
 		}
-	}()
+	}(prefix)
 	return nil
 }
 

@@ -42,7 +42,6 @@ var (
 )
 
 func TestDataBroker(t *testing.T) {
-	//setup
 	embd.Start(t)
 	defer embd.Stop()
 	RegisterTestingT(t)
@@ -111,8 +110,9 @@ func testPrefixedWatcher(t *testing.T) {
 	setupBrokers(t)
 	defer teardownBrokers()
 
+	closeCh := make(chan string)
 	watchCh := make(chan keyval.BytesWatchResp)
-	err := prefixedWatcher.Watch(keyval.ToChan(watchCh), nil, watchKey)
+	err := prefixedWatcher.Watch(keyval.ToChan(watchCh), closeCh, watchKey)
 	Expect(err).To(BeNil())
 
 	var wg sync.WaitGroup
@@ -123,10 +123,11 @@ func testPrefixedWatcher(t *testing.T) {
 		case resp := <-watchCh:
 			Expect(resp).NotTo(BeNil())
 			Expect(resp.GetKey()).To(BeEquivalentTo(expectedKey))
-		case <-time.After(1 * time.Second):
+		case <-time.After(time.Second):
 			t.Error("Watch resp not received")
 			t.FailNow()
 		}
+		close(closeCh)
 		wg.Done()
 	}(watchKey + "val1")
 

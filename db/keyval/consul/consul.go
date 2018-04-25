@@ -1,6 +1,21 @@
+//  Copyright (c) 2018 Cisco and/or its affiliates.
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at:
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
 package consul
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -107,90 +122,154 @@ func (c *Store) Delete(key string, opts ...datasync.DelOption) (existed bool, er
 // Watch watches given list of key prefixes.
 func (c *Store) Watch(resp func(keyval.BytesWatchResp), closeChan chan string, keys ...string) error {
 	for _, k := range keys {
-		if err := c.watchKey(resp, closeChan, k); err != nil {
+		if err := c.watch(resp, closeChan, k); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (c *Store) watchKey(resp func(watchResp keyval.BytesWatchResp), closeCh chan string, prefix string) error {
+func (c *Store) watch(resp func(watchResp keyval.BytesWatchResp), closeCh chan string, prefix string) error {
 	logrus.DefaultLogger().Debug("WATCH:", prefix)
 
+	ctx, cancel := context.WithCancel(context.Background())
+
+	recvChan := c.watchPrefix(ctx, prefix)
+
+	go func(regPrefix string) {
+		for {
+			select {
+			case wr, ok := <-recvChan:
+				if !ok {
+					logrus.DefaultLogger().WithField("prefix", prefix).Debug("Watch recv chan was closed")
+					return
+				}
+				for _, ev := range wr.Events {
+					var r keyval.BytesWatchResp
+					if ev.Type == datasync.Put {
+						r = etcdv3.NewBytesWatchPutResp(ev.Key, ev.Value, ev.PrevValue, ev.Revision)
+					} else {
+						r = etcdv3.NewBytesWatchDelResp(ev.Key, ev.Value, ev.Revision)
+					}
+					resp(r)
+				}
+			case closeVal, ok := <-closeCh:
+				if !ok || closeVal == regPrefix {
+					logrus.DefaultLogger().WithField("prefix", prefix).Debug("Watch ended")
+					cancel()
+					return
+				}
+			}
+		}
+	}(prefix)
+
+	return nil
+}
+
+type watchEvent struct {
+	Type      datasync.PutDel
+	Key       string
+	Value     []byte
+	PrevValue []byte
+	Revision  int64
+}
+
+type watchResponse struct {
+	Events []*watchEvent
+	Err    error
+}
+
+func (c *Store) watchPrefix(ctx context.Context, prefix string) <-chan watchResponse {
+	logrus.DefaultLogger().Debug("watchPrefix:", prefix)
+
+	ch := make(chan watchResponse, 1)
+
 	// Retrieve KV pairs and latest index
-	oldPairs, qm, err := c.client.KV().List(prefix, nil)
+	qOpt := &api.QueryOptions{}
+	oldPairs, qm, err := c.client.KV().List(prefix, qOpt.WithContext(ctx))
 	if err != nil {
-		return nil
+		ch <- watchResponse{Err: err}
+		close(ch)
+		return ch
 	}
 
 	oldIndex := qm.LastIndex
 	oldPairsMap := make(map[string]*api.KVPair)
 
-	logrus.DefaultLogger().Debugf("..waiting: %v old pairs (old index: %v)\n", len(oldPairs), oldIndex)
+	logrus.DefaultLogger().Debugf("..retrieved: %v old pairs (old index: %v)\n", len(oldPairs), oldIndex)
 	for _, pair := range oldPairs {
 		logrus.DefaultLogger().Debugf(" - key: %q create: %v modify: %v\n", pair.Key, pair.CreateIndex, pair.ModifyIndex)
 		oldPairsMap[pair.Key] = pair
 	}
 
-	for {
-		select {
-		case <-closeCh:
-			return nil
-		default:
-		}
+	go func() {
+		for {
+			logrus.DefaultLogger().Debug("calling list with wait")
 
-		// Wait for an update to occur since the last index
-		var newPairs api.KVPairs
-		qOpt := &api.QueryOptions{
-			WaitIndex: oldIndex,
-			//WaitTime:  time.Second * 2,
-		}
-		newPairs, qm, err = c.client.KV().List(prefix, qOpt)
-		if err != nil {
-			return err
-		}
-		newIndex := qm.LastIndex
-
-		// If the index is same as old one, request probably timed out, so we start again
-		if oldIndex == newIndex {
-			continue
-		}
-
-		logrus.DefaultLogger().Debugf("..waited: %v new pairs (new index: %v) %+v\n", len(newPairs), newIndex, qm)
-		for _, pair := range newPairs {
-			logrus.DefaultLogger().Debugf(" + key: %q create: %v modify: %v\n", pair.Key, pair.CreateIndex, pair.ModifyIndex)
-		}
-
-		var evs []keyval.BytesWatchResp
-
-		// Search for all created and modified KV
-		for _, pair := range newPairs {
-			if pair.ModifyIndex > oldIndex {
-				var prevVal []byte
-				if oldPair, ok := oldPairsMap[pair.Key]; ok {
-					prevVal = oldPair.Value
-				}
-				r := etcdv3.NewBytesWatchPutResp(pair.Key, pair.Value, prevVal, int64(pair.ModifyIndex))
-				evs = append(evs, r)
+			// Wait for an update to occur since the last index
+			var newPairs api.KVPairs
+			qOpt := &api.QueryOptions{
+				WaitIndex: oldIndex,
 			}
-			delete(oldPairsMap, pair.Key)
-		}
-		// Search for all deleted KV
-		for _, pair := range oldPairsMap {
-			r := etcdv3.NewBytesWatchDelResp(pair.Key, pair.Value, int64(pair.ModifyIndex))
-			evs = append(evs, r)
-		}
+			newPairs, qm, err = c.client.KV().List(prefix, qOpt.WithContext(ctx))
+			if err != nil {
+				ch <- watchResponse{Err: err}
+				close(ch)
+				return
+			}
+			newIndex := qm.LastIndex
 
-		// Prepare latest KV pairs and last index for next round
-		oldIndex = newIndex
-		oldPairsMap = make(map[string]*api.KVPair)
-		for _, pair := range newPairs {
-			oldPairsMap[pair.Key] = pair
+			// If the index is same as old one, request probably timed out, so we start again
+			if oldIndex == newIndex {
+				logrus.DefaultLogger().Debug("index unchanged, next round")
+				continue
+			}
+
+			logrus.DefaultLogger().Debugf("..waited: %v new pairs (new index: %v) %+v\n", len(newPairs), newIndex, qm)
+			for _, pair := range newPairs {
+				logrus.DefaultLogger().Debugf(" + key: %q create: %v modify: %v\n", pair.Key, pair.CreateIndex, pair.ModifyIndex)
+			}
+
+			var evs []*watchEvent
+
+			// Search for all created and modified KV
+			for _, pair := range newPairs {
+				if pair.ModifyIndex > oldIndex {
+					var prevVal []byte
+					if oldPair, ok := oldPairsMap[pair.Key]; ok {
+						prevVal = oldPair.Value
+					}
+					evs = append(evs, &watchEvent{
+						Type:      datasync.Put,
+						Key:       pair.Key,
+						Value:     pair.Value,
+						PrevValue: prevVal,
+						Revision:  int64(pair.ModifyIndex),
+					})
+				}
+				delete(oldPairsMap, pair.Key)
+			}
+			// Search for all deleted KV
+			for _, pair := range oldPairsMap {
+				evs = append(evs, &watchEvent{
+					Type:      datasync.Delete,
+					Key:       pair.Key,
+					PrevValue: pair.Value,
+					Revision:  int64(pair.ModifyIndex),
+				})
+			}
+
+			// Prepare latest KV pairs and last index for next round
+			oldIndex = newIndex
+			oldPairsMap = make(map[string]*api.KVPair)
+			for _, pair := range newPairs {
+				oldPairsMap[pair.Key] = pair
+			}
+
+			ch <- watchResponse{Events: evs}
 		}
-		for _, ev := range evs {
-			resp(ev)
-		}
-	}
+	}()
+	return ch
 }
 
 // Close returns nil.
