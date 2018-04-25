@@ -73,7 +73,9 @@ func (c *Store) Put(key string, data []byte, opts ...datasync.PutOption) error {
 
 // NewTxn creates new transaction.
 func (c *Store) NewTxn() keyval.BytesTxn {
-	panic("implement me")
+	return &txn{
+		kv: c.client.KV(),
+	}
 }
 
 // GetValue returns data for the given key.
