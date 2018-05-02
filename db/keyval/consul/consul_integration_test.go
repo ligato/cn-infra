@@ -30,7 +30,7 @@ func init() {
 }
 
 type testCtx struct {
-	store *Store
+	client *Client
 }
 
 func setupTest(t *testing.T) *testCtx {
@@ -45,14 +45,14 @@ func setupTest(t *testing.T) *testCtx {
 }
 
 func (ctx *testCtx) teardownTest() {
-	ctx.store.Close()
+	ctx.client.Close()
 }
 
 func TestPut(t *testing.T) {
 	ctx := setupTest(t)
 	defer ctx.teardownTest()
 
-	err := ctx.store.Put("key", []byte("val"))
+	err := ctx.client.Put("key", []byte("val"))
 	Expect(err).ToNot(HaveOccurred())
 }
 
@@ -60,7 +60,7 @@ func TestGetValue(t *testing.T) {
 	ctx := setupTest(t)
 	defer ctx.teardownTest()
 
-	data, found, rev, err := ctx.store.GetValue("key")
+	data, found, rev, err := ctx.client.GetValue("key")
 	Expect(err).ToNot(HaveOccurred())
 	Expect(data).To(Equal([]byte("val")))
 	Expect(found).To(BeTrue())
@@ -71,7 +71,7 @@ func TestDelete(t *testing.T) {
 	ctx := setupTest(t)
 	defer ctx.teardownTest()
 
-	existed, err := ctx.store.Delete("key")
+	existed, err := ctx.client.Delete("key")
 	Expect(err).ToNot(HaveOccurred())
 	Expect(existed).To(BeTrue())
 }
@@ -84,7 +84,7 @@ func TestWatch(t *testing.T) {
 
 	closeCh := make(chan string)
 	watchCh := make(chan keyval.BytesWatchResp)
-	err := ctx.store.Watch(keyval.ToChan(watchCh), closeCh, watchKey)
+	err := ctx.client.Watch(keyval.ToChan(watchCh), closeCh, watchKey)
 	Expect(err).To(BeNil())
 
 	var wg sync.WaitGroup
@@ -103,8 +103,8 @@ func TestWatch(t *testing.T) {
 		wg.Done()
 	}(watchKey + "val1")
 
-	ctx.store.Put("/something/else/val1", []byte{0, 0, 7})
-	ctx.store.Put(watchKey+"val1", []byte{1, 2, 3})
+	ctx.client.Put("/something/else/val1", []byte{0, 0, 7})
+	ctx.client.Put(watchKey+"val1", []byte{1, 2, 3})
 
 	wg.Wait()
 
