@@ -22,7 +22,6 @@ import (
 
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/db/keyval/etcdv3"
 	"github.com/ligato/cn-infra/logging/logrus"
 
 	"github.com/hashicorp/consul/api"
@@ -129,6 +128,38 @@ func (c *Client) Watch(resp func(keyval.BytesWatchResp), closeChan chan string, 
 	return nil
 }
 
+type watchResp struct {
+	typ              datasync.PutDel
+	key              string
+	value, prevValue []byte
+	rev              int64
+}
+
+// GetChangeType returns "Put" for BytesWatchPutResp.
+func (resp *watchResp) GetChangeType() datasync.PutDel {
+	return resp.typ
+}
+
+// GetKey returns the key that the value has been inserted under.
+func (resp *watchResp) GetKey() string {
+	return resp.key
+}
+
+// GetValue returns the value that has been inserted.
+func (resp *watchResp) GetValue() []byte {
+	return resp.value
+}
+
+// GetPrevValue returns the previous value that has been inserted.
+func (resp *watchResp) GetPrevValue() []byte {
+	return resp.prevValue
+}
+
+// GetRevision returns the revision associated with the 'put' operation.
+func (resp *watchResp) GetRevision() int64 {
+	return resp.rev
+}
+
 func (c *Client) watch(resp func(watchResp keyval.BytesWatchResp), closeCh chan string, prefix string) error {
 	fmt.Println("WATCH:", prefix)
 
@@ -151,9 +182,20 @@ func (c *Client) watch(resp func(watchResp keyval.BytesWatchResp), closeCh chan 
 					}
 					var r keyval.BytesWatchResp
 					if ev.Type == datasync.Put {
-						r = etcdv3.NewBytesWatchPutResp(key, ev.Value, ev.PrevValue, ev.Revision)
+						r = &watchResp{
+							typ:       datasync.Put,
+							key:       key,
+							value:     ev.Value,
+							prevValue: ev.PrevValue,
+							rev:       ev.Revision,
+						}
 					} else {
-						r = etcdv3.NewBytesWatchDelResp(key, ev.Value, ev.Revision)
+						r = &watchResp{
+							typ:   datasync.Delete,
+							key:   key,
+							value: ev.Value,
+							rev:   ev.Revision,
+						}
 					}
 					resp(r)
 				}
@@ -319,6 +361,10 @@ func (pdb *BrokerWatcher) prefixKey(key string) string {
 	return filepath.Join(pdb.prefix, key)
 }
 
+func (pdb *BrokerWatcher) trimPrefix(key string) string {
+	return strings.TrimPrefix(key, pdb.prefix)
+}
+
 // Put calls 'Put' function of the underlying BytesConnectionEtcd.
 // KeyPrefix defined in constructor is prepended to the key argument.
 func (pdb *BrokerWatcher) Put(key string, data []byte, opts ...datasync.PutOption) error {
@@ -366,7 +412,11 @@ func (pdb *BrokerWatcher) Watch(resp func(keyval.BytesWatchResp), closeChan chan
 	for _, key := range keys {
 		prefixedKeys = append(prefixedKeys, pdb.prefixKey(key))
 	}
-	return pdb.Client.Watch(resp, closeChan, prefixedKeys...)
+	return pdb.Client.Watch(func(origResp keyval.BytesWatchResp) {
+		r := origResp.(*watchResp)
+		r.key = pdb.trimPrefix(r.key)
+		resp(r)
+	}, closeChan, prefixedKeys...)
 }
 
 // bytesKeyIterator is an iterator returned by ListKeys call.

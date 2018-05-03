@@ -179,6 +179,20 @@ func (pdb *BytesBrokerWatcherEtcd) Delete(key string, opts ...datasync.DelOption
 	return deleteInternal(pdb.Logger, pdb.kv, pdb.opTimeout, key, opts...)
 }
 
+// Watch starts subscription for changes associated with the selected <keys>.
+// KeyPrefix defined in constructor is prepended to all <keys> in the argument
+// list. The prefix is removed from the keys returned in watch events.
+// Watch events will be delivered to <resp> callback.
+func (pdb *BytesBrokerWatcherEtcd) Watch(resp func(keyval.BytesWatchResp), closeChan chan string, keys ...string) error {
+	for _, k := range keys {
+		err := watchInternal(pdb.Logger, pdb.watcher, closeChan, k, resp)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func handleWatchEvent(log logging.Logger, resp func(keyval.BytesWatchResp), ev *clientv3.Event) {
 	var prevKvValue []byte
 	if ev.PrevKv != nil {
