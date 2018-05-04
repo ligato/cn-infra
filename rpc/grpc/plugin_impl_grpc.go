@@ -152,7 +152,6 @@ func (plugin *Plugin) getGrpcConfig() (Config, error) {
 	if !found {
 		plugin.Log.Info("GRPC config not found, skip loading this plugin")
 		plugin.disabled = true
-		return grpcCfg, nil
 	}
 	return grpcCfg, nil
 }
