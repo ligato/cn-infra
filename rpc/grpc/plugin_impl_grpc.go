@@ -110,7 +110,9 @@ func (plugin *Plugin) AfterInit() (err error) {
 func (plugin *Plugin) Close() error {
 	wasError := safeclose.Close(plugin.netListener)
 
-	plugin.grpcServer.Stop()
+	if plugin.grpcServer != nil {
+		plugin.grpcServer.Stop()
+	}
 
 	return wasError
 }
