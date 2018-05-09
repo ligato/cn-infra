@@ -15,8 +15,8 @@
 package grpc
 
 import (
+	"fmt"
 	"io"
-
 	"net/http"
 
 	"strconv"
@@ -35,13 +35,17 @@ import (
 type Plugin struct {
 	Deps
 	// Stored GRPC config (used in example)
-	*Config
+	grpcCfg *Config
 	// GRPC server instance
 	grpcServer *grpc.Server
+	// GRPC client instance
+	grpcClient Client
 	// Used mainly for testing purposes
 	listenAndServe ListenAndServe
 	// GRPC network listener
 	netListener io.Closer
+	// Connected notification endpoints
+	notifConnections []*grpc.ClientConn
 	// Plugin availability flag
 	disabled bool
 }
@@ -58,11 +62,8 @@ type Deps struct {
 func (plugin *Plugin) Init() error {
 	var err error
 	// Get GRPC configuration file
-	var grpcCfg Config
-	if plugin.Config != nil {
-		grpcCfg = *plugin.Config
-	} else {
-		grpcCfg, err = plugin.getGrpcConfig()
+	if plugin.grpcCfg == nil {
+		plugin.grpcCfg, err = plugin.getGrpcConfig()
 		if err != nil || plugin.disabled {
 			return err
 		}
@@ -70,12 +71,12 @@ func (plugin *Plugin) Init() error {
 
 	// Prepare GRPC server
 	if plugin.grpcServer == nil {
-		opts := []grpc.ServerOption{}
-		if grpcCfg.MaxConcurrentStreams > 0 {
-			opts = append(opts, grpc.MaxConcurrentStreams(grpcCfg.MaxConcurrentStreams))
+		var opts []grpc.ServerOption
+		if plugin.grpcCfg.MaxConcurrentStreams > 0 {
+			opts = append(opts, grpc.MaxConcurrentStreams(plugin.grpcCfg.MaxConcurrentStreams))
 		}
-		if grpcCfg.MaxMsgSize > 0 {
-			opts = append(opts, grpc.MaxMsgSize(grpcCfg.MaxMsgSize))
+		if plugin.grpcCfg.MaxMsgSize > 0 {
+			opts = append(opts, grpc.MaxMsgSize(plugin.grpcCfg.MaxMsgSize))
 		}
 
 		plugin.grpcServer = grpc.NewServer(opts...)
@@ -84,10 +85,10 @@ func (plugin *Plugin) Init() error {
 
 	// Start GRPC listener
 	if plugin.listenAndServe != nil {
-		plugin.netListener, err = plugin.listenAndServe(grpcCfg, plugin.grpcServer)
+		plugin.netListener, err = plugin.listenAndServe(*plugin.grpcCfg, plugin.grpcServer)
 	} else {
-		plugin.Log.Info("Listening GRPC on tcp://", grpcCfg.Endpoint)
-		plugin.netListener, err = ListenAndServeGRPC(grpcCfg, plugin.grpcServer)
+		plugin.Log.Info("Listening GRPC on tcp://", plugin.grpcCfg.Endpoint)
+		plugin.netListener, err = ListenAndServeGRPC(plugin.grpcCfg, plugin.grpcServer)
 	}
 
 	return err
@@ -110,6 +111,11 @@ func (plugin *Plugin) AfterInit() (err error) {
 func (plugin *Plugin) Close() error {
 	wasError := safeclose.Close(plugin.netListener)
 
+	for _, connection := range plugin.notifConnections {
+		err := connection.Close()
+		plugin.Log.Errorf("Closing GRPC connection failed: %v", err)
+	}
+
 	if plugin.grpcServer != nil {
 		plugin.grpcServer.Stop()
 	}
@@ -117,24 +123,41 @@ func (plugin *Plugin) Close() error {
 	return wasError
 }
 
-// Server is a getter for accessing grpc.Server (of a GRPC plugin)
-//
-// Example usage:
-//
-//   protocgenerated.RegisterServiceXY(plugin.Deps.GRPC.Server(), &ServiceXYImplP{})
-//
-//   type Deps struct {
-//       GRPC grps.Server // inject plugin implementing RegisterHandler
-//       // other dependencies ...
-//   }
-func (plugin *Plugin) Server() *grpc.Server {
+// GetServer is a getter for accessing grpc.Server
+func (plugin *Plugin) GetServer() *grpc.Server {
 	return plugin.grpcServer
+}
+
+// GetClientFromServer directly returns client type instance
+func (plugin *Plugin) GetClientFromServer() Client {
+	return plugin
 }
 
 // Disabled returns *true* if the plugin is not in use due to missing
 // grpc configuration.
-func (plugin *Plugin) Disabled() (disabled bool) {
+func (plugin *Plugin) IsDisabled() (disabled bool) {
 	return plugin.disabled
+}
+
+// Connect returns new GRPC connection to the provided address
+func (plugin *Plugin) Connect(address string) (*grpc.ClientConn, error) {
+	// Set up connection to the server
+	connection, err := grpc.Dial(address, grpc.WithInsecure())
+	if err != nil {
+		return nil, fmt.Errorf("GRPC connection was not successful. Error: %v", err)
+	}
+
+	plugin.notifConnections = append(plugin.notifConnections, connection)
+	return connection, nil
+}
+
+// GetNotificationEndpoints returns an array of endpoints where the notifications
+// should be sent
+func (plugin *Plugin) GetNotificationEndpoints() []string {
+	if plugin.grpcCfg == nil {
+		return nil
+	}
+	return plugin.grpcCfg.NotificationEndpoints
 }
 
 // String returns plugin name (if not set defaults to "HTTP")
@@ -145,15 +168,15 @@ func (plugin *Plugin) String() string {
 	return "GRPC"
 }
 
-func (plugin *Plugin) getGrpcConfig() (Config, error) {
+func (plugin *Plugin) getGrpcConfig() (*Config, error) {
 	var grpcCfg Config
 	found, err := plugin.PluginConfig.GetValue(&grpcCfg)
 	if err != nil {
-		return grpcCfg, err
+		return &grpcCfg, err
 	}
 	if !found {
 		plugin.Log.Info("GRPC config not found, skip loading this plugin")
 		plugin.disabled = true
 	}
-	return grpcCfg, nil
+	return &grpcCfg, nil
 }

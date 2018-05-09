@@ -17,7 +17,7 @@ package grpc
 import "google.golang.org/grpc"
 
 // Server defines the API for getting grpc.Server instance that
-// is useful for registering new GRPC service
+// is useful for registering new GRPC services
 type Server interface {
 	// Server is a getter for accessing grpc.Server (of a GRPC plugin)
 	//
@@ -29,8 +29,25 @@ type Server interface {
 	//       GRPC grps.Server // inject plugin implementing RegisterHandler
 	//       // other dependencies ...
 	//   }
-	Server() *grpc.Server
+	GetServer() *grpc.Server
 
-	// GetPort returns configured port number (for debugging purposes)
-	GetPort() int
+	// GetClientFromServer allows to get client instance from the server
+	GetClientFromServer() Client
+
+	// Disabled informs other plugins about availability
+	IsDisabled() bool
+}
+
+// Client defines API for connectiong to external servers and receiving information
+// about their IP and port
+type Client interface {
+	// Connect dials provided address and creates new client connection
+	Connect(address string) (*grpc.ClientConn, error)
+
+	// GetNotificationEndpoints returns a list of addresses defined in grpc.conf. Those
+	// addresses are expected as GRPC listeners for statistics
+	GetNotificationEndpoints() []string
+
+	// Disabled informs other plugins about availability
+	IsDisabled() bool
 }
