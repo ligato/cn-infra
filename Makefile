@@ -65,6 +65,8 @@ clean-examples-plugin:
 test:
 	@echo "# running unit tests"
 	go test ./core
+	go test ./datasync/syncbase
+	go test ./db/keyval/consul
 	go test ./db/keyval/etcdv3
 	go test ./db/keyval/redis
 	go test ./db/sql/cassandra
@@ -74,7 +76,6 @@ test:
 	go test ./messaging/kafka/mux
 	go test ./utils/addrs
 	go test ./tests/gotests/itest
-	go test ./datasync/syncbase
 
 # Run script for testing examples
 test-examples:
@@ -91,16 +92,17 @@ get-covtools:
 test-cover: get-covtools
 	@echo "# running coverage report"
 	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit1.out ./core
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit2.out ./db/keyval/etcdv3
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit3.out ./db/keyval/redis
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit4.out ./db/sql/cassandra
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit5.out ./idxmap/mem
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit6.out ./logging/logrus
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit7.out ./messaging/kafka/client
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit8.out ./messaging/kafka/mux
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit9.out ./utils/addrs
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit10.out ./tests/gotests/itest
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit11.out ./datasync/syncbase
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit2.out ./datasync/syncbase
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit3.out ./db/keyval/consul
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit4.out ./db/keyval/etcdv3
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit5.out ./db/keyval/redis
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit6.out ./db/sql/cassandra
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit7.out ./idxmap/mem
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit8.out ./logging/logrus
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit9.out ./messaging/kafka/client
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit10.out ./messaging/kafka/mux
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit11.out ./utils/addrs
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit12.out ./tests/gotests/itest
 	@echo "# merging coverage results"
 	gocovmerge \
 			${COVER_DIR}coverage_unit1.out \
@@ -114,6 +116,7 @@ test-cover: get-covtools
 			${COVER_DIR}coverage_unit9.out \
 			${COVER_DIR}coverage_unit10.out \
 			${COVER_DIR}coverage_unit11.out \
+			${COVER_DIR}coverage_unit12.out \
 		> ${COVER_DIR}coverage.out
 	@echo "# coverage data generated into ${COVER_DIR}coverage.out"
 

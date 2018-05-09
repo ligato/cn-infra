@@ -157,8 +157,12 @@ func testPrefixedTxn(t *testing.T) {
 	Expect(kvi).NotTo(BeNil())
 
 	expectedKeys := []string{prefix + "b/val1", prefix + "b/val2", prefix + "b/val3"}
-	for i := 0; i < 3; i++ {
+	for i := 0; i <= len(expectedKeys); i++ {
 		kv, all := kvi.GetNext()
+		if i == len(expectedKeys) {
+			Expect(all).To(BeTrue())
+			break
+		}
 		Expect(kv).NotTo(BeNil())
 		Expect(all).To(BeFalse())
 		Expect(kv.GetKey()).To(BeEquivalentTo(expectedKeys[i]))
@@ -184,8 +188,12 @@ func testPrefixedListValues(t *testing.T) {
 	Expect(kvi).NotTo(BeNil())
 
 	expectedKeys := []string{"a/val1", "a/val2", "a/val3"}
-	for i := 0; i < 3; i++ {
+	for i := 0; i <= len(expectedKeys); i++ {
 		kv, all := kvi.GetNext()
+		if i == len(expectedKeys) {
+			Expect(all).To(BeTrue())
+			break
+		}
 		Expect(kv).NotTo(BeNil())
 		Expect(all).To(BeFalse())
 		// verify that prefix of BytesBrokerWatcherEtcd is trimmed

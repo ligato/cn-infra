@@ -19,6 +19,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/consul/api"
+	"github.com/hashicorp/consul/testutil"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logrus"
@@ -30,22 +32,32 @@ func init() {
 }
 
 type testCtx struct {
-	client *Client
+	client  *Client
+	testSrv *testutil.TestServer
 }
 
 func setupTest(t *testing.T) *testCtx {
 	RegisterTestingT(t)
 
-	store, err := NewConsulStore("127.0.0.1:8500")
+	srv, err := testutil.NewTestServer()
+	if err != nil {
+		t.Fatal("setting up test server failed:", err)
+	}
+
+	cfg := api.DefaultConfig()
+	cfg.Address = srv.HTTPAddr
+
+	client, err := NewClient(cfg)
 	if err != nil {
 		t.Fatal("connecting to consul failed:", err)
 	}
 
-	return &testCtx{store}
+	return &testCtx{client: client, testSrv: srv}
 }
 
 func (ctx *testCtx) teardownTest() {
 	ctx.client.Close()
+	ctx.testSrv.Stop()
 }
 
 func TestPut(t *testing.T) {
@@ -54,11 +66,15 @@ func TestPut(t *testing.T) {
 
 	err := ctx.client.Put("key", []byte("val"))
 	Expect(err).ToNot(HaveOccurred())
+
+	Expect(ctx.testSrv.GetKVString(t, "key")).To(Equal("val"))
 }
 
 func TestGetValue(t *testing.T) {
 	ctx := setupTest(t)
 	defer ctx.teardownTest()
+
+	ctx.testSrv.SetKV(t, "key", []byte("val"))
 
 	data, found, rev, err := ctx.client.GetValue("key")
 	Expect(err).ToNot(HaveOccurred())
@@ -71,9 +87,122 @@ func TestDelete(t *testing.T) {
 	ctx := setupTest(t)
 	defer ctx.teardownTest()
 
+	ctx.testSrv.SetKV(t, "key", []byte("val"))
+
 	existed, err := ctx.client.Delete("key")
 	Expect(err).ToNot(HaveOccurred())
 	Expect(existed).To(BeTrue())
+
+	Expect(ctx.testSrv.ListKV(t, "")).To(BeEmpty())
+}
+
+func TestListKeys(t *testing.T) {
+	ctx := setupTest(t)
+	defer ctx.teardownTest()
+
+	ctx.testSrv.PopulateKV(t, map[string][]byte{
+		"key/1": []byte("val1"),
+		"key/2": []byte("val2"),
+	})
+
+	kvi, err := ctx.client.ListKeys("key/")
+	Expect(err).ToNot(HaveOccurred())
+	Expect(kvi).NotTo(BeNil())
+
+	expectedKeys := []string{"key/1", "key/2"}
+	for i := 0; i <= len(expectedKeys); i++ {
+		key, _, all := kvi.GetNext()
+		if i == len(expectedKeys) {
+			Expect(all).To(BeTrue())
+			break
+		}
+		Expect(all).To(BeFalse())
+		Expect(key).To(BeEquivalentTo(expectedKeys[i]))
+	}
+}
+
+func TestListKeysPrefixed(t *testing.T) {
+	ctx := setupTest(t)
+	defer ctx.teardownTest()
+
+	ctx.testSrv.PopulateKV(t, map[string][]byte{
+		"myprefix/key/1": []byte("val1"),
+		"myprefix/key/2": []byte("val2"),
+		"key/x":          []byte("valx"),
+	})
+
+	client := ctx.client.NewBroker("myprefix/")
+	kvi, err := client.ListKeys("key")
+	Expect(err).ToNot(HaveOccurred())
+	Expect(kvi).NotTo(BeNil())
+
+	expectedKeys := []string{"key/1", "key/2"}
+	for i := 0; i <= len(expectedKeys); i++ {
+		key, _, all := kvi.GetNext()
+		if i == len(expectedKeys) {
+			Expect(all).To(BeTrue())
+			break
+		}
+		Expect(all).To(BeFalse())
+		// verify that prefix of BytesBrokerWatcherEtcd is trimmed
+		Expect(key).To(BeEquivalentTo(expectedKeys[i]))
+	}
+}
+
+func TestListValues(t *testing.T) {
+	ctx := setupTest(t)
+	defer ctx.teardownTest()
+
+	ctx.testSrv.PopulateKV(t, map[string][]byte{
+		"key/1": []byte("val1"),
+		"key/2": []byte("val2"),
+	})
+
+	kvi, err := ctx.client.ListValues("key")
+	Expect(err).ToNot(HaveOccurred())
+	Expect(kvi).NotTo(BeNil())
+
+	expectedKeys := []string{"key/1", "key/2"}
+	for i := 0; i <= len(expectedKeys); i++ {
+		kv, all := kvi.GetNext()
+		if i == len(expectedKeys) {
+			Expect(all).To(BeTrue())
+			break
+		}
+		Expect(kv).NotTo(BeNil())
+		Expect(all).To(BeFalse())
+		// verify that prefix of BytesBrokerWatcherEtcd is trimmed
+		Expect(kv.GetKey()).To(BeEquivalentTo(expectedKeys[i]))
+	}
+}
+
+func TestListValuesPrefixed(t *testing.T) {
+	ctx := setupTest(t)
+	defer ctx.teardownTest()
+
+	ctx.testSrv.PopulateKV(t, map[string][]byte{
+		"myprefix/key/1": []byte("val1"),
+		"myprefix/key/2": []byte("val2"),
+		"key/x":          []byte("valx"),
+	})
+
+	client := ctx.client.NewBroker("myprefix/")
+	kvi, err := client.ListValues("key")
+	Expect(err).ToNot(HaveOccurred())
+	Expect(kvi).NotTo(BeNil())
+
+	expectedKeys := []string{"key/1", "key/2"}
+	for i := 0; i <= len(expectedKeys); i++ {
+		kv, all := kvi.GetNext()
+		if i == len(expectedKeys) {
+			Expect(all).To(BeTrue())
+			break
+		}
+		Expect(kv).NotTo(BeNil())
+		Expect(all).To(BeFalse())
+		// verify that prefix of BytesBrokerWatcherEtcd is trimmed
+		Expect(kv.GetKey()).To(BeEquivalentTo(expectedKeys[i]))
+	}
 }
 
 func TestWatch(t *testing.T) {
@@ -107,6 +236,4 @@ func TestWatch(t *testing.T) {
 	ctx.client.Put(watchKey+"val1", []byte{1, 2, 3})
 
 	wg.Wait()
-
-	time.Sleep(time.Second)
 }
