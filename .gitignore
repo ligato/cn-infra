@@ -2,6 +2,7 @@
 glide.lock
 examples/cassandra-lib/cassandra-lib
 examples/configs-plugin/configs-plugin
+examples/consul-lib/consul-lib
 examples/datasync-plugin/datasync-plugin
 examples/etcdv3-lib/editor/editor
 examples/etcdv3-lib/view/view

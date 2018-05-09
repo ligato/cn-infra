@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/hashicorp/consul/api"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/consul"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
@@ -25,7 +26,7 @@ import (
 )
 
 func main() {
-	db, err := consul.NewConsulStore("127.0.0.1:8500")
+	db, err := consul.NewClient(api.DefaultConfig())
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -36,8 +36,8 @@ type Client struct {
 	client *api.Client
 }
 
-// NewConsulStore creates new client for Consul using given address.
-func NewConsulStore(cfg *api.Config) (store *Client, err error) {
+// NewClient creates new client for Consul using given address.
+func NewClient(cfg *api.Config) (store *Client, err error) {
 	var c *api.Client
 	if c, err = api.NewClient(cfg); err != nil {
 		return nil, fmt.Errorf("failed to create Consul client %s", err)
@@ -361,10 +361,6 @@ func (pdb *BrokerWatcher) prefixKey(key string) string {
 	return filepath.Join(pdb.prefix, key)
 }
 
-func (pdb *BrokerWatcher) trimPrefix(key string) string {
-	return strings.TrimPrefix(key, pdb.prefix)
-}
-
 // Put calls 'Put' function of the underlying BytesConnectionEtcd.
 // KeyPrefix defined in constructor is prepended to the key argument.
 func (pdb *BrokerWatcher) Put(key string, data []byte, opts ...datasync.PutOption) error {
@@ -388,13 +384,23 @@ func (pdb *BrokerWatcher) GetValue(key string) (data []byte, found bool, revisio
 // KeyPrefix defined in constructor is prepended to the key argument.
 // The prefix is removed from the keys of the returned values.
 func (pdb *BrokerWatcher) ListValues(key string) (keyval.BytesKeyValIterator, error) {
-	return pdb.Client.ListValues(pdb.prefixKey(key))
+	pairs, _, err := pdb.client.KV().List(pdb.prefixKey(transformKey(key)), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return &bytesKeyValIterator{len: len(pairs), pairs: pairs, prefix: pdb.prefix}, nil
 }
 
 // ListKeys calls 'ListKeys' function of the underlying BytesConnectionEtcd.
 // KeyPrefix defined in constructor is prepended to the argument.
 func (pdb *BrokerWatcher) ListKeys(prefix string) (keyval.BytesKeyIterator, error) {
-	return pdb.Client.ListKeys(pdb.prefixKey(prefix))
+	keys, _, err := pdb.client.KV().Keys(pdb.prefixKey(transformKey(prefix)), "", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return &bytesKeyIterator{len: len(keys), keys: keys, prefix: pdb.prefix}, nil
 }
 
 // Delete calls 'Delete' function of the underlying BytesConnectionEtcd.
@@ -414,71 +420,79 @@ func (pdb *BrokerWatcher) Watch(resp func(keyval.BytesWatchResp), closeChan chan
 	}
 	return pdb.Client.Watch(func(origResp keyval.BytesWatchResp) {
 		r := origResp.(*watchResp)
-		r.key = pdb.trimPrefix(r.key)
+		r.key = strings.TrimPrefix(r.key, pdb.prefix)
 		resp(r)
 	}, closeChan, prefixedKeys...)
 }
 
 // bytesKeyIterator is an iterator returned by ListKeys call.
 type bytesKeyIterator struct {
-	index int
-	len   int
-	keys  []string
+	index  int
+	len    int
+	keys   []string
+	prefix string
 }
 
 // GetNext returns the following key (+ revision) from the result set.
 // When there are no more keys to get, <stop> is returned as *true*
 // and <key> and <rev> are default values.
-func (ctx *bytesKeyIterator) GetNext() (key string, rev int64, stop bool) {
-	if ctx.index >= ctx.len {
+func (it *bytesKeyIterator) GetNext() (key string, rev int64, stop bool) {
+	if it.index >= it.len {
 		return "", 0, true
 	}
 
-	key = string(ctx.keys[ctx.index])
-	rev = 0 //ctx.keys[ctx.index].mod
-	ctx.index++
+	key = string(it.keys[it.index])
+	if it.prefix != "" {
+		key = strings.TrimPrefix(key, it.prefix)
+	}
+	rev = 0 //it.keys[it.index].mod
+	it.index++
 
 	return key, rev, false
 }
 
 // Close does nothing since db cursors are not needed.
 // The method is required by the code since it implements Iterator API.
-func (ctx *bytesKeyIterator) Close() error {
+func (it *bytesKeyIterator) Close() error {
 	return nil
 }
 
 // bytesKeyValIterator is an iterator returned by ListValues call.
 type bytesKeyValIterator struct {
-	index int
-	len   int
-	pairs api.KVPairs
+	index  int
+	len    int
+	pairs  api.KVPairs
+	prefix string
 }
 
 // GetNext returns the following item from the result set.
 // When there are no more items to get, <stop> is returned as *true* and <val>
 // is simply *nil*.
-func (ctx *bytesKeyValIterator) GetNext() (val keyval.BytesKeyVal, stop bool) {
-	if ctx.index >= ctx.len {
+func (it *bytesKeyValIterator) GetNext() (val keyval.BytesKeyVal, stop bool) {
+	if it.index >= it.len {
 		return nil, true
 	}
 
-	key := string(ctx.pairs[ctx.index].Key)
-	data := ctx.pairs[ctx.index].Value
-	rev := int64(ctx.pairs[ctx.index].ModifyIndex)
+	key := string(it.pairs[it.index].Key)
+	if it.prefix != "" {
+		key = strings.TrimPrefix(key, it.prefix)
+	}
+	data := it.pairs[it.index].Value
+	rev := int64(it.pairs[it.index].ModifyIndex)
 
 	var prevValue []byte
-	if len(ctx.pairs) > 0 && ctx.index > 0 {
-		prevValue = ctx.pairs[ctx.index-1].Value
+	if len(it.pairs) > 0 && it.index > 0 {
+		prevValue = it.pairs[it.index-1].Value
 	}
 
-	ctx.index++
+	it.index++
 
 	return &bytesKeyVal{key, data, prevValue, rev}, false
 }
 
 // Close does nothing since db cursors are not needed.
 // The method is required by the code since it implements Iterator API.
-func (ctx *bytesKeyValIterator) Close() error {
+func (it *bytesKeyValIterator) Close() error {
 	return nil
 }
 

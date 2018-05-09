@@ -86,7 +86,7 @@ func (plugin *Plugin) Init() (err error) {
 	if err != nil {
 		return err
 	}
-	plugin.client, err = NewConsulStore(clientCfg)
+	plugin.client, err = NewClient(clientCfg)
 	if err != nil {
 		plugin.Log.Errorf("Err: %v", err)
 		return err
