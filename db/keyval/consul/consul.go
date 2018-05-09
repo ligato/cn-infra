@@ -17,15 +17,25 @@ package consul
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logrus"
 
 	"github.com/hashicorp/consul/api"
 )
+
+var consulLogger = logrus.NewLogger("consul")
+
+func init() {
+	if os.Getenv("DEBUG_CONSUL_CLIENT") != "" {
+		consulLogger.SetLevel(logging.DebugLevel)
+	}
+}
 
 func transformKey(key string) string {
 	return strings.TrimPrefix(key, "/")
@@ -47,7 +57,7 @@ func NewClient(cfg *api.Config) (store *Client, err error) {
 	if err != nil {
 		return nil, err
 	}
-	logrus.DefaultLogger().Debugf("consul peers: %v", peers)
+	consulLogger.Infof("consul peers: %v", peers)
 
 	return &Client{
 		client: c,
@@ -57,7 +67,7 @@ func NewClient(cfg *api.Config) (store *Client, err error) {
 
 // Put stores given data for the key.
 func (c *Client) Put(key string, data []byte, opts ...datasync.PutOption) error {
-	fmt.Printf("put: %q\n", key)
+	consulLogger.Debugf("put: %q\n", key)
 	p := &api.KVPair{Key: transformKey(key), Value: data}
 	_, err := c.client.KV().Put(p, nil)
 	if err != nil {
@@ -76,7 +86,7 @@ func (c *Client) NewTxn() keyval.BytesTxn {
 
 // GetValue returns data for the given key.
 func (c *Client) GetValue(key string) (data []byte, found bool, revision int64, err error) {
-	fmt.Printf("get value: %q\n", key)
+	consulLogger.Debugf("get value: %q\n", key)
 	pair, _, err := c.client.KV().Get(transformKey(key), nil)
 	if err != nil {
 		return nil, false, 0, err
@@ -109,7 +119,7 @@ func (c *Client) ListKeys(prefix string) (keyval.BytesKeyIterator, error) {
 
 // Delete deletes given key.
 func (c *Client) Delete(key string, opts ...datasync.DelOption) (existed bool, err error) {
-	fmt.Printf("delete: %q\n", key)
+	consulLogger.Debugf("delete: %q\n", key)
 	if _, err := c.client.KV().Delete(transformKey(key), nil); err != nil {
 		return false, err
 	}
@@ -119,7 +129,7 @@ func (c *Client) Delete(key string, opts ...datasync.DelOption) (existed bool, e
 
 // Watch watches given list of key prefixes.
 func (c *Client) Watch(resp func(keyval.BytesWatchResp), closeChan chan string, keys ...string) error {
-	logrus.DefaultLogger().Warn("Watch:", keys)
+	consulLogger.Debug("Watch:", keys)
 	for _, k := range keys {
 		if err := c.watch(resp, closeChan, k); err != nil {
 			return err
@@ -161,7 +171,7 @@ func (resp *watchResp) GetRevision() int64 {
 }
 
 func (c *Client) watch(resp func(watchResp keyval.BytesWatchResp), closeCh chan string, prefix string) error {
-	fmt.Println("WATCH:", prefix)
+	consulLogger.Debug("WATCH:", prefix)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -172,7 +182,7 @@ func (c *Client) watch(resp func(watchResp keyval.BytesWatchResp), closeCh chan 
 			select {
 			case wr, ok := <-recvChan:
 				if !ok {
-					logrus.DefaultLogger().WithField("prefix", prefix).Debug("Watch recv chan was closed")
+					consulLogger.WithField("prefix", prefix).Debug("Watch recv chan was closed")
 					return
 				}
 				for _, ev := range wr.Events {
@@ -201,7 +211,7 @@ func (c *Client) watch(resp func(watchResp keyval.BytesWatchResp), closeCh chan 
 				}
 			case closeVal, ok := <-closeCh:
 				if !ok || closeVal == regPrefix {
-					logrus.DefaultLogger().WithField("prefix", prefix).Debug("Watch ended")
+					consulLogger.WithField("prefix", prefix).Debug("Watch ended")
 					cancel()
 					return
 				}
@@ -226,7 +236,7 @@ type watchResponse struct {
 }
 
 func (c *Client) watchPrefix(ctx context.Context, prefix string) <-chan watchResponse {
-	logrus.DefaultLogger().Warn("watchPrefix:", prefix)
+	consulLogger.Debug("watchPrefix:", prefix)
 
 	ch := make(chan watchResponse, 1)
 
@@ -242,16 +252,14 @@ func (c *Client) watchPrefix(ctx context.Context, prefix string) <-chan watchRes
 	oldIndex := qm.LastIndex
 	oldPairsMap := make(map[string]*api.KVPair)
 
-	logrus.DefaultLogger().Debugf("..retrieved: %v old pairs (old index: %v)", len(oldPairs), oldIndex)
+	consulLogger.Debugf("..retrieved: %v old pairs (old index: %v)", len(oldPairs), oldIndex)
 	for _, pair := range oldPairs {
-		logrus.DefaultLogger().Debugf(" - key: %q create: %v modify: %v", pair.Key, pair.CreateIndex, pair.ModifyIndex)
+		consulLogger.Debugf(" - key: %q create: %v modify: %v", pair.Key, pair.CreateIndex, pair.ModifyIndex)
 		oldPairsMap[pair.Key] = pair
 	}
 
 	go func() {
 		for {
-			//logrus.DefaultLogger().Debug("calling list with wait")
-
 			// Wait for an update to occur since the last index
 			var newPairs api.KVPairs
 			qOpt := &api.QueryOptions{
@@ -267,13 +275,13 @@ func (c *Client) watchPrefix(ctx context.Context, prefix string) <-chan watchRes
 
 			// If the index is same as old one, request probably timed out, so we start again
 			if oldIndex == newIndex {
-				logrus.DefaultLogger().Debug("index unchanged, next round")
+				consulLogger.Debug("index unchanged, next round")
 				continue
 			}
 
-			logrus.DefaultLogger().Debugf("prefix %q: %v new pairs (new index: %v) %+v", prefix, len(newPairs), newIndex, qm)
+			consulLogger.Debugf("prefix %q: %v new pairs (new index: %v) %+v", prefix, len(newPairs), newIndex, qm)
 			for _, pair := range newPairs {
-				logrus.DefaultLogger().Debugf(" + key: %q create: %v modify: %v", pair.Key, pair.CreateIndex, pair.ModifyIndex)
+				consulLogger.Debugf(" + key: %q create: %v modify: %v", pair.Key, pair.CreateIndex, pair.ModifyIndex)
 			}
 
 			var evs []*watchEvent
@@ -395,12 +403,12 @@ func (pdb *BrokerWatcher) ListValues(key string) (keyval.BytesKeyValIterator, er
 // ListKeys calls 'ListKeys' function of the underlying BytesConnectionEtcd.
 // KeyPrefix defined in constructor is prepended to the argument.
 func (pdb *BrokerWatcher) ListKeys(prefix string) (keyval.BytesKeyIterator, error) {
-	keys, _, err := pdb.client.KV().Keys(pdb.prefixKey(transformKey(prefix)), "", nil)
+	keys, qm, err := pdb.client.KV().Keys(pdb.prefixKey(transformKey(prefix)), "", nil)
 	if err != nil {
 		return nil, err
 	}
 
-	return &bytesKeyIterator{len: len(keys), keys: keys, prefix: pdb.prefix}, nil
+	return &bytesKeyIterator{len: len(keys), keys: keys, prefix: pdb.prefix, lastIndex: qm.LastIndex}, nil
 }
 
 // Delete calls 'Delete' function of the underlying BytesConnectionEtcd.
@@ -427,10 +435,11 @@ func (pdb *BrokerWatcher) Watch(resp func(keyval.BytesWatchResp), closeChan chan
 
 // bytesKeyIterator is an iterator returned by ListKeys call.
 type bytesKeyIterator struct {
-	index  int
-	len    int
-	keys   []string
-	prefix string
+	index     int
+	len       int
+	keys      []string
+	prefix    string
+	lastIndex uint64
 }
 
 // GetNext returns the following key (+ revision) from the result set.
@@ -445,7 +454,7 @@ func (it *bytesKeyIterator) GetNext() (key string, rev int64, stop bool) {
 	if it.prefix != "" {
 		key = strings.TrimPrefix(key, it.prefix)
 	}
-	rev = 0 //it.keys[it.index].mod
+	rev = int64(it.lastIndex)
 	it.index++
 
 	return key, rev, false

@@ -26,6 +26,7 @@ import (
 )
 
 func main() {
+	// create new consul client with default config
 	db, err := consul.NewClient(api.DefaultConfig())
 	if err != nil {
 		log.Fatal(err)
@@ -34,24 +35,28 @@ func main() {
 	protoDb := kvproto.NewProtoWrapper(db)
 	defer protoDb.Close()
 
-	list(protoDb)
+	// put some data into store and get it
 	put(protoDb, []string{"Me", "TheCompany", "123456"})
 	get(protoDb, "Me")
+
+	// put some data into store and list values and keys
 	put(protoDb, []string{"You", "TheCompany", "666"})
 	list(protoDb)
 	listKeys(protoDb)
+
+	// delete some data from store and list values
 	del(protoDb, "Me")
 	list(protoDb)
-
 }
 
+// listKeys lists keys
 func listKeys(db keyval.ProtoBroker) {
 	resp, err := db.ListKeys(phonebook.EtcdPath())
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Phonebook keys:")
+	fmt.Println("list keys:")
 	for {
 		key, _, stop := resp.GetNext()
 		if stop {
@@ -63,6 +68,7 @@ func listKeys(db keyval.ProtoBroker) {
 	}
 }
 
+// list lists keys with values
 func list(db keyval.ProtoBroker) {
 	resp, err := db.ListValues(phonebook.EtcdPath())
 	if err != nil {
@@ -70,7 +76,7 @@ func list(db keyval.ProtoBroker) {
 	}
 
 	var revision int64
-	fmt.Println("Phonebook:")
+	fmt.Println("list values:")
 	for {
 		c := &phonebook.Contact{}
 		kv, stop := resp.GetNext()
@@ -91,6 +97,7 @@ func list(db keyval.ProtoBroker) {
 	fmt.Println("Revision", revision)
 }
 
+// put saves single entry
 func put(db keyval.ProtoBroker, data []string) {
 	c := &phonebook.Contact{Name: data[0], Company: data[1], Phonenumber: data[2]}
 
@@ -104,6 +111,7 @@ func put(db keyval.ProtoBroker, data []string) {
 	fmt.Println("Saved:", key)
 }
 
+// get retrieves single entry
 func get(db keyval.ProtoBroker, data string) {
 	c := &phonebook.Contact{Name: data}
 
@@ -120,6 +128,7 @@ func get(db keyval.ProtoBroker, data string) {
 	fmt.Println("Loaded:", key, c)
 }
 
+// del deletes single entry
 func del(db keyval.ProtoBroker, data string) {
 	c := &phonebook.Contact{Name: data}
 

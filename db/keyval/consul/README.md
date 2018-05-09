@@ -1,6 +1,6 @@
 # Consul plugin
 
-The Consul plugin provides access to an consul key-value data store.
+The Consul plugin provides access to a consul key-value data store.
 
 ## Configuration
 

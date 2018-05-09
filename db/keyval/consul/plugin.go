@@ -22,7 +22,6 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/ligato/cn-infra/health/statuscheck"
-	"github.com/ligato/cn-infra/logging/logrus"
 )
 
 const (
@@ -138,12 +137,10 @@ func (plugin *Plugin) Close() error {
 
 // NewBroker creates new instance of prefixed broker that provides API with arguments of type proto.Message.
 func (plugin *Plugin) NewBroker(keyPrefix string) keyval.ProtoBroker {
-	logrus.DefaultLogger().Warnf("CONSUL-PLUGIN: NewBroker %v", keyPrefix)
 	return plugin.protoWrapper.NewBroker(keyPrefix)
 }
 
 // NewWatcher creates new instance of prefixed broker that provides API with arguments of type proto.Message.
 func (plugin *Plugin) NewWatcher(keyPrefix string) keyval.ProtoWatcher {
-	logrus.DefaultLogger().Warnf("CONSUL-PLUGIN: NewWatcher %v", keyPrefix)
 	return plugin.protoWrapper.NewWatcher(keyPrefix)
 }
