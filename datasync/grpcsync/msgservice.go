@@ -80,14 +80,14 @@ func (s *DataMsgServiceServer) DataResyncs(ctx context.Context, req *msg.DataRes
 		err := localtxn.Commit()*/
 		var err error
 		if err != nil {
-			return &msg.DataResyncReplies{MsgId: replySeq(), Error: &msg.Error{err.Error()} /*TODO all other fields*/}, err
+			return &msg.DataResyncReplies{MsgId: replySeq(), Error: &msg.Error{Message: err.Error()} /*TODO all other fields*/}, err
 		}
 
 		return &msg.DataResyncReplies{MsgId: replySeq() /*TODO all other fields*/}, nil
 	}
 
 	err := errors.New("unexpected place - nil resyncs")
-	return &msg.DataResyncReplies{MsgId: replySeq(), Error: &msg.Error{err.Error()} /*TODO all other fields*/}, err
+	return &msg.DataResyncReplies{MsgId: replySeq(), Error: &msg.Error{Message: err.Error()} /*TODO all other fields*/}, err
 }
 
 func replySeq() *msg.Seq {
@@ -96,5 +96,5 @@ func replySeq() *msg.Seq {
 
 // Ping checks the connectivity/ measures the minimal transport latency.
 func (s *DataMsgServiceServer) Ping(ctx context.Context, req *msg.PingRequest) (*msg.PingReply, error) {
-	return &msg.PingReply{"it works"}, nil
+	return &msg.PingReply{Message: "it works"}, nil
 }

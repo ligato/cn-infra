@@ -133,7 +133,7 @@ func (plugin *Plugin) GetClientFromServer() Client {
 	return plugin
 }
 
-// Disabled returns *true* if the plugin is not in use due to missing
+// IsDisabled returns *true* if the plugin is not in use due to missing
 // grpc configuration.
 func (plugin *Plugin) IsDisabled() (disabled bool) {
 	return plugin.disabled
