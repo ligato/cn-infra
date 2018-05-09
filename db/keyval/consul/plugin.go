@@ -16,16 +16,24 @@ package consul
 
 import (
 	"github.com/hashicorp/consul/api"
+	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/logging/logrus"
+)
+
+const (
+	// healthCheckProbeKey is a key used to probe connection state
+	healthCheckProbeKey = "/probe-consul-connection"
 )
 
 // Config represents configuration for Consul plugin.
 type Config struct {
-	Address string `json:"address"`
+	Address         string `json:"address"`
+	ReconnectResync bool   `json:"resync-after-reconnect"`
 }
 
 // Plugin implements Consul as plugin.
@@ -38,6 +46,9 @@ type Plugin struct {
 	client *Client
 	// Read/Write proto modelled data
 	protoWrapper *kvproto.ProtoWrapper
+
+	reconnectResync bool
+	lastConnErr     error
 }
 
 // Deps lists dependencies of the Consul plugin.
@@ -91,7 +102,31 @@ func (plugin *Plugin) Init() (err error) {
 		plugin.Log.Errorf("Err: %v", err)
 		return err
 	}
+	plugin.reconnectResync = cfg.ReconnectResync
 	plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.client, &keyval.SerializerJSON{})
+
+	// Register for providing status reports (polling mode).
+	if plugin.StatusCheck != nil {
+		plugin.StatusCheck.Register(core.PluginName(plugin.PluginName), func() (statuscheck.PluginState, error) {
+			_, _, _, err := plugin.client.GetValue(healthCheckProbeKey)
+			if err == nil {
+				if plugin.reconnectResync && plugin.lastConnErr != nil {
+					plugin.Log.Info("Starting resync after Consul reconnect")
+					if plugin.Resync != nil {
+						plugin.Resync.DoResync()
+						plugin.lastConnErr = nil
+					} else {
+						plugin.Log.Warn("Expected resync after Consul reconnect could not start beacuse of missing Resync plugin")
+					}
+				}
+				return statuscheck.OK, nil
+			}
+			plugin.lastConnErr = err
+			return statuscheck.Error, err
+		})
+	} else {
+		plugin.Log.Warnf("Unable to start status check for consul")
+	}
 
 	return nil
 }
