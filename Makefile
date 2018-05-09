@@ -15,7 +15,7 @@ clean: clean-examples clean-examples-plugin
 
 # Build examples
 examples:
-	@echo "# building examples"
+	@echo "=> building examples"
 	cd examples/cassandra-lib && go build
 	cd examples/etcdv3-lib && make build
 	cd examples/kafka-lib && make build
@@ -24,7 +24,7 @@ examples:
 
 # Build plugin examples
 examples-plugin:
-	@echo "# building plugin examples"
+	@echo "=> building plugin examples"
 	cd examples/configs-plugin && go build -i -v ${LDFLAGS}
 	cd examples/datasync-plugin && go build -i -v ${LDFLAGS}
 	cd examples/flags-lib && go build -i -v ${LDFLAGS}
@@ -39,7 +39,7 @@ examples-plugin:
 
 # Clean examples
 clean-examples:
-	@echo "# cleaning examples"
+	@echo "=> cleaning examples"
 	cd examples/cassandra-lib && rm -f cassandra-lib
 	cd examples/etcdv3-lib && make clean
 	cd examples/kafka-lib && make clean
@@ -48,7 +48,7 @@ clean-examples:
 
 # Clean plugin examples
 clean-examples-plugin:
-	@echo "# cleaning plugin examples"
+	@echo "=> cleaning plugin examples"
 	rm -f examples/configs-plugin/configs-plugin
 	rm -f examples/datasync-plugin/datasync-plugin
 	rm -f examples/flags-lib/flags-lib
@@ -61,10 +61,16 @@ clean-examples-plugin:
 	rm -f examples/statuscheck-plugin/statuscheck-plugin
 	rm -f examples/prometheus-plugin/prometheus-plugin
 
+# Get test tools
+get-testtools:
+	go get -v github.com/hashicorp/consul
+
 # Run tests
-test:
-	@echo "# running unit tests"
+test: get-testtools
+	@echo "=> running unit tests"
 	go test ./core
+	go test ./datasync/syncbase
+	go test ./db/keyval/consul
 	go test ./db/keyval/etcdv3
 	go test ./db/keyval/redis
 	go test ./db/sql/cassandra
@@ -74,13 +80,12 @@ test:
 	go test ./messaging/kafka/mux
 	go test ./utils/addrs
 	go test ./tests/gotests/itest
-	go test ./datasync/syncbase
 
 # Run script for testing examples
 test-examples:
-	@echo "# Testing examples"
+	@echo "=> Testing examples"
 	./scripts/test_examples/test_examples.sh
-	@echo "# Testing examples: reactions to disconnect/reconnect of plugins redis, cassandra ..."
+	@echo "=> Testing examples: reactions to disconnect/reconnect of plugins redis, cassandra ..."
 	./scripts/test_examples/plugin_reconnect.sh
 
 # Get coverage report tools
@@ -88,20 +93,21 @@ get-covtools:
 	go get -v github.com/wadey/gocovmerge
 
 # Run coverage report
-test-cover: get-covtools
-	@echo "# running coverage report"
+test-cover: get-testtools get-covtools
+	@echo "=> running coverage report"
 	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit1.out ./core
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit2.out ./db/keyval/etcdv3
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit3.out ./db/keyval/redis
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit4.out ./db/sql/cassandra
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit5.out ./idxmap/mem
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit6.out ./logging/logrus
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit7.out ./messaging/kafka/client
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit8.out ./messaging/kafka/mux
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit9.out ./utils/addrs
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit10.out ./tests/gotests/itest
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit11.out ./datasync/syncbase
-	@echo "# merging coverage results"
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit2.out ./datasync/syncbase
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit3.out ./db/keyval/consul
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit4.out ./db/keyval/etcdv3
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit5.out ./db/keyval/redis
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit6.out ./db/sql/cassandra
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit7.out ./idxmap/mem
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit8.out ./logging/logrus
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit9.out ./messaging/kafka/client
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit10.out ./messaging/kafka/mux
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit11.out ./utils/addrs
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit12.out ./tests/gotests/itest
+	@echo "=> merging coverage results"
 	gocovmerge \
 			${COVER_DIR}coverage_unit1.out \
 			${COVER_DIR}coverage_unit2.out \
@@ -114,17 +120,18 @@ test-cover: get-covtools
 			${COVER_DIR}coverage_unit9.out \
 			${COVER_DIR}coverage_unit10.out \
 			${COVER_DIR}coverage_unit11.out \
+			${COVER_DIR}coverage_unit12.out \
 		> ${COVER_DIR}coverage.out
-	@echo "# coverage data generated into ${COVER_DIR}coverage.out"
+	@echo "=> coverage data generated into ${COVER_DIR}coverage.out"
 
 test-cover-html: test-cover
 	go tool cover -html=${COVER_DIR}coverage.out -o ${COVER_DIR}coverage.html
-	@echo "# coverage report generated into ${COVER_DIR}coverage.html"
+	@echo "=> coverage report generated into ${COVER_DIR}coverage.html"
 	go tool cover -html=${COVER_DIR}coverage.out
 
 test-cover-xml: test-cover
 	gocov convert ${COVER_DIR}coverage.out | gocov-xml > ${COVER_DIR}coverage.xml
-	@echo "# coverage report generated into ${COVER_DIR}coverage.xml"
+	@echo "=> coverage report generated into ${COVER_DIR}coverage.xml"
 
 # Get dependency manager tool
 get-dep:
@@ -140,18 +147,18 @@ dep-update: get-dep
 
 # Get linter tools
 get-linters:
-	@echo "# installing linters"
+	@echo "=> installing linters"
 	go get -v github.com/alecthomas/gometalinter
 	gometalinter --install
 
 # Run linters
 lint: get-linters
-	@echo "# running code analysis"
+	@echo "=> running code analysis"
 	./scripts/static_analysis.sh golint vet
 
 # Format code
 format:
-	@echo "# formatting the code"
+	@echo "=> formatting the code"
 	./scripts/gofmt.sh
 
 # Get link check tool
@@ -161,7 +168,7 @@ get-linkcheck:
 
 # Validate links in markdown files
 check-links: get-linkcheck
-	@echo "# checking links"
+	@echo "=> checking links"
 	./scripts/check_links.sh
 
 .PHONY: build clean \

@@ -23,7 +23,10 @@
 #   non-go = false
 #   go-tests = true
 #   unused-packages = true
-required = ["github.com/grpc-ecosystem/grpc-gateway/runtime"]
+
+required = [
+    "github.com/grpc-ecosystem/grpc-gateway/runtime"
+]
 
 [[constraint]]
   name = "google.golang.org/grpc"

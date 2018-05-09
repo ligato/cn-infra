@@ -19,11 +19,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/etcd/etcdserver/api/v3client"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/etcdv3/mocks"
 	"github.com/ligato/cn-infra/logging/logrus"
+
+	"github.com/coreos/etcd/etcdserver/api/v3client"
 	. "github.com/onsi/gomega"
 )
 
@@ -41,7 +42,6 @@ var (
 )
 
 func TestDataBroker(t *testing.T) {
-	//setup
 	embd.Start(t)
 	defer embd.Stop()
 	RegisterTestingT(t)
@@ -110,13 +110,26 @@ func testPrefixedWatcher(t *testing.T) {
 	setupBrokers(t)
 	defer teardownBrokers()
 
+	closeCh := make(chan string)
 	watchCh := make(chan keyval.BytesWatchResp)
-	err := prefixedWatcher.Watch(keyval.ToChan(watchCh), nil, watchKey)
+	err := prefixedWatcher.Watch(keyval.ToChan(watchCh), closeCh, watchKey)
 	Expect(err).To(BeNil())
 
-	wg := sync.WaitGroup{}
+	var wg sync.WaitGroup
 	wg.Add(1)
-	go expectWatchEvent(t, &wg, watchCh, watchKey+"val1")
+
+	go func(expectedKey string) {
+		select {
+		case resp := <-watchCh:
+			Expect(resp).NotTo(BeNil())
+			Expect(resp.GetKey()).To(BeEquivalentTo(expectedKey))
+		case <-time.After(time.Second):
+			t.Error("Watch resp not received")
+			t.FailNow()
+		}
+		close(closeCh)
+		wg.Done()
+	}(watchKey + "val1")
 
 	// Insert kv that doesn't match the watcher subscription.
 	broker.Put(prefix+"/something/else/val1", []byte{0, 0, 7})
@@ -144,8 +157,12 @@ func testPrefixedTxn(t *testing.T) {
 	Expect(kvi).NotTo(BeNil())
 
 	expectedKeys := []string{prefix + "b/val1", prefix + "b/val2", prefix + "b/val3"}
-	for i := 0; i < 3; i++ {
+	for i := 0; i <= len(expectedKeys); i++ {
 		kv, all := kvi.GetNext()
+		if i == len(expectedKeys) {
+			Expect(all).To(BeTrue())
+			break
+		}
 		Expect(kv).NotTo(BeNil())
 		Expect(all).To(BeFalse())
 		Expect(kv.GetKey()).To(BeEquivalentTo(expectedKeys[i]))
@@ -171,8 +188,12 @@ func testPrefixedListValues(t *testing.T) {
 	Expect(kvi).NotTo(BeNil())
 
 	expectedKeys := []string{"a/val1", "a/val2", "a/val3"}
-	for i := 0; i < 3; i++ {
+	for i := 0; i <= len(expectedKeys); i++ {
 		kv, all := kvi.GetNext()
+		if i == len(expectedKeys) {
+			Expect(all).To(BeTrue())
+			break
+		}
 		Expect(kv).NotTo(BeNil())
 		Expect(all).To(BeFalse())
 		// verify that prefix of BytesBrokerWatcherEtcd is trimmed
@@ -342,16 +363,4 @@ func testCompact(t *testing.T) {
 	Expect(retData).To(BeNil())
 	Expect(found).NotTo(BeTrue())
 	Expect(err).NotTo(BeNil())
-}
-
-func expectWatchEvent(t *testing.T, wg *sync.WaitGroup, watchCh chan keyval.BytesWatchResp, expectedKey string) {
-	select {
-	case resp := <-watchCh:
-		Expect(resp).NotTo(BeNil())
-		Expect(resp.GetKey()).To(BeEquivalentTo(expectedKey))
-	case <-time.After(1 * time.Second):
-		t.Error("Watch resp not received")
-		t.FailNow()
-	}
-	wg.Done()
 }
