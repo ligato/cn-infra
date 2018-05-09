@@ -39,7 +39,7 @@ type Registry struct {
 	lastRev       *PrevRevisions
 }
 
-// Subscription
+// Subscription represents single subscription for Registry.
 type Subscription struct {
 	ResyncName  string
 	ChangeChan  chan datasync.ChangeEvent
