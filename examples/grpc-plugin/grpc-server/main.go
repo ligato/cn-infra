@@ -41,7 +41,7 @@ type ExamplePlugin struct {
 func (plugin *ExamplePlugin) Init() (err error) {
 	plugin.Log.Info("Example Init")
 
-	helloworld.RegisterGreeterServer(plugin.GRPC.Server(), &GreeterService{})
+	helloworld.RegisterGreeterServer(plugin.GRPC.GetServer(), &GreeterService{})
 
 	return nil
 }

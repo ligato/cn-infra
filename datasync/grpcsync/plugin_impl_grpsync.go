@@ -33,7 +33,7 @@ type Deps struct {
 
 // Init registers new gRPC service and instantiates plugin.Adapter.
 func (plugin *Plugin) Init() error {
-	grpcAdapter := NewAdapter(plugin.GRPC.Server())
+	grpcAdapter := NewAdapter(plugin.GRPC.GetServer())
 	plugin.Adapter = &syncbase.Adapter{Watcher: grpcAdapter}
 
 	return nil
