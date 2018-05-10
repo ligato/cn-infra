@@ -31,23 +31,6 @@ type Server interface {
 	//   }
 	GetServer() *grpc.Server
 
-	// GetClientFromServer allows to get client instance from the server
-	GetClientFromServer() Client
-
-	// Disabled informs other plugins about availability
-	IsDisabled() bool
-}
-
-// Client defines API for connectiong to external servers and receiving information
-// about their IP and port
-type Client interface {
-	// Connect dials provided address and creates new client connection
-	Connect(address string) (*grpc.ClientConn, error)
-
-	// GetNotificationEndpoints returns a list of addresses defined in grpc.conf. Those
-	// addresses are expected as GRPC listeners for statistics
-	GetNotificationEndpoints() []string
-
 	// Disabled informs other plugins about availability
 	IsDisabled() bool
 }

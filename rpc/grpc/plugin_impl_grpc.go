@@ -15,7 +15,6 @@
 package grpc
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 
@@ -38,14 +37,10 @@ type Plugin struct {
 	grpcCfg *Config
 	// GRPC server instance
 	grpcServer *grpc.Server
-	// GRPC client instance
-	grpcClient Client
 	// Used mainly for testing purposes
 	listenAndServe ListenAndServe
 	// GRPC network listener
 	netListener io.Closer
-	// Connected notification endpoints
-	notifConnections []*grpc.ClientConn
 	// Plugin availability flag
 	disabled bool
 }
@@ -111,11 +106,6 @@ func (plugin *Plugin) AfterInit() (err error) {
 func (plugin *Plugin) Close() error {
 	wasError := safeclose.Close(plugin.netListener)
 
-	for _, connection := range plugin.notifConnections {
-		err := connection.Close()
-		plugin.Log.Errorf("Closing GRPC connection failed: %v", err)
-	}
-
 	if plugin.grpcServer != nil {
 		plugin.grpcServer.Stop()
 	}
@@ -128,36 +118,10 @@ func (plugin *Plugin) GetServer() *grpc.Server {
 	return plugin.grpcServer
 }
 
-// GetClientFromServer directly returns client type instance
-func (plugin *Plugin) GetClientFromServer() Client {
-	return plugin
-}
-
 // IsDisabled returns *true* if the plugin is not in use due to missing
 // grpc configuration.
 func (plugin *Plugin) IsDisabled() (disabled bool) {
 	return plugin.disabled
-}
-
-// Connect returns new GRPC connection to the provided address
-func (plugin *Plugin) Connect(address string) (*grpc.ClientConn, error) {
-	// Set up connection to the server
-	connection, err := grpc.Dial(address, grpc.WithInsecure())
-	if err != nil {
-		return nil, fmt.Errorf("GRPC connection was not successful. Error: %v", err)
-	}
-
-	plugin.notifConnections = append(plugin.notifConnections, connection)
-	return connection, nil
-}
-
-// GetNotificationEndpoints returns an array of endpoints where the notifications
-// should be sent
-func (plugin *Plugin) GetNotificationEndpoints() []string {
-	if plugin.grpcCfg == nil {
-		return nil
-	}
-	return plugin.grpcCfg.NotificationEndpoints
 }
 
 // String returns plugin name (if not set defaults to "HTTP")

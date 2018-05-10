@@ -29,9 +29,6 @@ type Config struct {
 	// Endpoint is an address of GRPC netListener
 	Endpoint string `json:"endpoint"`
 
-	// NotificationEndpoints is a list of addresses where the notifications will be sent
-	NotificationEndpoints []string `json:"notification-endpoints"`
-
 	// MaxMsgSize returns a ServerOption to set the max message size in bytes for inbound mesages.
 	// If this is not set, gRPC uses the default 4MB.
 	MaxMsgSize int `json:"max-msg-size"`
