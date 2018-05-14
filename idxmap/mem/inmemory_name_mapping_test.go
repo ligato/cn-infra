@@ -26,7 +26,7 @@ import (
 func TestNewNamedMappingMem(t *testing.T) {
 	gomega.RegisterTestingT(t)
 	title := "Title"
-	mapping := NewNamedMapping(logrus.DefaultLogger(), "owner", title, nil)
+	mapping := NewNamedMapping(logrus.DefaultLogger(), title, nil)
 	returnedTitle := mapping.GetRegistryTitle()
 	gomega.Expect(returnedTitle).To(gomega.BeEquivalentTo(title))
 
@@ -36,7 +36,7 @@ func TestNewNamedMappingMem(t *testing.T) {
 
 func TestUpdateMetadata(t *testing.T) {
 	gomega.RegisterTestingT(t)
-	mapping := NewNamedMapping(logrus.DefaultLogger(), "owner", "title", nil)
+	mapping := NewNamedMapping(logrus.DefaultLogger(), "title", nil)
 
 	success := mapping.Update("Name1", "value1")
 	gomega.Expect(success).To(gomega.BeFalse())
@@ -56,7 +56,7 @@ func TestUpdateMetadata(t *testing.T) {
 
 func TestCrudOps(t *testing.T) {
 	gomega.RegisterTestingT(t)
-	mapping := NewNamedMapping(logrus.DefaultLogger(), "owner", "title", nil)
+	mapping := NewNamedMapping(logrus.DefaultLogger(), "title", nil)
 
 	mapping.Put("Name1", "value1")
 	meta, found := mapping.GetValue("Name1")
@@ -94,7 +94,7 @@ func TestCrudOps(t *testing.T) {
 func TestSecondaryIndexes(t *testing.T) {
 	gomega.RegisterTestingT(t)
 	const secondaryIx = "secondary"
-	mapping := NewNamedMapping(logrus.DefaultLogger(), "owner", "title", func(meta interface{}) map[string][]string {
+	mapping := NewNamedMapping(logrus.DefaultLogger(), "title", func(meta interface{}) map[string][]string {
 		res := map[string][]string{}
 		if str, ok := meta.(string); ok {
 			res[secondaryIx] = []string{str}
@@ -135,7 +135,7 @@ func TestSecondaryIndexes(t *testing.T) {
 
 func TestNotifications(t *testing.T) {
 	gomega.RegisterTestingT(t)
-	mapping := NewNamedMapping(logrus.DefaultLogger(), "owner", "title", nil)
+	mapping := NewNamedMapping(logrus.DefaultLogger(), "title", nil)
 
 	ch := make(chan idxmap.NamedMappingGenericEvent, 10)
 	err := mapping.Watch("subscriber", idxmap.ToChan(ch))
