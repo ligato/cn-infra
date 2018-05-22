@@ -150,6 +150,7 @@ func TestNotifications(t *testing.T) {
 	case notif := <-ch:
 		gomega.Expect(notif.RegistryTitle).To(gomega.BeEquivalentTo("title"))
 		gomega.Expect(notif.Del).To(gomega.BeFalse())
+		gomega.Expect(notif.Update).To(gomega.BeFalse())
 		gomega.Expect(notif.Name).To(gomega.BeEquivalentTo("Name1"))
 		gomega.Expect(notif.Value).To(gomega.BeEquivalentTo("value"))
 	case <-time.After(time.Second):
@@ -165,8 +166,25 @@ func TestNotifications(t *testing.T) {
 	case notif := <-ch:
 		gomega.Expect(notif.RegistryTitle).To(gomega.BeEquivalentTo("title"))
 		gomega.Expect(notif.Del).To(gomega.BeFalse())
+		gomega.Expect(notif.Update).To(gomega.BeFalse())
 		gomega.Expect(notif.Name).To(gomega.BeEquivalentTo("Name1"))
 		gomega.Expect(notif.Value).To(gomega.BeEquivalentTo("modified"))
+	case <-time.After(time.Second):
+		t.FailNow()
+	}
+
+	mapping.Update("Name1", "updated")
+	meta, found = mapping.GetValue("Name1")
+	gomega.Expect(found).To(gomega.BeTrue())
+	gomega.Expect(meta).To(gomega.BeEquivalentTo("updated"))
+
+	select {
+	case notif := <-ch:
+		gomega.Expect(notif.RegistryTitle).To(gomega.BeEquivalentTo("title"))
+		gomega.Expect(notif.Del).To(gomega.BeFalse())
+		gomega.Expect(notif.Update).To(gomega.BeTrue())
+		gomega.Expect(notif.Name).To(gomega.BeEquivalentTo("Name1"))
+		gomega.Expect(notif.Value).To(gomega.BeEquivalentTo("updated"))
 	case <-time.After(time.Second):
 		t.FailNow()
 	}
@@ -180,8 +198,9 @@ func TestNotifications(t *testing.T) {
 	case notif := <-ch:
 		gomega.Expect(notif.RegistryTitle).To(gomega.BeEquivalentTo("title"))
 		gomega.Expect(notif.Del).To(gomega.BeTrue())
+		gomega.Expect(notif.Update).To(gomega.BeFalse())
 		gomega.Expect(notif.Name).To(gomega.BeEquivalentTo("Name1"))
-		gomega.Expect(notif.Value).To(gomega.BeEquivalentTo("modified"))
+		gomega.Expect(notif.Value).To(gomega.BeEquivalentTo("updated"))
 	case <-time.After(time.Second):
 		t.FailNow()
 	}
