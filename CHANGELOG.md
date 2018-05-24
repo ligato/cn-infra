@@ -1,3 +1,21 @@
+# Release v1.3 (2018-05-24)
+
+## New Features
+  * Automatic resync if ETCD was disconnected and connected again. The feature is
+  disabled by default. See [readme](db/keyval/etcdv3/README.md) to learn how to 
+  enable the feature.
+  * Watch registration [API](datasync/datasync_api.go) now contains new method 
+  __Registration()__ allowing to register new key to all adapters.
+  * New plugin for [Consul](db/keyval/consul). See [readme](db/keyval/consul/README.md)
+  for more information.
+  * In-memory mapping method __UpdateMetadata()__ now triggers events. Use __IsUpdate()__
+  so see if the event comes from the update notification.
+  
+## Bugfix
+  * Transport for statuscheck plugin fixed
+  * Fixed bug where watcher was closed after server restart if database was compacted  
+  
+
 # Release v1.2 (2018-03-22)
 
 ## New Features
