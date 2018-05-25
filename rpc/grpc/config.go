@@ -26,8 +26,11 @@ import (
 // Config is a configuration for GRPC netListener
 // It is meant to be extended with security (TLS...)
 type Config struct {
-	// Endpoint is an address of GRPC netListener
+	// Endpoint is an address of GRPC netListener for TCP/IP transport. Always chosen as default if set.
 	Endpoint string `json:"endpoint"`
+
+	// UnixSocketFilePath defines a path for unix socket file.
+	UnixSocketFilePath string `json:"unix-socket-file-path"`
 
 	// MaxMsgSize returns a ServerOption to set the max message size in bytes for inbound mesages.
 	// If this is not set, gRPC uses the default 4MB.
