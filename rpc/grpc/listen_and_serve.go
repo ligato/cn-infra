@@ -15,9 +15,12 @@
 package grpc
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"time"
+	"syscall"
+	"github.com/ligato/cn-infra/logging"
 
 	"google.golang.org/grpc"
 )
@@ -34,8 +37,20 @@ func FromExistingServer(listenAndServe ListenAndServe) *Plugin {
 }
 
 // ListenAndServeGRPC starts a netListener.
-func ListenAndServeGRPC(config *Config, grpcServer *grpc.Server) (netListener net.Listener, err error) {
-	netListener, err = net.Listen("tcp", config.Endpoint)
+func ListenAndServeGRPC(config *Config, grpcServer *grpc.Server, log logging.Logger) (netListener net.Listener, err error) {
+	// Start listener with TCP/IP or unix domain socket type
+	if config.Endpoint != "" {
+		netListener, err = net.Listen("tcp", config.Endpoint)
+		log.Info("Listening GRPC on tcp://", config.Endpoint)
+	} else if config.UnixSocketFilePath != "" {
+		// Remove old socket
+		syscall.Unlink(config.UnixSocketFilePath)
+		// Socket file is created automatically
+		netListener, err = net.Listen("unix", config.UnixSocketFilePath)
+		log.Info("Listening GRPC on unix://", config.UnixSocketFilePath)
+	} else {
+		return nil, fmt.Errorf("no GRPC transport available")
+	}
 	if err != nil {
 		return nil, err
 	}
