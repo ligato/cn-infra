@@ -116,3 +116,26 @@ func EventLoopWithInterrupt(plugin NamedWirablePlugin,closeChan chan struct{}, w
 	return core.EventLoopWithInterrupt(agent,closeChan);
 }
 
+// Convenience function to run an MonitorableEventLoopWithInterupt from a single plugin, provided its Wirable and Named
+// Optionally you can provide a list of wirings to be composed an applied to the plugin
+// If no wirings are provided and the plugin is DefaultWirable, the DefaultWiring will be
+// applied.  This lets you get a running MonitorableEventLoopWithInterupt  in a single simple call:
+//
+// err := wiring.MonitorableEventLoopWithInterupt(plugin)
+//
+// An EventLoop for a plugin with a custom wiring started with a single simple call:
+//
+// err := wiring.MonitorableEventLoopWithInterupt(plugin, customWiring)
+//
+// An EventLoop for a plugin  with a custom wiring applied on top of the DefaultWiring can be applied with:
+//
+// err := wiring.MonitorableEventLoopWithInterupt(plugin, plugin.DefaultWiring(), customWiring)
+func MonitorableEventLoopWithInterupt(plugin NamedWirablePlugin,closeChan chan struct{},readyChan chan interface {}, wiring... Wiring) error {
+	agent,err := NewAgent(plugin,wiring...)
+	if err != nil {
+		readyChan <- err
+		close(readyChan)
+		return err;
+	}
+	return core.MonitorableEventLoopWithInterupt(agent,closeChan,readyChan)
+}
