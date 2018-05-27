@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The wiring package contains an SPI for Wirable Plugins and implementations of Helper Function to assist
+// Package wiring contains an SPI for Wirable Plugins and implementations of Helper Function to assist
 // with Wiring plugin dependencies into plugins
 package wiring

@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package wiring
 
 import (
@@ -28,7 +29,7 @@ func newAgentFromPlugins(plugins ...*core.NamedPlugin) *core.Agent {
 		plugins...)
 }
 
-// Convenience function to create a NamedPlugin from a plugin and a name
+// NamePlugin is a convenience function to create a NamedPlugin from a plugin and a name
 func NamePlugin (plugin core.Plugin, name string) *core.NamedPlugin {
 	return &core.NamedPlugin{
 		PluginName: core.PluginName(name),
@@ -36,7 +37,7 @@ func NamePlugin (plugin core.Plugin, name string) *core.NamedPlugin {
 	}
 }
 
-// Composes a list of Wirings into a single Wiring that will apply them in the order provided
+// ComposeWirings composes a list of Wirings into a single Wiring that will apply them in the order provided
 // This is really really handy when you want to simply mutate the DefaultWiring of a Plugin
 // rather than taking full responsiblity for all of its wiring. Example, you could have a
 // Wiring customWiring that just tweaks a single dependency:
@@ -56,7 +57,7 @@ func ComposeWirings(wiring... Wiring) (Wiring) {
 	return ret;
 }
 
-// Convenience method to create a NewAgent from a plugin that is Named and Wirable
+// NewAgent is a convenience method to create a NewAgent from a plugin that is Named and Wirable
 // Optionally you can provide a list of wirings to be composed an applied to the plugin
 // If no wirings are provided and the plugin is DefaultWirable, the DefaultWiring will be
 // applied.  This lets you get an agent with a single simple call:
@@ -94,7 +95,7 @@ func NewAgent(plugin  NamedWirablePlugin, wiring... Wiring) (agent *core.Agent, 
 	return newAgentFromPlugins(np),err
 }
 
-// Convenience function to run an EventLoopWithInterupt from a single plugin, provided its Wirable and Named
+// EventLoopWithInterrupt is a convenience function to run an EventLoopWithInterupt from a single plugin, provided its Wirable and Named
 // Optionally you can provide a list of wirings to be composed an applied to the plugin
 // If no wirings are provided and the plugin is DefaultWirable, the DefaultWiring will be
 // applied.  This lets you get a running EventLoopWithInterupt  in a single simple call:
@@ -116,7 +117,7 @@ func EventLoopWithInterrupt(plugin NamedWirablePlugin,closeChan chan struct{}, w
 	return core.EventLoopWithInterrupt(agent,closeChan);
 }
 
-// Convenience function to run an MonitorableEventLoopWithInterupt from a single plugin, provided its Wirable and Named
+// MonitorableEventLoopWithInterupt is a convenience function to run an MonitorableEventLoopWithInterupt from a single plugin, provided its Wirable and Named
 // Optionally you can provide a list of wirings to be composed an applied to the plugin
 // If no wirings are provided and the plugin is DefaultWirable, the DefaultWiring will be
 // applied.  This lets you get a running MonitorableEventLoopWithInterupt  in a single simple call:

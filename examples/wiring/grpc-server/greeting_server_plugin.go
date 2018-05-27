@@ -33,13 +33,13 @@ func (*GreeterService) SayHello(ctx context.Context, request *helloworld.HelloRe
 	return &helloworld.HelloReply{Message: defaultHelloWorldGreeting + request.Name}, nil
 }
 
-// Create a simple new GreeterService Plugin by embedding the grpc.Plugin
+// GreeterServicePlugin creates a new type of Plugin for a particular GRPC Service by embedding grpc.Plugin
 type GreeterServicePlugin struct {
 	grpc.Plugin
 }
 
-// Overload the Init() method
-// All we do here is call Init() on the embedded gRPC plugin and then register our GreeterService with the GRPC Server
+// Init overloads the grpc.Plugin Init() method
+// It calls grpc.Init() on the embedded gRPC plugin and then register our GreeterService with the GRPC Server
 func (plugin *GreeterServicePlugin) Init() (err error) {
 	plugin.Log.Infof("GreeterServicePlugin Init()")
 	err = plugin.Plugin.Init()

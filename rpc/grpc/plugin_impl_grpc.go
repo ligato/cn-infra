@@ -152,7 +152,7 @@ func (plugin *Plugin) getGrpcConfig() (*Config, error) {
 	return &grpcCfg, nil
 }
 
-// Implements wiring.Wireable This allows us to use Wiring rather than Flavors
+// Wire implements wiring.Wireable allowing us to use Wiring rather than Flavors
 // to configure Plugin Dependencies.
 func (plugin *Plugin) Wire(wiring wiring.Wiring) error {
 	if wiring == nil {
@@ -161,7 +161,7 @@ func (plugin *Plugin) Wire(wiring wiring.Wiring) error {
 	return wiring(plugin)
 }
 
-// Implements wiring.DefaultWirable .  Allows us to get a fully wired version of this file
+// DefaultWiring implements wiring.DefaultWirable allowing us to get a fully wired version of this file
 // without having to specify any wiring.
 func (plugin *Plugin) DefaultWiring() wiring.Wiring {
 	flavor := &local.FlavorLocal{}
@@ -169,7 +169,7 @@ func (plugin *Plugin) DefaultWiring() wiring.Wiring {
 	return plugin.DefaultWiringFromFlavorLocal(flavor)
 }
 
-// Abuse slightly the old flavor way of doing things.  Rather than having to figure out all of the
+// DefaultWiringFromFlavorLocal abuse slightly the old flavor way of doing things.  Rather than having to figure out all of the
 // Wiring myself at this stage, steal from the local.FlavorLocal.  This makes transitioning a Plugin
 // to being wirable very easy, as you can simply copy paste from a Flavor, as all Flavor's start
 // life with local.FlavorLocal.
@@ -186,19 +186,18 @@ func (plugin *Plugin) DefaultWiringFromFlavorLocal(flavor *local.FlavorLocal) wi
 			p.Deps.PluginName = grpcPlugDeps.PluginName
 			p.Deps.HTTP = nil;
 			return nil;
-		} else {
-			return errors.New("grpc.DefaultWiringFromFlavorLocal could not convert core.Plugin to *grpc.Plugin")
 		}
+		return errors.New("grpc.DefaultWiringFromFlavorLocal could not convert core.Plugin to *grpc.Plugin")
 	}
 	return ret;
 }
 
-// Implement wiring.Named
+// Name implement wiring.Named
 func (plugin *Plugin) Name() string {
 	return string(plugin.Deps.PluginName)
 }
 
-// Convienence function to set the runtime configuration of the GRPC plugin rather than reading it from file
+// Config is a convienence function to set the runtime configuration of the GRPC plugin rather than reading it from file
 func (plugin *Plugin) Config(config *Config) {
 	plugin.grpcCfg = config
 }
