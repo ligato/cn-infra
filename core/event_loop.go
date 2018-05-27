@@ -24,12 +24,20 @@ import (
 // Agent is stopped when <closeChan> is closed, a user interrupt (SIGINT), or a
 // terminate signal (SIGTERM) is received.
 func EventLoopWithInterrupt(agent *Agent, closeChan chan struct{}) error {
+	readyChan := make(chan interface{})
+	return MonitorableEventLoopWithInterupt(agent,closeChan,readyChan)
+}
+
+// MonitorableEventLoopWithInterupt starts an instance of the agent created with NewAgent().
+// readyChan receives any error involved with starting the Agent and is closed once the agent
+// is Started(), thus signaling readiness to the outside world
+func MonitorableEventLoopWithInterupt(agent *Agent, closeChan chan struct{},readyChan chan interface{} ) error {
 	err := agent.Start()
 	if err != nil {
 		agent.Error("Error loading core: ", err)
 		return err
 	}
-
+	close(readyChan)
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt)
 	signal.Notify(sigChan, syscall.SIGTERM)
