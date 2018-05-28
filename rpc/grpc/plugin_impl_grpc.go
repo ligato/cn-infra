@@ -82,7 +82,8 @@ func (plugin *Plugin) Init() error {
 	if plugin.listenAndServe != nil {
 		plugin.netListener, err = plugin.listenAndServe(*plugin.grpcCfg, plugin.grpcServer)
 	} else {
-		plugin.netListener, err = ListenAndServeGRPC(plugin.grpcCfg, plugin.grpcServer, plugin.Log)
+		plugin.Log.Info("Listening GRPC on tcp://", plugin.grpcCfg.Endpoint)
+		plugin.netListener, err = ListenAndServeGRPC(plugin.grpcCfg, plugin.grpcServer)
 	}
 
 	return err
