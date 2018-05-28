@@ -31,6 +31,7 @@ import (
 	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/ligato/cn-infra/wiring"
 	"github.com/pkg/errors"
+	"github.com/ligato/cn-infra/logging/logrus"
 )
 
 const (
@@ -166,7 +167,7 @@ func (plugin *Plugin) Wire(wiring wiring.Wiring) error {
 func (plugin *Plugin) DefaultWiring() wiring.Wiring {
 	flavor := &local.FlavorLocal{}
 	flavor.Inject()
-	return plugin.DefaultWiringFromFlavorLocal(flavor)
+	return plugin.DefaultWiringDirect()
 }
 
 // DefaultWiringFromFlavorLocal abuse slightly the old flavor way of doing things.  Rather than having to figure out all of the
@@ -188,6 +189,22 @@ func (plugin *Plugin) DefaultWiringFromFlavorLocal(flavor *local.FlavorLocal) wi
 			return nil;
 		}
 		return errors.New("grpc.DefaultWiringFromFlavorLocal could not convert core.Plugin to *grpc.Plugin")
+	}
+	return ret;
+}
+
+//DefaultWiringDirect creates DefaultWiring equivalent to using FlavorLocal but without having to go though FlavorLocal
+func (plugin *Plugin) DefaultWiringDirect() wiring.Wiring {
+	ret := func (plugin core.Plugin) error {
+		p,ok := plugin.(*Plugin)
+		if ok {
+			p.Deps.PluginName = core.PluginName(defaultName)
+			p.Deps.Log = logging.ForPlugin(p.Name(),logrus.NewLogRegistry())
+			p.Deps.PluginConfig = config.ForPlugin(p.Name())
+			p.Deps.HTTP = nil;
+			return nil;
+		}
+		return errors.New("grpc.DefaultWiringDirect could not convert core.Plugin to *grpc.Plugin")
 	}
 	return ret;
 }
