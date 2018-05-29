@@ -108,9 +108,10 @@ Added TLS support
 # Release v1.0.5 (2017-10-17)
 
 ## Profiling
-* new [logging/measure](logging/measure) - time measurement utility to measure duration of binary api calls
-  or linuxplugin netlink during resync. The feature is disabled by default and it can be enabled in
-  vpp.conf and linux.conf file (see plugin's readme)
+* new [logging/measure](logging/measure) - time measurement utility to measure duration of function or 
+  any part of the code. Use `NewStopwatch(name string, log logging.Logger)` to create an 
+  instance of stopwatch with name, desired logger and table with measured time entries. See 
+  [readme](logging/measure/README.md) for more information.
 
 ## Kafka
 * proto_connection.go and bytes_connection.go consolidated, bytes_connection.go now mirrors all
