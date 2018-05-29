@@ -103,9 +103,8 @@ func (plugin *Plugin) RegisterHTTPHandler(path string,
 
 	if plugin.Authenticator != nil {
 		return plugin.mx.HandleFunc(path, auth(handler(plugin.formatter), plugin.Authenticator)).Methods(methods...)
-	} else {
-		return plugin.mx.HandleFunc(path, handler(plugin.formatter)).Methods(methods...)
 	}
+	return plugin.mx.HandleFunc(path, handler(plugin.formatter)).Methods(methods...)
 
 }
 

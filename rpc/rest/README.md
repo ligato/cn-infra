@@ -49,7 +49,7 @@ $ curl -X GET http://localhost:9191/example
 ```
 
 
-**Security**
+##Security
 
 REST plugin allows to optionally configure following security features:
 - server certificate (HTTPS)
@@ -77,8 +77,8 @@ client certificates. If the list is not empty only client who provide a valid ce
 is allowed to access the server.
 
 `client-basic-auth` allows to define user password pairs that are allowed to access the
-server. The config option defines a static list of allowed user and instantiates default
-staticAuthenticator. Alternatively, you can implement custom authenticator and inject it
+server. The config option defines a static list of allowed user. If the list is not empty default
+staticAuthenticator is instantiated. Alternatively, you can implement custom authenticator and inject it
 into the plugin (e.g.: if you want to read credentials from ETCD).
 
 
