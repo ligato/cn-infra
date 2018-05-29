@@ -23,25 +23,42 @@ import (
 // EventLoopWithInterrupt starts an instance of the agent created with NewAgent().
 // Agent is stopped when <closeChan> is closed, a user interrupt (SIGINT), or a
 // terminate signal (SIGTERM) is received.
-func EventLoopWithInterrupt(agent *Agent, closeChan chan struct{}) error {
-	err := agent.Start()
-	if err != nil {
-		agent.Error("Error loading core: ", err)
-		return err
-	}
+func EventLoopWithInterrupt(agent *Agent, closeCh chan struct{}) error {
+	_, errCh := Run(agent, closeCh)
+	return <-errCh
+}
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt)
-	signal.Notify(sigChan, syscall.SIGTERM)
-	select {
-	case <-sigChan:
-		agent.Println("Interrupt received, returning.")
-	case <-closeChan:
-	}
-
-	err = agent.Stop()
-	if err != nil {
-		agent.Errorf("Agent stop error '%+v'", err)
-	}
-	return err
+// Run starts an instance of the agent created with NewAgent().
+// Agent is stopped when <closeChan> is closed, , a user interrupt (SIGINT), or a
+// terminate signal (SIGTERM) is received.
+//
+// Returns readyCh which will be closed when the agent is ready - warning readyCh may never be closed if the agent fails on start
+// Returns errCh which will receive all errors associated with starting or stopping the event loop
+//    errCh will be closed when the agent is successfully stopped
+func Run(agent *Agent, closeCh chan struct{}) (<-chan struct{}, <-chan error) {
+	// We need two slots in the errCh, one for errors on Start(), one for errors on Stop()
+	errCh := make(chan error, 2)
+	readyCh := make(chan struct{})
+	go func() {
+		defer close(errCh)
+		if err := agent.Start(); err != nil {
+			agent.Error("Error loading core: ", err)
+			errCh <- err
+			return
+		}
+		close(readyCh)
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, os.Interrupt)
+		signal.Notify(sigChan, syscall.SIGTERM)
+		select {
+		case <-sigChan:
+			agent.Println("Interrupt received, returning.")
+		case <-closeCh:
+		}
+		if err := agent.Stop(); err != nil {
+			agent.Errorf("Agent stop error '%+v'", err)
+			errCh <- err
+		}
+	}()
+	return readyCh, errCh
 }
