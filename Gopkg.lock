@@ -187,6 +187,12 @@
   version = "v1.0.0"
 
 [[projects]]
+  name = "github.com/go-errors/errors"
+  packages = ["."]
+  revision = "a6af135bd4e28680facf08a3d206b454abc877a4"
+  version = "v1.0.1"
+
+[[projects]]
   name = "github.com/go-redis/redis"
   packages = [
     ".",
@@ -602,6 +608,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "bd6f64032e7f1b4be64d5a2f649ca7b64b4c23c7da98f3889f9d71d732395e13"
+  inputs-digest = "ae3c8042f8bfb6543f9d41dd127a76017f85a0aa0a1144d25e383ccbaec700dc"
   solver-name = "gps-cdcl"
   solver-version = 1

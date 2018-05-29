@@ -18,11 +18,13 @@ import "github.com/ligato/cn-infra/core"
 
 // Wiring is a function that, when called on a core.Plugin is expected to 'wire'
 // Its dependencies
-type Wiring func (core.Plugin) error
+type Wiring func (plugin core.Plugin) error
 
 // Wireable implements a Wire function to wire in dependencies using a Wiring
 type Wireable interface {
 	Wire(wiring Wiring) error  // nil Wiring should result in a Default Wiring
+	IsWired() bool // true if the plugin is Wired, false otherwise
+	DefaultWiring(overwrite bool) Wiring
 }
 
 // WireablePlugin is a core.Plugin that is also Wireable
@@ -42,14 +44,3 @@ type NamedWirablePlugin interface {
 	Named
 }
 
-// DefaultWirable - a struct which has a DefaultWiring() method that returns a Wiring to use to
-// Wire up its dependencies with Default values
-type DefaultWirable interface {
-	DefaultWiring() Wiring
-}
-
-// DefaultWireableNamedWireablePlugin is a NamedWireablePlugin that is also DefaultWirable.
-type DefaultWireableNamedWireablePlugin interface {
-	NamedWirablePlugin
-	DefaultWirable
-}

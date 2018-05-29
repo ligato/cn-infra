@@ -14,69 +14,53 @@
 package grpc_test
 
 import (
-	"errors"
 	"google.golang.org/grpc/examples/helloworld/helloworld"
-	"github.com/ligato/cn-infra/rpc/grpc"
 	"github.com/ligato/cn-infra/wiring"
+	"github.com/ligato/cn-infra/rpc/grpc"
+	"github.com/ligato/cn-infra/examples/wiring/grpc-server/greetingservice"
 	"golang.org/x/net/context"
 	"testing"
 	dialer "google.golang.org/grpc"
+	"time"
+	"net"
 )
 
 const (
 	defaultAddress = "localhost:9111"
-	defaultHelloWorldGreeting = "hello "
 	defaultHelloWorldName = "Ed"
 )
 
-// GreeterService implements GRPC GreeterServer interface (interface generated from protobuf definition file).
-// It is a simple implementation for testing/demo only purposes.
-type GreeterService struct{}
 
-// SayHello returns error if request.name was not filled otherwise: "hello " + request.Name
-func (*GreeterService) SayHello(ctx context.Context, request *helloworld.HelloRequest) (*helloworld.HelloReply, error) {
-	if request.Name == "" {
-		return nil, errors.New("not filled name in the request")
-	}
-
-	return &helloworld.HelloReply{Message: defaultHelloWorldGreeting + request.Name}, nil
-}
-
-type GreeterServicePlugin struct {
-	grpc.Plugin
-}
-
-func (plugin *GreeterServicePlugin) Init() (err error) {
-	plugin.Log.Infof("GreeterServicePlugin Init()")
-	err = plugin.Plugin.Init()
-	if err != nil {
-		return err
-	} else {
-		helloworld.RegisterGreeterServer(plugin.GetServer(), &GreeterService{})
-		plugin.Log.Infof("Registered Greeter Service")
-	}
-	return err
-}
-
-func (plugin *GreeterServicePlugin) Name() string { return "greeting-service"}
-
-func GreetingTest(t *testing.T,config *grpc.Config,name string, target string) {
-	closeCh := make(chan struct{})
-	defer close(closeCh)
-	readyCh := make(chan interface {})
-	errorCh := make(chan error)
-	plugin := &GreeterServicePlugin{}
-	plugin.Config(config)
+func Setup(config *grpc.Config) (plugin *greetingservice.Plugin,closeCh chan struct{},readyCh chan interface{},errorCh chan error ) {
+	closeCh = make(chan struct{})
+	readyCh = make(chan interface {})
+	errorCh = make(chan error)
+	plugin = &greetingservice.Plugin{}
+	plugin.SetConfig(config)
 	go func() { errorCh <- wiring.MonitorableEventLoopWithInterupt(plugin,closeCh,readyCh);close(errorCh)}()
-	var err error
+	return plugin,closeCh,readyCh,errorCh
+}
+
+func GreetingTest(t *testing.T,config *grpc.Config,name string) {
+	plugin,closeCh,readyCh,errorCh := Setup(config)
+	defer close(closeCh)
+
 	select {
-	case err = <-errorCh:
+	case err := <-errorCh:
 		t.Errorf("%s failed with err on running EventLoop: %s", name, err)
 		return
 	case <- readyCh:
 	}
-	plugin.Log.Infof("Attempting to dial target %s", target)
-	conn, err := dialer.Dial(target, dialer.WithInsecure())
+
+	plugin.Log.Infof("Attempting to dial target %s", config.Endpoint)
+	d := func(target string, duration time.Duration) (net.Conn, error) {
+		network := "tcp"
+		if config.SocketType != "" {
+			network = config.SocketType
+		}
+		return net.DialTimeout(network,target,duration)
+	}
+	conn, err := dialer.Dial(config.Endpoint, dialer.WithInsecure(), dialer.WithDialer(d))
 	if err != nil {
 		t.Errorf("%s failed with err on Dialing GRPC Server: %s", name, err)
 		return
@@ -88,7 +72,7 @@ func GreetingTest(t *testing.T,config *grpc.Config,name string, target string) {
 		t.Errorf("%s failed with err on calling SayHello on GRPC Server %s",name,err)
 		return
 	}
-	expectedResponse := &helloworld.HelloReply{Message:(defaultHelloWorldGreeting + defaultHelloWorldName)}
+	expectedResponse := &helloworld.HelloReply{Message:(greetingservice.DefaultHelloWorldGreeting + defaultHelloWorldName)}
 	if r.Message != expectedResponse.Message {
 		t.Errorf("%s failed with incorrect response to SayHello on GRPC Server \"%s\" expected \"%s\"",name,r.Message,expectedResponse.Message)
 		return
@@ -96,10 +80,10 @@ func GreetingTest(t *testing.T,config *grpc.Config,name string, target string) {
 }
 
 func TestGrpc01TCP (t *testing.T) {
-	GreetingTest(t,&grpc.Config{ Endpoint: defaultAddress},"TestGrpcTCP01",defaultAddress)
+	GreetingTest(t,&grpc.Config{ Endpoint: defaultAddress},"TestGrpcTCP01")
 }
 
-// TODO: Fix this test (or the code)
+//TODO: Fix this test (or the code)
 //func TestGrpc01UnixFileSocket (t *testing.T) {
 //	name := "TestGrpcUnixFileSocket01"
 //	tempfile,err := ioutil.TempFile("/tmp","test")
@@ -108,5 +92,5 @@ func TestGrpc01TCP (t *testing.T) {
 //	if err != nil {
 //		t.Errorf("%s failed to open tempfile, %s",name,err)
 //	}
-//	GreetingTest(t,&grpc.Config{ UnixSocketFilePath: tempfile.Name()},name,("unix://"+tempfile.Name()))
+//	GreetingTest(t,&grpc.SetConfig{ Endpoint: tempfile.Name(),SocketType:"unix"},name)
 //}

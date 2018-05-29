@@ -27,6 +27,8 @@ examples/redis-plugin/redis-plugin
 examples/simple-agent/simple-agent
 examples/statuscheck-plugin/statuscheck-plugin
 examples/prometheus-plugin/prometheus-plugin
+examples/wiring/grpc-server/grpc-server
+examples/wiring/grpc-with-rest/grpc-with-rest
 db/keyval/etcdv3/examples/phonebook/editor/editor
 db/keyval/etcdv3/examples/phonebook/view/view
 db/keyval/etcdv3/examples/phonebook/watcher/watcher

@@ -16,7 +16,7 @@ package wiring
 
 import (
 	"github.com/ligato/cn-infra/core"
-	"github.com/pkg/errors"
+	"github.com/go-errors/errors"
 	"github.com/ligato/cn-infra/logging/logrus"
 	"time"
 )
@@ -75,23 +75,15 @@ func NewAgent(plugin  NamedWirablePlugin, wiring... Wiring) (agent *core.Agent, 
 	if plugin == nil {
 		return nil, errors.Errorf("Cannot construct an Agent for nil plugin")
 	}
-	if len(wiring) > 0 {
-		err = plugin.Wire(ComposeWirings(wiring...))
-	} else {
-		p,ok := plugin.(DefaultWirable)
-		if ok {
-			err = plugin.Wire(p.DefaultWiring())
-		} else {
-			return nil,errors.Errorf("plugin %s is not DefaultWirable and no Wirings were specified", plugin.Name())
-		}
-	}
+
+	wiring = append(wiring,plugin.DefaultWiring(false))
+
+	err = plugin.Wire(ComposeWirings(wiring...))
 	if err != nil {
 		return nil,err
 	}
-	np := &core.NamedPlugin{
-		core.PluginName(plugin.Name()),
-		plugin,
-	}
+
+	np := NamePlugin(plugin,plugin.Name())
 	return newAgentFromPlugins(np),err
 }
 

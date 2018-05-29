@@ -28,14 +28,6 @@ import (
 	"github.com/unrolled/render"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
-	"github.com/ligato/cn-infra/flavors/local"
-	"github.com/ligato/cn-infra/wiring"
-	"github.com/pkg/errors"
-	"github.com/ligato/cn-infra/logging/logrus"
-)
-
-const (
-	defaultName = "grpc"
 )
 
 // Plugin maintains the GRPC netListener (see Init, AfterInit, Close methods)
@@ -153,69 +145,7 @@ func (plugin *Plugin) getGrpcConfig() (*Config, error) {
 	return &grpcCfg, nil
 }
 
-// Wire implements wiring.Wireable allowing us to use Wiring rather than Flavors
-// to configure Plugin Dependencies.
-func (plugin *Plugin) Wire(wiring wiring.Wiring) error {
-	if wiring == nil {
-		wiring = plugin.DefaultWiring()
-	}
-	return wiring(plugin)
-}
-
-// DefaultWiring implements wiring.DefaultWirable allowing us to get a fully wired version of this file
-// without having to specify any wiring.
-func (plugin *Plugin) DefaultWiring() wiring.Wiring {
-	flavor := &local.FlavorLocal{}
-	flavor.Inject()
-	return plugin.DefaultWiringDirect()
-}
-
-// DefaultWiringFromFlavorLocal abuse slightly the old flavor way of doing things.  Rather than having to figure out all of the
-// Wiring myself at this stage, steal from the local.FlavorLocal.  This makes transitioning a Plugin
-// to being wirable very easy, as you can simply copy paste from a Flavor, as all Flavor's start
-// life with local.FlavorLocal.
-// Note: this default wiring doesn't configuring Deps.HTTP, because its designed to Wire the Plugin
-// standalone.  If you *wanted* to configure Deps.HTTP you could simply supply a Wiring that does.
-func (plugin *Plugin) DefaultWiringFromFlavorLocal(flavor *local.FlavorLocal) wiring.Wiring {
-	ret := func (plugin core.Plugin) error {
-		p,ok := plugin.(*Plugin)
-		if ok {
-			grpcPlugDeps := *flavor.InfraDeps(defaultName, local.WithConf())
-			p.Deps.Log = grpcPlugDeps.Log
-			//p.Deps.Log = logging.ForPlugin("grpc",nil)
-			p.Deps.PluginConfig = grpcPlugDeps.PluginConfig
-			p.Deps.PluginName = grpcPlugDeps.PluginName
-			p.Deps.HTTP = nil;
-			return nil;
-		}
-		return errors.New("grpc.DefaultWiringFromFlavorLocal could not convert core.Plugin to *grpc.Plugin")
-	}
-	return ret;
-}
-
-//DefaultWiringDirect creates DefaultWiring equivalent to using FlavorLocal but without having to go though FlavorLocal
-func (plugin *Plugin) DefaultWiringDirect() wiring.Wiring {
-	ret := func (plugin core.Plugin) error {
-		p,ok := plugin.(*Plugin)
-		if ok {
-			p.Deps.PluginName = core.PluginName(defaultName)
-			p.Deps.Log = logging.ForPlugin(p.Name(),logrus.NewLogRegistry())
-			p.Deps.PluginConfig = config.ForPlugin(p.Name())
-			p.Deps.HTTP = nil;
-			return nil;
-		}
-		return errors.New("grpc.DefaultWiringDirect could not convert core.Plugin to *grpc.Plugin")
-	}
-	return ret;
-}
-
-// Name implement wiring.Named
-func (plugin *Plugin) Name() string {
-	return string(plugin.Deps.PluginName)
-}
-
-// Config is a convienence function to set the runtime configuration of the GRPC plugin rather than reading it from file
-func (plugin *Plugin) Config(config *Config) {
+// SetConfig is a convienence function to set the runtime configuration of the GRPC plugin rather than reading it from file
+func (plugin *Plugin) SetConfig(config *Config) {
 	plugin.grpcCfg = config
 }
-

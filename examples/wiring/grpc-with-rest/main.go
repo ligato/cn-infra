@@ -17,6 +17,7 @@ package main
 import (
 	"github.com/ligato/cn-infra/wiring"
 	"github.com/ligato/cn-infra/examples/wiring/grpc-server/greetingservice"
+	"github.com/ligato/cn-infra/rpc/grpc"
 )
 
 const (
@@ -40,5 +41,5 @@ func main() {
 	// wiring.EventLoopWithInterrupt(plugin,closeCh,plugin.DefaultWiring(),wiring)
 	// which would first apply the DefaultWiring for the plugin, and then custom wiring provided in wiring
 	// 99% of the time, you are good with the DefaultWiring
-	wiring.EventLoopWithInterrupt(plugin,closeCh)
+	wiring.EventLoopWithInterrupt(plugin,closeCh,grpc.WithRest(false))
 }
