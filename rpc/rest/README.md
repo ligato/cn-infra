@@ -49,7 +49,7 @@ $ curl -X GET http://localhost:9191/example
 ```
 
 
-##Security
+## Security
 
 REST plugin allows to optionally configure following security features:
 - server certificate (HTTPS)
@@ -58,7 +58,7 @@ REST plugin allows to optionally configure following security features:
 
 All of them are disabled by default and can be enabled by config file:
 
-```
+```yaml
 endpoint: 127.0.0.1:9292
 server-cert-file: server.crt
 server-key-file: server.key
@@ -86,7 +86,7 @@ into the plugin (e.g.: if you want to read credentials from ETCD).
 
 In order to generated self-signed certificates you can use the following commands:
 
-```
+```bash
 #generate key for "Our Certificate Authority"
 openssl genrsa -out ca.key 2048
 
@@ -109,21 +109,21 @@ Once the security features are enabled, the endpoint can be accessed by the foll
 
 - **HTTPS**
 where `ca.pem` is a certificate authority where server certificate should be validated (in case of self-signed certificates)
-```
-curl --cacert ca.crt  https://127.0.0.1:9292/log/list
-```
+  ```
+  curl --cacert ca.crt  https://127.0.0.1:9292/log/list
+  ```
 
 - **HTTPS + client cert** where `client.crt` is a valid client certificate.
-```
-curl --cacert ca.crt  --cert client.crt --key client.key  https://127.0.0.1:9292/log/list
-```
+  ```
+  curl --cacert ca.crt  --cert client.crt --key client.key  https://127.0.0.1:9292/log/list
+  ```
 
 - **HTTPS + basic auth** where `user:pass` is a valid username password pair.
-```
-curl --cacert ca.crt  -u user:pass  https://127.0.0.1:9292/log/list
-```
+  ```
+  curl --cacert ca.crt  -u user:pass  https://127.0.0.1:9292/log/list
+  ```
 
 - **HTTPS + client cert + basic auth**
-```
-curl --cacert ca.crt  --cert client.crt --key client.key -u user:pass  https://127.0.0.1:9292/log/list
-```
+  ```
+  curl --cacert ca.crt  --cert client.crt --key client.key -u user:pass  https://127.0.0.1:9292/log/list
+  ```
