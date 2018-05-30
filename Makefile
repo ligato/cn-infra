@@ -77,12 +77,8 @@ test-examples:
 	@echo "=> Testing examples: reactions to disconnect/reconnect of plugins redis, cassandra ..."
 	./scripts/test_examples/plugin_reconnect.sh
 
-# Get coverage report tools
-get-covtools:
-	go get -v github.com/wadey/gocovmerge
-
 # Run coverage report
-test-cover: get-testtools get-covtools
+test-cover: get-testtools
 	@echo "=> running coverage report"
 	go test -covermode=count -coverprofile=${COVER_DIR}/coverage.out ./...
 	@echo "=> coverage data generated into ${COVER_DIR}/coverage.out"
@@ -136,7 +132,7 @@ check-links: get-linkcheck
 
 .PHONY: build clean \
 	examples examples-plugin clean-examples clean-examples-plugin test test-examples \
-	get-testtools test-cover test-cover-html test-cover-xml \
+	test-cover test-cover-html test-cover-xml \
 	get-dep dep-install dep-update \
 	get-linters lint format \
 	get-linkcheck check-links
