@@ -39,7 +39,7 @@ type Config struct {
 
 	// MaxConcurrentStreams returns a ServerOption that will apply a limit on the number
 	// of concurrent streams to each ServerTransport.
-	MaxConcurrentStreams uint32 `json:"mac-conncurrent-streams"`
+	MaxConcurrentStreams uint32 `json:"max-concurrent-streams"`
 
 	// Compression for inbound/outbound messages.
 	// Supported only gzip.
