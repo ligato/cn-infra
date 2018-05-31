@@ -144,3 +144,8 @@ func (plugin *Plugin) getGrpcConfig() (*Config, error) {
 	}
 	return &grpcCfg, nil
 }
+
+// SetConfig is a convienence function to set the runtime configuration of the GRPC plugin rather than reading it from file
+func (plugin *Plugin) SetConfig(config *Config) {
+	plugin.grpcCfg = config
+}

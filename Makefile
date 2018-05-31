@@ -36,6 +36,8 @@ examples-plugin:
 	cd examples/simple-agent && go build -i -v ${LDFLAGS}
 	cd examples/statuscheck-plugin && go build -i -v ${LDFLAGS}
 	cd examples/prometheus-plugin && go build -i -v ${LDFLAGS}
+	cd examples/wiring/grpc-server && go build -i -v ${LDFLAGS} ./...
+	cd examples/wiring/grpc-with-rest && go build -i -v ${LDFLAGS}
 
 # Clean examples
 clean-examples:
@@ -61,6 +63,7 @@ clean-examples-plugin:
 	rm -f examples/statuscheck-plugin/statuscheck-plugin
 	rm -f examples/prometheus-plugin/prometheus-plugin
 
+
 # Get test tools
 get-testtools:
 	go get -v github.com/hashicorp/consul
@@ -80,6 +83,8 @@ test: get-testtools
 	go test ./messaging/kafka/mux
 	go test ./utils/addrs
 	go test ./tests/gotests/itest
+	go test ./rpc/grpc
+	go test ./rpc/rest
 
 # Run script for testing examples
 test-examples:
@@ -107,6 +112,8 @@ test-cover: get-testtools get-covtools
 	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit10.out ./messaging/kafka/mux
 	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit11.out ./utils/addrs
 	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit12.out ./tests/gotests/itest
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit13.out ./rpc/grpc
+	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit14.out ./rpc/rest
 	@echo "=> merging coverage results"
 	gocovmerge \
 			${COVER_DIR}coverage_unit1.out \
@@ -121,6 +128,8 @@ test-cover: get-testtools get-covtools
 			${COVER_DIR}coverage_unit10.out \
 			${COVER_DIR}coverage_unit11.out \
 			${COVER_DIR}coverage_unit12.out \
+			${COVER_DIR}coverage_unit13.out \
+			${COVER_DIR}coverage_unit14.out \
 		> ${COVER_DIR}coverage.out
 	@echo "=> coverage data generated into ${COVER_DIR}coverage.out"
 
