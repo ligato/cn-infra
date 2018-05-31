@@ -5,7 +5,7 @@ DATE	:= $(shell date +'%Y-%m-%dT%H:%M%:z')
 CNINFRA_CORE := github.com/ligato/cn-infra/core
 LDFLAGS = -ldflags '-X $(CNINFRA_CORE).BuildVersion=$(VERSION) -X $(CNINFRA_CORE).CommitHash=$(COMMIT) -X $(CNINFRA_CORE).BuildDate=$(DATE)'
 
-COVER_DIR ?= /tmp/
+COVER_DIR ?= /tmp
 
 # Build all
 build: examples examples-plugin
@@ -63,23 +63,12 @@ clean-examples-plugin:
 
 # Get test tools
 get-testtools:
-	go get -v github.com/hashicorp/consul
+	go get github.com/hashicorp/consul
 
 # Run tests
 test: get-testtools
 	@echo "=> running unit tests"
-	go test ./core
-	go test ./datasync/syncbase
-	go test ./db/keyval/consul
-	go test ./db/keyval/etcdv3
-	go test ./db/keyval/redis
-	go test ./db/sql/cassandra
-	go test ./idxmap/mem
-	go test ./logging/logrus
-	go test ./messaging/kafka/client
-	go test ./messaging/kafka/mux
-	go test ./utils/addrs
-	go test ./tests/gotests/itest
+	go test ./...
 
 # Run script for testing examples
 test-examples:
@@ -88,50 +77,20 @@ test-examples:
 	@echo "=> Testing examples: reactions to disconnect/reconnect of plugins redis, cassandra ..."
 	./scripts/test_examples/plugin_reconnect.sh
 
-# Get coverage report tools
-get-covtools:
-	go get -v github.com/wadey/gocovmerge
-
 # Run coverage report
-test-cover: get-testtools get-covtools
+test-cover: get-testtools
 	@echo "=> running coverage report"
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit1.out ./core
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit2.out ./datasync/syncbase
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit3.out ./db/keyval/consul
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit4.out ./db/keyval/etcdv3
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit5.out ./db/keyval/redis
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit6.out ./db/sql/cassandra
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit7.out ./idxmap/mem
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit8.out ./logging/logrus
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit9.out ./messaging/kafka/client
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit10.out ./messaging/kafka/mux
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit11.out ./utils/addrs
-	go test -covermode=count -coverprofile=${COVER_DIR}coverage_unit12.out ./tests/gotests/itest
-	@echo "=> merging coverage results"
-	gocovmerge \
-			${COVER_DIR}coverage_unit1.out \
-			${COVER_DIR}coverage_unit2.out \
-			${COVER_DIR}coverage_unit3.out \
-			${COVER_DIR}coverage_unit4.out \
-			${COVER_DIR}coverage_unit5.out \
-			${COVER_DIR}coverage_unit6.out \
-			${COVER_DIR}coverage_unit7.out \
-			${COVER_DIR}coverage_unit8.out \
-			${COVER_DIR}coverage_unit9.out \
-			${COVER_DIR}coverage_unit10.out \
-			${COVER_DIR}coverage_unit11.out \
-			${COVER_DIR}coverage_unit12.out \
-		> ${COVER_DIR}coverage.out
-	@echo "=> coverage data generated into ${COVER_DIR}coverage.out"
+	go test -covermode=count -coverprofile=${COVER_DIR}/coverage.out ./...
+	@echo "=> coverage data generated into ${COVER_DIR}/coverage.out"
 
 test-cover-html: test-cover
-	go tool cover -html=${COVER_DIR}coverage.out -o ${COVER_DIR}coverage.html
-	@echo "=> coverage report generated into ${COVER_DIR}coverage.html"
-	go tool cover -html=${COVER_DIR}coverage.out
+	go tool cover -html=${COVER_DIR}/coverage.out -o ${COVER_DIR}/coverage.html
+	@echo "=> coverage report generated into ${COVER_DIR}/coverage.html"
+	go tool cover -html=${COVER_DIR}/coverage.out
 
 test-cover-xml: test-cover
-	gocov convert ${COVER_DIR}coverage.out | gocov-xml > ${COVER_DIR}coverage.xml
-	@echo "=> coverage report generated into ${COVER_DIR}coverage.xml"
+	gocov convert ${COVER_DIR}/coverage.out | gocov-xml > ${COVER_DIR}/coverage.xml
+	@echo "=> coverage report generated into ${COVER_DIR}/coverage.xml"
 
 # Get dependency manager tool
 get-dep:
@@ -173,7 +132,7 @@ check-links: get-linkcheck
 
 .PHONY: build clean \
 	examples examples-plugin clean-examples clean-examples-plugin test test-examples \
-	get-covtools test-cover test-cover-html test-cover-xml \
+	test-cover test-cover-html test-cover-xml \
 	get-dep dep-install dep-update \
 	get-linters lint format \
 	get-linkcheck check-links

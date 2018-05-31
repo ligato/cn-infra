@@ -50,8 +50,9 @@ type PluginStatusIdxMapRW interface {
 
 // NewPluginStatusMap is a constructor for PluginStatusIdxMapRW.
 func NewPluginStatusMap(owner core.PluginName) PluginStatusIdxMapRW {
-	return &pluginStatusMap{mapping: mem.NewNamedMapping(logrus.DefaultLogger(),
-		owner, "plugin status", IndexPluginStatus)}
+	return &pluginStatusMap{
+		mapping: mem.NewNamedMapping(logrus.DefaultLogger(), "plugin_status", IndexPluginStatus),
+	}
 }
 
 // pluginStatusMap is a type-safe implementation of PluginStatusIdxMap(RW).
