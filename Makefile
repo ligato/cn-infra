@@ -17,7 +17,7 @@ clean: clean-examples clean-examples-plugin
 examples:
 	@echo "=> building examples"
 	cd examples/cassandra-lib && go build
-	cd examples/etcdv3-lib && make build
+	cd examples/etcd-lib && make build
 	cd examples/kafka-lib && make build
 	cd examples/logs-lib && make build
 	cd examples/redis-lib && make build
@@ -41,7 +41,7 @@ examples-plugin:
 clean-examples:
 	@echo "=> cleaning examples"
 	cd examples/cassandra-lib && rm -f cassandra-lib
-	cd examples/etcdv3-lib && make clean
+	cd examples/etcd-lib && make clean
 	cd examples/kafka-lib && make clean
 	cd examples/logs-lib && make clean
 	cd examples/redis-lib && make clean

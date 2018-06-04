@@ -18,7 +18,7 @@ The most importatnt CN-Infra flavors are:
 The following diagram depicts:
 * plugins that are parts of a specific flavor
 * the initialized (injected) [statuscheck](../health/statuscheck)
-  dependency within the [etcd client plugin](../db/keyval/etcdv3)
+  dependency within the [etcd client plugin](../db/keyval/etcd)
   and the [Kafka client plugin](../messaging/kafka)
 * the [local flavor](local) embedded in:
     * [all connectors flavor](connectors) 

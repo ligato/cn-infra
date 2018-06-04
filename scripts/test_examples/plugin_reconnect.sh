@@ -99,12 +99,12 @@ startCustomizedKafka examples/kafka-plugin/manual-partitioner/server.properties
 startRedis
 startCassandra
 
-expected=("Plugin etcdv3: status check probe registered
+expected=("Plugin etcd: status check probe registered
 Plugin redis: status check probe registered
 Plugin cassandra: status check probe registered
 Plugin kafka: status check probe registered
 All plugins initialized successfully
-Agent plugin state update.*plugin=etcdv3 state=ok
+Agent plugin state update.*plugin=etcd state=ok
 Agent plugin state update.*plugin=redis state=ok
 Agent plugin state update.*plugin=cassandra state=ok
 Agent plugin state update.*plugin=kafka state=ok
@@ -114,7 +114,7 @@ unexpected=("Redis config not found, skip loading this plugin
 cassandra client config not found  - skip loading this plugin
 ")
 
-cmd="examples/simple-agent/simple-agent --etcdv3-config=examples/etcdv3-lib/etcd.conf --kafka-config=examples/kafka-plugin/manual-partitioner/kafka.conf  --redis-config=examples/redis-lib/node-client.yaml --cassandra-config=examples/cassandra-lib/client-config.yaml"
+cmd="examples/simple-agent/simple-agent --etcd-config=examples/etcd-lib/etcd.conf --kafka-config=examples/kafka-plugin/manual-partitioner/kafka.conf  --redis-config=examples/redis-lib/node-client.yaml --cassandra-config=examples/cassandra-lib/client-config.yaml"
 testOutput "${cmd}" "${expected}" "${unexpected}"
 # the cmd continues to run - PID of the process is stored in the variable CMD_PID
 # we will kill it later after testing of all events ...

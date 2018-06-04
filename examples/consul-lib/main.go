@@ -22,7 +22,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/consul"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
-	"github.com/ligato/cn-infra/examples/etcdv3-lib/model/phonebook"
+	"github.com/ligato/cn-infra/examples/etcd-lib/model/phonebook"
 )
 
 func main() {
