@@ -68,7 +68,7 @@ in one of the following functional areas:
 * **Data Stores** - provides a common data store API for app plugins (the 
     Data Broker) and back-end clients for Etcd, Redis and Cassandra. The 
     data store related plugin are as follows:
-  - [Etcd](db/keyval/etcdv3) - implements keyval skeleton provides access 
+  - [Etcd](db/keyval/etcd) - implements keyval skeleton provides access
     to etcd
   - [Redis](db/keyval/redis) - implements keyval skeleton provides access
     to redis

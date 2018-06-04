@@ -17,7 +17,7 @@ It will bring up ETCD listening on port 2379 for client communication.
 ### Usage
 
 In the example, the location of the ETCD configuration file is defined
-with the `-etcdv3-config` argument or through the `ETCDV3_CONFIG`
+with the `-etcd-config` argument or through the `ETCD_CONFIG`
 environment variable.
 By default, the application will try to search for `etcd.conf`
 in the current working directory.
@@ -27,6 +27,6 @@ not execute in its entirety.
 
 To run the example, type:
 ```
-go run main.go deps.go [-etcdv3-config <config-filepath>]
+go run main.go deps.go [-etcd-config <config-filepath>]
 ```
 

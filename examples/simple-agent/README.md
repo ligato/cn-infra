@@ -7,7 +7,7 @@ can be turned into an application.
 
 To run the example, simply type:
 ```
-go run agent.go [-kafka-config <config-filepath>] [-etcdv3-config <config-filepath>] \
+go run agent.go [-kafka-config <config-filepath>] [-etcd-config <config-filepath>] \
  [-cassandra-config <config-filepath>] [-redis-config <config-filepath>]
 ```
 

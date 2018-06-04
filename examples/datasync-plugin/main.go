@@ -8,7 +8,7 @@ import (
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/kvdbsync"
 	"github.com/ligato/cn-infra/datasync/resync"
-	"github.com/ligato/cn-infra/db/keyval/etcdv3"
+	"github.com/ligato/cn-infra/db/keyval/etcd"
 	"github.com/ligato/cn-infra/examples/model"
 	"github.com/ligato/cn-infra/flavors/connectors"
 	"github.com/ligato/cn-infra/flavors/local"
@@ -17,7 +17,7 @@ import (
 )
 
 // *************************************************************************
-// This example demonstrates the usage of datasync API with etcdv3
+// This example demonstrates the usage of datasync API with etcd
 // as the data store.
 // ExamplePlugin spawns a data publisher and a data consumer (watcher)
 // as two separate go routines.
@@ -32,16 +32,16 @@ func main() {
 
 	// Start Agent with ExamplePlugin, ETCDPlugin & FlavorLocal (reused cn-infra plugins).
 	agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
-		etcdPlug := &etcdv3.Plugin{}
+		etcdPlug := &etcd.Plugin{}
 		etcdDataSync := &kvdbsync.Plugin{}
 		resyncOrch := &resync.Plugin{}
 
-		etcdPlug.Deps.PluginInfraDeps = *flavor.InfraDeps("etcdv3", local.WithConf())
-		resyncOrch.Deps.PluginLogDeps = *flavor.LogDeps("etcdv3-resync")
+		etcdPlug.Deps.PluginInfraDeps = *flavor.InfraDeps("etcd", local.WithConf())
+		resyncOrch.Deps.PluginLogDeps = *flavor.LogDeps("etcd-resync")
 		connectors.InjectKVDBSync(etcdDataSync, etcdPlug, etcdPlug.PluginName, flavor, resyncOrch)
 
 		examplePlug := &ExamplePlugin{closeChannel: &exampleFinished}
-		examplePlug.Deps.PluginInfraDeps = *flavor.InfraDeps("etcdv3-example")
+		examplePlug.Deps.PluginInfraDeps = *flavor.InfraDeps("etcd-example")
 		examplePlug.Deps.Publisher = etcdDataSync // Inject datasync Watcher to example plugin.
 		examplePlug.Deps.Watcher = etcdDataSync   // Inject datasync Publisher to example plugin.
 

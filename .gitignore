@@ -4,9 +4,9 @@ examples/cassandra-lib/cassandra-lib
 examples/configs-plugin/configs-plugin
 examples/consul-lib/consul-lib
 examples/datasync-plugin/datasync-plugin
-examples/etcdv3-lib/editor/editor
-examples/etcdv3-lib/view/view
-examples/etcdv3-lib/watcher/watcher
+examples/etcd-lib/editor/editor
+examples/etcd-lib/view/view
+examples/etcd-lib/watcher/watcher
 examples/flags-lib/flags-lib
 examples/kafka-lib/asyncproducer/asyncproducer
 examples/kafka-lib/consumer/consumer
@@ -27,9 +27,9 @@ examples/redis-plugin/redis-plugin
 examples/simple-agent/simple-agent
 examples/statuscheck-plugin/statuscheck-plugin
 examples/prometheus-plugin/prometheus-plugin
-db/keyval/etcdv3/examples/phonebook/editor/editor
-db/keyval/etcdv3/examples/phonebook/view/view
-db/keyval/etcdv3/examples/phonebook/watcher/watcher
+db/keyval/etcd/examples/phonebook/editor/editor
+db/keyval/etcd/examples/phonebook/view/view
+db/keyval/etcd/examples/phonebook/watcher/watcher
 db/sql/cassandra/examples/simple/simple
 logging/logrus/examples/basic/basic
 logging/logrus/examples/custom/custom

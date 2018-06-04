@@ -128,19 +128,19 @@ Event arrived to etcd eventHandler, key /vnf-agent/vpp1/api/v1/example/db/simple
 unexpected=("etcd/datasync example failed
 ")
 
-cmd="examples/datasync-plugin/datasync-plugin --etcdv3-config=examples/datasync-plugin/etcd.conf"
+cmd="examples/datasync-plugin/datasync-plugin --etcd-config=examples/datasync-plugin/etcd.conf"
 testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT
 
 stopEtcd
 
-#### Etcdv3-lib ##########################################################
+#### Etcd-lib ##########################################################
 
 startEtcd
 
 expected=("Saving  /phonebook/Peter
 ")
 
-cmd="examples/etcdv3-lib/editor/editor --cfg examples/etcdv3-lib/etcd.conf  put  Peter Company 0907"
+cmd="examples/etcd-lib/editor/editor --cfg examples/etcd-lib/etcd.conf  put  Peter Company 0907"
 testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT
 
 stopEtcd
@@ -466,7 +466,7 @@ testOutput examples/simple-agent/simple-agent "${expected}" $RUNTIME_LIMIT "${un
 startEtcd
 startKafka
 
-expected=("Plugin etcdv3: status check probe registered
+expected=("Plugin etcd: status check probe registered
 Plugin kafka: status check probe registered
 Redis config not found, skip loading this plugin
 cassandra client config not found  - skip loading this plugin
@@ -475,7 +475,7 @@ All plugins initialized successfully
 
 unexpected=("")
 
-cmd="examples/simple-agent/simple-agent --etcdv3-config=examples/datasync-plugin/etcd.conf --kafka-config examples/kafka-plugin/hash-partitioner/kafka.conf"
+cmd="examples/simple-agent/simple-agent --etcd-config=examples/datasync-plugin/etcd.conf --kafka-config examples/kafka-plugin/hash-partitioner/kafka.conf"
 testOutput "${cmd}" "${expected}" $RUNTIME_LIMIT "${unexpected}"
 
 stopEtcd

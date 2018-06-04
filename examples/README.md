@@ -23,7 +23,7 @@ Current examples:
 * **[datasync-plugin](datasync-plugin)** demonstrates the usage
   of the data synchronization APIs of the datasync package inside
   an example plugin,
-* **[etcdv3-lib](etcdv3-lib)** shows how to use the ETCD data broker API
+* **[etcd-lib](etcd-lib)** shows how to use the ETCD data broker API
   to write data into ETCD and catch this change as an event by the watcher,
 * **[flags-lib](flags-lib/main.go)** registers flags and shows their
   runtime values in an example plugin,
