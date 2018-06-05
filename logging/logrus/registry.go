@@ -17,12 +17,12 @@ package logrus
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"sync"
 
-	"regexp"
+	"github.com/sirupsen/logrus"
 
 	"github.com/ligato/cn-infra/logging"
-	"github.com/sirupsen/logrus"
 )
 
 var initialLogLvl = logrus.InfoLevel
