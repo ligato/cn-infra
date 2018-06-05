@@ -102,6 +102,5 @@ func (plugin *ExamplePlugin) checkStatus(closeCh chan struct{}) {
 
 // Close shutdowns the consumer and channels used to propagate data resync and data change events.
 func (plugin *ExamplePlugin) Close() error {
-	safeclose.CloseAll(plugin.closeChannel)
-	return nil
+	return safeclose.Close(plugin.closeChannel)
 }

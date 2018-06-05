@@ -182,8 +182,7 @@ func (plugin *ExamplePlugin) closeExample() {
 
 // Close closes the subscription and the channels used by the async producer.
 func (plugin *ExamplePlugin) Close() error {
-	safeclose.CloseAll(plugin.subscription, plugin.asyncErrorChannel, plugin.asyncErrorChannel, plugin.asyncSuccessChannel)
-	return nil
+	return safeclose.Close(plugin.subscription, plugin.asyncErrorChannel, plugin.asyncErrorChannel, plugin.asyncSuccessChannel)
 }
 
 /***********************

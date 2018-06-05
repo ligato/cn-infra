@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/Shopify/sarama"
+
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
@@ -232,8 +233,13 @@ func (mux *Multiplexer) Start() error {
 
 // Close cleans up the resources used by the Multiplexer
 func (mux *Multiplexer) Close() {
-	close(mux.closeCh)
-	safeclose.CloseAll(mux.Consumer, mux.hashSyncProducer, mux.hashAsyncProducer, mux.manSyncProducer, mux.manAsyncProducer)
+	safeclose.Close(
+		mux.closeCh,
+		mux.Consumer,
+		mux.hashSyncProducer,
+		mux.hashAsyncProducer,
+		mux.manSyncProducer,
+		mux.manAsyncProducer)
 }
 
 // NewBytesConnection creates instance of the BytesConnectionStr that provides access to shared
