@@ -136,7 +136,7 @@ type Registry interface {
 //    flavor.ETCD.Logger =
 // 			ForPlugin(PluginNameOfFlavor(&flavor.ETCD, flavor), flavor.Logrus)
 //
-func ForPlugin(name string, factory LogFactory) *pluginLogger {
+func ForPlugin(name string, factory LogFactory) PluginLogger {
 	return &pluginLogger{
 		Logger:     factory.NewLogger(name),
 		LogFactory: &prefixedLogFactory{name, factory},

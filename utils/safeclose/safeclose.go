@@ -78,10 +78,10 @@ func Close(objs ...interface{}) error {
 	return nil
 }
 
-// DEPRECATED - use safeclose.Close(...) instead
 // CloseAll tries to close all objects and return all errors (there are nils if there was no errors).
+// DEPRECATED - use safeclose.Close(...) instead
 func CloseAll(objs ...interface{}) ([]error, error) {
-	logrus.DefaultLogger().Warnf("safeclose.CloseAll() is DEPRECATED! Please use safeclose.Close() instead")
+	logrus.DefaultLogger().Debugf("safeclose.CloseAll() is DEPRECATED! Please use safeclose.Close() instead")
 
 	errs := make([]error, len(objs))
 
