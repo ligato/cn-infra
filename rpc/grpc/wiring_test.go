@@ -15,119 +15,87 @@
 package grpc
 
 import (
-	"github.com/ligato/cn-infra/core"
+	"testing"
+
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logrus"
-	"testing"
+	"github.com/onsi/gomega"
 )
 
 func Test01DefaultWiring(t *testing.T) {
+	gomega.RegisterTestingT(t)
 	plugin := &Plugin{}
 	err := plugin.Wire(plugin.DefaultWiring(true))
-	if err != nil {
-		t.Errorf("plugin.Wire returned error %s", err)
-	}
-	if plugin.PluginName != core.PluginName(defaultName) {
-		t.Errorf("Incorrect PluginName, expected %s, actual: %s", defaultName, string(plugin.PluginName))
-	}
-	if plugin.Log == nil {
-		t.Errorf("Incorrect Log, expected non-nil, got nil")
-	}
-	if plugin.PluginConfig == nil {
-		t.Errorf("Incorrect PluginConfig, expected non-nil got nil")
-	}
+	gomega.Expect(err).Should(gomega.BeNil())
+	gomega.Expect(plugin.PluginName).Should(gomega.BeEquivalentTo(defaultName))
+	gomega.Expect(plugin.Log).ShouldNot(gomega.BeNil())
+	gomega.Expect(plugin.PluginConfig).ShouldNot(gomega.BeNil())
 }
 
 func Test02WithNameDefault(t *testing.T) {
+	gomega.RegisterTestingT(t)
 	plugin := &Plugin{}
 	err := plugin.Wire(WithName(true))
-	if err != nil {
-		t.Errorf("plugin.Wire returned error %s", err)
-	}
-	if plugin.PluginName != core.PluginName(defaultName) {
-		t.Errorf("Incorrect PluginName, expected %s, actual: %s", defaultName, string(plugin.PluginName))
-	}
-
-	if plugin.Log != nil {
-		t.Errorf("Incorrect Log, expected nil, actual non-nil")
-	}
-
-	if plugin.PluginConfig != nil {
-		t.Errorf("Incorrect PluginConfig, expected nil actual non-nil")
-	}
+	gomega.Expect(err).Should(gomega.BeNil())
+	gomega.Expect(plugin.PluginName).Should(gomega.BeEquivalentTo(defaultName))
+	gomega.Expect(plugin.Log).Should(gomega.BeNil())
+	gomega.Expect(plugin.PluginConfig).Should(gomega.BeNil())
 }
 
 func Test03WithNameNonDefault(t *testing.T) {
+	gomega.RegisterTestingT(t)
 	plugin := &Plugin{}
 	name := "foo"
 	err := plugin.Wire(WithName(true, name))
-	if err != nil {
-		t.Errorf("plugin.Wire returned error %s", err)
-	}
-	if plugin.PluginName != core.PluginName(name) {
-		t.Errorf("Incorrect PluginName, expected %s, actual: %s", name, string(plugin.PluginName))
-	}
-	if plugin.Log != nil {
-		t.Errorf("Incorrect Log, expected nil, actual non-nil")
-	}
-	if plugin.PluginConfig != nil {
-		t.Errorf("Incorrect PluginConfig, expected nil actual non-nil")
-	}
+	gomega.Expect(err).Should(gomega.BeNil())
+	gomega.Expect(plugin.PluginName).Should(gomega.BeEquivalentTo(name))
+	gomega.Expect(plugin.Log).Should(gomega.BeNil())
+	gomega.Expect(plugin.PluginConfig).Should(gomega.BeNil())
 }
 
 func Test04WithLogNonDefault(t *testing.T) {
+	gomega.RegisterTestingT(t)
 	plugin := &Plugin{}
 	log := logging.ForPlugin(defaultName, logrus.NewLogRegistry())
 	err := plugin.Wire(WithLog(true, log))
-	if err != nil {
-		t.Errorf("plugin.Wire returned error %s", err)
-	}
-	if plugin.Log != log {
-		t.Errorf("Incorrect Log, expected %s, actual %s", log, plugin.Log)
-	}
-	if plugin.PluginConfig != nil {
-		t.Errorf("Incorrect PluginConfig, expected nil actual non-nil")
-	}
+	gomega.Expect(err).Should(gomega.BeNil())
+	gomega.Expect(plugin.Log).Should(gomega.BeEquivalentTo(log))
+	gomega.Expect(plugin.PluginConfig).Should(gomega.BeNil())
 }
 
 func Test05NilWiring(t *testing.T) {
+	gomega.RegisterTestingT(t)
 	plugin := &Plugin{}
 	err := plugin.Wire(nil)
-	if err != nil {
-		t.Errorf("plugin.Wire returned error %s", err)
-	}
-	if plugin.PluginName != core.PluginName(defaultName) {
-		t.Errorf("Incorrect PluginName, expected %s, actual: %s", defaultName, string(plugin.PluginName))
-	}
-	if plugin.Log == nil {
-		t.Errorf("Incorrect Log, expected non-nil, got nil")
-	}
-	if plugin.PluginConfig == nil {
-		t.Errorf("Incorrect PluginConfig, expected non-nil got nil")
-	}
+	gomega.Expect(err).Should(gomega.BeNil())
+	gomega.Expect(plugin.PluginName).Should(gomega.BeEquivalentTo(defaultName))
+	gomega.Expect(plugin.Log).ShouldNot(gomega.BeNil())
+	gomega.Expect(plugin.PluginConfig).ShouldNot(gomega.BeNil())
 }
 
 func Test06DefaultWiringOverwriteTrue(t *testing.T) {
+	gomega.RegisterTestingT(t)
 	plugin := &Plugin{}
 	name := "foo"
 
 	err := plugin.Wire(WithName(true, name))
-	if err != nil {
-		t.Errorf("plugin.Wire returned error %s", err)
-	}
+	gomega.Expect(err).Should(gomega.BeNil())
 
 	err = plugin.Wire(DefaultWiring(false))
-	if err != nil {
-		t.Errorf("plugin.Wire returned error %s", err)
-	}
-	if plugin.PluginName != core.PluginName(name) {
-		t.Errorf("Incorrect PluginName, expected %s, actual: %s", name, string(plugin.PluginName))
-	}
-	if plugin.Log == nil {
-		t.Errorf("Incorrect Log, expected non-nil, actual nil")
-	}
-	if plugin.PluginConfig == nil {
-		t.Errorf("Incorrect PluginConfig, expected nil actual non-nil")
-	}
+	gomega.Expect(err).Should(gomega.BeNil())
+	gomega.Expect(plugin.PluginName).Should(gomega.BeEquivalentTo(defaultName))
+	gomega.Expect(plugin.Log).ShouldNot(gomega.BeNil())
+	gomega.Expect(plugin.PluginConfig).ShouldNot(gomega.BeNil())
 
+}
+
+func Test07WithNamePrefix(t *testing.T) {
+	gomega.RegisterTestingT(t)
+	plugin := &Plugin{}
+	name := "foo"
+	err := plugin.Wire(WithNamePrefix(true, name))
+	gomega.Expect(err).Should(gomega.BeNil())
+	gomega.Expect(plugin.PluginName).Should(gomega.BeEquivalentTo(name + defaultName))
+	gomega.Expect(plugin.Log).Should(gomega.BeNil())
+	gomega.Expect(plugin.PluginConfig).Should(gomega.BeNil())
 }

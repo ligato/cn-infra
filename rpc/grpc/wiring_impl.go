@@ -136,6 +136,26 @@ func WithName(overwrite bool, name ...string) wiring.Wiring {
 	return ret
 }
 
+// WithNamePrefix wires a PluginName for the Plugin
+// If overwrite is false, existing values will not be overwritten
+// If name is provided, that will be configured as the prefix to PluginName
+func WithNamePrefix(overwrite bool, name ...string) wiring.Wiring {
+	ret := func(plugin core.Plugin) error {
+		p, ok := plugin.(*Plugin)
+		if ok {
+			if overwrite || p.PluginName == "" {
+				p.Wire(WithName(false)) // Make sure worst case we have the Default name
+				if len(name) > 0 {
+					p.PluginName = core.PluginName(name[0] + string(p.PluginName))
+				}
+			}
+			return nil
+		}
+		return fmt.Errorf("Could not convert core.Plugin to *%s.Plugin", packageName)
+	}
+	return ret
+}
+
 // WithPluginConfig wires in a PluginConfig for the plugin
 // If overwrite is false, existing values will not be overwritten
 // If cfg is provided, that will be configured as the PluginConfig, otherwise a default will be used
