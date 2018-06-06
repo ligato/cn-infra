@@ -47,7 +47,6 @@ type Multiplexer struct {
 
 	// factory that crates Consumer used in the Multiplexer
 	consumerFactory func(topics []string, groupId string) (*client.Consumer, error)
-	closeCh         chan struct{}
 }
 
 // ConsumerSubscription contains all information about subscribed kafka consumer/watcher
@@ -99,7 +98,6 @@ func NewMultiplexer(consumerFactory ConsumerFactory, producers multiplexerProduc
 		Logger:               log,
 		name:                 name,
 		mapping:              []*consumerSubscription{},
-		closeCh:              make(chan struct{}),
 		multiplexerProducers: producers,
 		config:               clientCfg,
 	}
@@ -234,7 +232,6 @@ func (mux *Multiplexer) Start() error {
 // Close cleans up the resources used by the Multiplexer
 func (mux *Multiplexer) Close() {
 	safeclose.Close(
-		mux.closeCh,
 		mux.Consumer,
 		mux.hashSyncProducer,
 		mux.hashAsyncProducer,

@@ -25,7 +25,7 @@ func main() {
 		kafkaPlug := &kafka.Plugin{}
 		kafkaPlug.Deps.PluginInfraDeps = *flavor.InfraDeps("kafka", local.WithConf())
 
-		examplePlug := &ExamplePlugin{closeChannel: &exampleFinished}
+		examplePlug := &ExamplePlugin{closeChannel: exampleFinished}
 		examplePlug.Deps.PluginLogDeps = *flavor.LogDeps("kafka-example")
 		examplePlug.Deps.Kafka = kafkaPlug // Inject kafka to example plugin.
 
@@ -33,6 +33,7 @@ func main() {
 			{kafkaPlug.PluginName, kafkaPlug},
 			{examplePlug.PluginName, examplePlug}}
 	}))
+
 	core.EventLoopWithInterrupt(agent, exampleFinished)
 }
 
@@ -42,14 +43,20 @@ func main() {
 type ExamplePlugin struct {
 	Deps // plugin dependencies are injected
 
-	subscription       chan (messaging.ProtoMessage)
+	subscription       chan messaging.ProtoMessage
 	kafkaSyncPublisher messaging.ProtoPublisher
 	kafkaWatcher       messaging.ProtoPartitionWatcher
+
 	// Fields below are used to properly finish the example.
-	initialized  bool // auxiliary flag that marks plugin as initialized
 	messagesSent bool
 	syncCaseDone bool
-	closeChannel *chan struct{}
+	closeChannel chan struct{}
+}
+
+// Deps lists dependencies of ExamplePlugin.
+type Deps struct {
+	Kafka               messaging.Mux // injected
+	local.PluginLogDeps               // injected
 }
 
 const (
@@ -96,9 +103,6 @@ func (plugin *ExamplePlugin) AfterInit() error {
 	// Run consumer
 	go plugin.syncEventHandler()
 
-	// Mark plugin as initialized
-	plugin.initialized = true
-
 	return nil
 }
 
@@ -106,14 +110,17 @@ func (plugin *ExamplePlugin) closeExample() {
 	for {
 		if plugin.syncCaseDone && plugin.messagesSent {
 			time.Sleep(2 * time.Second)
+
 			err := plugin.kafkaWatcher.StopWatchPartition(topic1, syncMessagePartition, syncMessageOffset)
 			if err != nil {
 				plugin.Log.Errorf("Error while stopping watcher: %v", err)
 			} else {
 				plugin.Log.Info("Post-init watcher closed")
 			}
+
 			plugin.Log.Info("kafka example finished, sending shutdown ...")
-			*plugin.closeChannel <- struct{}{}
+
+			plugin.closeChannel <- struct{}{}
 			break
 		}
 	}
@@ -121,8 +128,7 @@ func (plugin *ExamplePlugin) closeExample() {
 
 // Close closes the subscription and the channels used by the async producer.
 func (plugin *ExamplePlugin) Close() error {
-	safeclose.Close(plugin.subscription)
-	return nil
+	return safeclose.Close(plugin.subscription)
 }
 
 /*************
@@ -163,12 +169,6 @@ func (plugin *ExamplePlugin) producer() {
 // will receive it.
 func (plugin *ExamplePlugin) syncEventHandler() {
 	plugin.Log.Info("Started Kafka sync event handler...")
-
-	// Handler waits until plugin is fully initialized (Init() and AfterInit() is done). After that, post-initialize new
-	// watcher
-	for !plugin.initialized {
-		continue
-	}
 
 	time.Sleep(1 * time.Second)
 

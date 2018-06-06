@@ -34,7 +34,8 @@ const topic = "status-check"
 
 // Plugin provides API for interaction with kafka brokers.
 type Plugin struct {
-	Deps         // inject
+	Deps // inject
+
 	mux          *mux.Multiplexer
 	subscription chan *client.ConsumerMessage
 
