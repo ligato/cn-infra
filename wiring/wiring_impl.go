@@ -81,6 +81,9 @@ func NewAgent(plugin NamedWirablePlugin, wiring ...Wiring) (agent *core.Agent, e
 	}
 
 	np := NamePlugin(plugin, plugin.Name())
+	// Get all Dependent Plugins we need to initialize
+	nps := []*core.NamedPlugin{np}
+	nps = append(nps, ListUniqueNamedPlugins(plugin)...)
 	return newAgentFromPlugins(np), err
 }
 
