@@ -1,11 +1,10 @@
 package main
 
 import (
-	"time"
-
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/examples/model"
@@ -37,7 +36,7 @@ func main() {
 		kafkaPlug := &kafka.Plugin{}
 		kafkaPlug.Deps.PluginInfraDeps = *flavor.InfraDeps("kafka", local.WithConf())
 
-		examplePlug := &ExamplePlugin{closeChannel: &exampleFinished}
+		examplePlug := &ExamplePlugin{closeChannel: exampleFinished}
 		examplePlug.Deps.PluginLogDeps = *flavor.LogDeps("kafka-example")
 		examplePlug.Deps.Kafka = kafkaPlug // Inject kafka to example plugin.
 
@@ -45,6 +44,7 @@ func main() {
 			{kafkaPlug.PluginName, kafkaPlug},
 			{examplePlug.PluginName, examplePlug}}
 	}))
+
 	core.EventLoopWithInterrupt(agent, exampleFinished)
 }
 
@@ -54,19 +54,26 @@ func main() {
 type ExamplePlugin struct {
 	Deps // plugin dependencies are injected
 
-	subscription        chan (messaging.ProtoMessage)
+	subscription        chan messaging.ProtoMessage
 	kafkaSyncPublisher  messaging.ProtoPublisher
 	kafkaAsyncPublisher messaging.ProtoPublisher
 	kafkaWatcher        messaging.ProtoPartitionWatcher
 	// Successfully published kafka message is sent through the message channel.
 	// In case of a failure it sent through the error channel.
-	asyncSubscription   chan (messaging.ProtoMessage)
-	asyncSuccessChannel chan (messaging.ProtoMessage)
-	asyncErrorChannel   chan (messaging.ProtoMessageErr)
+	asyncSubscription   chan messaging.ProtoMessage
+	asyncSuccessChannel chan messaging.ProtoMessage
+	asyncErrorChannel   chan messaging.ProtoMessageErr
+
 	// Fields below are used to properly finish the example.
 	messagesSent bool
 	asyncSuccess bool
-	closeChannel *chan struct{}
+	closeChannel chan struct{}
+}
+
+// Deps lists dependencies of ExamplePlugin.
+type Deps struct {
+	Kafka               messaging.Mux // injected
+	local.PluginLogDeps               // injected
 }
 
 const (
@@ -96,6 +103,7 @@ const (
 func (plugin *ExamplePlugin) Init() (err error) {
 	// handle flags
 	flag.Parse()
+
 	// sync/async offset flag
 	if *offsetMsg != "" {
 		messageOffset, err = resolveOffset(*offsetMsg)
@@ -105,6 +113,7 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	} else {
 		plugin.Log.Info("offset arg not set, using default value")
 	}
+
 	// message count flag
 	if *messageCount != "" {
 		messageCountNum, err = resolveMsgCount(*messageCount)
@@ -127,9 +136,10 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	if err != nil {
 		return err
 	}
+
 	// Async publisher requires two more channels to send success/error callback.
-	plugin.asyncSuccessChannel = make(chan messaging.ProtoMessage, 0)
-	plugin.asyncErrorChannel = make(chan messaging.ProtoMessageErr, 0)
+	plugin.asyncSuccessChannel = make(chan messaging.ProtoMessage)
+	plugin.asyncErrorChannel = make(chan messaging.ProtoMessageErr)
 	plugin.kafkaAsyncPublisher, err = plugin.Kafka.NewAsyncPublisherToPartition(connection, topic2, asyncMessagePartition,
 		messaging.ToProtoMsgChan(plugin.asyncSuccessChannel), messaging.ToProtoMsgErrChan(plugin.asyncErrorChannel))
 	if err != nil {
@@ -182,20 +192,24 @@ func (plugin *ExamplePlugin) closeExample() {
 	for {
 		if plugin.messagesSent && plugin.asyncSuccess {
 			time.Sleep(2 * time.Second)
+
 			err := plugin.kafkaWatcher.StopWatchPartition(topic1, syncMessagePartition, messageOffset)
 			if err != nil {
 				plugin.Log.Errorf("Error while stopping watcher: %v", err)
 			} else {
 				plugin.Log.Info("Sync watcher closed")
 			}
+
 			err = plugin.kafkaWatcher.StopWatchPartition(topic2, asyncMessagePartition, messageOffset)
 			if err != nil {
 				plugin.Log.Errorf("Error while stopping watcher: %v", err)
 			} else {
 				plugin.Log.Info("Async watcher closed")
 			}
+
 			plugin.Log.Info("kafka example finished, sending shutdown ...")
-			*plugin.closeChannel <- struct{}{}
+
+			plugin.closeChannel <- struct{}{}
 			break
 		}
 	}
@@ -203,8 +217,7 @@ func (plugin *ExamplePlugin) closeExample() {
 
 // Close closes the subscription and the channels used by the async producer.
 func (plugin *ExamplePlugin) Close() error {
-	safeclose.CloseAll(plugin.subscription, plugin.asyncErrorChannel, plugin.asyncSuccessChannel)
-	return nil
+	return safeclose.Close(plugin.subscription)
 }
 
 /*************
@@ -322,10 +335,9 @@ func resolveOffset(offset string) (int64, error) {
 		return mux.OffsetNewest, nil
 	} else if offset == "oldest" {
 		return mux.OffsetOldest, nil
-	} else {
-		result, err := strconv.Atoi(offset)
-		return int64(result), err
 	}
+	result, err := strconv.Atoi(offset)
+	return int64(result), err
 }
 
 func resolveMsgCount(count string) (int, error) {

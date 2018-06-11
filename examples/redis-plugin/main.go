@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/kvdbsync"
 	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval"
@@ -46,6 +47,13 @@ type ExamplePlugin struct {
 	Deps // plugin dependencies are injected
 
 	closeChannel *chan struct{}
+}
+
+// Deps is a helper struct which is grouping all dependencies injected to the plugin
+type Deps struct {
+	local.PluginLogDeps                             // injected
+	Watcher             datasync.KeyValProtoWatcher // injected
+	DB                  keyval.KvProtoPlugin        // injected
 }
 
 // Init is meant for registering the watcher

@@ -40,7 +40,7 @@ func main() {
 		resyncOrch.Deps.PluginLogDeps = *flavor.LogDeps("etcd-resync")
 		connectors.InjectKVDBSync(etcdDataSync, etcdPlug, etcdPlug.PluginName, flavor, resyncOrch)
 
-		examplePlug := &ExamplePlugin{closeChannel: &exampleFinished}
+		examplePlug := &ExamplePlugin{closeChannel: exampleFinished}
 		examplePlug.Deps.PluginInfraDeps = *flavor.InfraDeps("etcd-example")
 		examplePlug.Deps.Publisher = etcdDataSync // Inject datasync Watcher to example plugin.
 		examplePlug.Deps.Watcher = etcdDataSync   // Inject datasync Publisher to example plugin.
@@ -49,7 +49,8 @@ func main() {
 			{etcdPlug.PluginName, etcdPlug},
 			{etcdDataSync.PluginName, etcdDataSync},
 			{resyncOrch.PluginName, resyncOrch},
-			{examplePlug.PluginName, examplePlug}}
+			{examplePlug.PluginName, examplePlug},
+		}
 	}))
 	core.EventLoopWithInterrupt(agent, exampleFinished)
 }
@@ -65,7 +66,7 @@ type ExamplePlugin struct {
 	// Fields below are used to properly finish the example.
 	eventCounter  uint8
 	publisherDone bool
-	closeChannel  *chan struct{}
+	closeChannel  chan struct{}
 }
 
 // Init starts the consumer.
@@ -218,7 +219,7 @@ func (plugin *ExamplePlugin) closeExample() {
 			plugin.context.Done()
 			plugin.Log.Infof("etcd/datasync example finished, sending shutdown ...")
 			// Close the example
-			*plugin.closeChannel <- struct{}{}
+			plugin.closeChannel <- struct{}{}
 			break
 		}
 	}
@@ -228,8 +229,7 @@ func (plugin *ExamplePlugin) closeExample() {
 // Channels used to propagate data resync and data change events are closed
 // as well.
 func (plugin *ExamplePlugin) Close() error {
-	safeclose.CloseAll(plugin.Publisher, plugin.Watcher, plugin.resyncChannel, plugin.changeChannel)
-	return nil
+	return safeclose.Close(plugin.Publisher, plugin.Watcher, plugin.resyncChannel, plugin.changeChannel)
 }
 
 // Create simple ETCD data structure with provided data values.

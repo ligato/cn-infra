@@ -1,11 +1,10 @@
 package main
 
 import (
-	"time"
-
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/examples/model"
@@ -36,7 +35,7 @@ func main() {
 		kafkaPlug := &kafka.Plugin{}
 		kafkaPlug.Deps.PluginInfraDeps = *flavor.InfraDeps("kafka", local.WithConf())
 
-		examplePlug := &ExamplePlugin{closeChannel: &exampleFinished}
+		examplePlug := &ExamplePlugin{closeChannel: exampleFinished}
 		examplePlug.Deps.PluginLogDeps = *flavor.LogDeps("kafka-example")
 		examplePlug.Deps.Kafka = kafkaPlug // Inject kafka to example plugin.
 
@@ -44,6 +43,7 @@ func main() {
 			{kafkaPlug.PluginName, kafkaPlug},
 			{examplePlug.PluginName, examplePlug}}
 	}))
+
 	core.EventLoopWithInterrupt(agent, exampleFinished)
 }
 
@@ -53,21 +53,28 @@ func main() {
 type ExamplePlugin struct {
 	Deps // plugin dependencies are injected
 
-	subscription        chan (messaging.ProtoMessage)
+	subscription        chan messaging.ProtoMessage
 	kafkaSyncPublisher  messaging.ProtoPublisher
 	kafkaAsyncPublisher messaging.ProtoPublisher
 	kafkaWatcher        messaging.ProtoWatcher
 	// Successfully published kafka message is sent through the message channel.
 	// In case of a failure it sent through the error channel.
-	asyncSubscription   chan (messaging.ProtoMessage)
-	asyncSuccessChannel chan (messaging.ProtoMessage)
-	asyncErrorChannel   chan (messaging.ProtoMessageErr)
+	asyncSubscription   chan messaging.ProtoMessage
+	asyncSuccessChannel chan messaging.ProtoMessage
+	asyncErrorChannel   chan messaging.ProtoMessageErr
+
 	// Fields below are used to properly finish the example.
 	messagesSent bool
 	syncRecv     bool
 	asyncRecv    bool
 	asyncSuccess bool
-	closeChannel *chan struct{}
+	closeChannel chan struct{}
+}
+
+// Deps lists dependencies of ExamplePlugin.
+type Deps struct {
+	Kafka               messaging.Mux // injected
+	local.PluginLogDeps               // injected
 }
 
 // Consts
@@ -105,8 +112,8 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	plugin.Log.Infof("Message count: %v", *messageCount)
 
 	// Init channels required for async handler.
-	plugin.asyncSuccessChannel = make(chan messaging.ProtoMessage, 0)
-	plugin.asyncErrorChannel = make(chan messaging.ProtoMessageErr, 0)
+	plugin.asyncSuccessChannel = make(chan messaging.ProtoMessage)
+	plugin.asyncErrorChannel = make(chan messaging.ProtoMessageErr)
 
 	// Create a synchronous publisher for the selected topic.
 	plugin.kafkaSyncPublisher, err = plugin.Kafka.NewSyncPublisher(connection, topic1)
@@ -161,20 +168,24 @@ func (plugin *ExamplePlugin) closeExample() {
 	for {
 		if plugin.messagesSent && plugin.asyncSuccess && plugin.syncRecv && plugin.asyncRecv {
 			time.Sleep(2 * time.Second)
+
 			err := plugin.kafkaWatcher.StopWatch(topic1)
 			if err != nil {
 				plugin.Log.Errorf("Error while stopping watcher: %v", err)
 			} else {
 				plugin.Log.Info("Sync watcher closed")
 			}
+
 			err = plugin.kafkaWatcher.StopWatch(topic2)
 			if err != nil {
 				plugin.Log.Errorf("Error while stopping watcher: %v", err)
 			} else {
 				plugin.Log.Info("Async watcher closed")
 			}
+
 			plugin.Log.Info("kafka example finished, sending shutdown ...")
-			*plugin.closeChannel <- struct{}{}
+
+			plugin.closeChannel <- struct{}{}
 			break
 		}
 	}
@@ -182,8 +193,7 @@ func (plugin *ExamplePlugin) closeExample() {
 
 // Close closes the subscription and the channels used by the async producer.
 func (plugin *ExamplePlugin) Close() error {
-	safeclose.CloseAll(plugin.subscription, plugin.asyncErrorChannel, plugin.asyncErrorChannel, plugin.asyncSuccessChannel)
-	return nil
+	return safeclose.Close(plugin.subscription)
 }
 
 /***********************

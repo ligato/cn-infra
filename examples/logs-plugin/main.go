@@ -26,8 +26,10 @@ func main() {
 
 	// Start Agent with ExamplePlugin & LocalFlavor (reused cn-infra plugins).
 	agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
-		examplePlug := &ExamplePlugin{exampleFinished: exampleFinished,
-			PluginLogDeps: *flavor.LogDeps("logs-example")}
+		examplePlug := &ExamplePlugin{
+			exampleFinished: exampleFinished,
+			PluginLogDeps:   *flavor.LogDeps("logs-example"),
+		}
 		return []*core.NamedPlugin{{examplePlug.PluginName, examplePlug}}
 	}))
 	core.EventLoopWithInterrupt(agent, exampleFinished)

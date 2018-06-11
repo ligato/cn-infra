@@ -46,8 +46,10 @@ func main() {
 	// Start Agent with ExampleFlavor
 	// (combination of ExamplePlugin & Local flavor)
 	agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
-		examplePlug := &ExamplePlugin{exampleFinished: exampleFinished,
-			PluginInfraDeps: *flavor.InfraDeps(PluginName, local.WithConf())}
+		examplePlug := &ExamplePlugin{
+			exampleFinished: exampleFinished,
+			PluginInfraDeps: *flavor.InfraDeps(PluginName, local.WithConf()),
+		}
 		return []*core.NamedPlugin{{examplePlug.PluginName, examplePlug}}
 	}))
 	core.EventLoopWithInterrupt(agent, exampleFinished)

@@ -3,10 +3,13 @@ package main
 import (
 	"errors"
 
-	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/flavors/rpc"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/examples/helloworld/helloworld"
+
+	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/flavors/rpc"
+	"github.com/ligato/cn-infra/rpc/grpc"
 )
 
 // *************************************************************************
@@ -35,6 +38,12 @@ func main() {
 type ExamplePlugin struct {
 	Deps
 	exampleFinished chan struct{}
+}
+
+// Deps - dependencies for ExamplePlugin
+type Deps struct {
+	local.PluginLogDeps
+	GRPC grpc.Server
 }
 
 // Init demonstrates the usage of PluginLogger API.
