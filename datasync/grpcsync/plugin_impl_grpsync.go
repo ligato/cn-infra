@@ -15,6 +15,8 @@
 package grpcsync
 
 import (
+	"sync"
+
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/syncbase"
 	"github.com/ligato/cn-infra/rpc/grpc"
@@ -23,7 +25,8 @@ import (
 // Plugin grpcsync implements Plugin interface, therefore can be loaded with other plugins.
 type Plugin struct {
 	Deps
-	Adapter datasync.KeyValProtoWatcher
+	Adapter  datasync.KeyValProtoWatcher
+	initOnce sync.Once
 }
 
 // Deps - gRPC Plugin dependencies
@@ -32,14 +35,17 @@ type Deps struct {
 }
 
 // Init registers new gRPC service and instantiates plugin.Adapter.
-func (plugin *Plugin) Init() error {
-	grpcAdapter := NewAdapter(plugin.GRPC.GetServer())
-	plugin.Adapter = &syncbase.Adapter{Watcher: grpcAdapter}
-
-	return nil
+func (plugin *Plugin) Init() (err error) {
+	plugin.initOnce.Do(func() {
+		grpcAdapter := NewAdapter(plugin.GRPC.GetServer())
+		plugin.Adapter = &syncbase.Adapter{Watcher: grpcAdapter}
+	})
+	return err
 }
 
 // Close does nothing.
 func (plugin *Plugin) Close() error {
+	// Warning: If you ever do anything here other than return nil, please see grpc plugin for an example of how to
+	// Use closeOnce (a sync.Once) to protect it.
 	return nil
 }
