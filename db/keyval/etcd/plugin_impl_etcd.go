@@ -16,6 +16,7 @@ package etcd
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/ligato/cn-infra/core"
@@ -45,6 +46,8 @@ type Plugin struct {
 	autoCompactDone chan struct{}
 	reconnectResync bool
 	lastConnErr     error
+	initOnce        sync.Once
+	closeOnce       sync.Once
 }
 
 // Deps lists dependencies of the etcd plugin.
@@ -64,60 +67,64 @@ type Deps struct {
 // Check clientv3.New from coreos/etcd for possible errors returned in case
 // the connection cannot be established.
 func (plugin *Plugin) Init() (err error) {
-	// Read ETCD configuration file. Returns error if does not exists.
-	etcdCfg, err := plugin.getEtcdConfig()
-	if err != nil || plugin.disabled {
-		return err
-	}
-	// Transforms .yaml config to ETCD client configuration
-	etcdClientCfg, err := ConfigToClient(&etcdCfg)
-	if err != nil {
-		return err
-	}
-	// Uses config file to establish connection with the database
-	plugin.connection, err = NewEtcdConnectionWithBytes(*etcdClientCfg, plugin.Log)
-	if err != nil {
-		plugin.Log.Errorf("Err: %v", err)
-		return err
-	}
-	plugin.reconnectResync = etcdCfg.ReconnectResync
-	if etcdCfg.AutoCompact > 0 {
-		if etcdCfg.AutoCompact < time.Duration(time.Minute*60) {
-			plugin.Log.Warnf("Auto compact option for ETCD is set to less than 60 minutes!")
+	plugin.initOnce.Do(func() {
+		// Read ETCD configuration file. Returns error if does not exists.
+		etcdCfg, err := plugin.getEtcdConfig()
+		if err != nil || plugin.disabled {
+			return
 		}
-		plugin.startPeriodicAutoCompact(etcdCfg.AutoCompact)
-	}
-	plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.connection, &keyval.SerializerJSON{})
-
-	// Register for providing status reports (polling mode).
-	if plugin.StatusCheck != nil {
-		plugin.StatusCheck.Register(core.PluginName(plugin.PluginName), func() (statuscheck.PluginState, error) {
-			_, _, _, err := plugin.connection.GetValue(healthCheckProbeKey)
-			if err == nil {
-				if plugin.reconnectResync && plugin.lastConnErr != nil {
-					plugin.Log.Info("Starting resync after ETCD reconnect")
-					if plugin.Resync != nil {
-						plugin.Resync.DoResync()
-						plugin.lastConnErr = nil
-					} else {
-						plugin.Log.Warn("Expected resync after ETCD reconnect could not start beacuse of missing Resync plugin")
-					}
-				}
-				return statuscheck.OK, nil
+		// Transforms .yaml config to ETCD client configuration
+		etcdClientCfg, err := ConfigToClient(&etcdCfg)
+		if err != nil {
+			return
+		}
+		// Uses config file to establish connection with the database
+		plugin.connection, err = NewEtcdConnectionWithBytes(*etcdClientCfg, plugin.Log)
+		if err != nil {
+			plugin.Log.Errorf("Err: %v", err)
+			return
+		}
+		plugin.reconnectResync = etcdCfg.ReconnectResync
+		if etcdCfg.AutoCompact > 0 {
+			if etcdCfg.AutoCompact < time.Duration(time.Minute*60) {
+				plugin.Log.Warnf("Auto compact option for ETCD is set to less than 60 minutes!")
 			}
-			plugin.lastConnErr = err
-			return statuscheck.Error, err
-		})
-	} else {
-		plugin.Log.Warnf("Unable to start status check for etcd")
-	}
+			plugin.startPeriodicAutoCompact(etcdCfg.AutoCompact)
+		}
+		plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.connection, &keyval.SerializerJSON{})
 
-	return nil
+		// Register for providing status reports (polling mode).
+		if plugin.StatusCheck != nil {
+			plugin.StatusCheck.Register(core.PluginName(plugin.PluginName), func() (statuscheck.PluginState, error) {
+				_, _, _, err := plugin.connection.GetValue(healthCheckProbeKey)
+				if err == nil {
+					if plugin.reconnectResync && plugin.lastConnErr != nil {
+						plugin.Log.Info("Starting resync after ETCD reconnect")
+						if plugin.Resync != nil {
+							plugin.Resync.DoResync()
+							plugin.lastConnErr = nil
+						} else {
+							plugin.Log.Warn("Expected resync after ETCD reconnect could not start beacuse of missing Resync plugin")
+						}
+					}
+					return statuscheck.OK, nil
+				}
+				plugin.lastConnErr = err
+				return statuscheck.Error, err
+			})
+		} else {
+			plugin.Log.Warnf("Unable to start status check for etcd")
+		}
+	})
+
+	return err
 }
 
 // Close shutdowns the connection.
-func (plugin *Plugin) Close() error {
-	err := safeclose.Close(plugin.autoCompactDone)
+func (plugin *Plugin) Close() (err error) {
+	plugin.closeOnce.Do(func() {
+		err = safeclose.Close(plugin.autoCompactDone)
+	})
 	return err
 }
 
