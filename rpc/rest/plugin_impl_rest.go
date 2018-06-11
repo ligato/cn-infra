@@ -19,6 +19,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/gorilla/mux"
 	"github.com/unrolled/render"
@@ -52,9 +53,12 @@ type Plugin struct {
 	// Used mainly for testing purposes
 	listenAndServe ListenAndServe
 
-	server    io.Closer
-	mx        *mux.Router
-	formatter *render.Render
+	server        io.Closer
+	mx            *mux.Router
+	formatter     *render.Render
+	initOnce      sync.Once
+	afterInitOnce sync.Once
+	closeOnce     sync.Once
 }
 
 // Deps lists the dependencies of the Rest plugin.
@@ -72,27 +76,28 @@ type Deps struct {
 // Init is the plugin entry point called by Agent Core
 // - It prepares Gorilla MUX HTTP Router
 func (plugin *Plugin) Init() (err error) {
-	if plugin.Config == nil {
-		plugin.Config = DefaultConfig()
-	}
-	if err := PluginConfig(plugin.Deps.PluginConfig, plugin.Config, plugin.Deps.PluginName); err != nil {
-		return err
-	}
-
-	// if there is no injected authenticator and there are credentials defined in the config file
-	// instantiate staticAuthenticator otherwise do not use basic Auth
-	if plugin.Authenticator == nil && len(plugin.Config.ClientBasicAuth) > 0 {
-		plugin.Authenticator, err = newStaticAuthenticator(plugin.Config.ClientBasicAuth)
-		if err != nil {
-			return err
+	plugin.initOnce.Do(func() {
+		if plugin.Config == nil {
+			plugin.Config = DefaultConfig()
 		}
-	}
+		if err := PluginConfig(plugin.Deps.PluginConfig, plugin.Config, plugin.Deps.PluginName); err != nil {
+			return
+		}
 
-	plugin.mx = mux.NewRouter()
-	plugin.formatter = render.New(render.Options{
-		IndentJSON: true,
+		// if there is no injected authenticator and there are credentials defined in the config file
+		// instantiate staticAuthenticator otherwise do not use basic Auth
+		if plugin.Authenticator == nil && len(plugin.Config.ClientBasicAuth) > 0 {
+			plugin.Authenticator, err = newStaticAuthenticator(plugin.Config.ClientBasicAuth)
+			if err != nil {
+				return
+			}
+		}
+
+		plugin.mx = mux.NewRouter()
+		plugin.formatter = render.New(render.Options{
+			IndentJSON: true,
+		})
 	})
-
 	return err
 }
 
@@ -119,26 +124,30 @@ func (plugin *Plugin) GetPort() int {
 
 // AfterInit starts the HTTP server.
 func (plugin *Plugin) AfterInit() (err error) {
-	cfgCopy := *plugin.Config
+	plugin.afterInitOnce.Do(func() {
+		cfgCopy := *plugin.Config
 
-	if plugin.listenAndServe != nil {
-		plugin.server, err = plugin.listenAndServe(cfgCopy, plugin.mx)
-	} else {
-		if cfgCopy.UseHTTPS() {
-			plugin.Log.Info("Listening on https://", cfgCopy.Endpoint)
+		if plugin.listenAndServe != nil {
+			plugin.server, err = plugin.listenAndServe(cfgCopy, plugin.mx)
 		} else {
-			plugin.Log.Info("Listening on http://", cfgCopy.Endpoint)
+			if cfgCopy.UseHTTPS() {
+				plugin.Log.Info("Listening on https://", cfgCopy.Endpoint)
+			} else {
+				plugin.Log.Info("Listening on http://", cfgCopy.Endpoint)
+			}
+
+			plugin.server, err = ListenAndServeHTTP(cfgCopy, plugin.mx)
 		}
-
-		plugin.server, err = ListenAndServeHTTP(cfgCopy, plugin.mx)
-	}
-
+	})
 	return err
 }
 
 // Close stops the HTTP server.
-func (plugin *Plugin) Close() error {
-	return safeclose.Close(plugin.server)
+func (plugin *Plugin) Close() (err error) {
+	plugin.closeOnce.Do(func() {
+		err = safeclose.Close(plugin.server)
+	})
+	return err
 }
 
 // String returns plugin name (if not set defaults to "HTTP")

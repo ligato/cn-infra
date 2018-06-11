@@ -15,6 +15,8 @@
 package redis
 
 import (
+	"sync"
+
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/flavors/local"
@@ -34,7 +36,10 @@ type Plugin struct {
 	// Redis connection encapsulation
 	connection *BytesConnectionRedis
 	// Read/Write proto modelled data
-	protoWrapper *kvproto.ProtoWrapper
+	protoWrapper  *kvproto.ProtoWrapper
+	initOnce      sync.Once
+	afterInitOnce sync.Once
+	closeOnce     sync.Once
 }
 
 // Deps lists dependencies of the redis plugin.
@@ -48,40 +53,43 @@ type Deps struct {
 // will be of os.PathError type. An untyped error is returned in case the file
 // doesn't contain a valid YAML configuration.
 func (plugin *Plugin) Init() (err error) {
-	redisCfg, err := plugin.getRedisConfig()
-	if err != nil || plugin.disabled {
-		return err
-	}
-	// Create client according to config
-	client, err := ConfigToClient(redisCfg)
-	if err != nil {
-		return err
-	}
-	// Uses config file to establish connection with the database
-	plugin.connection, err = NewBytesConnection(client, plugin.Log)
-	if err != nil {
-		return err
-	}
-	plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.connection, &keyval.SerializerJSON{})
+	plugin.initOnce.Do(func() {
+		redisCfg, err := plugin.getRedisConfig()
+		if err != nil || plugin.disabled {
+			return
+		}
+		// Create client according to config
+		client, err := ConfigToClient(redisCfg)
+		if err != nil {
+			return
+		}
+		// Uses config file to establish connection with the database
+		plugin.connection, err = NewBytesConnection(client, plugin.Log)
+		if err != nil {
+			return
+		}
+		plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.connection, &keyval.SerializerJSON{})
 
-	// Register for providing status reports (polling mode)
-	if plugin.StatusCheck != nil {
-		plugin.StatusCheck.Register(plugin.PluginName, func() (statuscheck.PluginState, error) {
-			_, _, err := plugin.NewBroker("/").GetValue(healthCheckProbeKey, nil)
-			if err == nil {
-				return statuscheck.OK, nil
-			}
-			return statuscheck.Error, err
-		})
-	} else {
-		plugin.Log.Warnf("Unable to start status check for redis")
-	}
-
-	return nil
+		// Register for providing status reports (polling mode)
+		if plugin.StatusCheck != nil {
+			plugin.StatusCheck.Register(plugin.PluginName, func() (statuscheck.PluginState, error) {
+				_, _, err := plugin.NewBroker("/").GetValue(healthCheckProbeKey, nil)
+				if err == nil {
+					return statuscheck.OK, nil
+				}
+				return statuscheck.Error, err
+			})
+		} else {
+			plugin.Log.Warnf("Unable to start status check for redis")
+		}
+	})
+	return err
 }
 
 // Close does nothing for redis plugin.
 func (plugin *Plugin) Close() error {
+	// Warning: If you ever do anything here other than return nil, please see grpc plugin for an example of how to
+	// Use closeOnce (a sync.Once) to protect it.
 	return nil
 }
 

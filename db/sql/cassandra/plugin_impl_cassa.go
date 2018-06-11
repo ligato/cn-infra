@@ -16,6 +16,7 @@ package cassandra
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/sql"
@@ -36,6 +37,10 @@ type Plugin struct {
 
 	clientConfig *ClientConfig
 	session      gockle.Session
+
+	initOnce      sync.Once
+	afterInitOnce sync.Once
+	closeOnce     sync.Once
 }
 
 // Deps is here to group injected dependencies of plugin
@@ -60,61 +65,65 @@ var (
 
 // Init is called at plugin startup. The session to Cassandra is established.
 func (p *Plugin) Init() (err error) {
-	if p.session != nil {
-		return nil // skip initialization
-	}
-
-	// Retrieve config
-	var cfg Config
-	found, err := p.PluginConfig.GetValue(&cfg)
-	// need to be strict about config presence for ETCD
-	if !found {
-		p.Log.Info("cassandra client config not found ", p.PluginConfig.GetConfigName(),
-			" - skip loading this plugin")
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-
-	// Init session
-	p.clientConfig, err = ConfigToClientConfig(&cfg)
-	if err != nil {
-		return err
-	}
-
-	if p.session == nil && p.clientConfig != nil {
-		session, err := CreateSessionFromConfig(p.clientConfig)
-		if err != nil {
-			return err
-		}
-
-		p.session = gockle.NewSession(session)
-	}
-
-	// Register for providing status reports (polling mode)
-	if p.StatusCheck != nil {
+	p.initOnce.Do(func() {
 		if p.session != nil {
-			p.StatusCheck.Register(core.PluginName(p.String()), func() (statuscheck.PluginState, error) {
-				broker := p.NewBroker()
-				err := broker.Exec(`select keyspace_name from system_schema.keyspaces`)
-				if err == nil {
-					return statuscheck.OK, nil
-				}
-				return statuscheck.Error, err
-			})
-		} else {
-			p.Log.Warnf("Cassandra connection not available")
+			return // skip initialization
 		}
-	} else {
-		p.Log.Warnf("Unable to start status check for Cassandra")
-	}
 
-	return nil
+		// Retrieve config
+		var cfg Config
+		found, err := p.PluginConfig.GetValue(&cfg)
+		// need to be strict about config presence for ETCD
+		if !found {
+			p.Log.Info("cassandra client config not found ", p.PluginConfig.GetConfigName(),
+				" - skip loading this plugin")
+			return
+		}
+		if err != nil {
+			return
+		}
+
+		// Init session
+		p.clientConfig, err = ConfigToClientConfig(&cfg)
+		if err != nil {
+			return
+		}
+
+		if p.session == nil && p.clientConfig != nil {
+			session, err := CreateSessionFromConfig(p.clientConfig)
+			if err != nil {
+				return
+			}
+
+			p.session = gockle.NewSession(session)
+		}
+
+		// Register for providing status reports (polling mode)
+		if p.StatusCheck != nil {
+			if p.session != nil {
+				p.StatusCheck.Register(core.PluginName(p.String()), func() (statuscheck.PluginState, error) {
+					broker := p.NewBroker()
+					err := broker.Exec(`select keyspace_name from system_schema.keyspaces`)
+					if err == nil {
+						return statuscheck.OK, nil
+					}
+					return statuscheck.Error, err
+				})
+			} else {
+				p.Log.Warnf("Cassandra connection not available")
+			}
+		} else {
+			p.Log.Warnf("Unable to start status check for Cassandra")
+		}
+	})
+
+	return err
 }
 
 // AfterInit is called by the Agent Core after all plugins have been initialized.
 func (p *Plugin) AfterInit() error {
+	// Warning: If you ever do anything here other than return nil, please see grpc plugin for an example of how to
+	// Use afterInitOnce (a sync.Once) to protect it.
 	return nil
 }
 
@@ -129,9 +138,11 @@ func (p *Plugin) NewBroker() sql.Broker {
 }
 
 // Close resources
-func (p *Plugin) Close() error {
-	safeclose.Close(p.session)
-	return nil
+func (p *Plugin) Close() (err error) {
+	p.closeOnce.Do(func() {
+		err = safeclose.Close(p.session)
+	})
+	return err
 }
 
 // String returns if set Deps.PluginName or "cassa-client" otherwise

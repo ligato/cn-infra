@@ -16,14 +16,15 @@ package prometheus
 
 import (
 	"errors"
+	"net/http"
+	"strings"
+	"sync"
+
 	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/unrolled/render"
-	"net/http"
-	"strings"
-	"sync"
 )
 
 // DefaultRegistry default Prometheus metrics URL
@@ -43,7 +44,10 @@ type Plugin struct {
 	Deps
 	sync.Mutex
 	// regs is a map of URL path(symbolic names) to registries. Registries group metrics and can be exposed at different urls.
-	regs map[string]*registry
+	regs          map[string]*registry
+	initOnce      sync.Once
+	afterInitOnce sync.Once
+	closeOnce     sync.Once
 }
 
 // Deps lists dependencies of the plugin.
@@ -62,37 +66,42 @@ type registry struct {
 
 // Init initializes the internal structures
 func (p *Plugin) Init() (err error) {
+	p.initOnce.Do(func() {
+		p.regs = map[string]*registry{}
 
-	p.regs = map[string]*registry{}
-
-	// add default registry
-	p.regs[DefaultRegistry] = &registry{
-		Gatherer:   prometheus.DefaultGatherer,
-		Registerer: prometheus.DefaultRegisterer,
-	}
+		// add default registry
+		p.regs[DefaultRegistry] = &registry{
+			Gatherer:   prometheus.DefaultGatherer,
+			Registerer: prometheus.DefaultRegisterer,
+		}
+	})
 
 	return nil
 }
 
 // AfterInit registers HTTP handlers.
-func (p *Plugin) AfterInit() error {
-	if p.HTTP != nil {
-		p.Lock()
-		defer p.Unlock()
-		for path, reg := range p.regs {
-			p.HTTP.RegisterHTTPHandler(path, p.createHandlerHandler(reg.Gatherer, reg.httpOpts), "GET")
-			p.Log.Infof("Serving %s on port %d", path, p.HTTP.GetPort())
+func (p *Plugin) AfterInit() (err error) {
+	p.afterInitOnce.Do(func() {
+		if p.HTTP != nil {
+			p.Lock()
+			defer p.Unlock()
+			for path, reg := range p.regs {
+				p.HTTP.RegisterHTTPHandler(path, p.createHandlerHandler(reg.Gatherer, reg.httpOpts), "GET")
+				p.Log.Infof("Serving %s on port %d", path, p.HTTP.GetPort())
 
+			}
+		} else {
+			p.Log.Info("Unable to register Prometheus metrics handlers, HTTP is nil")
 		}
-	} else {
-		p.Log.Info("Unable to register Prometheus metrics handlers, HTTP is nil")
-	}
+	})
 
 	return nil
 }
 
 // Close cleans up the allocated resources.
 func (p *Plugin) Close() error {
+	// Warning: If you ever do anything here, please wrap it in p.closeOnce.Do(func() {}).
+	// See Init() and AfterInit() for examples
 	return nil
 }
 

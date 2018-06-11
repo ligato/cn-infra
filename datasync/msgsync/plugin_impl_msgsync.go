@@ -16,6 +16,7 @@ package msgsync
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/datasync"
@@ -26,8 +27,11 @@ import (
 // PubPlugin implements KeyProtoValWriter that propagates protobuf messages
 // to a particular topic (unless the messaging.Mux is not disabled).
 type PubPlugin struct {
-	Deps    // inject
-	adapter messaging.ProtoPublisher
+	Deps          // inject
+	adapter       messaging.ProtoPublisher
+	initOnce      sync.Once
+	afterInitOnce sync.Once
+	closeOnce     sync.Once
 }
 
 // Deps groups dependencies injected into the plugin so that they are
@@ -46,25 +50,28 @@ type Cfg struct {
 
 // Init does nothing.
 func (plugin *PubPlugin) Init() error {
+	// Warning: If you ever do anything here other than return nil, please see grpc plugin for an example of how to
+	// Use initOnce (a sync.Once) to protect it.
 	return nil
 }
 
 // AfterInit uses provided MUX connection to build new publisher.
-func (plugin *PubPlugin) AfterInit() error {
-	if !plugin.Messaging.Disabled() {
-		cfg := plugin.Deps.Cfg
-		plugin.PluginConfig.GetValue(&cfg)
+func (plugin *PubPlugin) AfterInit() (err error) {
+	plugin.afterInitOnce.Do(func() {
+		if !plugin.Messaging.Disabled() {
+			cfg := plugin.Deps.Cfg
+			plugin.PluginConfig.GetValue(&cfg)
 
-		if cfg.Topic != "" {
-			var err error
-			plugin.adapter, err = plugin.Messaging.NewSyncPublisher("msgsync-connection", cfg.Topic)
-			if err != nil {
-				return err
+			if cfg.Topic != "" {
+				plugin.adapter, err = plugin.Messaging.NewSyncPublisher("msgsync-connection", cfg.Topic)
+				if err != nil {
+					return
+				}
 			}
 		}
-	}
+	})
 
-	return nil
+	return err
 }
 
 // Put propagates this call to a particular messaging Publisher.
@@ -84,6 +91,8 @@ func (plugin *PubPlugin) Put(key string, data proto.Message, opts ...datasync.Pu
 
 // Close resources.
 func (plugin *PubPlugin) Close() error {
+	// Warning: If you ever do anything here other than return nil, please see grpc plugin for an example of how to
+	// Use closeOnce (a sync.Once) to protect it.
 	return nil
 }
 

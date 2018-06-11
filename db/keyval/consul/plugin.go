@@ -15,6 +15,8 @@
 package consul
 
 import (
+	"sync"
+
 	"github.com/hashicorp/consul/api"
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync/resync"
@@ -48,6 +50,9 @@ type Plugin struct {
 
 	reconnectResync bool
 	lastConnErr     error
+
+	initOnce  sync.Once
+	closeOnce sync.Once
 }
 
 // Deps lists dependencies of the Consul plugin.
@@ -88,50 +93,54 @@ func ConfigToClient(cfg *Config) (*api.Config, error) {
 
 // Init initializes Consul plugin.
 func (plugin *Plugin) Init() (err error) {
-	cfg, err := plugin.getConfig()
-	if err != nil || plugin.disabled {
-		return err
-	}
-	clientCfg, err := ConfigToClient(cfg)
-	if err != nil {
-		return err
-	}
-	plugin.client, err = NewClient(clientCfg)
-	if err != nil {
-		plugin.Log.Errorf("Err: %v", err)
-		return err
-	}
-	plugin.reconnectResync = cfg.ReconnectResync
-	plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.client, &keyval.SerializerJSON{})
+	plugin.initOnce.Do(func() {
+		cfg, err := plugin.getConfig()
+		if err != nil || plugin.disabled {
+			return
+		}
+		clientCfg, err := ConfigToClient(cfg)
+		if err != nil {
+			return
+		}
+		plugin.client, err = NewClient(clientCfg)
+		if err != nil {
+			plugin.Log.Errorf("Err: %v", err)
+			return
+		}
+		plugin.reconnectResync = cfg.ReconnectResync
+		plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.client, &keyval.SerializerJSON{})
 
-	// Register for providing status reports (polling mode).
-	if plugin.StatusCheck != nil {
-		plugin.StatusCheck.Register(core.PluginName(plugin.PluginName), func() (statuscheck.PluginState, error) {
-			_, _, _, err := plugin.client.GetValue(healthCheckProbeKey)
-			if err == nil {
-				if plugin.reconnectResync && plugin.lastConnErr != nil {
-					plugin.Log.Info("Starting resync after Consul reconnect")
-					if plugin.Resync != nil {
-						plugin.Resync.DoResync()
-						plugin.lastConnErr = nil
-					} else {
-						plugin.Log.Warn("Expected resync after Consul reconnect could not start beacuse of missing Resync plugin")
+		// Register for providing status reports (polling mode).
+		if plugin.StatusCheck != nil {
+			plugin.StatusCheck.Register(core.PluginName(plugin.PluginName), func() (statuscheck.PluginState, error) {
+				_, _, _, err := plugin.client.GetValue(healthCheckProbeKey)
+				if err == nil {
+					if plugin.reconnectResync && plugin.lastConnErr != nil {
+						plugin.Log.Info("Starting resync after Consul reconnect")
+						if plugin.Resync != nil {
+							plugin.Resync.DoResync()
+							plugin.lastConnErr = nil
+						} else {
+							plugin.Log.Warn("Expected resync after Consul reconnect could not start beacuse of missing Resync plugin")
+						}
 					}
+					return statuscheck.OK, nil
 				}
-				return statuscheck.OK, nil
-			}
-			plugin.lastConnErr = err
-			return statuscheck.Error, err
-		})
-	} else {
-		plugin.Log.Warnf("Unable to start status check for consul")
-	}
+				plugin.lastConnErr = err
+				return statuscheck.Error, err
+			})
+		} else {
+			plugin.Log.Warnf("Unable to start status check for consul")
+		}
+	})
 
-	return nil
+	return err
 }
 
 // Close closes Consul plugin.
 func (plugin *Plugin) Close() error {
+	// Warning: If you ever do anything here other than return nil, please see grpc plugin for an example of how to
+	// Use closeOnce (a sync.Once) to protect it.
 	return nil
 }
 

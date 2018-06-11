@@ -16,6 +16,7 @@ package kafka
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/Shopify/sarama"
 
@@ -44,7 +45,10 @@ type Plugin struct {
 	hsClient  sarama.Client
 	manClient sarama.Client
 
-	disabled bool
+	disabled      bool
+	initOnce      sync.Once
+	afterInitOnce sync.Once
+	closeOnce     sync.Once
 }
 
 // Deps groups dependencies injected into the plugin so that they are
@@ -60,86 +64,91 @@ func FromExistingMux(mux *mux.Multiplexer) *Plugin {
 
 // Init is called at plugin initialization.
 func (plugin *Plugin) Init() (err error) {
-	// Prepare topic and  subscription for status check client
-	plugin.subscription = make(chan *client.ConsumerMessage)
+	plugin.initOnce.Do(func() {
+		// Prepare topic and  subscription for status check client
+		plugin.subscription = make(chan *client.ConsumerMessage)
 
-	// Get muxCfg data (contains kafka brokers ip addresses)
-	muxCfg := &mux.Config{}
-	found, err := plugin.PluginConfig.GetValue(muxCfg)
-	if !found {
-		plugin.Log.Info("kafka config not found ", plugin.PluginConfig.GetConfigName(), " - skip loading this plugin")
-		plugin.disabled = true
-		return nil //skip loading the plugin
-	}
-	if err != nil {
-		return err
-	}
-	// retrieve clientCfg
-	clientCfg, err := plugin.getClientConfig(muxCfg, plugin.Log, topic)
-	if err != nil {
-		return err
-	}
-
-	// init 'hash' sarama client
-	plugin.hsClient, err = client.NewClient(clientCfg, client.Hash)
-	if err != nil {
-		return err
-	}
-
-	// init 'manual' sarama client
-	plugin.manClient, err = client.NewClient(clientCfg, client.Manual)
-	if err != nil {
-		return err
-	}
-
-	// Initialize both multiplexers to allow both, dynamic and manual mode
-	if plugin.mux == nil {
-		name := clientCfg.GroupID
-		plugin.Log.Infof("Group ID is set to %v", name)
-		plugin.mux, err = mux.InitMultiplexerWithConfig(clientCfg, plugin.hsClient, plugin.manClient, name, plugin.Log)
-		if err != nil {
-			return err
+		// Get muxCfg data (contains kafka brokers ip addresses)
+		muxCfg := &mux.Config{}
+		found, err := plugin.PluginConfig.GetValue(muxCfg)
+		if !found {
+			plugin.Log.Info("kafka config not found ", plugin.PluginConfig.GetConfigName(), " - skip loading this plugin")
+			plugin.disabled = true
+			return //skip loading the plugin
 		}
-		plugin.Log.Debug("Default multiplexer initialized")
-	}
+		if err != nil {
+			return
+		}
+		// retrieve clientCfg
+		clientCfg, err := plugin.getClientConfig(muxCfg, plugin.Log, topic)
+		if err != nil {
+			return
+		}
 
+		// init 'hash' sarama client
+		plugin.hsClient, err = client.NewClient(clientCfg, client.Hash)
+		if err != nil {
+			return
+		}
+
+		// init 'manual' sarama client
+		plugin.manClient, err = client.NewClient(clientCfg, client.Manual)
+		if err != nil {
+			return
+		}
+
+		// Initialize both multiplexers to allow both, dynamic and manual mode
+		if plugin.mux == nil {
+			name := clientCfg.GroupID
+			plugin.Log.Infof("Group ID is set to %v", name)
+			plugin.mux, err = mux.InitMultiplexerWithConfig(clientCfg, plugin.hsClient, plugin.manClient, name, plugin.Log)
+			if err != nil {
+				return
+			}
+			plugin.Log.Debug("Default multiplexer initialized")
+		}
+	})
 	return err
 }
 
 // AfterInit is called in the second phase of the initialization. The kafka multiplexerNewWatcher
 // is started, all consumers have to be subscribed until this phase.
-func (plugin *Plugin) AfterInit() error {
-	if plugin.mux != nil {
-		err := plugin.mux.Start()
-		if err != nil {
-			return err
+func (plugin *Plugin) AfterInit() (err error) {
+	plugin.afterInitOnce.Do(func() {
+		if plugin.mux != nil {
+			err := plugin.mux.Start()
+			if err != nil {
+				return
+			}
 		}
-	}
 
-	// Register for providing status reports (polling mode)
-	if plugin.StatusCheck != nil && !plugin.disabled {
-		plugin.StatusCheck.Register(plugin.PluginName, func() (statuscheck.PluginState, error) {
-			if plugin.hsClient == nil || plugin.hsClient.Closed() {
-				return statuscheck.Error, fmt.Errorf("kafka client/consumer not available")
-			}
-			// Method 'RefreshMetadata()' returns error if kafka server is unavailable
-			err := plugin.hsClient.RefreshMetadata(topic)
-			if err == nil {
-				return statuscheck.OK, nil
-			}
-			plugin.Log.Errorf("Kafka server unavailable")
-			return statuscheck.Error, err
-		})
-	} else {
-		plugin.Log.Warnf("Unable to start status check for kafka")
-	}
-
-	return nil
+		// Register for providing status reports (polling mode)
+		if plugin.StatusCheck != nil && !plugin.disabled {
+			plugin.StatusCheck.Register(plugin.PluginName, func() (statuscheck.PluginState, error) {
+				if plugin.hsClient == nil || plugin.hsClient.Closed() {
+					return statuscheck.Error, fmt.Errorf("kafka client/consumer not available")
+				}
+				// Method 'RefreshMetadata()' returns error if kafka server is unavailable
+				err := plugin.hsClient.RefreshMetadata(topic)
+				if err == nil {
+					return statuscheck.OK, nil
+				}
+				plugin.Log.Errorf("Kafka server unavailable")
+				return statuscheck.Error, err
+			})
+		} else {
+			plugin.Log.Warnf("Unable to start status check for kafka")
+		}
+	})
+	return err
 }
 
 // Close is called at plugin cleanup phase.
-func (plugin *Plugin) Close() error {
-	return safeclose.Close(plugin.hsClient, plugin.manClient, plugin.mux)
+func (plugin *Plugin) Close() (err error) {
+	plugin.closeOnce.Do(func() {
+		err = safeclose.Close(plugin.hsClient, plugin.manClient, plugin.mux)
+	})
+	return err
 }
 
 // NewBytesConnection returns a new instance of a connection to access kafka brokers. The connection allows to create
