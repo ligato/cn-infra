@@ -17,6 +17,7 @@ package logmanager
 import (
 	"fmt"
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/mux"
 	"github.com/unrolled/render"
@@ -43,6 +44,8 @@ const (
 type Plugin struct {
 	Deps
 	*Conf
+	initOnce      sync.Once
+	afterInitOnce sync.Once
 }
 
 // Deps groups dependencies injected into the plugin so that they are
@@ -79,36 +82,37 @@ type ConfLogger struct {
 }
 
 // Init does nothing
-func (lm *Plugin) Init() error {
-	if lm.PluginConfig != nil {
-		if lm.Conf == nil {
-			lm.Conf = NewConf()
-		}
-
-		_, err := lm.PluginConfig.GetValue(lm.Conf)
-		if err != nil {
-			return err
-		}
-		lm.Log.Debugf("logs config: %+v", lm.Conf)
-
-		if lm.Conf.DefaultLevel != "" {
-			if err := lm.LogRegistry.SetLevel("default", lm.Conf.DefaultLevel); err != nil {
-				lm.Log.Warn("setting default log level failed:", err)
-			} else {
-				lm.Log.Debugf("default log level to %q", lm.Conf.DefaultLevel)
+func (lm *Plugin) Init() (err error) {
+	lm.initOnce.Do(func() {
+		if lm.PluginConfig != nil {
+			if lm.Conf == nil {
+				lm.Conf = NewConf()
 			}
-		}
 
-		// try to set log levels (note, not all of them might exist yet)
-		for _, cfgLogger := range lm.Conf.Loggers {
-			if err := lm.LogRegistry.SetLevel(cfgLogger.Name, cfgLogger.Level); err != nil {
-				//intentionally just log warn & not propagate the error (it is minor thing to interrupt startup)
-				lm.Log.Warn("setting level failed:", err)
+			_, err := lm.PluginConfig.GetValue(lm.Conf)
+			if err != nil {
+				return
 			}
+			lm.Log.Debugf("logs config: %+v", lm.Conf)
+
+			if lm.Conf.DefaultLevel != "" {
+				if err := lm.LogRegistry.SetLevel("default", lm.Conf.DefaultLevel); err != nil {
+					lm.Log.Warn("setting default log level failed:", err)
+				} else {
+					lm.Log.Debugf("default log level to %q", lm.Conf.DefaultLevel)
+				}
+			}
+
+			// try to set log levels (note, not all of them might exist yet)
+			for _, cfgLogger := range lm.Conf.Loggers {
+				if err := lm.LogRegistry.SetLevel(cfgLogger.Name, cfgLogger.Level); err != nil {
+					//intentionally just log warn & not propagate the error (it is minor thing to interrupt startup)
+					lm.Log.Warn("setting level failed:", err)
+				}
+			}
+
 		}
-
-	}
-
+	})
 	return nil
 }
 
@@ -117,17 +121,21 @@ func (lm *Plugin) Init() error {
 //   > curl -X GET http://localhost:<port>/log/list
 // - Set log level for a registered logger:
 //   > curl -X PUT http://localhost:<port>/log/<logger-name>/<log-level>
-func (lm *Plugin) AfterInit() error {
-	if lm.HTTP != nil {
-		lm.HTTP.RegisterHTTPHandler(fmt.Sprintf("/log/{%s}/{%s:debug|info|warning|error|fatal|panic}",
-			loggerVarName, levelVarName), lm.logLevelHandler, "PUT")
-		lm.HTTP.RegisterHTTPHandler("/log/list", lm.listLoggersHandler, "GET")
-	}
-	return nil
+func (lm *Plugin) AfterInit() (err error) {
+	lm.afterInitOnce.Do(func() {
+		if lm.HTTP != nil {
+			lm.HTTP.RegisterHTTPHandler(fmt.Sprintf("/log/{%s}/{%s:debug|info|warning|error|fatal|panic}",
+				loggerVarName, levelVarName), lm.logLevelHandler, "PUT")
+			lm.HTTP.RegisterHTTPHandler("/log/list", lm.listLoggersHandler, "GET")
+		}
+	})
+	return err
 }
 
 // Close is called at plugin cleanup phase.
 func (lm *Plugin) Close() error {
+	// Warning: If you ever do anything here other than return nil, please see grpc plugin for an example of how to
+	// Use closeInit (a sync.Once) to protect it.
 	return nil
 }
 
