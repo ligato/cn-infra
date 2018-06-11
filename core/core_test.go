@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Cisco and/or its affiliates.
+// Copyright (c) 2018 Cisco and/or its affiliates.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,22 +21,22 @@ import (
 	"time"
 
 	"github.com/ligato/cn-infra/logging/logrus"
-	"github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 )
 
 func TestEmptyAgent(t *testing.T) {
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 
 	agent := NewAgent(Inject(), WithTimeout(1*time.Second))
-	gomega.Expect(agent).NotTo(gomega.BeNil())
+	Expect(agent).NotTo(BeNil())
 	err := agent.Start()
-	gomega.Expect(err).To(gomega.BeNil())
+	Expect(err).To(BeNil())
 	err = agent.Stop()
-	gomega.Expect(err).To(gomega.BeNil())
+	Expect(err).To(BeNil())
 }
 
 func TestEventLoopWithInterrupt(t *testing.T) {
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 
 	plugins := []*TestPlugin{{}, {}, {}}
 
@@ -45,9 +45,9 @@ func TestEventLoopWithInterrupt(t *testing.T) {
 		{"Third", plugins[2]}}
 
 	for _, p := range plugins {
-		gomega.Expect(p.Initialized()).To(gomega.BeFalse())
-		gomega.Expect(p.AfterInitialized()).To(gomega.BeFalse())
-		gomega.Expect(p.Closed()).To(gomega.BeFalse())
+		Expect(p.Initialized()).To(BeFalse())
+		Expect(p.AfterInitialized()).To(BeFalse())
+		Expect(p.Closed()).To(BeFalse())
 	}
 
 	agent := NewAgentDeprecated(logrus.DefaultLogger(), 100*time.Millisecond, namedPlugins...)
@@ -59,26 +59,26 @@ func TestEventLoopWithInterrupt(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 	for _, p := range plugins {
-		gomega.Expect(p.Initialized()).To(gomega.BeTrue())
-		gomega.Expect(p.AfterInitialized()).To(gomega.BeTrue())
-		gomega.Expect(p.Closed()).To(gomega.BeFalse())
+		Expect(p.Initialized()).To(BeTrue())
+		Expect(p.AfterInitialized()).To(BeTrue())
+		Expect(p.Closed()).To(BeFalse())
 	}
 	close(closeCh)
 
 	select {
 	case errCh := <-errCh:
-		gomega.Expect(errCh).To(gomega.BeNil())
+		Expect(errCh).To(BeNil())
 	case <-time.After(100 * time.Millisecond):
 		t.FailNow()
 	}
 
 	for _, p := range plugins {
-		gomega.Expect(p.Closed()).To(gomega.BeTrue())
+		Expect(p.Closed()).To(BeTrue())
 	}
 }
 
 func TestEventLoopFailInit(t *testing.T) {
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 
 	plugins := []*TestPlugin{{}, {}, NewTestPlugin(true, false, false)}
 
@@ -87,9 +87,9 @@ func TestEventLoopFailInit(t *testing.T) {
 		{"Third", plugins[2]}}
 
 	for _, p := range plugins {
-		gomega.Expect(p.Initialized()).To(gomega.BeFalse())
-		gomega.Expect(p.AfterInitialized()).To(gomega.BeFalse())
-		gomega.Expect(p.Closed()).To(gomega.BeFalse())
+		Expect(p.Initialized()).To(BeFalse())
+		Expect(p.AfterInitialized()).To(BeFalse())
+		Expect(p.Closed()).To(BeFalse())
 	}
 
 	agent := NewAgentDeprecated(logrus.DefaultLogger(), 100*time.Millisecond, namedPlugins...)
@@ -101,23 +101,23 @@ func TestEventLoopFailInit(t *testing.T) {
 
 	select {
 	case errCh := <-errCh:
-		gomega.Expect(errCh).NotTo(gomega.BeNil())
+		Expect(errCh).NotTo(BeNil())
 	case <-time.After(100 * time.Millisecond):
 		t.FailNow()
 	}
 
 	for _, p := range plugins {
-		gomega.Expect(p.Initialized()).To(gomega.BeTrue())
+		Expect(p.Initialized()).To(BeTrue())
 		// initialization failed of a plugin failed, afterInit was not called
-		gomega.Expect(p.AfterInitialized()).To(gomega.BeFalse())
-		gomega.Expect(p.Closed()).To(gomega.BeTrue())
+		Expect(p.AfterInitialized()).To(BeFalse())
+		Expect(p.Closed()).To(BeTrue())
 	}
 	close(closeCh)
 
 }
 
 func TestEventLoopAfterInitFailed(t *testing.T) {
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 
 	plugins := []*TestPlugin{{}, NewTestPlugin(false, true, false), {}}
 
@@ -126,9 +126,9 @@ func TestEventLoopAfterInitFailed(t *testing.T) {
 		{"Third", plugins[2]}}
 
 	for _, p := range plugins {
-		gomega.Expect(p.Initialized()).To(gomega.BeFalse())
-		gomega.Expect(p.AfterInitialized()).To(gomega.BeFalse())
-		gomega.Expect(p.Closed()).To(gomega.BeFalse())
+		Expect(p.Initialized()).To(BeFalse())
+		Expect(p.AfterInitialized()).To(BeFalse())
+		Expect(p.Closed()).To(BeFalse())
 	}
 
 	agent := NewAgentDeprecated(logrus.DefaultLogger(), 100*time.Millisecond, namedPlugins...)
@@ -140,26 +140,26 @@ func TestEventLoopAfterInitFailed(t *testing.T) {
 
 	select {
 	case errCh := <-errCh:
-		gomega.Expect(errCh).NotTo(gomega.BeNil())
+		Expect(errCh).NotTo(BeNil())
 	case <-time.After(100 * time.Millisecond):
 		t.FailNow()
 	}
 
 	for _, p := range plugins {
-		gomega.Expect(p.Initialized()).To(gomega.BeTrue())
-		gomega.Expect(p.Closed()).To(gomega.BeTrue())
+		Expect(p.Initialized()).To(BeTrue())
+		Expect(p.Closed()).To(BeTrue())
 	}
 	close(closeCh)
 
-	gomega.Expect(plugins[0].AfterInitialized()).To(gomega.BeTrue())
-	gomega.Expect(plugins[1].AfterInitialized()).To(gomega.BeTrue())
+	Expect(plugins[0].AfterInitialized()).To(BeTrue())
+	Expect(plugins[1].AfterInitialized()).To(BeTrue())
 	// afterInit of the second plugin failed thus the third was not afterInitialized
-	gomega.Expect(plugins[2].AfterInitialized()).To(gomega.BeFalse())
+	Expect(plugins[2].AfterInitialized()).To(BeFalse())
 
 }
 
 func TestEventLoopCloseFailed(t *testing.T) {
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 
 	plugins := []*TestPlugin{NewTestPlugin(false, false, true), {}, {}}
 
@@ -168,9 +168,9 @@ func TestEventLoopCloseFailed(t *testing.T) {
 		{"Third", plugins[2]}}
 
 	for _, p := range plugins {
-		gomega.Expect(p.Initialized()).To(gomega.BeFalse())
-		gomega.Expect(p.AfterInitialized()).To(gomega.BeFalse())
-		gomega.Expect(p.Closed()).To(gomega.BeFalse())
+		Expect(p.Initialized()).To(BeFalse())
+		Expect(p.AfterInitialized()).To(BeFalse())
+		Expect(p.Closed()).To(BeFalse())
 	}
 
 	agent := NewAgentDeprecated(logrus.DefaultLogger(), 100*time.Millisecond, namedPlugins...)
@@ -182,33 +182,33 @@ func TestEventLoopCloseFailed(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 	for _, p := range plugins {
-		gomega.Expect(p.Initialized()).To(gomega.BeTrue())
-		gomega.Expect(p.AfterInitialized()).To(gomega.BeTrue())
-		gomega.Expect(p.Closed()).To(gomega.BeFalse())
+		Expect(p.Initialized()).To(BeTrue())
+		Expect(p.AfterInitialized()).To(BeTrue())
+		Expect(p.Closed()).To(BeFalse())
 	}
 
 	close(closeCh)
 
 	select {
 	case errCh := <-errCh:
-		gomega.Expect(errCh).NotTo(gomega.BeNil())
+		Expect(errCh).NotTo(BeNil())
 	case <-time.After(100 * time.Millisecond):
 		t.FailNow()
 	}
 
 	for _, p := range plugins {
-		gomega.Expect(p.Closed()).To(gomega.BeTrue())
+		Expect(p.Closed()).To(BeTrue())
 	}
 
 }
 
 func TestPluginApi(t *testing.T) {
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 	const plName = "Name"
 	named := NamedPlugin{plName, &TestPlugin{}}
 
 	strRep := named.String()
-	gomega.Expect(strRep).To(gomega.BeEquivalentTo(plName))
+	Expect(strRep).To(BeEquivalentTo(plName))
 }
 
 type TestPlugin struct {
