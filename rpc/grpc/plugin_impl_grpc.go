@@ -20,6 +20,8 @@ import (
 
 	"strconv"
 
+	"sync"
+
 	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging"
@@ -42,7 +44,10 @@ type Plugin struct {
 	// GRPC network listener
 	netListener io.Closer
 	// Plugin availability flag
-	disabled bool
+	disabled      bool
+	initOnce      sync.Once
+	afterInitOnce sync.Once
+	closeOnce     sync.Once
 }
 
 // Deps is a list of injected dependencies of the GRPC plugin.
@@ -54,63 +59,66 @@ type Deps struct {
 }
 
 // Init prepares GRPC netListener for registration of individual service
-func (plugin *Plugin) Init() error {
-	var err error
-	// Get GRPC configuration file
-	if plugin.grpcCfg == nil {
-		plugin.grpcCfg, err = plugin.getGrpcConfig()
-		if err != nil || plugin.disabled {
-			return err
-		}
-	}
+func (plugin *Plugin) Init() (err error) {
+	plugin.initOnce.Do(func() {
 
-	// Prepare GRPC server
-	if plugin.grpcServer == nil {
-		var opts []grpc.ServerOption
-		if plugin.grpcCfg.MaxConcurrentStreams > 0 {
-			opts = append(opts, grpc.MaxConcurrentStreams(plugin.grpcCfg.MaxConcurrentStreams))
-		}
-		if plugin.grpcCfg.MaxMsgSize > 0 {
-			opts = append(opts, grpc.MaxMsgSize(plugin.grpcCfg.MaxMsgSize))
+		// Get GRPC configuration file
+		if plugin.grpcCfg == nil {
+			plugin.grpcCfg, err = plugin.getGrpcConfig()
+			if err != nil || plugin.disabled {
+				return
+			}
 		}
 
-		plugin.grpcServer = grpc.NewServer(opts...)
-		grpclog.SetLogger(plugin.Log.NewLogger("grpc-server"))
-	}
+		// Prepare GRPC server
+		if plugin.grpcServer == nil {
+			var opts []grpc.ServerOption
+			if plugin.grpcCfg.MaxConcurrentStreams > 0 {
+				opts = append(opts, grpc.MaxConcurrentStreams(plugin.grpcCfg.MaxConcurrentStreams))
+			}
+			if plugin.grpcCfg.MaxMsgSize > 0 {
+				opts = append(opts, grpc.MaxMsgSize(plugin.grpcCfg.MaxMsgSize))
+			}
 
-	// Start GRPC listener
-	if plugin.listenAndServe != nil {
-		plugin.netListener, err = plugin.listenAndServe(*plugin.grpcCfg, plugin.grpcServer)
-	} else {
-		plugin.Log.Info("Listening GRPC on tcp://", plugin.grpcCfg.Endpoint)
-		plugin.netListener, err = ListenAndServeGRPC(plugin.grpcCfg, plugin.grpcServer)
-	}
+			plugin.grpcServer = grpc.NewServer(opts...)
+			grpclog.SetLogger(plugin.Log.NewLogger("grpc-server"))
+		}
 
+		// Start GRPC listener
+		if plugin.listenAndServe != nil {
+			plugin.netListener, err = plugin.listenAndServe(*plugin.grpcCfg, plugin.grpcServer)
+		} else {
+			plugin.Log.Info("Listening GRPC on tcp://", plugin.grpcCfg.Endpoint)
+			plugin.netListener, err = ListenAndServeGRPC(plugin.grpcCfg, plugin.grpcServer)
+		}
+	})
 	return err
 }
 
 // AfterInit starts the HTTP netListener.
 func (plugin *Plugin) AfterInit() (err error) {
-	if plugin.Deps.HTTP != nil {
-		plugin.Log.Info("exposing GRPC services over HTTP port " + strconv.Itoa(plugin.Deps.HTTP.GetPort()) +
-			" /service ")
-		plugin.Deps.HTTP.RegisterHTTPHandler("service", func(formatter *render.Render) http.HandlerFunc {
-			return plugin.grpcServer.ServeHTTP
-		}, "GET", "PUT", "POST")
-	}
-
+	plugin.afterInitOnce.Do(func() {
+		if plugin.Deps.HTTP != nil {
+			plugin.Log.Info("exposing GRPC services over HTTP port " + strconv.Itoa(plugin.Deps.HTTP.GetPort()) +
+				" /service ")
+			plugin.Deps.HTTP.RegisterHTTPHandler("service", func(formatter *render.Render) http.HandlerFunc {
+				return plugin.grpcServer.ServeHTTP
+			}, "GET", "PUT", "POST")
+		}
+	})
 	return err
 }
 
 // Close stops the HTTP netListener.
-func (plugin *Plugin) Close() error {
-	wasError := safeclose.Close(plugin.netListener)
+func (plugin *Plugin) Close() (err error) {
+	plugin.closeOnce.Do(func() {
+		err = safeclose.Close(plugin.netListener)
 
-	if plugin.grpcServer != nil {
-		plugin.grpcServer.Stop()
-	}
-
-	return wasError
+		if plugin.grpcServer != nil {
+			plugin.grpcServer.Stop()
+		}
+	})
+	return err
 }
 
 // GetServer is a getter for accessing grpc.Server
