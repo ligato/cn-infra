@@ -17,6 +17,7 @@ package rest
 import (
 	"io"
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/config"
@@ -40,6 +41,10 @@ type ForkPlugin struct {
 	server    io.Closer
 	mx        *mux.Router
 	formatter *render.Render
+
+	initOnce      sync.Once
+	afterInitOnce sync.Once
+	closeOnce     sync.Once
 }
 
 // ForkDeps lists the dependencies of the Fork on top of Rest plugin.
@@ -54,31 +59,33 @@ type ForkDeps struct {
 
 // Init checks config if the port is different that it creates ne HTTP server
 func (plugin *ForkPlugin) Init() (err error) {
-	if plugin.Config == nil {
-		plugin.Config = DefaultConfig()
-	}
-	if err := PluginConfig(plugin.Deps.PluginConfig, plugin.Config, plugin.Deps.PluginName); err != nil {
-		return err
-	}
-
-	probePort := plugin.Config.GetPort()
-	plugin.Deps.Log.WithField("probePort", probePort).Info("init")
-	if probePort > 0 && probePort != plugin.Deps.DefaultHTTP.GetPort() {
-		childPlugNameHTTP := plugin.String() + "-HTTP"
-		plugin.newPlugin = &Plugin{Deps: Deps{
-			Log:        logging.ForPlugin(childPlugNameHTTP, plugin.Deps.Log),
-			PluginName: core.PluginName(childPlugNameHTTP),
-		}, Config: plugin.Config,
+	plugin.initOnce.Do(func() {
+		if plugin.Config == nil {
+			plugin.Config = DefaultConfig()
+		}
+		if err = PluginConfig(plugin.Deps.PluginConfig, plugin.Config, plugin.Deps.PluginName); err != nil {
+			return
 		}
 
-		plugin.delegate = plugin.newPlugin
-	} else {
-		plugin.delegate = plugin.Deps.DefaultHTTP
-	}
+		probePort := plugin.Config.GetPort()
+		plugin.Deps.Log.WithField("probePort", probePort).Info("init")
+		if probePort > 0 && probePort != plugin.Deps.DefaultHTTP.GetPort() {
+			childPlugNameHTTP := plugin.String() + "-HTTP"
+			plugin.newPlugin = &Plugin{Deps: Deps{
+				Log:        logging.ForPlugin(childPlugNameHTTP, plugin.Deps.Log),
+				PluginName: core.PluginName(childPlugNameHTTP),
+			}, Config: plugin.Config,
+			}
 
-	if plugin.newPlugin != nil {
-		return plugin.newPlugin.Init()
-	}
+			plugin.delegate = plugin.newPlugin
+		} else {
+			plugin.delegate = plugin.Deps.DefaultHTTP
+		}
+
+		if plugin.newPlugin != nil {
+			err = plugin.newPlugin.Init()
+		}
+	})
 
 	return err
 }
@@ -108,20 +115,24 @@ func (plugin *ForkPlugin) GetPort() int {
 
 // AfterInit starts the HTTP server.
 // (only if port was different in Init())
-func (plugin *ForkPlugin) AfterInit() error {
-	if plugin.newPlugin != nil {
-		return plugin.newPlugin.AfterInit()
-	}
-	return nil
+func (plugin *ForkPlugin) AfterInit() (err error) {
+	plugin.afterInitOnce.Do(func() {
+		if plugin.newPlugin != nil {
+			err = plugin.newPlugin.AfterInit()
+		}
+	})
+	return err
 }
 
 // Close stops the HTTP server.
 // (only if port was different in Init())
-func (plugin *ForkPlugin) Close() error {
-	if plugin.newPlugin != nil {
-		return plugin.newPlugin.Close()
-	}
-	return nil
+func (plugin *ForkPlugin) Close() (err error) {
+	plugin.closeOnce.Do(func() {
+		if plugin.newPlugin != nil {
+			err = plugin.newPlugin.Close()
+		}
+	})
+	return err
 }
 
 // String returns plugin name (if not set defaults to "HTTP-FORK")
