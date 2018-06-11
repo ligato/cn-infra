@@ -16,6 +16,7 @@ package servicelabel
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/namsral/flag"
@@ -26,6 +27,7 @@ type Plugin struct {
 	// MicroserviceLabel identifies particular VNF.
 	// Used primarily as a key prefix to ETCD data store.
 	MicroserviceLabel string
+	initOnce          sync.Once
 }
 
 // OfDifferentAgent sets micorserivce label and returns new instance of Plugin.
@@ -42,16 +44,20 @@ func init() {
 }
 
 // Init is called at plugin initialization.
-func (p *Plugin) Init() error {
-	if p.MicroserviceLabel == "" {
-		p.MicroserviceLabel = microserviceLabelFlag
-	}
-	logrus.DefaultLogger().Debugf("Microservice label is set to %v", p.MicroserviceLabel)
-	return nil
+func (p *Plugin) Init() (err error) {
+	p.initOnce.Do(func() {
+		if p.MicroserviceLabel == "" {
+			p.MicroserviceLabel = microserviceLabelFlag
+		}
+		logrus.DefaultLogger().Debugf("Microservice label is set to %v", p.MicroserviceLabel)
+	})
+	return err
 }
 
 // Close is called at plugin cleanup phase.
 func (p *Plugin) Close() error {
+	// Warning: If you ever do anything here other than return nil, please use a sync.Once (see grpc plugin) to
+	// insure you are threadsafe and idempotent
 	return nil
 }
 
