@@ -55,6 +55,10 @@ type Plugin struct {
 	ctx    context.Context
 	cancel context.CancelFunc // cancel can be used to cancel all goroutines and their jobs inside of the plugin
 	wg     sync.WaitGroup     // wait group that allows to wait until all goroutines of the plugin have finished
+
+	initOnce      sync.Once
+	afterInitOnce sync.Once
+	closeOnce     sync.Once
 }
 
 // Deps lists the dependencies of statuscheck plugin.
@@ -65,60 +69,65 @@ type Deps struct {
 }
 
 // Init prepares the initial status data.
-func (p *Plugin) Init() error {
-	// write initial status data into ETCD
-	p.agentStat = &status.AgentStatus{
-		BuildVersion: core.BuildVersion,
-		BuildDate:    core.BuildDate,
-		State:        status.OperationalState_INIT,
-		StartTime:    time.Now().Unix(),
-		LastChange:   time.Now().Unix(),
-		CommitHash:   core.CommitHash,
-	}
+func (p *Plugin) Init() (err error) {
+	p.initOnce.Do(func() {
+		// write initial status data into ETCD
+		p.agentStat = &status.AgentStatus{
+			BuildVersion: core.BuildVersion,
+			BuildDate:    core.BuildDate,
+			State:        status.OperationalState_INIT,
+			StartTime:    time.Now().Unix(),
+			LastChange:   time.Now().Unix(),
+			CommitHash:   core.CommitHash,
+		}
 
-	// initial empty interface status
-	p.interfaceStat = &status.InterfaceStats{}
+		// initial empty interface status
+		p.interfaceStat = &status.InterfaceStats{}
 
-	// init pluginStat map
-	p.pluginStat = make(map[string]*status.PluginStatus)
+		// init pluginStat map
+		p.pluginStat = make(map[string]*status.PluginStatus)
 
-	// init map with plugin state probes
-	p.pluginProbe = make(map[string]PluginStateProbe)
+		// init map with plugin state probes
+		p.pluginProbe = make(map[string]PluginStateProbe)
 
-	// prepare context for all go routines
-	p.ctx, p.cancel = context.WithCancel(context.Background())
-
-	return nil
+		// prepare context for all go routines
+		p.ctx, p.cancel = context.WithCancel(context.Background())
+	})
+	return err
 }
 
 // AfterInit starts go routines for periodic probing and periodic updates.
 // Initial state data are published via the injected transport.
-func (p *Plugin) AfterInit() error {
-	p.access.Lock()
-	defer p.access.Unlock()
+func (p *Plugin) AfterInit() (err error) {
+	p.afterInitOnce.Do(func() {
+		p.access.Lock()
+		defer p.access.Unlock()
 
-	// do periodic status probing for plugins that have provided the probe function
-	go p.periodicProbing(p.ctx)
+		// do periodic status probing for plugins that have provided the probe function
+		go p.periodicProbing(p.ctx)
 
-	// do periodic updates of the state data in ETCD
-	go p.periodicUpdates(p.ctx)
+		// do periodic updates of the state data in ETCD
+		go p.periodicUpdates(p.ctx)
 
-	p.publishAgentData()
-
-	// transition to OK state if there are no plugins
-	if len(p.pluginStat) == 0 {
-		p.agentStat.State = status.OperationalState_OK
-		p.agentStat.LastChange = time.Now().Unix()
 		p.publishAgentData()
-	}
 
-	return nil
+		// transition to OK state if there are no plugins
+		if len(p.pluginStat) == 0 {
+			p.agentStat.State = status.OperationalState_OK
+			p.agentStat.LastChange = time.Now().Unix()
+			p.publishAgentData()
+		}
+	})
+
+	return err
 }
 
 // Close stops go routines for periodic probing and periodic updates.
-func (p *Plugin) Close() error {
-	p.cancel()
-	p.wg.Wait()
+func (p *Plugin) Close() (err error) {
+	p.closeOnce.Do(func() {
+		p.cancel()
+		p.wg.Wait()
+	})
 
 	return nil
 }
