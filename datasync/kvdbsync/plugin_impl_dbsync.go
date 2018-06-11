@@ -16,6 +16,7 @@ package kvdbsync
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/datasync"
@@ -32,8 +33,10 @@ import (
 type Plugin struct {
 	Deps // inject
 
-	adapter  *watcher
-	registry *syncbase.Registry
+	adapter       *watcher
+	registry      *syncbase.Registry
+	initOnce      sync.Once
+	afterInitOnce sync.Once
 }
 
 type infraDeps interface {
@@ -42,20 +45,24 @@ type infraDeps interface {
 }
 
 // OfDifferentAgent allows accessing DB of a different agent (with a particular microservice label).
-// This method is a shortcut to simplify creating new instance of a plugin
-// that is supposed to watch different agent DB.
-// Method intentionally copies instance of a plugin (assuming it has set all dependencies)
-// and sets microservice label.
-func (plugin /*intentionally without pointer receiver*/ Plugin) OfDifferentAgent(
+// This method creates a new instance of a plugin that is supposed to watch different agent DB.
+// Method copies the existing plugins Deps and sets microservice label.
+func (plugin *Plugin) OfDifferentAgent(
 	microserviceLabel string, infraDeps infraDeps) *Plugin {
+	// Create a new plugin and copy over all the fields from the old one
+	p := &Plugin{
+		Deps:          plugin.Deps,
+		initOnce:      sync.Once{},
+		afterInitOnce: sync.Once{},
+	}
 
-	// plugin name suffixed by micorservice label
-	plugin.Deps.PluginInfraDeps = *infraDeps.InfraDeps(string(
+	p.Deps.PluginInfraDeps = *infraDeps.InfraDeps(string(
 		plugin.Deps.PluginInfraDeps.PluginName) + "-" + microserviceLabel)
 
 	// this is important - here comes microservice label of different agent
-	plugin.Deps.PluginInfraDeps.ServiceLabel = servicelabel.OfDifferentAgent(microserviceLabel)
-	return &plugin // copy (no pointer receiver)
+	p.Deps.PluginInfraDeps.ServiceLabel = servicelabel.OfDifferentAgent(microserviceLabel)
+
+	return p
 }
 
 // Deps groups dependencies injected into the plugin so that they are
@@ -67,10 +74,12 @@ type Deps struct {
 }
 
 // Init only initializes plugin.registry.
-func (plugin *Plugin) Init() error {
-	plugin.registry = syncbase.NewRegistry()
+func (plugin *Plugin) Init() (err error) {
+	plugin.initOnce.Do(func() {
+		plugin.registry = syncbase.NewRegistry()
+	})
 
-	return nil
+	return err
 }
 
 // AfterInit uses provided connection to build new transport watcher.
@@ -80,25 +89,27 @@ func (plugin *Plugin) Init() error {
 // The order of plugins in flavor is not important to resync
 // since Watch() is called in Plugin.Init() and Resync.Register()
 // is called in Plugin.AfterInit().
-func (plugin *Plugin) AfterInit() error {
-	if plugin.KvPlugin != nil && !plugin.KvPlugin.Disabled() {
-		db := plugin.KvPlugin.NewBroker(plugin.ServiceLabel.GetAgentPrefix())
-		dbW := plugin.KvPlugin.NewWatcher(plugin.ServiceLabel.GetAgentPrefix())
-		plugin.adapter = &watcher{db, dbW, plugin.registry}
+func (plugin *Plugin) AfterInit() (err error) {
+	plugin.afterInitOnce.Do(func() {
+		if plugin.KvPlugin != nil && !plugin.KvPlugin.Disabled() {
+			db := plugin.KvPlugin.NewBroker(plugin.ServiceLabel.GetAgentPrefix())
+			dbW := plugin.KvPlugin.NewWatcher(plugin.ServiceLabel.GetAgentPrefix())
+			plugin.adapter = &watcher{db, dbW, plugin.registry}
 
-		if plugin.ResyncOrch != nil {
-			for resyncName, sub := range plugin.registry.Subscriptions() {
-				resyncReg := plugin.ResyncOrch.Register(resyncName)
-				_, err := watchAndResyncBrokerKeys(resyncReg, sub.ChangeChan, sub.ResyncChan, sub.CloseChan,
-					plugin.adapter, sub.KeyPrefixes...)
-				if err != nil {
-					return err
+			if plugin.ResyncOrch != nil {
+				for resyncName, sub := range plugin.registry.Subscriptions() {
+					resyncReg := plugin.ResyncOrch.Register(resyncName)
+					_, err := watchAndResyncBrokerKeys(resyncReg, sub.ChangeChan, sub.ResyncChan, sub.CloseChan,
+						plugin.adapter, sub.KeyPrefixes...)
+					if err != nil {
+						return
+					}
 				}
 			}
 		}
-	}
+	})
 
-	return nil
+	return err
 }
 
 // Watch adds entry to the plugin.registry. By doing this, other plugins will receive notifications
@@ -145,6 +156,8 @@ func (plugin *Plugin) Delete(key string, opts ...datasync.DelOption) (existed bo
 
 // Close resources.
 func (plugin *Plugin) Close() error {
+	// Warning: If you ever do anything here other than return nil, please see grpc plugin for an example of how to
+	// Use closeOnce (a sync.Once) to protect it.
 	return nil
 }
 
