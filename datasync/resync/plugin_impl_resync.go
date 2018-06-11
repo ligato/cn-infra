@@ -32,6 +32,10 @@ type Plugin struct {
 	regOrder      []string
 	registrations map[string]Registration
 	access        sync.Mutex
+
+	initOnce      sync.Once
+	afterInitOnce sync.Once
+	closeOnce     sync.Once
 }
 
 // Deps groups dependencies injected into the plugin so that they are
@@ -42,33 +46,36 @@ type Deps struct {
 
 // Init initializes variables.
 func (plugin *Plugin) Init() (err error) {
-	plugin.registrations = make(map[string]Registration)
+	plugin.initOnce.Do(func() {
+		plugin.registrations = make(map[string]Registration)
 
-	//plugin.waingForResync = make(map[core.PluginName]*PluginEvent)
-	//plugin.waingForResyncChan = make(chan *PluginEvent)
-	//go plugin.watchWaingForResync()
-
-	return nil
+		//plugin.waingForResync = make(map[core.PluginName]*PluginEvent)
+		//plugin.waingForResyncChan = make(chan *PluginEvent)
+		//go plugin.watchWaingForResync()
+	})
+	return err
 }
 
 // AfterInit method starts the resync.
 func (plugin *Plugin) AfterInit() (err error) {
-	plugin.startResync()
-
-	return nil
+	plugin.afterInitOnce.Do(func() {
+		plugin.startResync()
+	})
+	return err
 }
 
 // Close TODO set flag that ignore errors => not start Resync while agent is stopping
 // TODO kill existing Resync timeout while agent is stopping
-func (plugin *Plugin) Close() error {
-	//TODO close error report channel
+func (plugin *Plugin) Close() (err error) {
+	plugin.closeOnce.Do(func() {
+		//TODO close error report channel
 
-	plugin.access.Lock()
-	defer plugin.access.Unlock()
+		plugin.access.Lock()
+		defer plugin.access.Unlock()
 
-	plugin.registrations = make(map[string]Registration)
-
-	return nil
+		plugin.registrations = make(map[string]Registration)
+	})
+	return err
 }
 
 // Register function is supposed to be called in Init() by all VPP Agent plugins.
