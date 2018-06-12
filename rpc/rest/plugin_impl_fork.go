@@ -22,6 +22,7 @@ import (
 	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/utils/once"
 	"github.com/unrolled/render"
 )
 
@@ -40,6 +41,10 @@ type ForkPlugin struct {
 	server    io.Closer
 	mx        *mux.Router
 	formatter *render.Render
+
+	initOnce      once.ReturnError
+	afterInitOnce once.ReturnError
+	closeOnce     once.ReturnError
 }
 
 // ForkDeps lists the dependencies of the Fork on top of Rest plugin.
@@ -54,6 +59,10 @@ type ForkDeps struct {
 
 // Init checks config if the port is different that it creates ne HTTP server
 func (plugin *ForkPlugin) Init() (err error) {
+	return plugin.initOnce.Do(plugin.init)
+}
+
+func (plugin *ForkPlugin) init() (err error) {
 	if plugin.Config == nil {
 		plugin.Config = DefaultConfig()
 	}
@@ -109,6 +118,10 @@ func (plugin *ForkPlugin) GetPort() int {
 // AfterInit starts the HTTP server.
 // (only if port was different in Init())
 func (plugin *ForkPlugin) AfterInit() error {
+	return plugin.afterInitOnce.Do(plugin.afterInit)
+}
+
+func (plugin *ForkPlugin) afterInit() error {
 	if plugin.newPlugin != nil {
 		return plugin.newPlugin.AfterInit()
 	}
@@ -118,6 +131,10 @@ func (plugin *ForkPlugin) AfterInit() error {
 // Close stops the HTTP server.
 // (only if port was different in Init())
 func (plugin *ForkPlugin) Close() error {
+	return plugin.closeOnce.Do(plugin.close)
+}
+
+func (plugin *ForkPlugin) close() error {
 	if plugin.newPlugin != nil {
 		return plugin.newPlugin.Close()
 	}
