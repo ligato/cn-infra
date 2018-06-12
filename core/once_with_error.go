@@ -16,11 +16,17 @@ package core
 
 import "sync"
 
+// OnceWithError is a wrapper around sync.Once that properly handles:
+// func() error
+// instead of just
+// func()
 type OnceWithError struct {
 	once sync.Once
 	err  error
 }
 
+// Do provides the same functionality as sync.Once.Do(func()) but for
+// func() error
 func (owe *OnceWithError) Do(f func() error) error {
 	owe.once.Do(func() {
 		owe.err = f()
