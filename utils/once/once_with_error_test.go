@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package oncewitherror_test
+package once_test
 
 import (
 	"errors"
@@ -33,7 +33,7 @@ func returnErr() error {
 
 func TestBasicUsage(t *testing.T) {
 	gomega.RegisterTestingT(t)
-	owe := &oncewitherror.OnceWithError{}
+	owe := &once.OnceWithError{}
 	err := owe.Do(func() error {
 		return returnErr()
 	})
