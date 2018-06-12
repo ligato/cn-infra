@@ -12,31 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package once_test
+package once
 
-import (
-	"errors"
-	"testing"
+import "sync"
 
-	"github.com/ligato/cn-infra/utils/once"
-	"github.com/onsi/gomega"
-)
-
-const (
-	testErrorString = "This is a test error"
-)
-
-func returnErr() error {
-	err := errors.New(testErrorString)
-	return err
+// ReturnError is a wrapper around sync.Once that properly handles:
+// func() error
+// instead of just
+// func()
+type ReturnError struct {
+	once sync.Once
+	err  error
 }
 
-func TestBasicUsage(t *testing.T) {
-	gomega.RegisterTestingT(t)
-	owe := &once.OnceWithError{}
-	err := owe.Do(func() error {
-		return returnErr()
+// Do provides the same functionality as sync.Once.Do(func()) but for
+// func() error
+func (owe *ReturnError) Do(f func() error) error {
+	owe.once.Do(func() {
+		owe.err = f()
 	})
-	gomega.Expect(err).ShouldNot(gomega.BeNil())
-	gomega.Expect(err.Error()).Should(gomega.Equal(testErrorString))
+	return owe.err
 }

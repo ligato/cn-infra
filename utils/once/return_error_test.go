@@ -12,24 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package once
+package once_test
 
-import "sync"
+import (
+	"errors"
+	"testing"
 
-// OnceWithError is a wrapper around sync.Once that properly handles:
-// func() error
-// instead of just
-// func()
-type OnceWithError struct {
-	once sync.Once
-	err  error
+	"github.com/ligato/cn-infra/utils/once"
+	"github.com/onsi/gomega"
+)
+
+const (
+	testErrorString = "This is a test error"
+)
+
+func returnErr() error {
+	err := errors.New(testErrorString)
+	return err
 }
 
-// Do provides the same functionality as sync.Once.Do(func()) but for
-// func() error
-func (owe *OnceWithError) Do(f func() error) error {
-	owe.once.Do(func() {
-		owe.err = f()
+func TestBasicUsage(t *testing.T) {
+	gomega.RegisterTestingT(t)
+	owe := &once.ReturnError{}
+	err := owe.Do(func() error {
+		return returnErr()
 	})
-	return owe.err
+	gomega.Expect(err).ShouldNot(gomega.BeNil())
+	gomega.Expect(err.Error()).Should(gomega.Equal(testErrorString))
 }
