@@ -1,0 +1,88 @@
+//  Copyright (c) 2018 Cisco and/or its affiliates.
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at:
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
+package agent
+
+import (
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/logging/logrus"
+	"github.com/namsral/flag"
+)
+
+type Agent interface {
+	Run() error
+	Options() Options
+}
+
+func NewAgent(opts ...Option) Agent {
+	options := newOptions(opts...)
+
+	flag.Parse()
+
+	return &agent{
+		opts: options,
+	}
+}
+
+type agent struct {
+	opts Options
+}
+
+func (a *agent) Options() Options {
+	return a.opts
+}
+
+func (a *agent) Run() error {
+	// Init plugins
+	for _, p := range a.opts.Plugins {
+		if err := p.Init(); err != nil {
+			return err
+		}
+	}
+	// AfterInit plugins
+	for _, p := range a.opts.Plugins {
+		var plug core.Plugin = p
+		if np, ok := p.(*core.NamedPlugin); ok {
+			plug = np.Plugin
+		}
+		if postPlugin, ok := plug.(core.PostInit); ok {
+			if err := postPlugin.AfterInit(); err != nil {
+				return err
+			}
+		} else {
+			logrus.DefaultLogger().Debugf("plugin %v has no AfterInit", p)
+		}
+	}
+
+	// Wait for signal
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	select {
+	case <-sig:
+		logrus.DefaultLogger().Info("Signal received, stopping.")
+	}
+
+	// Close plugins
+	for _, p := range a.opts.Plugins {
+		if err := p.Close(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

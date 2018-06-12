@@ -17,22 +17,23 @@ package grpc
 import (
 	"io"
 	"net/http"
-
 	"strconv"
+
+	"github.com/unrolled/render"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/grpclog"
 
 	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/ligato/cn-infra/utils/safeclose"
-	"github.com/unrolled/render"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/grpclog"
 )
 
 // Plugin maintains the GRPC netListener (see Init, AfterInit, Close methods)
 type Plugin struct {
 	Deps
+
 	// Stored GRPC config (used in example)
 	grpcCfg *Config
 	// GRPC server instance
@@ -55,6 +56,8 @@ type Deps struct {
 
 // Init prepares GRPC netListener for registration of individual service
 func (plugin *Plugin) Init() error {
+	plugin.Log.Debugf("GRPC Init()")
+
 	var err error
 	// Get GRPC configuration file
 	if plugin.grpcCfg == nil {
@@ -91,10 +94,12 @@ func (plugin *Plugin) Init() error {
 
 // AfterInit starts the HTTP netListener.
 func (plugin *Plugin) AfterInit() (err error) {
+	plugin.Log.Debugf("GRPC AfterInit()")
+
 	if plugin.Deps.HTTP != nil {
 		plugin.Log.Info("exposing GRPC services over HTTP port " + strconv.Itoa(plugin.Deps.HTTP.GetPort()) +
 			" /service ")
-		plugin.Deps.HTTP.RegisterHTTPHandler("service", func(formatter *render.Render) http.HandlerFunc {
+		plugin.Deps.HTTP.RegisterHTTPHandler("/service", func(formatter *render.Render) http.HandlerFunc {
 			return plugin.grpcServer.ServeHTTP
 		}, "GET", "PUT", "POST")
 	}
@@ -122,6 +127,10 @@ func (plugin *Plugin) GetServer() *grpc.Server {
 // grpc configuration.
 func (plugin *Plugin) IsDisabled() (disabled bool) {
 	return plugin.disabled
+}
+
+func (plugin *Plugin) Name() string {
+	return plugin.PluginName.String()
 }
 
 // String returns plugin name (if not set defaults to "HTTP")

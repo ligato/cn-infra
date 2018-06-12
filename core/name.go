@@ -20,6 +20,11 @@ package core
 // (there are multiple instances).
 type PluginName string
 
+// String returns the PluginName.
+func (name PluginName) String() string {
+	return string(name)
+}
+
 // NamedPlugin represents a Plugin with a name.
 type NamedPlugin struct {
 	PluginName
@@ -29,4 +34,22 @@ type NamedPlugin struct {
 // String returns the PluginName.
 func (np *NamedPlugin) String() string {
 	return string(np.PluginName)
+}
+
+func (np *NamedPlugin) Name() string {
+	return string(np.PluginName)
+}
+
+// PluginNamed is plugin with Name
+type PluginNamed interface {
+	Plugin
+	Name() string
+}
+
+// NamePlugin returns NamedPlugin
+func NamePlugin(name string, plugin Plugin) *NamedPlugin {
+	return &NamedPlugin{
+		PluginName: PluginName(name),
+		Plugin:     plugin,
+	}
 }
