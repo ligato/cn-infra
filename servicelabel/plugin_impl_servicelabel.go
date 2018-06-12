@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/ligato/cn-infra/logging/logrus"
+	"github.com/ligato/cn-infra/utils/once"
 	"github.com/namsral/flag"
 )
 
@@ -26,6 +27,7 @@ type Plugin struct {
 	// MicroserviceLabel identifies particular VNF.
 	// Used primarily as a key prefix to ETCD data store.
 	MicroserviceLabel string
+	initOnce          once.ReturnError
 }
 
 // OfDifferentAgent sets micorserivce label and returns new instance of Plugin.
@@ -43,6 +45,10 @@ func init() {
 
 // Init is called at plugin initialization.
 func (p *Plugin) Init() error {
+	return p.initOnce.Do(p.init)
+}
+
+func (p *Plugin) init() error {
 	if p.MicroserviceLabel == "" {
 		p.MicroserviceLabel = microserviceLabelFlag
 	}
@@ -51,7 +57,15 @@ func (p *Plugin) Init() error {
 }
 
 // Close is called at plugin cleanup phase.
-func (p *Plugin) Close() error {
+func (p *Plugin) close() error {
+	// Warning, if you need to actually do anything in close in the future, please
+	// a)  Create a field in Plugin:
+	//     closeOnce          once.OnceWithError
+	// b)  Rename the existing Close() function to close()
+	// c)  Create a new Close() function:
+	//     func (p *Plugin) Close() error {
+	//	     return p.closeOnce.Do(p.close)
+	//     }
 	return nil
 }
 
