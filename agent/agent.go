@@ -27,6 +27,9 @@ import (
 // Agent implements startup & shutdown procedures.
 type Agent interface {
 	Run() error
+	Start() error
+	Wait() error
+	Stop() error
 	Options() Options
 }
 
@@ -50,8 +53,9 @@ func (a *agent) Options() Options {
 	return a.opts
 }
 
-// Run runs the agent.  Run will not return until a SIGINT, SIGTERM, or SIGKILL is received
-func (a *agent) Run() error {
+// Start starts the agent.  Start will return as soon as the Agent is ready.  The Agent continues
+// running after Start returns.
+func (a *agent) Start() error {
 	// Init plugins
 	for _, p := range a.opts.Plugins {
 		if err := p.Init(); err != nil {
@@ -72,15 +76,11 @@ func (a *agent) Run() error {
 			logrus.DefaultLogger().Debugf("plugin %v has no AfterInit", p)
 		}
 	}
+	return nil
+}
 
-	// Wait for signal
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
-	select {
-	case <-sig:
-		logrus.DefaultLogger().Info("Signal received, stopping.")
-	}
-
+// Stop the Agent.  Calls close on all Plugins
+func (a *agent) Stop() error {
 	// Close plugins
 	for _, p := range a.opts.Plugins {
 		if err := p.Close(); err != nil {
@@ -89,4 +89,26 @@ func (a *agent) Run() error {
 	}
 
 	return nil
+}
+
+// Wait will not return until a SIGINT, SIGTERM, or SIGKILL is received
+// Wait Closes all Plugins before returning
+func (a *agent) Wait() error {
+	// Wait for signal
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	select {
+	case <-sig:
+		logrus.DefaultLogger().Info("Signal received, stopping.")
+	}
+
+	return a.Stop()
+}
+
+// Run runs the agent.  Run will not return until a SIGINT, SIGTERM, or SIGKILL is received
+func (a *agent) Run() error {
+	if err := a.Start(); err != nil {
+		return err
+	}
+	return a.Wait()
 }
