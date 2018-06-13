@@ -21,6 +21,7 @@ import (
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging/logrus"
+	"github.com/ligato/cn-infra/utils/once"
 	"github.com/namsral/flag"
 )
 
@@ -45,7 +46,10 @@ func NewAgent(opts ...Option) Agent {
 }
 
 type agent struct {
-	opts Options
+	opts      Options
+	closeCh   chan struct{}
+	startOnce once.ReturnError
+	stopOnce  once.ReturnError
 }
 
 // Options returns the Options the agent was created with
@@ -56,6 +60,10 @@ func (a *agent) Options() Options {
 // Start starts the agent.  Start will return as soon as the Agent is ready.  The Agent continues
 // running after Start returns.
 func (a *agent) Start() error {
+	return a.startOnce.Do(a.start)
+}
+
+func (a *agent) start() error {
 	// Init plugins
 	for _, p := range a.opts.Plugins {
 		if err := p.Init(); err != nil {
@@ -81,18 +89,24 @@ func (a *agent) Start() error {
 
 // Stop the Agent.  Calls close on all Plugins
 func (a *agent) Stop() error {
+	return a.stopOnce.Do(a.stop)
+}
+
+func (a *agent) stop() error {
 	// Close plugins
 	for _, p := range a.opts.Plugins {
 		if err := p.Close(); err != nil {
 			return err
 		}
 	}
-
+	close(a.closeCh)
+	logrus.DefaultLogger().Info("Agent Stopped.")
 	return nil
 }
 
 // Wait will not return until a SIGINT, SIGTERM, or SIGKILL is received
-// Wait Closes all Plugins before returning
+// Or the Agent is Stopped
+// All Plugins are Closed() before Wait returns
 func (a *agent) Wait() error {
 	// Wait for signal
 	sig := make(chan os.Signal, 1)
@@ -100,6 +114,7 @@ func (a *agent) Wait() error {
 	select {
 	case <-sig:
 		logrus.DefaultLogger().Info("Signal received, stopping.")
+	case <-a.closeCh:
 	}
 
 	return a.Stop()
