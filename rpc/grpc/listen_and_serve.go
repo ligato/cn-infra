@@ -20,6 +20,8 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"os"
+	"strings"
 )
 
 // ListenAndServe is a function that uses <config> & <handler> to handle
@@ -41,6 +43,18 @@ func ListenAndServeGRPC(config *Config, grpcServer *grpc.Server) (netListener ne
 	if socketType == "" {
 		socketType = "tcp"
 	}
+
+	// Check directory of the unix domain socket file if used
+	if socketType == "unix" || socketType == "unixpacket" {
+		_, err := os.Stat(config.Endpoint)
+		if os.IsNotExist(err) {
+			// Create the directory
+			lastIdx := strings.LastIndex(config.Endpoint, "/")
+			path := config.Endpoint[:lastIdx]
+			os.MkdirAll(path, os.ModePerm)
+		}
+	}
+
 	netListener, err = net.Listen(socketType, config.Endpoint)
 	if err != nil {
 		return nil, err
