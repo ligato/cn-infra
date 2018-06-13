@@ -27,6 +27,7 @@ import (
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/messaging/kafka/mux"
 	"github.com/ligato/cn-infra/utils/clienttls"
+	"github.com/ligato/cn-infra/utils/once"
 	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
@@ -45,6 +46,10 @@ type Plugin struct {
 	manClient sarama.Client
 
 	disabled bool
+
+	initOnce      once.ReturnError
+	afterInitOnce once.ReturnError
+	closeOnce     once.ReturnError
 }
 
 // Deps groups dependencies injected into the plugin so that they are
@@ -60,6 +65,10 @@ func FromExistingMux(mux *mux.Multiplexer) *Plugin {
 
 // Init is called at plugin initialization.
 func (plugin *Plugin) Init() (err error) {
+	return plugin.initOnce.Do(plugin.init)
+}
+
+func (plugin *Plugin) init() (err error) {
 	// Prepare topic and  subscription for status check client
 	plugin.subscription = make(chan *client.ConsumerMessage)
 
@@ -109,6 +118,10 @@ func (plugin *Plugin) Init() (err error) {
 // AfterInit is called in the second phase of the initialization. The kafka multiplexerNewWatcher
 // is started, all consumers have to be subscribed until this phase.
 func (plugin *Plugin) AfterInit() error {
+	return plugin.afterInitOnce.Do(plugin.afterInit)
+}
+
+func (plugin *Plugin) afterInit() error {
 	if plugin.mux != nil {
 		err := plugin.mux.Start()
 		if err != nil {
@@ -139,6 +152,10 @@ func (plugin *Plugin) AfterInit() error {
 
 // Close is called at plugin cleanup phase.
 func (plugin *Plugin) Close() error {
+	return plugin.closeOnce.Do(plugin.close)
+}
+
+func (plugin *Plugin) close() error {
 	return safeclose.Close(plugin.hsClient, plugin.manClient, plugin.mux)
 }
 
