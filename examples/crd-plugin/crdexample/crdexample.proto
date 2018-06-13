@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package crdexample;
+
+message CrdExample {
+    string name = 1;
+    string uuid = 2;
+
+    message CrdExampleEmbed {
+        string name = 1;
+        string uuid = 2;
+    };
+    repeated CrdExampleEmbed repeats = 4;
+};
+
