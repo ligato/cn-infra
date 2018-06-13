@@ -24,11 +24,13 @@ import (
 	"github.com/namsral/flag"
 )
 
+// Agent implements startup & shutdown procedures.
 type Agent interface {
 	Run() error
 	Options() Options
 }
 
+// NewAgent creates a new Agent
 func NewAgent(opts ...Option) Agent {
 	options := newOptions(opts...)
 
@@ -43,10 +45,12 @@ type agent struct {
 	opts Options
 }
 
+// Options returns the Options the agent was created with
 func (a *agent) Options() Options {
 	return a.opts
 }
 
+// Run runs the agent.  Run will not return until a SIGINT, SIGTERM, or SIGKILL is received
 func (a *agent) Run() error {
 	// Init plugins
 	for _, p := range a.opts.Plugins {

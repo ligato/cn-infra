@@ -129,6 +129,7 @@ func (plugin *Plugin) IsDisabled() (disabled bool) {
 	return plugin.disabled
 }
 
+// Name returns the plugins name
 func (plugin *Plugin) Name() string {
 	return plugin.PluginName.String()
 }

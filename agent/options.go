@@ -23,6 +23,7 @@ import (
 	"github.com/ligato/cn-infra/logging/logrus"
 )
 
+// Options specifies the Version, MaxStartupTime, and Plugin list for the Agent
 type Options struct {
 	Version        string
 	MaxStartupTime time.Duration
@@ -43,26 +44,32 @@ func newOptions(opts ...Option) Options {
 	return opt
 }
 
+// Option is a function that operates on an Agent's Option
 type Option func(*Options)
 
+// MaxStartupTime returns an Option that sets the MaxStartuptime option of the Agent
 func MaxStartupTime(d time.Duration) Option {
 	return func(o *Options) {
 		o.MaxStartupTime = d
 	}
 }
 
+// Version returns an Option that sets the version of the Agent to the string v
 func Version(v string) Option {
 	return func(o *Options) {
 		o.Version = v
 	}
 }
 
+// Plugins creates an Option that adds a list of Plugins to the Agent's Plugin list
 func Plugins(plugins ...core.PluginNamed) Option {
 	return func(o *Options) {
 		o.Plugins = append(o.Plugins, plugins...)
 	}
 }
 
+// Recursive creates an Option that adds all of the Descendants of a Plugin Recursively to the Agent's
+// Plugin list
 func Recursive(plugin core.Plugin) Option {
 	return func(o *Options) {
 		uniqueness := map[core.Plugin]interface{}{}

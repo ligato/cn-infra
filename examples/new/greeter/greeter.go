@@ -21,9 +21,11 @@ import (
 	"google.golang.org/grpc/examples/helloworld/helloworld"
 )
 
-type GreeterService struct{}
+// Service is an empty struct to hang SayHello off of
+type Service struct{}
 
-func (*GreeterService) SayHello(ctx context.Context, request *helloworld.HelloRequest) (*helloworld.HelloReply, error) {
+// SayHello takes a context and a HelloRequest and returns a HelloReply
+func (*Service) SayHello(ctx context.Context, request *helloworld.HelloRequest) (*helloworld.HelloReply, error) {
 	if request.Name == "" {
 		return nil, errors.New("not filled name in the request")
 	}

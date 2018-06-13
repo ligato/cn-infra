@@ -36,6 +36,7 @@ func (np *NamedPlugin) String() string {
 	return string(np.PluginName)
 }
 
+// Name returns the name of the plugin as a string
 func (np *NamedPlugin) Name() string {
 	return string(np.PluginName)
 }

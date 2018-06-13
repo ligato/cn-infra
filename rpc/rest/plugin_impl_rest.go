@@ -154,6 +154,7 @@ func (plugin *Plugin) String() string {
 	return "HTTP"
 }
 
+// Name returns the name of the plugin
 func (plugin *Plugin) Name() string {
 	return plugin.PluginName.String()
 }

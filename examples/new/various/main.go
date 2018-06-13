@@ -94,11 +94,13 @@ func main() {
 	}
 }
 
+// MyPlugin aggregates a Log and a grpc.Plugin
 type MyPlugin struct {
 	Log logging.PluginLogger
 	*grpc.Plugin
 }
 
+// Init plugin
 func (plugin *MyPlugin) Init() (err error) {
 	plugin.Log.Infof("MyPlugin Init()")
 
@@ -108,7 +110,7 @@ func (plugin *MyPlugin) Init() (err error) {
 		}
 	}, "GET")
 
-	helloworld.RegisterGreeterServer(plugin.GetServer(), new(greeter.GreeterService))
+	helloworld.RegisterGreeterServer(plugin.GetServer(), new(greeter.Service))
 
 	plugin.Log.Infof("Registered Greeter Service")
 	return err

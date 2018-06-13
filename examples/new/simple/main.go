@@ -48,20 +48,23 @@ func main() {
 	}
 }
 
+// MyPlugin wraps grpc.Plugin and register the GreeterServer as part of its Init()
 type MyPlugin struct {
 	GRPC *grpc.Plugin
 }
 
+// Init registers GreeterServer with the embedded grpc.Plugin
 func (plugin *MyPlugin) Init() error {
 	logrus.DefaultLogger().Infof("MyPlugin Init()")
 
-	helloworld.RegisterGreeterServer(plugin.GRPC.GetServer(), new(greeter.GreeterService))
+	helloworld.RegisterGreeterServer(plugin.GRPC.GetServer(), new(greeter.Service))
 
 	logrus.DefaultLogger().Infof("Registered Greeter Service")
 
 	return nil
 }
 
+// Close the plugin
 func (plugin *MyPlugin) Close() error {
 	return nil
 }

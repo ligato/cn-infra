@@ -53,15 +53,17 @@ func main() {
 	}
 }
 
+// MyPlugin wraps grpc.Plugin and rest.Plugin register the GreeterServer as part of its Init()
 type MyPlugin struct {
 	REST *rest.Plugin
 	GRPC *grpc.Plugin
 }
 
+// Init registers GreeterServer with the embedded grpc.Plugin and sets up REST
 func (plugin *MyPlugin) Init() error {
 	logrus.DefaultLogger().Infof("MyPlugin Init()")
 
-	helloworld.RegisterGreeterServer(plugin.GRPC.GetServer(), new(greeter.GreeterService))
+	helloworld.RegisterGreeterServer(plugin.GRPC.GetServer(), new(greeter.Service))
 
 	plugin.REST.RegisterHTTPHandler("/mine", func(formatter *render.Render) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
@@ -74,6 +76,7 @@ func (plugin *MyPlugin) Init() error {
 	return nil
 }
 
+// Close plugin
 func (plugin *MyPlugin) Close() error {
 	return nil
 }

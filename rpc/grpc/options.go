@@ -20,6 +20,7 @@ import (
 	"github.com/ligato/cn-infra/logging/logrus"
 )
 
+// NewPlugin creates a new Plugin with the provides Options
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
@@ -41,8 +42,10 @@ func NewPlugin(opts ...Option) *Plugin {
 	return p
 }
 
+// Option is a function that acts on a Plugin to inject Dependencies or configuration
 type Option func(*Plugin)
 
+// UseDeps injects a particular set of Dependencies
 func UseDeps(deps Deps) Option {
 	return func(p *Plugin) {
 		d := &p.Deps
@@ -53,6 +56,7 @@ func UseDeps(deps Deps) Option {
 	}
 }
 
+// UseConf injects the Plugin's Configuration
 func UseConf(conf Config) Option {
 	return func(p *Plugin) {
 		p.grpcCfg = &conf
