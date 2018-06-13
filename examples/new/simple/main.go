@@ -30,7 +30,7 @@ func main() {
 	a := agent.NewAgent(
 		agent.Version("1.0.0"),
 		agent.MaxStartupTime(time.Second*5),
-		agent.Recursive(
+		agent.DescendantPlugins(
 			&MyPlugin{grpc.NewPlugin(
 				grpc.UseConf(grpc.Config{
 					Endpoint: "localhost:9191",

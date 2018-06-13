@@ -68,9 +68,9 @@ func Plugins(plugins ...core.PluginNamed) Option {
 	}
 }
 
-// Recursive creates an Option that adds all of the Descendants of a Plugin Recursively to the Agent's
+// DescendantPlugins creates an Option that adds all of the Descendants of a Plugin Recursively to the Agent's
 // Plugin list
-func Recursive(plugin core.Plugin) Option {
+func DescendantPlugins(plugin core.Plugin) Option {
 	return func(o *Options) {
 		uniqueness := map[core.Plugin]interface{}{}
 		plugins, err := listPlugins(reflect.ValueOf(plugin), uniqueness)

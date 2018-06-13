@@ -45,7 +45,7 @@ func main() {
 	}
 
 	// Create agent
-	agent := agent.NewAgent(agent.Recursive(myPlugin))
+	agent := agent.NewAgent(agent.DescendantPlugins(myPlugin))
 
 	// Run agent
 	if err := agent.Run(); err != nil {
