@@ -19,6 +19,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"errors"
+
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/utils/once"
@@ -47,7 +49,7 @@ func NewAgent(opts ...Option) Agent {
 
 type agent struct {
 	opts      Options
-	closeCh   chan struct{}
+	stopCh    chan struct{}
 	startOnce once.ReturnError
 	stopOnce  once.ReturnError
 }
@@ -84,6 +86,7 @@ func (a *agent) start() error {
 			logrus.DefaultLogger().Debugf("plugin %v has no AfterInit", p)
 		}
 	}
+	a.stopCh = make(chan struct{}, 1) // If we are started, we have a stopTime to signal stopping
 	return nil
 }
 
@@ -93,31 +96,42 @@ func (a *agent) Stop() error {
 }
 
 func (a *agent) stop() error {
-	// Close plugins
-	for _, p := range a.opts.Plugins {
-		if err := p.Close(); err != nil {
-			return err
+	if a.stopCh != nil { // Don't stop if we didn't start
+		defer close(a.stopCh)
+		// Close plugins
+		for _, p := range a.opts.Plugins {
+			if err := p.Close(); err != nil {
+				return err
+			}
 		}
+		logrus.DefaultLogger().Info("Agent Stopped.")
+		return nil
 	}
-	close(a.closeCh)
-	logrus.DefaultLogger().Info("Agent Stopped.")
-	return nil
+	err := errors.New("attempted to stop an agent that wasn't Started")
+	logrus.DefaultLogger().Error(err)
+	return err
+
 }
 
 // Wait will not return until a SIGINT, SIGTERM, or SIGKILL is received
 // Or the Agent is Stopped
 // All Plugins are Closed() before Wait returns
 func (a *agent) Wait() error {
-	// Wait for signal
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
-	select {
-	case <-sig:
-		logrus.DefaultLogger().Info("Signal received, stopping.")
-	case <-a.closeCh:
+	if a.stopCh != nil { // Don't wait if we didn't start
+		// Wait for signal
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+		select {
+		case <-sig:
+			logrus.DefaultLogger().Info("Signal received, stopping.")
+			return a.Stop()
+		case <-a.stopCh:
+		}
+		return nil
 	}
-
-	return a.Stop()
+	err := errors.New("attempted to wait on an agent that wasn't Started")
+	logrus.DefaultLogger().Error(err)
+	return err
 }
 
 // Run runs the agent.  Run will not return until a SIGINT, SIGTERM, or SIGKILL is received
