@@ -62,7 +62,34 @@ func (a *agent) Options() Options {
 // Start starts the agent.  Start will return as soon as the Agent is ready.  The Agent continues
 // running after Start returns.
 func (a *agent) Start() error {
-	return a.startOnce.Do(a.start)
+	return a.startOnce.Do(a.startSignalWrapper)
+}
+
+func (a *agent) startSignalWrapper() error {
+	// If we want to properly handle cleanup when a SIG comes in *during*
+	// agent startup (ie, clean up after its finished) we need to register
+	// for the signal before we start() the agent
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	err := a.start()
+	// If the agent started, we have things to clean up if here is a SIG
+	// So fire off a goroutine to do that
+	if err == nil {
+		go func() {
+			// Wait for signal or agent stop
+			select {
+			case <-sig:
+			case <-a.stopCh:
+			}
+			logrus.DefaultLogger().Info("Signal received, stopping.")
+			// Doesn't hurt to call Stop twice, its idempotent because of the
+			// stopOnce
+			a.Stop()
+			signal.Stop(sig)
+			close(sig)
+		}()
+	}
+	return err
 }
 
 func (a *agent) start() error {
@@ -86,7 +113,8 @@ func (a *agent) start() error {
 			logrus.DefaultLogger().Debugf("plugin %v has no AfterInit", p)
 		}
 	}
-	a.stopCh = make(chan struct{}, 1) // If we are started, we have a stopTime to signal stopping
+	a.stopCh = make(chan struct{}, 1) // If we are started, we have a stopCh to signal stopping
+	logrus.DefaultLogger().Info("Agent Started")
 	return nil
 }
 
@@ -117,17 +145,13 @@ func (a *agent) stop() error {
 // Or the Agent is Stopped
 // All Plugins are Closed() before Wait returns
 func (a *agent) Wait() error {
-	if a.stopCh != nil { // Don't wait if we didn't start
-		// Wait for signal
-		sig := make(chan os.Signal, 1)
-		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	if a.stopCh != nil { // Don't wait if we didn't Start
 		select {
-		case <-sig:
-			logrus.DefaultLogger().Info("Signal received, stopping.")
-			return a.Stop()
 		case <-a.stopCh:
 		}
-		return nil
+		// If we get here, a.Stop() has already been called, and we are simply
+		// retrieving the error if any squirreled away by stopOnce
+		return a.Stop()
 	}
 	err := errors.New("attempted to wait on an agent that wasn't Started")
 	logrus.DefaultLogger().Error(err)
