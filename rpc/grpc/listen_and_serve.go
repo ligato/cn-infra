@@ -15,13 +15,17 @@
 package grpc
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"time"
 
-	"google.golang.org/grpc"
 	"os"
+	"strconv"
 	"strings"
+
+	"github.com/ligato/cn-infra/logging/logrus"
+	"google.golang.org/grpc"
 )
 
 // ListenAndServe is a function that uses <config> & <handler> to handle
@@ -44,20 +48,30 @@ func ListenAndServeGRPC(config *Config, grpcServer *grpc.Server) (netListener ne
 		socketType = "tcp"
 	}
 
-	// Check directory of the unix domain socket file if used
 	if socketType == "unix" || socketType == "unixpacket" {
-		_, err := os.Stat(config.Endpoint)
-		if os.IsNotExist(err) {
-			// Create the directory
-			lastIdx := strings.LastIndex(config.Endpoint, "/")
-			path := config.Endpoint[:lastIdx]
-			os.MkdirAll(path, os.ModePerm)
+		permissions, err := getUnixSocketFilePermissions(config.Permission)
+		if err != nil {
+			return nil, err
 		}
-	}
+		if err := checkUnixSocketFileAndDirectory(config.Endpoint); err != nil {
+			return nil, err
+		}
 
-	netListener, err = net.Listen(socketType, config.Endpoint)
-	if err != nil {
-		return nil, err
+		netListener, err = net.Listen(socketType, config.Endpoint)
+		if err != nil {
+			return nil, err
+		}
+
+		// Set permissions to the socket file
+		logrus.DefaultLogger().Warnf("Setting up socket permissions %v", permissions)
+		if err := os.Chmod(config.Endpoint, permissions); err != nil {
+			return nil, err
+		}
+	} else {
+		netListener, err = net.Listen(socketType, config.Endpoint)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var errCh chan error
@@ -78,4 +92,43 @@ func ListenAndServeGRPC(config *Config, grpcServer *grpc.Server) (netListener ne
 		//everything is probably fine
 		return netListener, nil
 	}
+}
+
+// Resolve permissions and return FileMode
+func getUnixSocketFilePermissions(permissions int) (os.FileMode, error) {
+	if permissions > 0 {
+		if permissions > 7777 {
+			return 0, fmt.Errorf("incorrect unix socket file/path permission '%d', expecting three-digits", permissions)
+		}
+		// Convert to correct mode format
+		mode, err := strconv.ParseInt(strconv.Itoa(permissions), 8, 32)
+		if err != nil {
+			return 0, fmt.Errorf("failed to parse socket file permissions %d", permissions)
+		}
+		return os.FileMode(mode), nil
+	} else {
+		return os.ModePerm, nil
+	}
+}
+
+// Check old socket file/directory of the unix domain socket. Remove old socket file if exists or create the directory
+// path if does not exist.
+func checkUnixSocketFileAndDirectory(endpoint string) error {
+	_, err := os.Stat(endpoint)
+	if err == nil {
+		// Remove old socket file
+		if err := os.Remove(endpoint); err != nil {
+			return err
+		}
+	}
+	if os.IsNotExist(err) {
+		// Create the directory
+		lastIdx := strings.LastIndex(endpoint, "/")
+		path := endpoint[:lastIdx]
+		if err := os.MkdirAll(path, os.ModePerm); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
