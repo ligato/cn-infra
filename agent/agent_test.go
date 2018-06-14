@@ -79,6 +79,15 @@ func TestWaitBeforeStart(t *testing.T) {
 	Expect(err).To(BeNil())
 }
 
+func TestAfterBeforeStart(t *testing.T) {
+	RegisterTestingT(t)
+	agent := agent.NewAgent()
+	<-agent.After()
+	err := agent.Error()
+	Expect(err).ToNot(BeNil())
+	Expect(err.Error()).To(Equal(stopUnstartedAgentErrorString))
+}
+
 func TestAgentWithPlugin(t *testing.T) {
 	RegisterTestingT(t)
 	np1 := &TestPlugin{}

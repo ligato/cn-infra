@@ -32,6 +32,8 @@ type Agent interface {
 	Run() error
 	Start() error
 	Wait() error
+	After() <-chan struct{}
+	Error() error
 	Stop() error
 	Options() Options
 }
@@ -79,7 +81,7 @@ func (a *agent) startSignalWrapper() error {
 			// Wait for signal or agent stop
 			select {
 			case <-sig:
-			case <-a.stopCh:
+			case <-a.After():
 			}
 			logrus.DefaultLogger().Info("Signal received, stopping.")
 			// Doesn't hurt to call Stop twice, its idempotent because of the
@@ -146,9 +148,7 @@ func (a *agent) stop() error {
 // All Plugins are Closed() before Wait returns
 func (a *agent) Wait() error {
 	if a.stopCh != nil { // Don't wait if we didn't Start
-		select {
-		case <-a.stopCh:
-		}
+		<-a.After()
 		// If we get here, a.Stop() has already been called, and we are simply
 		// retrieving the error if any squirreled away by stopOnce
 		return a.Stop()
@@ -164,4 +164,43 @@ func (a *agent) Run() error {
 		return err
 	}
 	return a.Wait()
+}
+
+// After returns a channel that will be closed when the agent is Stopped.
+// To retrieve any error from the agent stopping call Error() on the agent
+// The normal pattern of use is:
+//
+// agent := NewAgent(options...)
+// agent.Start()
+// select {
+// case <-agent.After() // Will wait till the agent is stopped
+// ...
+// }
+// err := agent.Error() // Will return any error from the agent being stopped
+//
+func (a *agent) After() <-chan struct{} {
+	if a.stopCh != nil {
+		return a.stopCh
+	}
+	// The agent didn't start, so we can't return a.stopCh
+	// because *only* a.start() should allocate that
+	// we won't return a nil channel, because nil channels
+	// block forever.
+	// Since the normal pattern is to call a.After() so you
+	// can select till the agent is done and a.Stop() to
+	// retrieve the error, returning a closed channel will preserve that
+	// usage, as a.Stop() returns an error complaining that the agent
+	// never started.
+	stopCh := make(chan struct{})
+	close(stopCh)
+	return stopCh
+}
+
+// Error returns any error that occurred when the agent was Stopped
+func (a *agent) Error() error {
+	// a.Stop() returns whatever error occurred when stopping the agent
+	// This is because of stopOnce
+	// If you try to retrieve an error before the agent is started, you will get
+	// an error complaining the agent isn't started.
+	return a.Stop()
 }
