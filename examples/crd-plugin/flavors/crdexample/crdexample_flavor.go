@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package netmesh defines flavor used for the netmesh agent.
+// Package crdexample defines flavor used for the netmesh agent.
 package crdexample
 
 import (
