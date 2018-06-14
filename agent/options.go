@@ -80,7 +80,11 @@ func DescendantPlugins(plugin core.Plugin) Option {
 		o.Plugins = append(o.Plugins, plugins...)
 		typ := reflect.TypeOf(plugin)
 		logrus.DefaultLogger().Infof("recursively found %d plugins inside %v", len(plugins), typ)
-		o.Plugins = append(o.Plugins, core.NamePlugin(typ.String(), plugin))
+		p, ok := plugin.(core.PluginNamed)
+		if !ok {
+			p = core.NamePlugin(typ.String(), plugin)
+		}
+		o.Plugins = append(o.Plugins, p)
 	}
 }
 
@@ -126,7 +130,11 @@ func listPlugins(val reflect.Value, uniqueness map[core.Plugin]interface{}) ([]c
 					_, found := uniqueness[plug]
 					if !found {
 						uniqueness[plug] = nil
-						res = append(res, core.NamePlugin(field.Name, plug))
+						p, ok := plug.(core.PluginNamed)
+						if !ok {
+							p = core.NamePlugin(field.Name, plug)
+						}
+						res = append(res, p)
 
 						logrus.DefaultLogger().
 							WithField("fieldName", field.Name).
