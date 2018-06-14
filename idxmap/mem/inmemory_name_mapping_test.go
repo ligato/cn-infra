@@ -54,6 +54,31 @@ func TestUpdateMetadata(t *testing.T) {
 	gomega.Expect(meta).To(gomega.BeEquivalentTo("value2"))
 }
 
+func TestClear(t *testing.T) {
+	gomega.RegisterTestingT(t)
+	mapping := NewNamedMapping(logrus.DefaultLogger(), "title", nil)
+
+	mapping.Put("Name1", "value1")
+	mapping.Put("Name2", "value2")
+	mapping.Put("Name3", "value3")
+
+	_, found := mapping.GetValue("Name1")
+	gomega.Expect(found).To(gomega.BeTrue())
+	_, found = mapping.GetValue("Name2")
+	gomega.Expect(found).To(gomega.BeTrue())
+	_, found = mapping.GetValue("Name3")
+	gomega.Expect(found).To(gomega.BeTrue())
+
+	mapping.Clear()
+
+	_, found = mapping.GetValue("Name1")
+	gomega.Expect(found).To(gomega.BeFalse())
+	_, found = mapping.GetValue("Name2")
+	gomega.Expect(found).To(gomega.BeFalse())
+	_, found = mapping.GetValue("Name3")
+	gomega.Expect(found).To(gomega.BeFalse())
+}
+
 func TestCrudOps(t *testing.T) {
 	gomega.RegisterTestingT(t)
 	mapping := NewNamedMapping(logrus.DefaultLogger(), "title", nil)
