@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/ligato/cn-infra/utils/once"
-	"github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 )
 
 const (
@@ -32,11 +32,34 @@ func returnErr() error {
 }
 
 func TestBasicUsage(t *testing.T) {
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 	owe := &once.ReturnError{}
 	err := owe.Do(func() error {
 		return returnErr()
 	})
-	gomega.Expect(err).ShouldNot(gomega.BeNil())
-	gomega.Expect(err.Error()).Should(gomega.Equal(testErrorString))
+	Expect(err).ToNot(BeNil())
+	Expect(err.Error()).Should(Equal(testErrorString))
+}
+
+func TestRepeatUsage(t *testing.T) {
+	RegisterTestingT(t)
+	owe := &once.ReturnError{}
+	var counter int
+	function := func() error {
+		counter++
+		return returnErr()
+	}
+
+	// The first call is real, we get an error and counter is incremented
+	firstErr := owe.Do(function)
+	Expect(firstErr).ToNot(BeNil())
+	Expect(firstErr.Error()).To(Equal(testErrorString))
+	Expect(counter).To(Equal(1))
+
+	// Subsequent calls should be getting the exact same cached error
+	// Counter should not be incremented
+	err := owe.Do(function)
+	Expect(&err).To(Equal(&firstErr))
+	Expect(counter).To(Equal(1))
+
 }
