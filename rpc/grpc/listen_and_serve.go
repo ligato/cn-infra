@@ -106,9 +106,8 @@ func getUnixSocketFilePermissions(permissions int) (os.FileMode, error) {
 			return 0, fmt.Errorf("failed to parse socket file permissions %d", permissions)
 		}
 		return os.FileMode(mode), nil
-	} else {
-		return os.ModePerm, nil
 	}
+	return os.ModePerm, nil
 }
 
 // Check old socket file/directory of the unix domain socket. Remove old socket file if exists or create the directory
