@@ -24,7 +24,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ligato/cn-infra/logging/logrus"
 	"google.golang.org/grpc"
 )
 
@@ -53,7 +52,7 @@ func ListenAndServeGRPC(config *Config, grpcServer *grpc.Server) (netListener ne
 		if err != nil {
 			return nil, err
 		}
-		if err := checkUnixSocketFileAndDirectory(config.Endpoint); err != nil {
+		if err := checkUnixSocketFileAndDirectory(config.Endpoint, config.ForceSocketRemoval); err != nil {
 			return nil, err
 		}
 
@@ -63,7 +62,6 @@ func ListenAndServeGRPC(config *Config, grpcServer *grpc.Server) (netListener ne
 		}
 
 		// Set permissions to the socket file
-		logrus.DefaultLogger().Warnf("Setting up socket permissions %v", permissions)
 		if err := os.Chmod(config.Endpoint, permissions); err != nil {
 			return nil, err
 		}
@@ -98,7 +96,7 @@ func ListenAndServeGRPC(config *Config, grpcServer *grpc.Server) (netListener ne
 func getUnixSocketFilePermissions(permissions int) (os.FileMode, error) {
 	if permissions > 0 {
 		if permissions > 7777 {
-			return 0, fmt.Errorf("incorrect unix socket file/path permission '%d', expecting three-digits", permissions)
+			return 0, fmt.Errorf("incorrect unix socket file/path permission value '%d'", permissions)
 		}
 		// Convert to correct mode format
 		mode, err := strconv.ParseInt(strconv.Itoa(permissions), 8, 32)
@@ -112,10 +110,10 @@ func getUnixSocketFilePermissions(permissions int) (os.FileMode, error) {
 
 // Check old socket file/directory of the unix domain socket. Remove old socket file if exists or create the directory
 // path if does not exist.
-func checkUnixSocketFileAndDirectory(endpoint string) error {
+func checkUnixSocketFileAndDirectory(endpoint string, forceRemoval bool) error {
 	_, err := os.Stat(endpoint)
-	if err == nil {
-		// Remove old socket file
+	if err == nil && forceRemoval {
+		// Remove old socket file if required
 		if err := os.Remove(endpoint); err != nil {
 			return err
 		}
