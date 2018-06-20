@@ -56,7 +56,7 @@ type Plugin struct {
 	// items in the API server. It saves each informer listing and watches the
 	// same resources independently of each other, thus providing more up to
 	// date results with less 'effort'
-	sharedFactoryExample factory.SharedInformerFactory
+	sharedFactory factory.SharedInformerFactory
 
 	// Informer factories per CRD object
 	informerExample      cache.SharedIndexInformer
@@ -184,7 +184,7 @@ func createCRD(plugin *Plugin, FullName, Group, Version, Plural, Name string) er
 }
 
 func informerCrdExample(plugin *Plugin) {
-	plugin.informerExample = plugin.sharedFactoryExample.Crdexample().V1().CrdExamples().Informer()
+	plugin.informerExample = plugin.sharedFactory.Crdexample().V1().CrdExamples().Informer()
 	// We add a new event handler, watching for changes to API resources.
 	plugin.informerExample.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
@@ -200,7 +200,7 @@ func informerCrdExample(plugin *Plugin) {
 }
 
 func informerCrdExampleEmbed(plugin *Plugin) {
-	plugin.informerExampleEmbed = plugin.sharedFactoryExample.Crdexample().V1().CrdExampleEmbeds().Informer()
+	plugin.informerExampleEmbed = plugin.sharedFactory.Crdexample().V1().CrdExampleEmbeds().Informer()
 	// We add a new event handler, watching for changes to API resources.
 	plugin.informerExample.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
