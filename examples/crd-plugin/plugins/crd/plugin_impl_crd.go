@@ -52,12 +52,11 @@ type Plugin struct {
 	// within the application.
 	stopChExample      chan struct{}
 	stopChExampleEmbed chan struct{}
-	// sharedFactory's are shared informer factorys used as a cache for
-	// items in the API server. They saves each informer listing and watch the
+	// sharedFactory is a shared informer factorys used as a cache for
+	// items in the API server. It saves each informer listing and watches the
 	// same resources independently of each other, thus providing more up to
 	// date results with less 'effort'
-	sharedFactoryExample      factory.SharedInformerFactory
-	sharedFactoryExampleEmbed factory.SharedInformerFactory
+	sharedFactoryExample factory.SharedInformerFactory
 
 	// Informer factories per CRD object
 	informerExample      cache.SharedIndexInformer
@@ -185,12 +184,6 @@ func createCRD(plugin *Plugin, FullName, Group, Version, Plural, Name string) er
 }
 
 func informerCrdExample(plugin *Plugin) {
-	// We use a shared informer from the informer factory, to save calls to the
-	// API as we grow our application and so state is consistent between our
-	// control loops. We set a resync period of 30 seconds, in case any
-	// create/replace/update/delete operations are missed when watching
-	plugin.sharedFactoryExample = factory.NewSharedInformerFactory(plugin.crdClient, time.Second*30)
-
 	plugin.informerExample = plugin.sharedFactoryExample.Crdexample().V1().CrdExamples().Informer()
 	// We add a new event handler, watching for changes to API resources.
 	plugin.informerExample.AddEventHandler(
@@ -204,31 +197,9 @@ func informerCrdExample(plugin *Plugin) {
 			DeleteFunc: exampleCrdEnqueue,
 		},
 	)
-
-	// Start the informer. This will cause it to begin receiving updates from
-	// the configured API server and firing event handlers in response.
-	plugin.sharedFactoryExample.Start(plugin.stopChExample)
-	plugin.Log.Info("Started CrdExample informer factory.")
-
-	// Wait for the informer cache to finish performing it's initial sync of
-	// resources
-	if !cache.WaitForCacheSync(plugin.stopChExample, plugin.informerExample.HasSynced) {
-		plugin.Log.Error("Error waiting for informer cache to sync")
-	}
-
-	plugin.Log.Info("CrdExample Informer is ready")
-
-	// Read forever from the work queue
-	workforever(plugin, queueExample, plugin.informerExample, plugin.stopChExample)
 }
 
 func informerCrdExampleEmbed(plugin *Plugin) {
-	// We use a shared informer from the informer factory, to save calls to the
-	// API as we grow our application and so state is consistent between our
-	// control loops. We set a resync period of 30 seconds, in case any
-	// create/replace/update/delete operations are missed when watching
-	plugin.sharedFactoryExampleEmbed = factory.NewSharedInformerFactory(plugin.crdClient, time.Second*30)
-
 	plugin.informerExampleEmbed = plugin.sharedFactoryExample.Crdexample().V1().CrdExampleEmbeds().Informer()
 	// We add a new event handler, watching for changes to API resources.
 	plugin.informerExample.AddEventHandler(
@@ -242,22 +213,6 @@ func informerCrdExampleEmbed(plugin *Plugin) {
 			DeleteFunc: exampleCrdEmbedEnqueue,
 		},
 	)
-
-	// Start the informer. This will cause it to begin receiving updates from
-	// the configured API server and firing event handlers in response.
-	plugin.sharedFactoryExampleEmbed.Start(plugin.stopChExampleEmbed)
-	plugin.Log.Info("Started CrdExampleEmbed informer factory.")
-
-	// Wait for the informer cache to finish performing it's initial sync of
-	// resources
-	if !cache.WaitForCacheSync(plugin.stopChExampleEmbed, plugin.informerExample.HasSynced) {
-		plugin.Log.Error("Error waiting for informer cache to sync")
-	}
-
-	plugin.Log.Info("CrdExampleEmbed Informer is ready")
-
-	// Read forever from the work queue
-	workforever(plugin, queueExampleEmbed, plugin.informerExampleEmbed, plugin.stopChExampleEmbed)
 }
 
 // AfterInit This will create all of the CRDs for NetworkServiceMesh.
@@ -302,8 +257,31 @@ func (plugin *Plugin) AfterInit() error {
 		return err
 	}
 
-	go informerCrdExample(plugin)
-	go informerCrdExampleEmbed(plugin)
+	// We use a shared informer from the informer factory, to save calls to the
+	// API as we grow our application and so state is consistent between our
+	// control loops. We set a resync period of 30 seconds, in case any
+	// create/replace/update/delete operations are missed when watching
+	plugin.sharedFactory = factory.NewSharedInformerFactory(plugin.crdClient, time.Second*30)
+
+	informerCrdExample(plugin)
+	informerCrdExampleEmbed(plugin)
+
+	// Start the informer. This will cause it to begin receiving updates from
+	// the configured API server and firing event handlers in response.
+	plugin.sharedFactory.Start(plugin.stopChExample)
+	plugin.Log.Info("Started CrdExample informer factory.")
+
+	// Wait for the informer cache to finish performing it's initial sync of
+	// resources
+	if !cache.WaitForCacheSync(plugin.stopChExample, plugin.informerExample.HasSynced) {
+		plugin.Log.Error("Error waiting for informer cache to sync")
+	}
+
+	plugin.Log.Info("CrdExample Informer is ready")
+
+	// Read forever from the work queues
+	workforever(plugin, queueExample, plugin.informerExample, plugin.stopChExample)
+	workforever(plugin, queueExampleEmbed, plugin.informerExampleEmbed, plugin.stopChExampleEmbed)
 
 	return nil
 }
