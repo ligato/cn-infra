@@ -15,8 +15,11 @@
 package agent
 
 import (
+	"context"
 	"errors"
+	"os"
 	"reflect"
+	"syscall"
 	"time"
 
 	"github.com/ligato/cn-infra/core"
@@ -27,14 +30,22 @@ import (
 type Options struct {
 	Version        string
 	MaxStartupTime time.Duration
+	QuitSignals    []os.Signal
 
 	Plugins []core.PluginNamed
+
+	ctx context.Context
 }
 
 func newOptions(opts ...Option) Options {
 	opt := Options{
 		Version:        "dev",
 		MaxStartupTime: time.Second * 15,
+		QuitSignals: []os.Signal{
+			syscall.SIGINT,
+			syscall.SIGTERM,
+			syscall.SIGKILL,
+		},
 	}
 
 	for _, o := range opts {
@@ -54,10 +65,24 @@ func MaxStartupTime(d time.Duration) Option {
 	}
 }
 
-// Version returns an Option that sets the version of the Agent to the string v
+// Version returns an Option that sets the version of the Agent to the entered string
 func Version(v string) Option {
 	return func(o *Options) {
 		o.Version = v
+	}
+}
+
+// Context returns an Option that sets the context for the Agent
+func Context(ctx context.Context) Option {
+	return func(o *Options) {
+		o.ctx = ctx
+	}
+}
+
+// QuitSignals returns an Option that will set signals which stop Agent
+func QuitSignals(sigs ...os.Signal) Option {
+	return func(o *Options) {
+		o.QuitSignals = sigs
 	}
 }
 

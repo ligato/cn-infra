@@ -18,7 +18,6 @@ import (
 	"errors"
 	"os"
 	"os/signal"
-	"syscall"
 
 	"github.com/namsral/flag"
 
@@ -72,19 +71,28 @@ func (a *agent) startSignalWrapper() error {
 	// agent startup (ie, clean up after its finished) we need to register
 	// for the signal before we start() the agent
 	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	if len(a.opts.QuitSignals) > 0 {
+		signal.Notify(sig, a.opts.QuitSignals...)
+	}
 
 	// If the agent started, we have things to clean up if here is a SIG
 	// So fire off a goroutine to do that
 	if err := a.start(); err != nil {
+		signal.Stop(sig)
 		return err
 	}
 
 	go func() {
+		var done <-chan struct{}
+		if a.opts.ctx != nil {
+			done = a.opts.ctx.Done()
+		}
 		// Wait for signal or agent stop
 		select {
-		case <-sig:
-			logrus.DefaultLogger().Info("Signal received, stopping.")
+		case <-done:
+			logrus.DefaultLogger().Info("Context canceled, stopping.")
+		case s := <-sig:
+			logrus.DefaultLogger().Infof("Signal %v received, stopping.", s)
 		case <-a.After():
 		}
 		// Doesn't hurt to call Stop twice, its idempotent because of the
