@@ -30,10 +30,10 @@ func main() {
 	a := agent.NewAgent(
 		agent.Version("1.0.0"),
 		agent.MaxStartupTime(time.Second*5),
-		agent.DescendantPlugins(
+		agent.AllPlugins(
 			&MyPlugin{grpc.NewPlugin(
 				grpc.UseConf(grpc.Config{
-					Endpoint: "localhost:9191",
+					Endpoint: "localhost:9111",
 				}),
 				grpc.UseDeps(grpc.Deps{
 					PluginName: "myGRPC",
@@ -66,5 +66,6 @@ func (plugin *MyPlugin) Init() error {
 
 // Close the plugin
 func (plugin *MyPlugin) Close() error {
+	logrus.DefaultLogger().Infof("MyPlugin Close()")
 	return nil
 }

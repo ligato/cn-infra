@@ -48,7 +48,7 @@ func TestMaxStartupTime(t *testing.T) {
 func TestDescendantPluginsNoDep(t *testing.T) {
 	RegisterTestingT(t)
 	plugin := &PluginNoDeps{}
-	agent := agent.NewAgent(agent.DescendantPlugins(plugin))
+	agent := agent.NewAgent(agent.AllPlugins(plugin))
 	Expect(agent).ToNot(BeNil())
 	Expect(agent.Options()).ToNot(BeNil())
 	Expect(agent.Options().Plugins).ToNot(BeNil())
@@ -60,7 +60,7 @@ func TestDescendantPluginsOneLevelDep(t *testing.T) {
 	RegisterTestingT(t)
 
 	plugin := &PluginOneDep{}
-	agent := agent.NewAgent(agent.DescendantPlugins(plugin))
+	agent := agent.NewAgent(agent.AllPlugins(plugin))
 	Expect(agent).ToNot(BeNil())
 	Expect(agent.Options()).ToNot(BeNil())
 	Expect(agent.Options().Plugins).ToNot(BeNil())
@@ -72,7 +72,7 @@ func TestDescendantPluginsOneLevelDep(t *testing.T) {
 func TestDescendantPluginsTwoLevelsDeep(t *testing.T) {
 	RegisterTestingT(t)
 	plugin := &PluginTwoLevelDeps{}
-	agent := agent.NewAgent(agent.DescendantPlugins(plugin))
+	agent := agent.NewAgent(agent.AllPlugins(plugin))
 	Expect(agent).ToNot(BeNil())
 	Expect(agent.Options()).ToNot(BeNil())
 	Expect(agent.Options().Plugins).ToNot(BeNil())
