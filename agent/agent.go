@@ -15,16 +15,16 @@
 package agent
 
 import (
+	"errors"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"errors"
+	"github.com/namsral/flag"
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/utils/once"
-	"github.com/namsral/flag"
 )
 
 // Agent implements startup & shutdown procedures.
@@ -73,25 +73,27 @@ func (a *agent) startSignalWrapper() error {
 	// for the signal before we start() the agent
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
-	err := a.start()
+
 	// If the agent started, we have things to clean up if here is a SIG
 	// So fire off a goroutine to do that
-	if err == nil {
-		go func() {
-			// Wait for signal or agent stop
-			select {
-			case <-sig:
-			case <-a.After():
-			}
-			logrus.DefaultLogger().Info("Signal received, stopping.")
-			// Doesn't hurt to call Stop twice, its idempotent because of the
-			// stopOnce
-			a.Stop()
-			signal.Stop(sig)
-			close(sig)
-		}()
+	if err := a.start(); err != nil {
+		return err
 	}
-	return err
+
+	go func() {
+		// Wait for signal or agent stop
+		select {
+		case <-sig:
+			logrus.DefaultLogger().Info("Signal received, stopping.")
+		case <-a.After():
+		}
+		// Doesn't hurt to call Stop twice, its idempotent because of the
+		// stopOnce
+		a.Stop()
+		signal.Stop(sig)
+	}()
+
+	return nil
 }
 
 func (a *agent) start() error {
@@ -115,7 +117,9 @@ func (a *agent) start() error {
 			logrus.DefaultLogger().Debugf("plugin %v has no AfterInit", p)
 		}
 	}
-	a.stopCh = make(chan struct{}, 1) // If we are started, we have a stopCh to signal stopping
+
+	a.stopCh = make(chan struct{}) // If we are started, we have a stopCh to signal stopping
+
 	logrus.DefaultLogger().Info("Agent Started")
 	return nil
 }
@@ -126,36 +130,38 @@ func (a *agent) Stop() error {
 }
 
 func (a *agent) stop() error {
-	if a.stopCh != nil { // Don't stop if we didn't start
-		defer close(a.stopCh)
-		// Close plugins
-		for _, p := range a.opts.Plugins {
-			if err := p.Close(); err != nil {
-				return err
-			}
-		}
-		logrus.DefaultLogger().Info("Agent Stopped.")
-		return nil
+	if a.stopCh == nil {
+		err := errors.New("attempted to stop an agent that wasn't Started")
+		logrus.DefaultLogger().Error(err)
+		return err
 	}
-	err := errors.New("attempted to stop an agent that wasn't Started")
-	logrus.DefaultLogger().Error(err)
-	return err
+	defer close(a.stopCh)
 
+	// Close plugins
+	for _, p := range a.opts.Plugins {
+		if err := p.Close(); err != nil {
+			return err
+		}
+	}
+
+	logrus.DefaultLogger().Info("Agent Stopped.")
+	return nil
 }
 
 // Wait will not return until a SIGINT, SIGTERM, or SIGKILL is received
 // Or the Agent is Stopped
 // All Plugins are Closed() before Wait returns
 func (a *agent) Wait() error {
-	if a.stopCh != nil { // Don't wait if we didn't Start
-		<-a.After()
-		// If we get here, a.Stop() has already been called, and we are simply
-		// retrieving the error if any squirreled away by stopOnce
-		return a.Stop()
+	if a.stopCh == nil {
+		err := errors.New("attempted to wait on an agent that wasn't Started")
+		logrus.DefaultLogger().Error(err)
+		return err
 	}
-	err := errors.New("attempted to wait on an agent that wasn't Started")
-	logrus.DefaultLogger().Error(err)
-	return err
+	<-a.stopCh
+
+	// If we get here, a.Stop() has already been called, and we are simply
+	// retrieving the error if any squirreled away by stopOnce
+	return a.Stop()
 }
 
 // Run runs the agent.  Run will not return until a SIGINT, SIGTERM, or SIGKILL is received
@@ -191,9 +197,9 @@ func (a *agent) After() <-chan struct{} {
 	// retrieve the error, returning a closed channel will preserve that
 	// usage, as a.Stop() returns an error complaining that the agent
 	// never started.
-	stopCh := make(chan struct{})
-	close(stopCh)
-	return stopCh
+	ch := make(chan struct{})
+	close(ch)
+	return ch
 }
 
 // Error returns any error that occurred when the agent was Stopped
