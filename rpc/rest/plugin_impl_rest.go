@@ -26,6 +26,7 @@ import (
 	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/utils/once"
 	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
@@ -55,6 +56,10 @@ type Plugin struct {
 	server    io.Closer
 	mx        *mux.Router
 	formatter *render.Render
+
+	initOnce      once.ReturnError
+	afterInitOnce once.ReturnError
+	closeOnce     once.ReturnError
 }
 
 // Deps lists the dependencies of the Rest plugin.
@@ -72,6 +77,10 @@ type Deps struct {
 // Init is the plugin entry point called by Agent Core
 // - It prepares Gorilla MUX HTTP Router
 func (plugin *Plugin) Init() (err error) {
+	return plugin.initOnce.Do(plugin.init)
+}
+
+func (plugin *Plugin) init() (err error) {
 	if plugin.Config == nil {
 		plugin.Config = DefaultConfig()
 	}
@@ -119,6 +128,10 @@ func (plugin *Plugin) GetPort() int {
 
 // AfterInit starts the HTTP server.
 func (plugin *Plugin) AfterInit() (err error) {
+	return plugin.afterInitOnce.Do(plugin.afterInit)
+}
+
+func (plugin *Plugin) afterInit() (err error) {
 	cfgCopy := *plugin.Config
 
 	if plugin.listenAndServe != nil {
@@ -138,6 +151,10 @@ func (plugin *Plugin) AfterInit() (err error) {
 
 // Close stops the HTTP server.
 func (plugin *Plugin) Close() error {
+	return plugin.closeOnce.Do(plugin.close)
+}
+
+func (plugin *Plugin) close() error {
 	return safeclose.Close(plugin.server)
 }
 
