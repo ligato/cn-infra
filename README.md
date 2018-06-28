@@ -52,6 +52,7 @@ in the app. All plugins used in an app are statically linked into the
 app.
 
 ## CN-Infra Plugins
+
 A CN-Infra plugin is typically implemented as a library providing the 
 plugin's functionality/APIs wrapped in a plugin wrapper. A CN-Infra 
 library can also be used standalone in 3rd party apps that do not use
@@ -61,36 +62,38 @@ for the plugin component.
 Platform plugins in the current CN-Infra release provide functionality
 in one of the following functional areas:
 
-* **RPC** - allows to expose application's API via REST or gRPC:
-    * [REST](rpc/rest) -  HTTP requests and allows app plugins to define
-      their own REST APIs.
+* **RPC** - allows to expose application's API:
+  - [GRPC](rpc/grpc) - handles GRPC requests and allows app plugins to define
+    their own GRPC services
+  - [REST](rpc/rest) - handles HTTP requests and allows app plugins to define
+    their own REST APIs
+  - [Prometheus](rpc/prometheus) - serves Prometheus metrics via HTTP and allows
+    app plugins to register their own collectors
         
 * **Data Stores** - provides a common data store API for app plugins (the 
-    Data Broker) and back-end clients for Etcd, Redis and Cassandra. The 
-    data store related plugin are as follows:
-  - [Etcd](db/keyval/etcd) - implements keyval skeleton provides access
-    to etcd
-  - [Redis](db/keyval/redis) - implements keyval skeleton provides access
-    to redis
-  - [Casssandra](db/sql/cassandra) - implements sql skeleton provides access to cassandra
+    Data Broker) and back-end clients. The data store related plugins are:
+  - [Consul](db/keyval/consul) - implements key-value plugin providing access to Consul
+  - [Etcd](db/keyval/etcd) - implements key-value plugin providing access to Etcd
+  - [Redis](db/keyval/redis) - implements key-value plugin providing access to Redis
+  - [Casssandra](db/sql/cassandra) - implements sql plugin providing access to Cassandra
     
 * **Messaging** - provides a common API and connectivity to message buses:
-    - [Kafka](messaging/kafka) - provides access to a Kafka broker (Sarama)
+  - [Kafka](messaging/kafka) - provides access to a Kafka broker (Sarama)
     
 * **Logging**:
-    * [Logrus wrapper](logging/logrus) - implements logging skeleton 
-      using the Logrus library. An app writer can create multiple loggers -
-      for example, each app plugin can have its own logger. Log level
-      for each logger can be controlled individually at run time through
-      the Log Manager REST API.
-    * [Log Manager](logging/logmanager) - allows the operator to set log
-      level for each logger using a REST API.
+  - [Logrus wrapper](logging/logrus) - implements logging skeleton 
+    using the Logrus library. An app writer can create multiple loggers -
+    for example, each app plugin can have its own logger. Log level
+    for each logger can be controlled individually at run time through
+    the Log Manager REST API.
+  - [Log Manager](logging/logmanager) - allows the operator to set log
+    level for each logger using a REST API.
     
-* **[Health](health/statuscheck)** - Self health check mechanism between plugins 
+* **Health** - Self health check mechanism between plugins 
     plus RPCs:
-    - [StatusCheck](health/statuscheck) - allows to monitor the status of plugins
-      and exposes it via HTTP
-    - Probes (callable remotely from K8s)
+  - [StatusCheck](health/statuscheck) - allows to monitor the status of plugins
+    and exposes it via HTTP
+  - [Probe](health/probe) - callable remotely from K8s
   
 * **Miscellaneous** - value-add plugins supporting the operation of a 
     CN-Infra based application: 
@@ -100,8 +103,8 @@ in one of the following functional areas:
     stores, gRPC and REST.
   - [Flavors](flavors) - predefined reusable collection of plugins.
   - [IDX Map](idxmap) - reusable thread-safe map with advanced features:
-     - multiple subscribers for watching changes in the map
-     - secondary indexes
+    * multiple subscribers for watching changes in the map
+    * secondary indexes
   - [ServiceLabel](servicelabel) - provides setting and retrieval of a 
       unique identifier for a CN-Infra based app. A cloud app typically needs
       a unique identifier so that it can differentiated from other instances 
@@ -109,6 +112,7 @@ in one of the following functional areas:
       data store).
    
 ## Quickstart
+
 The following code shows the initialization/start of a simple agent 
 application built on the CN-Infra platform. The code for this example
 can be found [here](examples/simple-agent/agent.go).
@@ -130,7 +134,7 @@ For quick start with the VPP Agent, you can use pre-build Docker images with the
 on [Dockerhub](https://hub.docker.com/r/ligato/dev-cn-infra/).
 
 1. Run ETCD and Kafka on your host (e.g. in Docker 
-   [using this procedure](examples/simple-agent/README.md)).
+  [using this procedure](examples/simple-agent/README.md)).
 
 2. Run cn-infra example [simple-agent](examples/simple-agent/agent.go).
 ```
