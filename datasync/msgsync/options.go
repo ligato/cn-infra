@@ -12,15 +12,13 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package grpc
+package msgsync
 
 import (
 	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logrus"
 )
-
-var DefaultPlugin = NewPlugin()
 
 // NewPlugin creates a new Plugin with the provides Options
 func NewPlugin(opts ...Option) *Plugin {
@@ -32,7 +30,7 @@ func NewPlugin(opts ...Option) *Plugin {
 
 	deps := &p.Deps
 	if deps.PluginName == "" {
-		deps.PluginName = "GRPC"
+		deps.PluginName = "MsgSync"
 	}
 	if deps.Log == nil {
 		deps.Log = logging.ForPlugin(deps.PluginName.String(), logrus.DefaultRegistry)
@@ -54,13 +52,13 @@ func UseDeps(deps Deps) Option {
 		d.PluginName = deps.PluginName
 		d.Log = deps.Log
 		d.PluginConfig = deps.PluginConfig
-		d.HTTP = deps.HTTP
+		d.Messaging = deps.Messaging
 	}
 }
 
 // UseConf injects the Plugin's Configuration
-func UseConf(conf Config) Option {
+func UseConf(conf Cfg) Option {
 	return func(p *Plugin) {
-		p.Config = &conf
+		p.Cfg = conf
 	}
 }

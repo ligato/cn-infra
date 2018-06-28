@@ -35,6 +35,8 @@ const (
 // Plugin implements etcd plugin.
 type Plugin struct {
 	Deps
+
+	*Config
 	// Plugin is disabled if there is no config file available
 	disabled bool
 	// ETCD connection encapsulation
@@ -65,12 +67,14 @@ type Deps struct {
 // the connection cannot be established.
 func (plugin *Plugin) Init() (err error) {
 	// Read ETCD configuration file. Returns error if does not exists.
-	etcdCfg, err := plugin.getEtcdConfig()
-	if err != nil || plugin.disabled {
-		return err
+	if plugin.Config == nil {
+		plugin.Config, err = plugin.getEtcdConfig()
+		if err != nil || plugin.disabled {
+			return err
+		}
 	}
 	// Transforms .yaml config to ETCD client configuration
-	etcdClientCfg, err := ConfigToClient(&etcdCfg)
+	etcdClientCfg, err := ConfigToClient(plugin.Config)
 	if err != nil {
 		return err
 	}
@@ -80,12 +84,12 @@ func (plugin *Plugin) Init() (err error) {
 		plugin.Log.Errorf("Err: %v", err)
 		return err
 	}
-	plugin.reconnectResync = etcdCfg.ReconnectResync
-	if etcdCfg.AutoCompact > 0 {
-		if etcdCfg.AutoCompact < time.Duration(time.Minute*60) {
+	plugin.reconnectResync = plugin.Config.ReconnectResync
+	if plugin.Config.AutoCompact > 0 {
+		if plugin.Config.AutoCompact < time.Duration(time.Minute*60) {
 			plugin.Log.Warnf("Auto compact option for ETCD is set to less than 60 minutes!")
 		}
-		plugin.startPeriodicAutoCompact(etcdCfg.AutoCompact)
+		plugin.startPeriodicAutoCompact(plugin.Config.AutoCompact)
 	}
 	plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.connection, &keyval.SerializerJSON{})
 
@@ -154,18 +158,17 @@ func (plugin *Plugin) Compact(rev ...int64) (toRev int64, err error) {
 	return 0, fmt.Errorf("connection is not established")
 }
 
-func (plugin *Plugin) getEtcdConfig() (Config, error) {
+func (plugin *Plugin) getEtcdConfig() (*Config, error) {
 	var etcdCfg Config
 	found, err := plugin.PluginConfig.GetValue(&etcdCfg)
 	if err != nil {
-		return etcdCfg, err
+		return nil, err
 	}
 	if !found {
 		plugin.Log.Info("ETCD config not found, skip loading this plugin")
 		plugin.disabled = true
-		return etcdCfg, nil
 	}
-	return etcdCfg, nil
+	return &etcdCfg, nil
 }
 
 func (plugin *Plugin) startPeriodicAutoCompact(period time.Duration) {

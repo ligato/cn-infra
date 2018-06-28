@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package grpc
+package etcd
 
 import (
 	"github.com/ligato/cn-infra/config"
@@ -32,7 +32,7 @@ func NewPlugin(opts ...Option) *Plugin {
 
 	deps := &p.Deps
 	if deps.PluginName == "" {
-		deps.PluginName = "GRPC"
+		deps.PluginName = "ETCD"
 	}
 	if deps.Log == nil {
 		deps.Log = logging.ForPlugin(deps.PluginName.String(), logrus.DefaultRegistry)
@@ -50,11 +50,12 @@ type Option func(*Plugin)
 // UseDeps injects a particular set of Dependencies
 func UseDeps(deps Deps) Option {
 	return func(p *Plugin) {
-		d := &p.Deps
-		d.PluginName = deps.PluginName
-		d.Log = deps.Log
-		d.PluginConfig = deps.PluginConfig
-		d.HTTP = deps.HTTP
+		p.Deps.PluginName = deps.PluginName
+		p.Deps.Log = deps.Log
+		p.Deps.PluginConfig = deps.PluginConfig
+		p.Deps.StatusCheck = deps.StatusCheck
+		p.Deps.ServiceLabel = deps.ServiceLabel
+		p.Deps.Resync = deps.Resync
 	}
 }
 
