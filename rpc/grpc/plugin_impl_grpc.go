@@ -24,6 +24,7 @@ import (
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/rpc/rest"
+	"github.com/ligato/cn-infra/utils/once"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/unrolled/render"
 	"google.golang.org/grpc"
@@ -42,7 +43,10 @@ type Plugin struct {
 	// GRPC network listener
 	netListener io.Closer
 	// Plugin availability flag
-	disabled bool
+	disabled      bool
+	initOnce      once.ReturnError
+	afterInitOnce once.ReturnError
+	closeOnce     once.ReturnError
 }
 
 // Deps is a list of injected dependencies of the GRPC plugin.
@@ -55,6 +59,10 @@ type Deps struct {
 
 // Init prepares GRPC netListener for registration of individual service
 func (plugin *Plugin) Init() error {
+	return plugin.initOnce.Do(plugin.init)
+}
+
+func (plugin *Plugin) init() error {
 	var err error
 	// Get GRPC configuration file
 	if plugin.Config == nil {
@@ -91,6 +99,10 @@ func (plugin *Plugin) Init() error {
 
 // AfterInit starts the HTTP netListener.
 func (plugin *Plugin) AfterInit() (err error) {
+	return plugin.afterInitOnce.Do(plugin.afterInit)
+}
+
+func (plugin *Plugin) afterInit() (err error) {
 	if plugin.Deps.HTTP != nil {
 		plugin.Log.Info("exposing GRPC services over HTTP port " + strconv.Itoa(plugin.Deps.HTTP.GetPort()) +
 			" /service ")
@@ -104,6 +116,10 @@ func (plugin *Plugin) AfterInit() (err error) {
 
 // Close stops the HTTP netListener.
 func (plugin *Plugin) Close() error {
+	return plugin.closeOnce.Do(plugin.close)
+}
+
+func (plugin *Plugin) close() error {
 	wasError := safeclose.Close(plugin.netListener)
 
 	if plugin.grpcServer != nil {
