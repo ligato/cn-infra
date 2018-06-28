@@ -34,5 +34,5 @@ func main() {
 	if err != nil {
 		logrus.DefaultLogger().Fatalf("could not greet: %v", err)
 	}
-	logrus.DefaultLogger().Printf("Greeting: %s (received from server)", r.Message)
+	logrus.DefaultLogger().Printf("Reply: %s (received from server)", r.Message)
 }

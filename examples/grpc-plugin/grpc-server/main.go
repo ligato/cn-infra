@@ -23,12 +23,13 @@ func main() {
 
 	// Start Agent with ExamplePlugin & FlavorRPC (reused cn-infra plugins).
 	agent := rpc.NewAgent(rpc.WithPlugins(func(flavor *rpc.FlavorRPC) []*core.NamedPlugin {
-
-		examplePlug := &ExamplePlugin{exampleFinished: exampleFinished, Deps: Deps{
-			PluginLogDeps: *flavor.LogDeps("example"),
-			GRPC:          &flavor.GRPC,
-		}}
-
+		examplePlug := &ExamplePlugin{
+			exampleFinished: exampleFinished,
+			Deps: Deps{
+				PluginLogDeps: *flavor.LogDeps("example"),
+				GRPC:          &flavor.GRPC,
+			},
+		}
 		return []*core.NamedPlugin{{examplePlug.PluginName, examplePlug}}
 	}))
 	core.EventLoopWithInterrupt(agent, exampleFinished)

@@ -47,6 +47,7 @@ type BasicHTTPAuthenticator interface {
 // Plugin struct holds all plugin-related data.
 type Plugin struct {
 	Deps
+
 	*Config
 
 	// Used mainly for testing purposes
@@ -72,6 +73,8 @@ type Deps struct {
 // Init is the plugin entry point called by Agent Core
 // - It prepares Gorilla MUX HTTP Router
 func (plugin *Plugin) Init() (err error) {
+	plugin.Log.Debugf("REST Init()")
+
 	if plugin.Config == nil {
 		plugin.Config = DefaultConfig()
 	}
@@ -96,29 +99,10 @@ func (plugin *Plugin) Init() (err error) {
 	return err
 }
 
-// RegisterHTTPHandler registers HTTP <handler> at the given <path>.
-func (plugin *Plugin) RegisterHTTPHandler(path string,
-	handler func(formatter *render.Render) http.HandlerFunc,
-	methods ...string) *mux.Route {
-	plugin.Log.Debug("Register handler ", path)
-
-	if plugin.Authenticator != nil {
-		return plugin.mx.HandleFunc(path, auth(handler(plugin.formatter), plugin.Authenticator)).Methods(methods...)
-	}
-	return plugin.mx.HandleFunc(path, handler(plugin.formatter)).Methods(methods...)
-
-}
-
-// GetPort returns plugin configuration port
-func (plugin *Plugin) GetPort() int {
-	if plugin.Config != nil {
-		return plugin.Config.GetPort()
-	}
-	return 0
-}
-
 // AfterInit starts the HTTP server.
 func (plugin *Plugin) AfterInit() (err error) {
+	plugin.Log.Debugf("REST AfterInit()")
+
 	cfgCopy := *plugin.Config
 
 	if plugin.listenAndServe != nil {
@@ -136,6 +120,27 @@ func (plugin *Plugin) AfterInit() (err error) {
 	return err
 }
 
+// RegisterHTTPHandler registers HTTP <handler> at the given <path>.
+func (plugin *Plugin) RegisterHTTPHandler(path string,
+	handler func(formatter *render.Render) http.HandlerFunc,
+	methods ...string) *mux.Route {
+	plugin.Log.Debug("Registering handler: ", path)
+
+	if plugin.Authenticator != nil {
+		return plugin.mx.HandleFunc(path, auth(handler(plugin.formatter), plugin.Authenticator)).Methods(methods...)
+	}
+	return plugin.mx.HandleFunc(path, handler(plugin.formatter)).Methods(methods...)
+
+}
+
+// GetPort returns plugin configuration port
+func (plugin *Plugin) GetPort() int {
+	if plugin.Config != nil {
+		return plugin.Config.GetPort()
+	}
+	return 0
+}
+
 // Close stops the HTTP server.
 func (plugin *Plugin) Close() error {
 	return safeclose.Close(plugin.server)
@@ -147,6 +152,11 @@ func (plugin *Plugin) String() string {
 		return string(plugin.Deps.PluginName)
 	}
 	return "HTTP"
+}
+
+// Name returns the name of the plugin
+func (plugin *Plugin) Name() string {
+	return plugin.PluginName.String()
 }
 
 func auth(fn http.HandlerFunc, auth BasicHTTPAuthenticator) http.HandlerFunc {

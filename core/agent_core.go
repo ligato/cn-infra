@@ -85,11 +85,12 @@ func NewAgent(flavor Flavor, opts ...Option) *Agent {
 		flavors = []Flavor{flavor}
 	}
 
+	logrus.DefaultLogger().Warnf("calling Inject %T", flavor)
 	flavor.Inject()
 
-	var agentCoreLogger logging.Logger
 	plugins := flavor.Plugins()
 
+	var agentCoreLogger logging.Logger
 	for _, opt := range opts {
 		switch opt.(type) {
 		case WithPluginsOpt:
