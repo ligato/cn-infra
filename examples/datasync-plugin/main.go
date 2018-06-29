@@ -28,7 +28,7 @@ import (
 
 func main() {
 	// Init close channel used to stop the example.
-	exampleFinished := make(chan struct{}, 1)
+	exampleFinished := make(chan struct{})
 
 	// Start Agent with ExamplePlugin, ETCDPlugin & FlavorLocal (reused cn-infra plugins).
 	agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
@@ -66,7 +66,8 @@ type ExamplePlugin struct {
 	// Fields below are used to properly finish the example.
 	eventCounter  uint8
 	publisherDone bool
-	closeChannel  chan struct{}
+
+	closeChannel chan struct{}
 }
 
 // Init starts the consumer.
@@ -87,6 +88,13 @@ func (plugin *ExamplePlugin) Init() error {
 	plugin.Log.Info("Initialization of the custom plugin for the datasync example is completed")
 
 	return nil
+}
+
+// Close shutdowns both the publisher and the consumer.
+// Channels used to propagate data resync and data change events are closed
+// as well.
+func (plugin *ExamplePlugin) Close() error {
+	return safeclose.Close(plugin.Publisher, plugin.Watcher, plugin.resyncChannel, plugin.changeChannel)
 }
 
 // AfterInit starts the publisher and prepares for the shutdown.
@@ -219,17 +227,10 @@ func (plugin *ExamplePlugin) closeExample() {
 			plugin.context.Done()
 			plugin.Log.Infof("etcd/datasync example finished, sending shutdown ...")
 			// Close the example
-			plugin.closeChannel <- struct{}{}
+			close(plugin.closeChannel)
 			break
 		}
 	}
-}
-
-// Close shutdowns both the publisher and the consumer.
-// Channels used to propagate data resync and data change events are closed
-// as well.
-func (plugin *ExamplePlugin) Close() error {
-	return safeclose.Close(plugin.Publisher, plugin.Watcher, plugin.resyncChannel, plugin.changeChannel)
 }
 
 // Create simple ETCD data structure with provided data values.
