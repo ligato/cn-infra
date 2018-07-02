@@ -18,7 +18,7 @@ import (
 
 func main() {
 	// Init close channel used to stop the example
-	exampleFinished := make(chan struct{}, 1)
+	exampleFinished := make(chan struct{})
 
 	// Start Agent with ExamplePlugin, KafkaPlugin & FlavorLocal (reused cn-infra plugins).
 	agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
@@ -120,7 +120,7 @@ func (plugin *ExamplePlugin) closeExample() {
 
 			plugin.Log.Info("kafka example finished, sending shutdown ...")
 
-			plugin.closeChannel <- struct{}{}
+			close(plugin.closeChannel)
 			break
 		}
 	}

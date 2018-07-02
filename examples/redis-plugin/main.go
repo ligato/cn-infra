@@ -16,7 +16,7 @@ import (
 // and example plugin which demonstrates use of Redis flavor.
 func main() {
 	// Init close channel used to stop the example
-	exampleFinished := make(chan struct{}, 1)
+	exampleFinished := make(chan struct{})
 
 	// Start Agent with ExamplePlugin, RedisPlugin & FlavorLocal (reused cn-infra plugins).
 	agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
@@ -28,7 +28,7 @@ func main() {
 		resyncOrch.Deps.PluginLogDeps = *flavor.LogDeps("redis-resync")
 		connectors.InjectKVDBSync(redisDataSync, redisPlug, redisPlug.PluginName, flavor, resyncOrch)
 
-		examplePlug := &ExamplePlugin{closeChannel: &exampleFinished}
+		examplePlug := &ExamplePlugin{closeChannel: exampleFinished}
 		examplePlug.Deps.PluginLogDeps = *flavor.LogDeps("redis-example")
 		examplePlug.Deps.DB = redisPlug          // Inject redis to example plugin.
 		examplePlug.Deps.Watcher = redisDataSync // Inject datasync watcher to example plugin.
@@ -46,7 +46,7 @@ func main() {
 type ExamplePlugin struct {
 	Deps // plugin dependencies are injected
 
-	closeChannel *chan struct{}
+	closeChannel chan struct{}
 }
 
 // Deps is a helper struct which is grouping all dependencies injected to the plugin
@@ -74,6 +74,6 @@ func (plugin *ExamplePlugin) AfterInit() (err error) {
 // Close is called by Agent Core when the Agent is shutting down. It is supposed to clean up resources that were
 // allocated by the plugin during its lifetime
 func (plugin *ExamplePlugin) Close() error {
-	*plugin.closeChannel <- struct{}{}
+	close(plugin.closeChannel)
 	return nil
 }

@@ -2,14 +2,15 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
+	"time"
+
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/flavors/local"
 	prom "github.com/ligato/cn-infra/rpc/prometheus"
 	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"math/rand"
-	"time"
 )
 
 // *************************************************************************
@@ -26,7 +27,7 @@ import (
 
 func main() {
 	// Init close channel used to stop the example.
-	exampleFinished := make(chan struct{}, 1)
+	exampleFinished := make(chan struct{})
 
 	// Start Agent with ExamplePlugin, REST, prometheus plugin & FlavorLocal (reused cn-infra plugins).
 	agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
@@ -163,7 +164,6 @@ func (plugin *ExamplePlugin) decrementCounter() {
 			}
 			plugin.counterVal--
 			plugin.temporaryCounter.Set(float64(plugin.counterVal))
-
 		}
 	}
 }

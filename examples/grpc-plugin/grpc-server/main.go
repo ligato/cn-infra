@@ -19,7 +19,7 @@ import (
 
 func main() {
 	// Init close channel to stop the example after everything was logged
-	exampleFinished := make(chan struct{}, 1)
+	exampleFinished := make(chan struct{})
 
 	// Start Agent with ExamplePlugin & FlavorRPC (reused cn-infra plugins).
 	agent := rpc.NewAgent(rpc.WithPlugins(func(flavor *rpc.FlavorRPC) []*core.NamedPlugin {

@@ -22,7 +22,7 @@ import (
 
 func main() {
 	// Init close channel to stop the example after everything was logged
-	exampleFinished := make(chan struct{}, 1)
+	exampleFinished := make(chan struct{})
 
 	// Start Agent with ExamplePlugin & LocalFlavor (reused cn-infra plugins).
 	agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
@@ -79,7 +79,7 @@ func (plugin *ExamplePlugin) Init() (err error) {
 
 	// End the example
 	plugin.Log.Info("logs in plugin example finished, sending shutdown ...")
-	plugin.exampleFinished <- struct{}{}
+	close(plugin.exampleFinished)
 
 	return nil
 }

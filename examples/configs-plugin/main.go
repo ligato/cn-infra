@@ -41,7 +41,7 @@ const PluginName = "example"
 
 func main() {
 	// Init close channel to stop the example after everything was logged.
-	exampleFinished := make(chan struct{}, 1)
+	exampleFinished := make(chan struct{})
 
 	// Start Agent with ExampleFlavor
 	// (combination of ExamplePlugin & Local flavor)
@@ -93,7 +93,7 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	}
 	plugin.Log.Info("Plugin Config ", plugin.Conf)
 	time.Sleep(plugin.Conf.Sleep)
-	plugin.exampleFinished <- struct{}{}
+	close(plugin.exampleFinished)
 
 	return nil
 }
