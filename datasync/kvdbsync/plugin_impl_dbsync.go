@@ -36,6 +36,14 @@ type Plugin struct {
 	registry *syncbase.Registry
 }
 
+// Deps groups dependencies injected into the plugin so that they are
+// logically separated from other plugin fields.
+type Deps struct {
+	local.PluginInfraDeps                      // inject
+	ResyncOrch            resync.Subscriber    // inject
+	KvPlugin              keyval.KvProtoPlugin // inject
+}
+
 type infraDeps interface {
 	// InfraDeps for getting PlugginInfraDeps instance (logger, config, plugin name, statuscheck)
 	InfraDeps(pluginName string, opts ...local.InfraDepsOpts) *local.PluginInfraDeps
@@ -56,14 +64,6 @@ func (plugin /*intentionally without pointer receiver*/ Plugin) OfDifferentAgent
 	// this is important - here comes microservice label of different agent
 	plugin.Deps.PluginInfraDeps.ServiceLabel = servicelabel.OfDifferentAgent(microserviceLabel)
 	return &plugin // copy (no pointer receiver)
-}
-
-// Deps groups dependencies injected into the plugin so that they are
-// logically separated from other plugin fields.
-type Deps struct {
-	local.PluginInfraDeps                      // inject
-	ResyncOrch            resync.Subscriber    // inject
-	KvPlugin              keyval.KvProtoPlugin // inject
 }
 
 // Init only initializes plugin.registry.
