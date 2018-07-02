@@ -18,18 +18,28 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/health/statuscheck/model/status"
+	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/unrolled/render"
 )
 
 const (
-	livenessProbePath  string = "/liveness"  // liveness probe URL
-	readinessProbePath string = "/readiness" // readiness probe URL
+	livenessProbePath  = "/liveness"  // liveness probe URL
+	readinessProbePath = "/readiness" // readiness probe URL
 )
 
 // Plugin struct holds all plugin-related data.
 type Plugin struct {
 	Deps
+}
+
+// Deps lists dependencies of REST plugin.
+type Deps struct {
+	local.PluginInfraDeps                          // inject
+	HTTP                  rest.HTTPHandlers        // inject
+	StatusCheck           statuscheck.StatusReader // inject
 }
 
 // Init does nothing
@@ -57,7 +67,6 @@ func (p *Plugin) AfterInit() error {
 
 // readinessProbeHandler handles k8s readiness probe.
 func (p *Plugin) readinessProbeHandler(formatter *render.Render) http.HandlerFunc {
-
 	return func(w http.ResponseWriter, req *http.Request) {
 		ifStat := p.StatusCheck.GetInterfaceStats()
 		agentStat := p.StatusCheck.GetAgentStatus()
@@ -74,7 +83,6 @@ func (p *Plugin) readinessProbeHandler(formatter *render.Render) http.HandlerFun
 
 // livenessProbeHandler handles k8s liveness probe.
 func (p *Plugin) livenessProbeHandler(formatter *render.Render) http.HandlerFunc {
-
 	return func(w http.ResponseWriter, req *http.Request) {
 		stat := p.StatusCheck.GetAgentStatus()
 		statJSON, _ := json.Marshal(p.StatusCheck.GetAgentStatus())

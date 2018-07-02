@@ -15,57 +15,69 @@
 package probe
 
 import (
+	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/health/statuscheck/model/status"
+	prom "github.com/ligato/cn-infra/rpc/prometheus"
+	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const (
-	defaultPluginName string = "PROMETHEUS"
+	defaultPluginName = "PROMETHEUS"
 
 	// DefaultHealthPath default Prometheus health metrics URL
-	DefaultHealthPath string = "/health"
+	DefaultHealthPath = "/health"
 
 	// Namespace namespace to use for Prometheus health metrics
-	Namespace string = ""
+	Namespace = ""
 	// Subsystem subsystem to use for Prometheus health metrics
-	Subsystem string = ""
+	Subsystem = ""
 	// ServiceLabel label for service field
-	ServiceLabel string = "service"
+	ServiceLabel = "service"
 	// DependencyLabel label for dependency field
-	DependencyLabel string = "dependency"
+	DependencyLabel = "dependency"
 	// BuildVersionLabel label for build version field
-	BuildVersionLabel string = "build_version"
+	BuildVersionLabel = "build_version"
 	// BuildDateLabel label for build date field
-	BuildDateLabel string = "build_date"
+	BuildDateLabel = "build_date"
 
 	// ServiceHealthName name of service health metric
-	ServiceHealthName string = "service_health"
+	ServiceHealthName = "service_health"
 
 	// ServiceHealthHelp help text for service health metric
 	// Adapt Ligato status code for now.
 	// TODO: Consolidate with that from the "Common Container Telemetry" proposal.
 	// ServiceHealthHelp    string = "The health of the ServiceLabel 0 = INIT, 1 = UP, 2 = DOWN, 3 = OUTAGE"
-	ServiceHealthHelp string = "The health of the ServiceLabel 0 = INIT, 1 = OK, 2 = ERROR"
+	ServiceHealthHelp = "The health of the ServiceLabel 0 = INIT, 1 = OK, 2 = ERROR"
 
 	// DependencyHealthName name of dependency health metric
-	DependencyHealthName string = "service_dependency_health"
+	DependencyHealthName = "service_dependency_health"
 
 	// DependencyHealthHelp help text for dependency health metric
 	// Adapt Ligato status code for now.
 	// TODO: Consolidate with that from the "Common Container Telemetry" proposal.
 	// DependencyHealthHelp string = "The health of the DependencyLabel 0 = INIT, 1 = UP, 2 = DOWN, 3 = OUTAGE"
-	DependencyHealthHelp string = "The health of the DependencyLabel 0 = INIT, 1 = OK, 2 = ERROR"
+	DependencyHealthHelp = "The health of the DependencyLabel 0 = INIT, 1 = OK, 2 = ERROR"
 
 	// ServiceInfoName name of service info metric
-	ServiceInfoName string = "service_info"
+	ServiceInfoName = "service_info"
 	// ServiceInfoHelp help text for service info metric
-	ServiceInfoHelp string = "Build info for the service.  Value is always 1, build info is in the tags."
+	ServiceInfoHelp = "Build info for the service.  Value is always 1, build info is in the tags."
 )
 
 // PrometheusPlugin struct holds all plugin-related data.
 type PrometheusPlugin struct {
 	PrometheusDeps
+}
+
+// PrometheusDeps lists dependencies of Prometheus plugin.
+type PrometheusDeps struct {
+	local.PluginInfraDeps                          // inject
+	HTTP                  rest.HTTPHandlers        // inject
+	StatusCheck           statuscheck.StatusReader // inject
+	Prometheus            prom.API                 // inject
 }
 
 // Init may create a new (custom) instance of HTTP if the injected instance uses

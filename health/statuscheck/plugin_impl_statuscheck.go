@@ -35,10 +35,10 @@ const (
 	Error PluginState = "error"
 
 	// frequency of periodic writes of state data into ETCD
-	periodicWriteTimeout time.Duration = time.Second * 10
+	periodicWriteTimeout = time.Second * 10
 
 	// frequency of periodic plugin state probing
-	periodicProbingTimeout time.Duration = time.Second * 5
+	periodicProbingTimeout = time.Second * 5
 )
 
 // Plugin struct holds all plugin-related data.

@@ -49,8 +49,10 @@ func NewAgent(opts ...Option) Agent {
 }
 
 type agent struct {
-	opts      Options
-	stopCh    chan struct{}
+	opts Options
+
+	stopCh chan struct{}
+
 	startOnce once.ReturnError
 	stopOnce  once.ReturnError
 }
