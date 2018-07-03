@@ -1,9 +1,11 @@
 package main
 
 import (
-	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/flavors/local"
+	"log"
+
+	"github.com/ligato/cn-infra/agent"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logrus"
 )
 
 // *************************************************************************
@@ -20,24 +22,40 @@ import (
 // or remotely using REST (but different flavor must be used: rpc.RpcFlavor).
 // ************************************************************************/
 
+const PluginName = "example"
+
 func main() {
 	// Init close channel to stop the example after everything was logged
 	exampleFinished := make(chan struct{})
 
 	// Start Agent with ExamplePlugin & LocalFlavor (reused cn-infra plugins).
-	agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
+	/*agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
 		examplePlug := &ExamplePlugin{
 			exampleFinished: exampleFinished,
 			PluginLogDeps:   *flavor.LogDeps("logs-example"),
 		}
 		return []*core.NamedPlugin{{examplePlug.PluginName, examplePlug}}
 	}))
-	core.EventLoopWithInterrupt(agent, exampleFinished)
+	core.EventLoopWithInterrupt(agent, exampleFinished)*/
+
+	p := &ExamplePlugin{
+		Log:             logging.ForPlugin(PluginName, logrus.DefaultRegistry),
+		exampleFinished: exampleFinished,
+	}
+	a := agent.NewAgent(
+		agent.AllPlugins(p),
+		agent.DoneChan(exampleFinished),
+	)
+	if err := a.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // ExamplePlugin presents the PluginLogger API.
 type ExamplePlugin struct {
-	local.PluginLogDeps
+	Log logging.PluginLogger
+	//local.PluginLogDeps
+
 	exampleFinished chan struct{}
 }
 
@@ -79,9 +97,20 @@ func (plugin *ExamplePlugin) Init() (err error) {
 
 	// End the example
 	plugin.Log.Info("logs in plugin example finished, sending shutdown ...")
+
 	close(plugin.exampleFinished)
 
 	return nil
+}
+
+// Close implements Plugin interface..
+func (plugin *ExamplePlugin) Close() (err error) {
+	return nil
+}
+
+// Name implements PluginNamed interface.
+func (plugin *ExamplePlugin) Name() string {
+	return PluginName
 }
 
 // showPanicLog demonstrates panic log + recovering.

@@ -15,10 +15,13 @@
 package main
 
 import (
+	"log"
 	"time"
 
-	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/agent"
+	"github.com/ligato/cn-infra/config"
+	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logrus"
 )
 
 // PluginName is injected as the plugin name.
@@ -45,21 +48,38 @@ func main() {
 
 	// Start Agent with ExampleFlavor
 	// (combination of ExamplePlugin & Local flavor)
-	agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
+	/*agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
 		examplePlug := &ExamplePlugin{
 			exampleFinished: exampleFinished,
 			PluginInfraDeps: *flavor.InfraDeps(PluginName, local.WithConf()),
 		}
 		return []*core.NamedPlugin{{examplePlug.PluginName, examplePlug}}
 	}))
-	core.EventLoopWithInterrupt(agent, exampleFinished)
+	core.EventLoopWithInterrupt(agent, exampleFinished)*/
+
+	p := &ExamplePlugin{
+		Log:             logging.ForPlugin(PluginName, logrus.DefaultRegistry),
+		PluginConfig:    config.ForPlugin(PluginName),
+		exampleFinished: exampleFinished,
+	}
+	a := agent.NewAgent(
+		agent.AllPlugins(p),
+		agent.DoneChan(exampleFinished),
+	)
+	if err := a.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // ExamplePlugin demonstrates the use of injected Config plugin.
 type ExamplePlugin struct {
-	local.PluginInfraDeps // this field is usually injected in flavor
-	*Conf                 // it is possible to set config value programmatically (can be overridden)
-	exampleFinished       chan struct{}
+	Log          logging.PluginLogger
+	PluginConfig config.PluginConfig
+	//local.PluginInfraDeps // this field is usually injected in flavor
+
+	*Conf // it is possible to set config value programmatically (can be overridden)
+
+	exampleFinished chan struct{}
 }
 
 // Conf - example config binding
@@ -92,8 +112,17 @@ func (plugin *ExamplePlugin) Init() (err error) {
 		plugin.Log.Info("Loaded plugin config - default")
 	}
 	plugin.Log.Info("Plugin Config ", plugin.Conf)
+
 	time.Sleep(plugin.Conf.Sleep)
 	close(plugin.exampleFinished)
 
 	return nil
+}
+
+func (plugin *ExamplePlugin) Close() (err error) {
+	return nil
+}
+
+func (plugin *ExamplePlugin) Name() string {
+	return PluginName
 }
