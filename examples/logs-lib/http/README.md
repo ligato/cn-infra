@@ -12,5 +12,11 @@ curl localhost:8080/list
 
 Modify log level remotely via HTTP POST:
 ```
-curl localhost:8080/set/{loggerName}/{logLevel}
+curl -X PUT localhost:8080/set/{loggerName}/{logLevel}
+```
+
+Example of setting log level for custom and default loggers:
+```
+curl -X PUT localhost:8080/set/MyLogger/debug
+curl -X PUT localhost:8080/set/defaultLogger/debug
 ```
