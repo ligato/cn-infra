@@ -28,10 +28,11 @@ const loggerName = "loggerName"
 const loggerLevel = "level"
 
 var logRegistry = logrus.NewLogRegistry()
+var defaultLogger = logrus.DefaultLogger()
 
 // Every 10 seconds prints a set of logs using default and custom logger
 func generateLogs() {
-	myLogger := logrus.NewLogger("MyLogger")
+	myLogger := logRegistry.NewLogger("MyLogger")
 
 	for range time.NewTicker(10 * time.Second).C {
 
@@ -39,9 +40,9 @@ func generateLogs() {
 		myLogger.Info("My logger")
 		myLogger.Error("My logger")
 
-		myLogger.Debug("Default logger")
-		myLogger.Info("Default logger")
-		myLogger.Error("Default logger")
+		defaultLogger.Debug("Default logger")
+		defaultLogger.Info("Default logger")
+		defaultLogger.Error("Default logger")
 	}
 }
 
@@ -68,9 +69,12 @@ func main() {
 	// To list all registered logger and current log level
 	//  curl localhost:8080/list
 	// To modify log level
-	//  curl localhost:8080/set/{loggerName}/{logLevel}
+	//  curl -X PUT localhost:8080/set/{loggerName}/{logLevel}
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/list", listLoggers).Methods("GET")
 	router.HandleFunc(fmt.Sprintf("/set/{%s}/{%s:debug|info|warning|error|fatal|panic}", loggerName, loggerLevel), setLevel).Methods("PUT")
-	http.ListenAndServe(":8080", router)
+	err := http.ListenAndServe(":8080", router)
+	if err != nil{
+		defaultLogger.Fatal(err)
+	}
 }
