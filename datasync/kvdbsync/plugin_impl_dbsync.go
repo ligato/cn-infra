@@ -49,6 +49,11 @@ type Deps struct {
 	KvPlugin   keyval.KvProtoPlugin // inject
 }
 
+// Name implements PluginNamed
+func (p *Plugin) Name() string {
+	return p.PluginName.String()
+}
+
 type infraDeps interface {
 	// InfraDeps for getting PlugginInfraDeps instance (logger, config, plugin name, statuscheck)
 	InfraDeps(pluginName string, opts ...local.InfraDepsOpts) *local.PluginInfraDeps
