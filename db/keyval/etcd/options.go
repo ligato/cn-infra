@@ -58,7 +58,6 @@ func UseDeps(deps Deps) Option {
 		p.Deps.Log = deps.Log
 		p.Deps.PluginConfig = deps.PluginConfig
 		p.Deps.StatusCheck = deps.StatusCheck
-		p.Deps.ServiceLabel = deps.ServiceLabel
 		p.Deps.Resync = deps.Resync
 	}
 }

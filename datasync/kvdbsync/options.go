@@ -18,6 +18,7 @@ import (
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logrus"
+	"github.com/ligato/cn-infra/servicelabel"
 )
 
 // NewPlugin creates a new Plugin with the provides Options
@@ -41,6 +42,9 @@ func NewPlugin(opts ...Option) *Plugin {
 	if deps.Log == nil {
 		deps.Log = logging.ForPlugin(deps.PluginName.String(), logrus.DefaultRegistry)
 	}
+	if deps.ServiceLabel == nil {
+		deps.ServiceLabel = servicelabel.DefaultPlugin
+	}
 
 	return p
 }
@@ -55,5 +59,6 @@ func UseDeps(deps Deps) Option {
 		p.Deps.Log = deps.Log
 		p.Deps.KvPlugin = deps.KvPlugin
 		p.Deps.ResyncOrch = deps.ResyncOrch
+		p.Deps.ServiceLabel = deps.ServiceLabel
 	}
 }

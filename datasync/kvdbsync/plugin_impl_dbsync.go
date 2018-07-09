@@ -43,7 +43,7 @@ type Plugin struct {
 type Deps struct {
 	Log          logging.PluginLogger // inject
 	PluginName   core.PluginName      // inject
-	ServiceLabel servicelabel.Plugin
+	ServiceLabel servicelabel.ReaderAPI
 	//local.PluginInfraDeps                      // inject
 	KvPlugin   keyval.KvProtoPlugin // inject
 	ResyncOrch resync.Subscriber    // inject
