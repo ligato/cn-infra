@@ -15,6 +15,7 @@
 package kvdbsync
 
 import (
+	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logrus"
 )
@@ -29,7 +30,13 @@ func NewPlugin(opts ...Option) *Plugin {
 
 	deps := &p.Deps
 	if deps.PluginName == "" {
-		deps.PluginName = "kvdb-sync"
+		prefix := "kvdb"
+		if deps.KvPlugin != nil {
+			if kvdb, ok := deps.KvPlugin.(core.PluginNamed); ok {
+				prefix = kvdb.Name()
+			}
+		}
+		deps.PluginName = core.PluginName(prefix + "-datasync")
 	}
 	if deps.Log == nil {
 		deps.Log = logging.ForPlugin(deps.PluginName.String(), logrus.DefaultRegistry)

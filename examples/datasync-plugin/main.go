@@ -7,7 +7,6 @@ import (
 
 	"github.com/ligato/cn-infra/agent"
 	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/kvdbsync"
 	"github.com/ligato/cn-infra/datasync/resync"
@@ -63,17 +62,14 @@ func main() {
 
 	etcdDataSync := kvdbsync.NewPlugin(
 		kvdbsync.UseDeps(kvdbsync.Deps{
-			PluginName: "etcd-datasync",
 			KvPlugin:   etcd.DefaultPlugin,
 			ResyncOrch: resync.DefaultPlugin,
 		}),
 	)
 	p := &ExamplePlugin{
 		Deps: Deps{
-			PluginName:   PluginName,
 			Log:          logging.ForPlugin(PluginName, logrus.DefaultRegistry),
 			PluginConfig: config.ForPlugin(PluginName),
-			ServiceLabel: *servicelabel.DefaultPlugin,
 			Publisher:    etcdDataSync,
 			Watcher:      etcdDataSync,
 		},
@@ -113,13 +109,17 @@ type ExamplePlugin struct {
 
 // Deps lists dependencies of ExamplePlugin.
 type Deps struct {
-	PluginName   core.PluginName
 	Log          logging.PluginLogger
 	PluginConfig config.PluginConfig
 	ServiceLabel servicelabel.Plugin
 	//local.PluginInfraDeps                             // injected
 	Publisher datasync.KeyProtoValWriter  // injected - To write ETCD data
 	Watcher   datasync.KeyValProtoWatcher // injected - To watch ETCD data
+}
+
+// Name implements PluginNamed
+func (p *ExamplePlugin) Name() string {
+	return PluginName
 }
 
 // Init starts the consumer.
