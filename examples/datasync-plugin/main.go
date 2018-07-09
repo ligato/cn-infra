@@ -12,7 +12,6 @@ import (
 	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval/etcd"
 	"github.com/ligato/cn-infra/examples/model"
-	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/servicelabel"
@@ -70,6 +69,7 @@ func main() {
 		Deps: Deps{
 			Log:          logging.ForPlugin(PluginName, logrus.DefaultRegistry),
 			PluginConfig: config.ForPlugin(PluginName),
+			ServiceLabel: servicelabel.DefaultPlugin,
 			Publisher:    etcdDataSync,
 			Watcher:      etcdDataSync,
 		},
@@ -77,12 +77,6 @@ func main() {
 	}
 
 	a := agent.NewAgent(
-		/*agent.Plugins(
-			core.NamePlugin("status-check", statuscheck.DefaultPlugin),
-			core.NamePlugin("etcd", etcd.DefaultPlugin),
-			core.NamePlugin("resync", resync.DefaultPlugin),
-		),*/
-		agent.Plugins(statuscheck.DefaultPlugin, etcd.DefaultPlugin, resync.DefaultPlugin),
 		agent.AllPlugins(p),
 		agent.DoneChan(exampleFinished),
 	)
@@ -111,7 +105,7 @@ type ExamplePlugin struct {
 type Deps struct {
 	Log          logging.PluginLogger
 	PluginConfig config.PluginConfig
-	ServiceLabel servicelabel.Plugin
+	ServiceLabel servicelabel.ReaderAPI
 	//local.PluginInfraDeps                             // injected
 	Publisher datasync.KeyProtoValWriter  // injected - To write ETCD data
 	Watcher   datasync.KeyValProtoWatcher // injected - To watch ETCD data

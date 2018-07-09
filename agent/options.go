@@ -111,6 +111,9 @@ func AllPlugins(plugin core.Plugin) Option {
 		o.Plugins = append(o.Plugins, plugins...)
 		typ := reflect.TypeOf(plugin)
 		logrus.DefaultLogger().Infof("recursively found %d plugins inside %v", len(plugins), typ)
+		for _, plug := range plugins {
+			logrus.DefaultLogger().Debugf(" - plugin: %v %v", reflect.TypeOf(plug), plug)
+		}
 		p, ok := plugin.(core.PluginNamed)
 		if !ok {
 			p = core.NamePlugin(typ.String(), plugin)
@@ -120,21 +123,32 @@ func AllPlugins(plugin core.Plugin) Option {
 }
 
 func listPlugins(val reflect.Value, uniqueness map[core.Plugin]interface{}) ([]core.PluginNamed, error) {
+	origTyp := val.Type()
 	typ := val.Type()
 
-	logrus.DefaultLogger().Debug("inspect plugin structure ", val.Type(), typ)
+	logrus.DefaultLogger().Debugf("=> inspect plugin structure for: %v (%v) %v ", typ, typ.Kind(), val)
+
+	if typ.Kind() == reflect.Interface {
+		if val.IsNil() {
+			logrus.DefaultLogger().Debugf(" - val is nil")
+			return nil, nil
+		}
+		val = val.Elem()
+		typ = val.Type()
+		logrus.DefaultLogger().Debugf(" - interface to: %v %v", typ, val)
+	}
 
 	if typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()
-		logrus.DefaultLogger().Debug("typ ptr kind", typ)
+		//logrus.DefaultLogger().Debug(" - typ ptr kind: ", typ)
 	}
-
 	if val.Kind() == reflect.Ptr {
 		val = val.Elem()
-		logrus.DefaultLogger().Debug("val ptr kind", val)
+		//logrus.DefaultLogger().Debug(" - val ptr kind: ", val)
 	}
 
 	if !val.IsValid() {
+		logrus.DefaultLogger().Debugf(" - val is invalid")
 		return nil, nil
 	}
 
@@ -142,66 +156,79 @@ func listPlugins(val reflect.Value, uniqueness map[core.Plugin]interface{}) ([]c
 		return res, errors.New("does not satisfy the Plugin interface")
 	}*/
 
-	pluginType := reflect.TypeOf((*core.Plugin)(nil)).Elem()
+	if typ.Kind() != reflect.Struct {
+		logrus.DefaultLogger().Debugf(" - is not a struct: %v %v", typ.Kind(), val.Kind())
+		return nil, nil
+	}
 
 	var res []core.PluginNamed
 
-	if typ.Kind() == reflect.Struct {
-		numField := typ.NumField()
-		for i := 0; i < numField; i++ {
-			field := typ.Field(i)
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
 
-			exported := field.PkgPath == "" // PkgPath is empty for exported fields
-			if !exported {
+		exported := field.PkgPath == "" // PkgPath is empty for exported fields
+		if !exported {
+			continue
+		}
+
+		fieldVal := val.Field(i)
+
+		logrus.DefaultLogger().Debugf(" - check %v field[%d]: %v %v", typ, i, field.Type, fieldVal)
+
+		var fieldPlug core.PluginNamed
+		plug, implementsPlugin := isFieldPlugin(field, fieldVal)
+		if implementsPlugin {
+			if plug == nil {
+				logrus.DefaultLogger().WithField("fieldName", field.Name).
+					Debug(" - found nil plugin")
 				continue
 			}
 
-			fieldVal := val.Field(i)
-			plug, implementsPlugin := isFieldPlugin(field, fieldVal, pluginType)
-			if implementsPlugin {
-				if plug != nil {
-					_, found := uniqueness[plug]
-					if !found {
-						uniqueness[plug] = nil
-						p, ok := plug.(core.PluginNamed)
-						if !ok {
-							p = core.NamePlugin(field.Name, plug)
-						}
-						res = append(res, p)
-
-						logrus.DefaultLogger().
-							WithField("fieldName", field.Name).
-							Debugf("Found plugin: %v (%v)", field.Type, p.Name())
-					} else {
-						logrus.DefaultLogger().
-							WithField("fieldName", field.Name).
-							Debugf("Found duplicate plugin: %v", field.Type)
-					}
-				} else {
-					logrus.DefaultLogger().
-						WithField("fieldName", field.Name).
-						Debug("Found nil plugin")
-				}
-			} else {
-				// try to inspect plugin structure recursively
-				l, err := listPlugins(fieldVal, uniqueness)
-				if err != nil {
-					logrus.DefaultLogger().
-						WithField("fieldName", field.Name).
-						Debug("Bad field: ", err)
-				} else {
-					logrus.DefaultLogger().Debugf("listed %v plugins from %v (%v)", len(l), field.Name, field.Type)
-					res = append(res, l...)
-				}
+			_, found := uniqueness[plug]
+			if found {
+				logrus.DefaultLogger().WithField("fieldName", field.Name).
+					Debugf(" - Found duplicate plugin: %v", field.Type)
+				continue
 			}
+
+			uniqueness[plug] = nil
+			p, ok := plug.(core.PluginNamed)
+			if !ok {
+				p = core.NamePlugin(field.Name, plug)
+			}
+			//res = append(res, p)
+			fieldPlug = p
+
+			logrus.DefaultLogger().WithField("fieldName", field.Name).
+				Warnf(" - Found plugin: %v (%v)", p.Name(), field.Type)
+		}
+
+		// try to inspect plugin structure recursively
+		l, err := listPlugins(fieldVal, uniqueness)
+		if err != nil {
+			logrus.DefaultLogger().WithField("fieldName", field.Name).
+				Debug(" - Bad field: ", err)
+			continue
+		}
+
+		logrus.DefaultLogger().Debugf(" - listed %v plugins from %v (%v)", len(l), field.Name, field.Type)
+		res = append(res, l...)
+
+		if fieldPlug != nil {
+			res = append(res, fieldPlug)
 		}
 	}
+
+	logrus.DefaultLogger().Debugf("-> found %v plugins in %v (%v)", len(res), typ, origTyp.Kind())
 
 	return res, nil
 }
 
-func isFieldPlugin(field reflect.StructField, fieldVal reflect.Value, pluginType reflect.Type) (
-	plugin core.Plugin, implementsPlugin bool) {
+var pluginType = reflect.TypeOf((*core.Plugin)(nil)).Elem()
+
+func isFieldPlugin(field reflect.StructField, fieldVal reflect.Value) (core.Plugin, bool) {
+
+	logrus.DefaultLogger().Debugf(" - is field plugin: %v (%v) %v", field.Type, fieldVal.Kind(), fieldVal)
 
 	switch fieldVal.Kind() {
 	case reflect.Struct:
@@ -217,13 +244,26 @@ func isFieldPlugin(field reflect.StructField, fieldVal reflect.Value, pluginType
 	case reflect.Ptr, reflect.Interface:
 		if plug, ok := fieldVal.Interface().(core.Plugin); ok {
 			if fieldVal.IsNil() {
-				logrus.DefaultLogger().WithField("fieldName", field.Name).
-					Debug("Field is nil ", pluginType)
 				return nil, true
 			}
 			return plug, true
+		} else {
+			logrus.DefaultLogger().Debugf(" - does not implement Plugin: %v", field.Type.Implements(pluginType))
 		}
-
+		/*case reflect.Interface:
+		fieldVal = fieldVal.Elem()
+		if !fieldVal.IsValid() {
+			return nil, true
+		}
+		if plug, ok := fieldVal.Interface().(core.Plugin); ok {
+			if fieldVal.IsNil() {
+				return nil, true
+			}
+			return plug, true
+		} else {
+			logrus.DefaultLogger().Debugf(" - does not implement Plugin: %v", fieldVal.Type())
+		}*/
 	}
+
 	return nil, false
 }
