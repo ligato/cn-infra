@@ -1,23 +1,9 @@
-//  Copyright (c) 2018 Cisco and/or its affiliates.
-//
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at:
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License.
-
-package grpc
+package prometheus
 
 import (
-	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logrus"
+	"github.com/ligato/cn-infra/rpc/rest"
 )
 
 // DefaultPlugin is default instance of Plugin
@@ -38,9 +24,12 @@ func NewPlugin(opts ...Option) *Plugin {
 	if deps.Log == nil {
 		deps.Log = logging.ForPlugin(deps.PluginName.String(), logrus.DefaultRegistry)
 	}
-	if deps.PluginConfig == nil {
-		deps.PluginConfig = config.ForPlugin(deps.PluginName.String())
+	if deps.HTTP == nil {
+		deps.HTTP = rest.DefaultPlugin
 	}
+	/*if deps.PluginConfig == nil {
+		deps.PluginConfig = config.ForPlugin(deps.PluginName.String())
+	}*/
 
 	return p
 }
@@ -54,14 +43,15 @@ func UseDeps(deps Deps) Option {
 		d := &p.Deps
 		d.PluginName = deps.PluginName
 		d.Log = deps.Log
-		d.PluginConfig = deps.PluginConfig
+		//d.PluginConfig = deps.PluginConfig
 		d.HTTP = deps.HTTP
 	}
 }
 
 // UseConf injects the Plugin's Configuration
-func UseConf(conf Config) Option {
+/*func UseConf(conf Config) Option {
 	return func(p *Plugin) {
 		p.Config = &conf
 	}
 }
+*/

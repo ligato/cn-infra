@@ -16,14 +16,16 @@ package prometheus
 
 import (
 	"errors"
-	"github.com/ligato/cn-infra/flavors/local"
+	"net/http"
+	"strings"
+	"sync"
+
+	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/unrolled/render"
-	"net/http"
-	"strings"
-	"sync"
 )
 
 // DefaultRegistry default Prometheus metrics URL
@@ -48,7 +50,9 @@ type Plugin struct {
 
 // Deps lists dependencies of the plugin.
 type Deps struct {
-	local.PluginInfraDeps // inject
+	Log        logging.PluginLogger
+	PluginName core.PluginName
+	//local.PluginInfraDeps // inject
 	// HTTP server used to expose metrics
 	HTTP rest.HTTPHandlers // inject
 }

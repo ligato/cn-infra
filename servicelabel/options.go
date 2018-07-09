@@ -1,5 +1,6 @@
 package servicelabel
 
+// DefaultPlugin is default instance of Plugin
 var DefaultPlugin = NewPlugin()
 
 // NewPlugin creates a new Plugin with the provides Options

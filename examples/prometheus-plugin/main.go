@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"time"
 
-	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/agent"
+	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logrus"
 	prom "github.com/ligato/cn-infra/rpc/prometheus"
-	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -25,9 +26,11 @@ import (
 //       curl localhost:9191/custom
 // ************************************************************************/
 
+const PluginName = "example"
+
 func main() {
 	// Init close channel used to stop the example.
-	exampleFinished := make(chan struct{})
+	/*exampleFinished := make(chan struct{})
 
 	// Start Agent with ExamplePlugin, REST, prometheus plugin & FlavorLocal (reused cn-infra plugins).
 	agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
@@ -52,12 +55,27 @@ func main() {
 			{prometheusPlugin.PluginName, prometheusPlugin},
 			{examplePlug.PluginName, examplePlug}}
 	}))
-	core.EventLoopWithInterrupt(agent, exampleFinished)
+	core.EventLoopWithInterrupt(agent, exampleFinished)*/
+
+	p := &ExamplePlugin{
+		Deps: Deps{
+			Log:        logging.ForPlugin(PluginName, logrus.DefaultRegistry),
+			Prometheus: prom.DefaultPlugin,
+		},
+	}
+
+	a := agent.NewAgent(agent.AllPlugins(p))
+	if err := a.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // Deps group dependencies of the ExamplePlugin
 type Deps struct {
-	local.PluginInfraDeps
+	Log logging.PluginLogger
+	//PluginConfig config.PluginConfig
+	//ServiceLabel servicelabel.ReaderAPI
+	//local.PluginInfraDeps
 	Prometheus prom.API
 }
 
