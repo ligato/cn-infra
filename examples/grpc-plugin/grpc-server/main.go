@@ -2,13 +2,14 @@ package main
 
 import (
 	"errors"
+	"log"
 
+	"github.com/ligato/cn-infra/agent"
+	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/examples/helloworld/helloworld"
 
-	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/flavors/local"
-	"github.com/ligato/cn-infra/flavors/rpc"
 	"github.com/ligato/cn-infra/rpc/grpc"
 )
 
@@ -17,9 +18,11 @@ import (
 // Server.RegisterService(descriptor, service)
 // ************************************************************************/
 
+const PluginName = "example"
+
 func main() {
 	// Init close channel to stop the example after everything was logged
-	exampleFinished := make(chan struct{})
+	/*exampleFinished := make(chan struct{})
 
 	// Start Agent with ExamplePlugin & FlavorRPC (reused cn-infra plugins).
 	agent := rpc.NewAgent(rpc.WithPlugins(func(flavor *rpc.FlavorRPC) []*core.NamedPlugin {
@@ -32,27 +35,44 @@ func main() {
 		}
 		return []*core.NamedPlugin{{examplePlug.PluginName, examplePlug}}
 	}))
-	core.EventLoopWithInterrupt(agent, exampleFinished)
+	core.EventLoopWithInterrupt(agent, exampleFinished)*/
+
+	p := &ExamplePlugin{
+		Deps: Deps{
+			Log:  logging.ForPlugin(PluginName, logrus.DefaultRegistry),
+			GRPC: grpc.DefaultPlugin,
+		},
+	}
+
+	a := agent.NewAgent(agent.AllPlugins(p))
+	if err := a.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // ExamplePlugin presents the PluginLogger API.
 type ExamplePlugin struct {
 	Deps
-	exampleFinished chan struct{}
+	//exampleFinished chan struct{}
 }
 
 // Deps - dependencies for ExamplePlugin
 type Deps struct {
-	local.PluginLogDeps
+	Log logging.PluginLogger
+	//local.PluginLogDeps
 	GRPC grpc.Server
 }
 
 // Init demonstrates the usage of PluginLogger API.
-func (plugin *ExamplePlugin) Init() (err error) {
+func (plugin *ExamplePlugin) Init() error {
 	plugin.Log.Info("Example Init")
 
 	helloworld.RegisterGreeterServer(plugin.GRPC.GetServer(), &GreeterService{})
 
+	return nil
+}
+
+func (plugin *ExamplePlugin) Close() error {
 	return nil
 }
 
