@@ -32,7 +32,7 @@ func NewPlugin(opts ...Option) *Plugin {
 
 	deps := &p.Deps
 	if deps.PluginName == "" {
-		deps.PluginName = "GRPC"
+		deps.PluginName = "grpc"
 	}
 	if deps.Log == nil {
 		deps.Log = logging.ForPlugin(deps.PluginName.String(), logrus.DefaultRegistry)

@@ -18,11 +18,13 @@ import (
 	"errors"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/datasync/syncbase"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
 )
 
@@ -39,9 +41,12 @@ type Plugin struct {
 // Deps groups dependencies injected into the plugin so that they are
 // logically separated from other plugin fields.
 type Deps struct {
-	local.PluginInfraDeps                      // inject
-	ResyncOrch            resync.Subscriber    // inject
-	KvPlugin              keyval.KvProtoPlugin // inject
+	Log          logging.PluginLogger // inject
+	PluginName   core.PluginName      // inject
+	ServiceLabel servicelabel.Plugin
+	//local.PluginInfraDeps                      // inject
+	ResyncOrch resync.Subscriber    // inject
+	KvPlugin   keyval.KvProtoPlugin // inject
 }
 
 type infraDeps interface {
@@ -58,11 +63,11 @@ func (plugin /*intentionally without pointer receiver*/ Plugin) OfDifferentAgent
 	microserviceLabel string, infraDeps infraDeps) *Plugin {
 
 	// plugin name suffixed by micorservice label
-	plugin.Deps.PluginInfraDeps = *infraDeps.InfraDeps(string(
+	/*plugin.Deps.PluginInfraDeps = *infraDeps.InfraDeps(string(
 		plugin.Deps.PluginInfraDeps.PluginName) + "-" + microserviceLabel)
 
 	// this is important - here comes microservice label of different agent
-	plugin.Deps.PluginInfraDeps.ServiceLabel = servicelabel.OfDifferentAgent(microserviceLabel)
+	plugin.Deps.PluginInfraDeps.ServiceLabel = servicelabel.OfDifferentAgent(microserviceLabel)*/
 	return &plugin // copy (no pointer receiver)
 }
 

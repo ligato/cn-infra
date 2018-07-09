@@ -56,6 +56,11 @@ type Deps struct {
 	Resync *resync.Plugin
 }
 
+// Name implements PluginNamed
+func (p *Plugin) Name() string {
+	return p.PluginName.String()
+}
+
 // Init retrieves ETCD configuration and establishes a new connection
 // with the etcd data store.
 // If the configuration file doesn't exist or cannot be read, the returned error

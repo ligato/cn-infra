@@ -30,7 +30,7 @@ func NewPlugin(opts ...Option) *Plugin {
 
 	deps := &p.Deps
 	if deps.PluginName == "" {
-		deps.PluginName = "HTTP"
+		deps.PluginName = "http"
 	}
 	if deps.Log == nil {
 		deps.Log = logging.ForPlugin(deps.PluginName.String(), logrus.DefaultRegistry)

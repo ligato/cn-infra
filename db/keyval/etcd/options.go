@@ -16,6 +16,7 @@ package etcd
 
 import (
 	"github.com/ligato/cn-infra/config"
+	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logrus"
 )
@@ -32,13 +33,16 @@ func NewPlugin(opts ...Option) *Plugin {
 
 	deps := &p.Deps
 	if deps.PluginName == "" {
-		deps.PluginName = "ETCD"
+		deps.PluginName = "etcd"
 	}
 	if deps.Log == nil {
 		deps.Log = logging.ForPlugin(deps.PluginName.String(), logrus.DefaultRegistry)
 	}
 	if deps.PluginConfig == nil {
 		deps.PluginConfig = config.ForPlugin(deps.PluginName.String())
+	}
+	if deps.StatusCheck == nil {
+		deps.StatusCheck = statuscheck.DefaultPlugin
 	}
 
 	return p

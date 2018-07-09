@@ -64,6 +64,11 @@ type Deps struct {
 	Transport  datasync.KeyProtoValWriter // inject (optional)
 }
 
+// Name implements PluginNamed
+func (p *Plugin) Name() string {
+	return p.PluginName.String()
+}
+
 // Init prepares the initial status data.
 func (p *Plugin) Init() error {
 	// write initial status data into ETCD

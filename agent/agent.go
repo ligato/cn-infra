@@ -91,6 +91,8 @@ func (a *agent) startSignalWrapper() error {
 		}
 		// Wait for signal or agent stop
 		select {
+		case <-a.opts.DoneChan:
+			logrus.DefaultLogger().Info("Done channel closed, stopping.")
 		case <-done:
 			logrus.DefaultLogger().Info("Context canceled, stopping.")
 		case s := <-sig:
@@ -107,8 +109,10 @@ func (a *agent) startSignalWrapper() error {
 }
 
 func (a *agent) start() error {
+	logrus.DefaultLogger().Debugf("initializing %d plugins", len(a.opts.Plugins))
 	// Init plugins
 	for _, p := range a.opts.Plugins {
+		logrus.DefaultLogger().Debugf("Init: %v", p.Name())
 		if err := p.Init(); err != nil {
 			return err
 		}

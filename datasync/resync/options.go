@@ -1,10 +1,11 @@
-package logmanager
+package resync
 
 import (
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logrus"
 )
 
+// DefaultPlugin is default instance of Plugin
 var DefaultPlugin = NewPlugin()
 
 // NewPlugin creates a new Plugin with the provides Options
@@ -17,13 +18,10 @@ func NewPlugin(opts ...Option) *Plugin {
 
 	deps := &p.Deps
 	if deps.PluginName == "" {
-		deps.PluginName = "logs"
+		deps.PluginName = "resync"
 	}
 	if deps.Log == nil {
 		deps.Log = logging.ForPlugin(deps.PluginName.String(), logrus.DefaultRegistry)
-	}
-	if deps.LogRegistry == nil {
-		deps.LogRegistry = logrus.DefaultRegistry
 	}
 
 	return p
@@ -37,14 +35,5 @@ func UseDeps(deps Deps) Option {
 	return func(p *Plugin) {
 		p.Deps.PluginName = deps.PluginName
 		p.Deps.Log = deps.Log
-		p.Deps.HTTP = deps.HTTP
-		p.Deps.LogRegistry = deps.LogRegistry
-	}
-}
-
-// UseConf injects the Plugin's Configuration
-func UseConf(conf Conf) Option {
-	return func(p *Plugin) {
-		p.Conf = &conf
 	}
 }

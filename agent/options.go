@@ -16,7 +16,6 @@ package agent
 
 import (
 	"context"
-	"errors"
 	"os"
 	"reflect"
 	"syscall"
@@ -31,6 +30,7 @@ type Options struct {
 	Version        string
 	MaxStartupTime time.Duration
 	QuitSignals    []os.Signal
+	DoneChan       chan struct{}
 
 	Plugins []core.PluginNamed
 
@@ -86,6 +86,12 @@ func QuitSignals(sigs ...os.Signal) Option {
 	}
 }
 
+func DoneChan(ch chan struct{}) Option {
+	return func(o *Options) {
+		o.DoneChan = ch
+	}
+}
+
 // Plugins creates an Option that adds a list of Plugins to the Agent's Plugin list
 func Plugins(plugins ...core.PluginNamed) Option {
 	return func(o *Options) {
@@ -114,29 +120,31 @@ func AllPlugins(plugin core.Plugin) Option {
 }
 
 func listPlugins(val reflect.Value, uniqueness map[core.Plugin]interface{}) ([]core.PluginNamed, error) {
-	logrus.DefaultLogger().Debug("inspect plugin structure ", val.Type())
-
-	var res []core.PluginNamed
-
 	typ := val.Type()
+
+	logrus.DefaultLogger().Debug("inspect plugin structure ", val.Type(), typ)
 
 	if typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()
+		logrus.DefaultLogger().Debug("typ ptr kind", typ)
 	}
 
 	if val.Kind() == reflect.Ptr {
 		val = val.Elem()
+		logrus.DefaultLogger().Debug("val ptr kind", val)
 	}
 
 	if !val.IsValid() {
-		return res, nil
+		return nil, nil
 	}
 
-	if _, ok := val.Addr().Interface().(core.Plugin); !ok {
+	/*if _, ok := val.Addr().Interface().(core.Plugin); !ok {
 		return res, errors.New("does not satisfy the Plugin interface")
-	}
+	}*/
 
 	pluginType := reflect.TypeOf((*core.Plugin)(nil)).Elem()
+
+	var res []core.PluginNamed
 
 	if typ.Kind() == reflect.Struct {
 		numField := typ.NumField()
@@ -180,8 +188,9 @@ func listPlugins(val reflect.Value, uniqueness map[core.Plugin]interface{}) ([]c
 				if err != nil {
 					logrus.DefaultLogger().
 						WithField("fieldName", field.Name).
-						Error("Bad field: must satisfy Plugin: ", err)
+						Debug("Bad field: ", err)
 				} else {
+					logrus.DefaultLogger().Debugf("listed %v plugins from %v (%v)", len(l), field.Name, field.Type)
 					res = append(res, l...)
 				}
 			}
