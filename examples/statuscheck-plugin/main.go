@@ -15,16 +15,17 @@
 package main
 
 import (
+	"log"
 	"time"
 
+	"github.com/ligato/cn-infra/agent"
 	"github.com/ligato/cn-infra/db/keyval/etcd"
 	"github.com/ligato/cn-infra/health/statuscheck"
+	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logrus"
 
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync/kvdbsync"
 	"github.com/ligato/cn-infra/datasync/resync"
-	"github.com/ligato/cn-infra/flavors/connectors"
-	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
@@ -34,12 +35,14 @@ import (
 // ExamplePlugin periodically prints the status.
 // ************************************************************************/
 
+const PluginName = "example"
+
 func main() {
 	// Init close channel used to stop the example.
 	exampleFinished := make(chan struct{})
 
 	// Start Agent with ExamplePlugin, ETCDPlugin & FlavorLocal (reused cn-infra plugins).
-	agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
+	/*agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
 		etcdPlug := &etcd.Plugin{}
 		etcdDataSync := &kvdbsync.Plugin{}
 		resyncOrch := &resync.Plugin{}
@@ -58,16 +61,43 @@ func main() {
 			{resyncOrch.PluginName, resyncOrch},
 			{examplePlug.PluginName, examplePlug}}
 	}))
-	core.EventLoopWithInterrupt(agent, nil)
+	core.EventLoopWithInterrupt(agent, nil)*/
+
+	etcdDataSync := kvdbsync.NewPlugin(
+		kvdbsync.UseDeps(kvdbsync.Deps{
+			KvPlugin:   etcd.DefaultPlugin,
+			ResyncOrch: resync.DefaultPlugin,
+		}),
+	)
+	p := &ExamplePlugin{
+		Deps: Deps{
+			Log:           logging.ForPlugin(PluginName, logrus.DefaultRegistry),
+			StatusMonitor: statuscheck.DefaultPlugin,
+		},
+		closeChannel: exampleFinished,
+	}
+
+	a := agent.NewAgent(
+		agent.AllPlugins(etcdDataSync, p),
+		agent.DoneChan(exampleFinished),
+	)
+	if err := a.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // ExamplePlugin demonstrates the usage of datasync API.
 type ExamplePlugin struct {
-	local.PluginInfraDeps // injected
-	StatusMonitor         statuscheck.StatusReader
+	Deps
 
 	// Fields below are used to properly finish the example.
 	closeChannel chan struct{}
+}
+
+type Deps struct {
+	Log logging.PluginLogger
+	//local.PluginInfraDeps // injected
+	StatusMonitor statuscheck.StatusReader
 }
 
 // Init starts the consumer.

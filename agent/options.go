@@ -101,24 +101,26 @@ func Plugins(plugins ...core.PluginNamed) Option {
 
 // AllPlugins creates an Option that adds all of the nested
 // plugins recursively to the Agent's plugin list.
-func AllPlugins(plugin core.Plugin) Option {
+func AllPlugins(plugins ...core.Plugin) Option {
 	return func(o *Options) {
 		uniqueness := map[core.Plugin]interface{}{}
-		plugins, err := listPlugins(reflect.ValueOf(plugin), uniqueness)
-		if err != nil {
-			panic(err)
+		for _, plugin := range plugins {
+			plugins, err := listPlugins(reflect.ValueOf(plugin), uniqueness)
+			if err != nil {
+				panic(err)
+			}
+			o.Plugins = append(o.Plugins, plugins...)
+			typ := reflect.TypeOf(plugin)
+			logrus.DefaultLogger().Infof("recursively found %d plugins inside %v", len(plugins), typ)
+			for _, plug := range plugins {
+				logrus.DefaultLogger().Debugf(" - plugin: %v %v", reflect.TypeOf(plug), plug)
+			}
+			p, ok := plugin.(core.PluginNamed)
+			if !ok {
+				p = core.NamePlugin(typ.String(), plugin)
+			}
+			o.Plugins = append(o.Plugins, p)
 		}
-		o.Plugins = append(o.Plugins, plugins...)
-		typ := reflect.TypeOf(plugin)
-		logrus.DefaultLogger().Infof("recursively found %d plugins inside %v", len(plugins), typ)
-		for _, plug := range plugins {
-			logrus.DefaultLogger().Debugf(" - plugin: %v %v", reflect.TypeOf(plug), plug)
-		}
-		p, ok := plugin.(core.PluginNamed)
-		if !ok {
-			p = core.NamePlugin(typ.String(), plugin)
-		}
-		o.Plugins = append(o.Plugins, p)
 	}
 }
 
