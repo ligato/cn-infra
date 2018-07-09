@@ -1,17 +1,22 @@
 package main
 
 import (
+	"log"
 	"strings"
 	"time"
 
+	"github.com/ligato/cn-infra/agent"
+	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/kvdbsync"
 	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval/etcd"
 	"github.com/ligato/cn-infra/examples/model"
-	"github.com/ligato/cn-infra/flavors/connectors"
-	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/health/statuscheck"
+	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logrus"
+	"github.com/ligato/cn-infra/servicelabel"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"golang.org/x/net/context"
 )
@@ -26,12 +31,14 @@ import (
 // the log.
 // ************************************************************************/
 
+const PluginName = "example"
+
 func main() {
 	// Init close channel used to stop the example.
 	exampleFinished := make(chan struct{})
 
 	// Start Agent with ExamplePlugin, ETCDPlugin & FlavorLocal (reused cn-infra plugins).
-	agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
+	/*agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
 		etcdPlug := &etcd.Plugin{}
 		etcdDataSync := &kvdbsync.Plugin{}
 		resyncOrch := &resync.Plugin{}
@@ -52,16 +59,50 @@ func main() {
 			{examplePlug.PluginName, examplePlug},
 		}
 	}))
-	core.EventLoopWithInterrupt(agent, exampleFinished)
+	core.EventLoopWithInterrupt(agent, exampleFinished)*/
+
+	etcdDataSync := kvdbsync.NewPlugin(
+		kvdbsync.UseDeps(kvdbsync.Deps{
+			PluginName: "etcd-datasync",
+			KvPlugin:   etcd.DefaultPlugin,
+			ResyncOrch: resync.DefaultPlugin,
+		}),
+	)
+	p := &ExamplePlugin{
+		Deps: Deps{
+			PluginName:   PluginName,
+			Log:          logging.ForPlugin(PluginName, logrus.DefaultRegistry),
+			PluginConfig: config.ForPlugin(PluginName),
+			ServiceLabel: *servicelabel.DefaultPlugin,
+			Publisher:    etcdDataSync,
+			Watcher:      etcdDataSync,
+		},
+		closeChannel: exampleFinished,
+	}
+
+	a := agent.NewAgent(
+		/*agent.Plugins(
+			core.NamePlugin("status-check", statuscheck.DefaultPlugin),
+			core.NamePlugin("etcd", etcd.DefaultPlugin),
+			core.NamePlugin("resync", resync.DefaultPlugin),
+		),*/
+		agent.Plugins(statuscheck.DefaultPlugin, etcd.DefaultPlugin, resync.DefaultPlugin),
+		agent.AllPlugins(p),
+		agent.DoneChan(exampleFinished),
+	)
+	if err := a.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // ExamplePlugin demonstrates the usage of datasync API.
 type ExamplePlugin struct {
 	Deps
 
-	changeChannel chan datasync.ChangeEvent  // Channel used by the watcher for change events.
-	resyncChannel chan datasync.ResyncEvent  // Channel used by the watcher for resync events.
-	context       context.Context            // Used to cancel watching.
+	changeChannel chan datasync.ChangeEvent // Channel used by the watcher for change events.
+	resyncChannel chan datasync.ResyncEvent // Channel used by the watcher for resync events.
+	context       context.Context           // Used to cancel watching.
+	cancel        context.CancelFunc
 	watchDataReg  datasync.WatchRegistration // To subscribe on data change/resync events.
 	// Fields below are used to properly finish the example.
 	eventCounter  uint8
@@ -70,15 +111,27 @@ type ExamplePlugin struct {
 	closeChannel chan struct{}
 }
 
+// Deps lists dependencies of ExamplePlugin.
+type Deps struct {
+	PluginName   core.PluginName
+	Log          logging.PluginLogger
+	PluginConfig config.PluginConfig
+	ServiceLabel servicelabel.Plugin
+	//local.PluginInfraDeps                             // injected
+	Publisher datasync.KeyProtoValWriter  // injected - To write ETCD data
+	Watcher   datasync.KeyValProtoWatcher // injected - To watch ETCD data
+}
+
 // Init starts the consumer.
 func (plugin *ExamplePlugin) Init() error {
 	// Initialize plugin fields.
 	plugin.resyncChannel = make(chan datasync.ResyncEvent)
 	plugin.changeChannel = make(chan datasync.ChangeEvent)
-	plugin.context = context.Background()
+	plugin.context, plugin.cancel = context.WithCancel(context.Background())
 
 	// Start the consumer (ETCD watcher).
 	go plugin.consumer()
+
 	// Subscribe watcher to be able to watch on data changes and resync events.
 	err := plugin.subscribeWatcher()
 	if err != nil {
@@ -194,7 +247,8 @@ func (plugin *ExamplePlugin) consumer() {
 			plugin.Log.Infof("Resync event %v called", rs)
 			rs.Done(nil)
 		case <-plugin.context.Done():
-			plugin.Log.Warnf("Stop watching events")
+			plugin.Log.Debugf("Stop watching events")
+			return
 		}
 	}
 }
@@ -221,10 +275,10 @@ func (plugin *ExamplePlugin) closeExample() {
 		// Two events are expected for successful example completion.
 		if plugin.publisherDone {
 			if plugin.eventCounter != 2 {
-				plugin.Log.Error("etcd/datasync example failed")
+				plugin.Log.Error("etcd/datasync example failed", plugin.eventCounter)
 			}
 			// Close the watcher
-			plugin.context.Done()
+			plugin.cancel()
 			plugin.Log.Infof("etcd/datasync example finished, sending shutdown ...")
 			// Close the example
 			close(plugin.closeChannel)

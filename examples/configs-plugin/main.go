@@ -31,6 +31,7 @@ import (
 // The flag name is composed of the plugin name and the suffix config.FlagSuffix.
 // The default (flag value) filename for the configuration file is the plugin
 // name with the extension ".conf".
+
 const PluginName = "example"
 
 // *************************************************************************
