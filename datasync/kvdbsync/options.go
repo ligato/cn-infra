@@ -46,7 +46,7 @@ func UseDeps(deps Deps) Option {
 	return func(p *Plugin) {
 		p.Deps.PluginName = deps.PluginName
 		p.Deps.Log = deps.Log
-		p.Deps.ResyncOrch = deps.ResyncOrch
 		p.Deps.KvPlugin = deps.KvPlugin
+		p.Deps.ResyncOrch = deps.ResyncOrch
 	}
 }

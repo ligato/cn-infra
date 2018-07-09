@@ -45,8 +45,8 @@ type Deps struct {
 	PluginName   core.PluginName      // inject
 	ServiceLabel servicelabel.Plugin
 	//local.PluginInfraDeps                      // inject
-	ResyncOrch resync.Subscriber    // inject
 	KvPlugin   keyval.KvProtoPlugin // inject
+	ResyncOrch resync.Subscriber    // inject
 }
 
 // Name implements PluginNamed

@@ -171,11 +171,11 @@ func listPlugins(val reflect.Value, uniqueness map[core.Plugin]interface{}) ([]c
 
 						logrus.DefaultLogger().
 							WithField("fieldName", field.Name).
-							Debug("Found plugin ", field.Type)
+							Debugf("Found plugin: %v (%v)", field.Type, p.Name())
 					} else {
 						logrus.DefaultLogger().
 							WithField("fieldName", field.Name).
-							Debug("Found plugin with non unique name")
+							Debugf("Found duplicate plugin: %v", field.Type)
 					}
 				} else {
 					logrus.DefaultLogger().
