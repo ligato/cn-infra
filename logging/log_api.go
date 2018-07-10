@@ -106,7 +106,6 @@ type PluginLogger interface {
 	// Plugin has by default possibility to log
 	// Logger name is initialized with plugin name
 	Logger
-
 	// LogFactory can be optionally used by large plugins
 	// to create child loggers (their names are prefixed by plugin logger name)
 	LogFactory
@@ -143,8 +142,9 @@ func ForPlugin(name string, factory LogFactory) PluginLogger {
 	}
 }
 
-func (factory *prefixedLogFactory) NewLogger(name string) Logger {
-	return factory.delegate.NewLogger(factory.prefix + name)
+type pluginLogger struct {
+	Logger
+	LogFactory
 }
 
 type prefixedLogFactory struct {
@@ -152,7 +152,6 @@ type prefixedLogFactory struct {
 	delegate LogFactory
 }
 
-type pluginLogger struct {
-	Logger
-	LogFactory
+func (factory *prefixedLogFactory) NewLogger(name string) Logger {
+	return factory.delegate.NewLogger(factory.prefix + name)
 }

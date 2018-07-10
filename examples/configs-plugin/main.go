@@ -59,8 +59,10 @@ func main() {
 	core.EventLoopWithInterrupt(agent, exampleFinished)*/
 
 	p := &ExamplePlugin{
-		Log:             logging.ForPlugin(PluginName, logrus.DefaultRegistry),
-		PluginConfig:    config.ForPlugin(PluginName),
+		Deps: Deps{
+			Log:          logging.ForPlugin(PluginName, logrus.DefaultRegistry),
+			PluginConfig: config.ForPlugin(PluginName),
+		},
 		exampleFinished: exampleFinished,
 	}
 	a := agent.NewAgent(
@@ -74,13 +76,17 @@ func main() {
 
 // ExamplePlugin demonstrates the use of injected Config plugin.
 type ExamplePlugin struct {
-	Log          logging.PluginLogger
-	PluginConfig config.PluginConfig
-	//local.PluginInfraDeps // this field is usually injected in flavor
+	Deps
 
 	*Conf // it is possible to set config value programmatically (can be overridden)
 
 	exampleFinished chan struct{}
+}
+
+type Deps struct {
+	Log          logging.PluginLogger
+	PluginConfig config.PluginConfig
+	//local.PluginInfraDeps // this field is usually injected in flavor
 }
 
 // Conf - example config binding
