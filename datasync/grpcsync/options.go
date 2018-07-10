@@ -26,7 +26,6 @@ type Option func(*Plugin)
 // UseDeps injects a particular set of Dependencies
 func UseDeps(deps Deps) Option {
 	return func(p *Plugin) {
-		d := &p.Deps
-		d.GRPC = deps.GRPC
+		p.Deps.GRPC = deps.GRPC
 	}
 }

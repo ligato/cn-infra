@@ -50,8 +50,8 @@ type Plugin struct {
 type Deps struct {
 	Log        logging.PluginLogger
 	PluginName core.PluginName
-	HTTP       rest.HTTPHandlers
 	config.PluginConfig
+	HTTP rest.HTTPHandlers
 }
 
 // Init prepares GRPC netListener for registration of individual service

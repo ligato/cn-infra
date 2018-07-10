@@ -16,12 +16,13 @@ package consul
 
 import (
 	"github.com/hashicorp/consul/api"
+	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
-	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/ligato/cn-infra/health/statuscheck"
+	"github.com/ligato/cn-infra/logging"
 )
 
 const (
@@ -39,6 +40,7 @@ type Config struct {
 type Plugin struct {
 	Deps
 
+	*Config
 	// Plugin is disabled if there is no config file available
 	disabled bool
 	// Consul client encapsulation
@@ -53,46 +55,24 @@ type Plugin struct {
 // Deps lists dependencies of the Consul plugin.
 // If injected, Consul plugin will use StatusCheck to signal the connection status.
 type Deps struct {
-	local.PluginInfraDeps
+	Log                 logging.PluginLogger           // inject
+	PluginName          core.PluginName                // inject
+	config.PluginConfig                                // inject
+	StatusCheck         statuscheck.PluginStatusWriter // inject
+	//local.PluginInfraDeps
 	Resync *resync.Plugin
-}
-
-// Disabled returns *true* if the plugin is not in use due to missing configuration.
-func (plugin *Plugin) Disabled() bool {
-	return plugin.disabled
-}
-
-func (plugin *Plugin) getConfig() (*Config, error) {
-	var cfg Config
-	found, err := plugin.PluginConfig.GetValue(&cfg)
-	if err != nil {
-		return nil, err
-	}
-	if !found {
-		plugin.Log.Info("Consul config not found, skip loading this plugin")
-		plugin.disabled = true
-		return nil, nil
-	}
-	return &cfg, nil
-}
-
-// ConfigToClient transforms Config into api.Config,
-// which is ready for use with underlying consul package.
-func ConfigToClient(cfg *Config) (*api.Config, error) {
-	clientCfg := api.DefaultConfig()
-	if cfg.Address != "" {
-		clientCfg.Address = cfg.Address
-	}
-	return clientCfg, nil
 }
 
 // Init initializes Consul plugin.
 func (plugin *Plugin) Init() (err error) {
-	cfg, err := plugin.getConfig()
-	if err != nil || plugin.disabled {
-		return err
+	if plugin.Config == nil {
+		plugin.Config, err = plugin.getConfig()
+		if err != nil || plugin.disabled {
+			return err
+		}
 	}
-	clientCfg, err := ConfigToClient(cfg)
+
+	clientCfg, err := ConfigToClient(plugin.Config)
 	if err != nil {
 		return err
 	}
@@ -101,7 +81,7 @@ func (plugin *Plugin) Init() (err error) {
 		plugin.Log.Errorf("Err: %v", err)
 		return err
 	}
-	plugin.reconnectResync = cfg.ReconnectResync
+	plugin.reconnectResync = plugin.Config.ReconnectResync
 	plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.client, &keyval.SerializerJSON{})
 
 	// Register for providing status reports (polling mode).
@@ -133,6 +113,35 @@ func (plugin *Plugin) Init() (err error) {
 // Close closes Consul plugin.
 func (plugin *Plugin) Close() error {
 	return nil
+}
+
+// Disabled returns *true* if the plugin is not in use due to missing configuration.
+func (plugin *Plugin) Disabled() bool {
+	return plugin.disabled
+}
+
+func (plugin *Plugin) getConfig() (*Config, error) {
+	var cfg Config
+	found, err := plugin.PluginConfig.GetValue(&cfg)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		plugin.Log.Info("Consul config not found, skip loading this plugin")
+		plugin.disabled = true
+		return nil, nil
+	}
+	return &cfg, nil
+}
+
+// ConfigToClient transforms Config into api.Config,
+// which is ready for use with underlying consul package.
+func ConfigToClient(cfg *Config) (*api.Config, error) {
+	clientCfg := api.DefaultConfig()
+	if cfg.Address != "" {
+		clientCfg.Address = cfg.Address
+	}
+	return clientCfg, nil
 }
 
 // NewBroker creates new instance of prefixed broker that provides API with arguments of type proto.Message.

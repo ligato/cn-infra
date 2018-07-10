@@ -65,8 +65,7 @@ type registry struct {
 }
 
 // Init initializes the internal structures
-func (p *Plugin) Init() (err error) {
-
+func (p *Plugin) Init() error {
 	p.regs = map[string]*registry{}
 
 	// add default registry

@@ -19,7 +19,7 @@ func NewPlugin(opts ...Option) *Plugin {
 
 	deps := &p.Deps
 	if deps.PluginName == "" {
-		deps.PluginName = "grpc"
+		deps.PluginName = "prometheus"
 	}
 	if deps.Log == nil {
 		deps.Log = logging.ForPlugin(deps.PluginName.String(), logrus.DefaultRegistry)
@@ -27,9 +27,6 @@ func NewPlugin(opts ...Option) *Plugin {
 	if deps.HTTP == nil {
 		deps.HTTP = rest.DefaultPlugin
 	}
-	/*if deps.PluginConfig == nil {
-		deps.PluginConfig = config.ForPlugin(deps.PluginName.String())
-	}*/
 
 	return p
 }
@@ -40,18 +37,8 @@ type Option func(*Plugin)
 // UseDeps injects a particular set of Dependencies
 func UseDeps(deps Deps) Option {
 	return func(p *Plugin) {
-		d := &p.Deps
-		d.PluginName = deps.PluginName
-		d.Log = deps.Log
-		//d.PluginConfig = deps.PluginConfig
-		d.HTTP = deps.HTTP
+		p.Deps.PluginName = deps.PluginName
+		p.Deps.Log = deps.Log
+		p.Deps.HTTP = deps.HTTP
 	}
 }
-
-// UseConf injects the Plugin's Configuration
-/*func UseConf(conf Config) Option {
-	return func(p *Plugin) {
-		p.Config = &conf
-	}
-}
-*/

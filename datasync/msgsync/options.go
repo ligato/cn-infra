@@ -48,11 +48,10 @@ type Option func(*Plugin)
 // UseDeps injects a particular set of Dependencies
 func UseDeps(deps Deps) Option {
 	return func(p *Plugin) {
-		d := &p.Deps
-		d.PluginName = deps.PluginName
-		d.Log = deps.Log
-		d.PluginConfig = deps.PluginConfig
-		d.Messaging = deps.Messaging
+		p.Deps.PluginName = deps.PluginName
+		p.Deps.Log = deps.Log
+		p.Deps.PluginConfig = deps.PluginConfig
+		p.Deps.Messaging = deps.Messaging
 	}
 }
 

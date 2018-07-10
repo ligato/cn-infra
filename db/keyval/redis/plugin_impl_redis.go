@@ -15,10 +15,12 @@
 package redis
 
 import (
+	"github.com/ligato/cn-infra/config"
+	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
-	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/ligato/cn-infra/health/statuscheck"
+	"github.com/ligato/cn-infra/logging"
 )
 
 const (
@@ -29,6 +31,7 @@ const (
 // Plugin implements redis plugin.
 type Plugin struct {
 	Deps
+
 	// Plugin is disabled if there is no config file available
 	disabled bool
 	// Redis connection encapsulation
@@ -39,7 +42,11 @@ type Plugin struct {
 
 // Deps lists dependencies of the redis plugin.
 type Deps struct {
-	local.PluginInfraDeps //inject
+	Log                 logging.PluginLogger           // inject
+	PluginName          core.PluginName                // inject
+	config.PluginConfig                                // inject
+	StatusCheck         statuscheck.PluginStatusWriter // inject
+	//local.PluginInfraDeps //inject
 }
 
 // Init retrieves redis configuration and establishes a new connection

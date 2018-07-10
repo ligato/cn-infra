@@ -60,14 +60,14 @@ type Plugin struct {
 
 // Deps lists the dependencies of the Rest plugin.
 type Deps struct {
-	Log        logging.PluginLogger //inject
-	PluginName core.PluginName      //inject
+	Log                 logging.PluginLogger //inject
+	PluginName          core.PluginName      //inject
+	config.PluginConfig                      //inject
 	// Authenticator can be injected in a flavor inject method.
 	// If there is no authenticator injected and config contains
 	// user password, the default staticAuthenticator is instantiated.
 	// By default the authenticator is disabled.
-	Authenticator       BasicHTTPAuthenticator //inject
-	config.PluginConfig                        //inject
+	Authenticator BasicHTTPAuthenticator //inject
 }
 
 // Init is the plugin entry point called by Agent Core

@@ -1,6 +1,7 @@
 package logmanager
 
 import (
+	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logrus"
 )
@@ -23,6 +24,9 @@ func NewPlugin(opts ...Option) *Plugin {
 	if deps.Log == nil {
 		deps.Log = logging.ForPlugin(deps.PluginName.String(), logrus.DefaultRegistry)
 	}
+	if deps.PluginConfig == nil {
+		deps.PluginConfig = config.ForPlugin(deps.PluginName.String())
+	}
 	if deps.LogRegistry == nil {
 		deps.LogRegistry = logrus.DefaultRegistry
 	}
@@ -38,6 +42,7 @@ func UseDeps(deps Deps) Option {
 	return func(p *Plugin) {
 		p.Deps.PluginName = deps.PluginName
 		p.Deps.Log = deps.Log
+		p.Deps.PluginConfig = deps.PluginConfig
 		p.Deps.HTTP = deps.HTTP
 		p.Deps.LogRegistry = deps.LogRegistry
 	}

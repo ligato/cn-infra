@@ -12,10 +12,11 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package grpc
+package consul
 
 import (
 	"github.com/ligato/cn-infra/config"
+	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logrus"
 )
@@ -33,13 +34,16 @@ func NewPlugin(opts ...Option) *Plugin {
 
 	deps := &p.Deps
 	if deps.PluginName == "" {
-		deps.PluginName = "grpc"
+		deps.PluginName = "consul"
 	}
 	if deps.Log == nil {
 		deps.Log = logging.ForPlugin(deps.PluginName.String(), logrus.DefaultRegistry)
 	}
 	if deps.PluginConfig == nil {
 		deps.PluginConfig = config.ForPlugin(deps.PluginName.String())
+	}
+	if deps.StatusCheck == nil {
+		deps.StatusCheck = statuscheck.DefaultPlugin
 	}
 
 	return p
@@ -54,7 +58,8 @@ func UseDeps(deps Deps) Option {
 		p.Deps.PluginName = deps.PluginName
 		p.Deps.Log = deps.Log
 		p.Deps.PluginConfig = deps.PluginConfig
-		p.Deps.HTTP = deps.HTTP
+		p.Deps.StatusCheck = deps.StatusCheck
+		p.Deps.Resync = deps.Resync
 	}
 }
 
