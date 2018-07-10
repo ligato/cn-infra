@@ -6,10 +6,10 @@ import (
 	"github.com/ligato/cn-infra/rpc/rest"
 )
 
-// DefaultPlugin is default instance of Plugin
+// DefaultPlugin is a default instance of Plugin.
 var DefaultPlugin = NewPlugin()
 
-// NewPlugin creates a new Plugin with the provides Options
+// NewPlugin creates a new Plugin with the provided Options.
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
@@ -30,10 +30,10 @@ func NewPlugin(opts ...Option) *Plugin {
 	return p
 }
 
-// Option is a function that acts on a Plugin to inject Dependencies or configuration
+// Option is a function that acts on a Plugin to inject some settings.
 type Option func(*Plugin)
 
-// UseDeps injects a particular set of Dependencies
+// UseDeps returns Option which injects a particular set of dependencies.
 func UseDeps(deps Deps) Option {
 	return func(p *Plugin) {
 		p.Deps = deps
