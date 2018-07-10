@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/ligato/cn-infra/logging"
 	"github.com/namsral/flag"
 
 	"github.com/ligato/cn-infra/core"
@@ -41,7 +42,9 @@ type Agent interface {
 func NewAgent(opts ...Option) Agent {
 	options := newOptions(opts...)
 
-	flag.Parse()
+	if !flag.Parsed() {
+		flag.Parse()
+	}
 
 	return &agent{
 		opts: options,
@@ -69,6 +72,11 @@ func (a *agent) Start() error {
 }
 
 func (a *agent) startSignalWrapper() error {
+	logrus.DefaultLogger().WithFields(logging.Fields{
+		"CommitHash": a.opts.CommitHash,
+		"BuildDate":  a.opts.BuildDate,
+	}).Infof("Starting agent %v", a.opts.BuildVersion)
+
 	// If we want to properly handle cleanup when a SIG comes in *during*
 	// agent startup (ie, clean up after its finished) we need to register
 	// for the signal before we start() the agent
@@ -85,15 +93,15 @@ func (a *agent) startSignalWrapper() error {
 	}
 
 	go func() {
-		var done <-chan struct{}
+		var quit <-chan struct{}
 		if a.opts.ctx != nil {
-			done = a.opts.ctx.Done()
+			quit = a.opts.ctx.Done()
 		}
 		// Wait for signal or agent stop
 		select {
-		case <-a.opts.DoneChan:
-			logrus.DefaultLogger().Info("Done channel closed, stopping.")
-		case <-done:
+		case <-a.opts.QuitChan:
+			logrus.DefaultLogger().Info("Quit channel closed, stopping.")
+		case <-quit:
 			logrus.DefaultLogger().Info("Context canceled, stopping.")
 		case s := <-sig:
 			logrus.DefaultLogger().Infof("Signal %v received, stopping.", s)

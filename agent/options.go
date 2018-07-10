@@ -19,30 +19,41 @@ import (
 	"os"
 	"reflect"
 	"syscall"
-	"time"
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging/logrus"
 )
 
-// Options specifies the Version, MaxStartupTime, and Plugin list for the Agent
+// Variables set by the compiler using ldflags
+var (
+	// BuildVersion describes version for the build. It is usually set using `git describe --always --tags --dirty`.
+	BuildVersion = "dev"
+	// BuildDate describes time of the build.
+	BuildDate string
+	// CommitHash describes commit hash for the build.
+	CommitHash string
+)
+
+// Options specifies option list for the Agent
 type Options struct {
-	Version        string
-	MaxStartupTime time.Duration
-	QuitSignals    []os.Signal
-	DoneChan       chan struct{}
+	BuildVersion string
+	BuildDate    string
+	CommitHash   string
+
+	QuitSignals []os.Signal
+	QuitChan    chan struct{}
+	ctx         context.Context
 
 	Plugins []core.PluginNamed
-
-	ctx context.Context
 }
 
 func newOptions(opts ...Option) Options {
 	opt := Options{
-		Version:        "dev",
-		MaxStartupTime: time.Second * 15,
+		BuildVersion: BuildVersion,
+		BuildDate:    BuildDate,
+		CommitHash:   CommitHash,
 		QuitSignals: []os.Signal{
-			syscall.SIGINT,
+			os.Interrupt,
 			syscall.SIGTERM,
 			syscall.SIGKILL,
 		},
@@ -58,17 +69,12 @@ func newOptions(opts ...Option) Options {
 // Option is a function that operates on an Agent's Option
 type Option func(*Options)
 
-// MaxStartupTime returns an Option that sets the MaxStartuptime option of the Agent
-func MaxStartupTime(d time.Duration) Option {
-	return func(o *Options) {
-		o.MaxStartupTime = d
-	}
-}
-
 // Version returns an Option that sets the version of the Agent to the entered string
-func Version(v string) Option {
+func Version(buildVer, buildDate, commitHash string) Option {
 	return func(o *Options) {
-		o.Version = v
+		o.BuildVersion = buildVer
+		o.BuildDate = buildDate
+		o.CommitHash = commitHash
 	}
 }
 
@@ -86,9 +92,10 @@ func QuitSignals(sigs ...os.Signal) Option {
 	}
 }
 
-func DoneChan(ch chan struct{}) Option {
+// QuitOn returns an Option that will set channel which stops Agent on close
+func QuitOn(ch chan struct{}) Option {
 	return func(o *Options) {
-		o.DoneChan = ch
+		o.QuitChan = ch
 	}
 }
 
