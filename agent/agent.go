@@ -19,10 +19,10 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/ligato/cn-infra/logging"
 	"github.com/namsral/flag"
 
 	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/utils/once"
 )

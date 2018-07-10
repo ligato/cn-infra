@@ -6,8 +6,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/namsral/flag"
+
+	"github.com/ligato/cn-infra/logging/logrus"
 )
 
 // FlagSuffix is added to plugin name while loading plugins configuration.
@@ -50,6 +51,8 @@ type PluginConfig interface {
 // - default value
 // - usage
 func ForPlugin(pluginName string, opts ...string) PluginConfig {
+	defineFlagsOnce.Do(defineFlags)
+
 	flgName := pluginName + FlagSuffix
 	flg := flag.CommandLine.Lookup(flgName)
 	if flg == nil {
@@ -71,6 +74,37 @@ func ForPlugin(pluginName string, opts ...string) PluginConfig {
 	}
 
 	return &pluginConfig{pluginName: pluginName}
+}
+
+// Dir evaluates the flag DirFlag. It interprets "." as current working directory.
+func Dir() (string, error) {
+	flg := flag.CommandLine.Lookup(DirFlag)
+	if flg != nil {
+		val := flg.Value.String()
+		if strings.HasPrefix(val, ".") {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return cwd, err
+			}
+
+			if len(val) > 1 {
+				return cwd + val[1:], nil
+			}
+			return cwd, nil
+		}
+
+		return val, nil
+	}
+
+	return "", nil
+}
+
+var defineFlagsOnce sync.Once
+
+func defineFlags() {
+	if flag.Lookup(DirFlag) == nil {
+		flag.String(DirFlag, DirDefault, DirUsage)
+	}
 }
 
 type pluginConfig struct {
@@ -132,27 +166,4 @@ func (p *pluginConfig) getConfigName() string {
 	}
 
 	return ""
-}
-
-// Dir evaluates the flag DirFlag. It interprets "." as current working directory.
-func Dir() (string, error) {
-	flg := flag.CommandLine.Lookup(DirFlag)
-	if flg != nil {
-		val := flg.Value.String()
-		if strings.HasPrefix(val, ".") {
-			cwd, err := os.Getwd()
-			if err != nil {
-				return cwd, err
-			}
-
-			if len(val) > 1 {
-				return cwd + val[1:], nil
-			}
-			return cwd, nil
-		}
-
-		return val, nil
-	}
-
-	return "", nil
 }

@@ -40,8 +40,8 @@ var (
 	defaultLogger = NewLogger(DefaultLoggerName)
 )
 
-// DefaultLogger returns a global Logrus logger. Please notice, that recommended
-// approach is to create a custom logger.
+// DefaultLogger returns a global Logrus logger.
+// Note, that recommended approach is to create a custom logger.
 func DefaultLogger() *Logger {
 	return defaultLogger
 }
