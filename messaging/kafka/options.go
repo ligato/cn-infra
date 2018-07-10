@@ -33,21 +33,20 @@ func NewPlugin(opts ...Option) *Plugin {
 		o(p)
 	}
 
-	deps := &p.Deps
-	if deps.PluginName == "" {
-		deps.PluginName = "kafka"
+	if p.Deps.PluginName == "" {
+		p.Deps.PluginName = "kafka"
 	}
-	if deps.Log == nil {
-		deps.Log = logging.ForPlugin(deps.PluginName.String(), logrus.DefaultRegistry)
+	if p.Deps.Log == nil {
+		p.Deps.Log = logging.ForPlugin(p.Deps.PluginName.String(), logrus.DefaultRegistry)
 	}
-	if deps.PluginConfig == nil {
-		deps.PluginConfig = config.ForPlugin(deps.PluginName.String())
+	if p.Deps.PluginConfig == nil {
+		p.Deps.PluginConfig = config.ForPlugin(p.Deps.PluginName.String())
 	}
-	if deps.StatusCheck == nil {
-		deps.StatusCheck = statuscheck.DefaultPlugin
+	if p.Deps.StatusCheck == nil {
+		p.Deps.StatusCheck = statuscheck.DefaultPlugin
 	}
-	if deps.ServiceLabel == nil {
-		deps.ServiceLabel = servicelabel.DefaultPlugin
+	if p.Deps.ServiceLabel == nil {
+		p.Deps.ServiceLabel = servicelabel.DefaultPlugin
 	}
 
 	return p
@@ -59,10 +58,6 @@ type Option func(*Plugin)
 // UseDeps injects a particular set of Dependencies
 func UseDeps(deps Deps) Option {
 	return func(p *Plugin) {
-		p.Deps.PluginName = deps.PluginName
-		p.Deps.Log = deps.Log
-		p.Deps.PluginConfig = deps.PluginConfig
-		p.Deps.StatusCheck = deps.StatusCheck
-		p.Deps.ServiceLabel = deps.ServiceLabel
+		p.Deps = deps
 	}
 }

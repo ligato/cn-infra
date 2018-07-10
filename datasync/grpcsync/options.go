@@ -12,9 +12,8 @@ func NewPlugin(opts ...Option) *Plugin {
 		o(p)
 	}
 
-	deps := &p.Deps
-	if deps.GRPC == nil {
-		deps.GRPC = grpc.DefaultPlugin
+	if p.Deps.GRPC == nil {
+		p.Deps.GRPC = grpc.DefaultPlugin
 	}
 
 	return p
@@ -26,6 +25,6 @@ type Option func(*Plugin)
 // UseDeps injects a particular set of Dependencies
 func UseDeps(deps Deps) Option {
 	return func(p *Plugin) {
-		p.Deps.GRPC = deps.GRPC
+		p.Deps = deps
 	}
 }

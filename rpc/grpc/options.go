@@ -31,15 +31,14 @@ func NewPlugin(opts ...Option) *Plugin {
 		o(p)
 	}
 
-	deps := &p.Deps
-	if deps.PluginName == "" {
-		deps.PluginName = "grpc"
+	if p.Deps.PluginName == "" {
+		p.Deps.PluginName = "grpc"
 	}
-	if deps.Log == nil {
-		deps.Log = logging.ForPlugin(deps.PluginName.String(), logrus.DefaultRegistry)
+	if p.Deps.Log == nil {
+		p.Deps.Log = logging.ForPlugin(p.Deps.PluginName.String(), logrus.DefaultRegistry)
 	}
-	if deps.PluginConfig == nil {
-		deps.PluginConfig = config.ForPlugin(deps.PluginName.String())
+	if p.Deps.PluginConfig == nil {
+		p.Deps.PluginConfig = config.ForPlugin(p.Deps.PluginName.String())
 	}
 
 	return p
@@ -51,10 +50,7 @@ type Option func(*Plugin)
 // UseDeps injects a particular set of Dependencies
 func UseDeps(deps Deps) Option {
 	return func(p *Plugin) {
-		p.Deps.PluginName = deps.PluginName
-		p.Deps.Log = deps.Log
-		p.Deps.PluginConfig = deps.PluginConfig
-		p.Deps.HTTP = deps.HTTP
+		p.Deps = deps
 	}
 }
 

@@ -29,21 +29,20 @@ func NewPlugin(opts ...Option) *Plugin {
 		o(p)
 	}
 
-	deps := &p.Deps
-	if deps.PluginName == "" {
+	if p.Deps.PluginName == "" {
 		prefix := "kvdb"
-		if deps.KvPlugin != nil {
-			if kvdb, ok := deps.KvPlugin.(core.PluginNamed); ok {
+		if p.Deps.KvPlugin != nil {
+			if kvdb, ok := p.Deps.KvPlugin.(core.PluginNamed); ok {
 				prefix = kvdb.Name()
 			}
 		}
-		deps.PluginName = core.PluginName(prefix + "-datasync")
+		p.Deps.PluginName = core.PluginName(prefix + "-datasync")
 	}
-	if deps.Log == nil {
-		deps.Log = logging.ForPlugin(deps.PluginName.String(), logrus.DefaultRegistry)
+	if p.Deps.Log == nil {
+		p.Deps.Log = logging.ForPlugin(p.Deps.PluginName.String(), logrus.DefaultRegistry)
 	}
-	if deps.ServiceLabel == nil {
-		deps.ServiceLabel = servicelabel.DefaultPlugin
+	if p.Deps.ServiceLabel == nil {
+		p.Deps.ServiceLabel = servicelabel.DefaultPlugin
 	}
 
 	return p
@@ -55,10 +54,6 @@ type Option func(*Plugin)
 // UseDeps injects a particular set of Dependencies
 func UseDeps(deps Deps) Option {
 	return func(p *Plugin) {
-		p.Deps.PluginName = deps.PluginName
-		p.Deps.Log = deps.Log
-		p.Deps.KvPlugin = deps.KvPlugin
-		p.Deps.ResyncOrch = deps.ResyncOrch
-		p.Deps.ServiceLabel = deps.ServiceLabel
+		p.Deps = deps
 	}
 }

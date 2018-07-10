@@ -16,12 +16,11 @@ func NewPlugin(opts ...Option) *Plugin {
 		o(p)
 	}
 
-	deps := &p.Deps
-	if deps.PluginName == "" {
-		deps.PluginName = "resync"
+	if p.Deps.PluginName == "" {
+		p.Deps.PluginName = "resync"
 	}
-	if deps.Log == nil {
-		deps.Log = logging.ForPlugin(deps.PluginName.String(), logrus.DefaultRegistry)
+	if p.Deps.Log == nil {
+		p.Deps.Log = logging.ForPlugin(p.Deps.PluginName.String(), logrus.DefaultRegistry)
 	}
 
 	return p
