@@ -18,10 +18,14 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/config"
+	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/health/statuscheck/model/status"
+	"github.com/ligato/cn-infra/logging"
+	prom "github.com/ligato/cn-infra/rpc/prometheus"
 	"github.com/ligato/cn-infra/rpc/rest"
+	"github.com/ligato/cn-infra/servicelabel"
 	"github.com/unrolled/render"
 )
 
@@ -37,31 +41,49 @@ type Plugin struct {
 
 // Deps lists dependencies of REST plugin.
 type Deps struct {
-	local.PluginInfraDeps                          // inject
-	HTTP                  rest.HTTPHandlers        // inject
-	StatusCheck           statuscheck.StatusReader // inject
+	Log                 logging.PluginLogger // inject
+	PluginName          core.PluginName      // inject
+	config.PluginConfig                      // inject
+	ServiceLabel        servicelabel.ReaderAPI
+	//local.PluginInfraDeps                          // inject
+	StatusCheck statuscheck.StatusReader // inject
+	HTTP        rest.HTTPHandlers        // inject
+	Prometheus  prom.API                 // inject
 }
 
 // Init does nothing
-func (p *Plugin) Init() (err error) {
+func (p *Plugin) Init() error {
 	return nil
 }
 
 // AfterInit registers HTTP handlers for liveness and readiness probes.
 func (p *Plugin) AfterInit() error {
-	if p.HTTP != nil {
-		if p.StatusCheck != nil {
-			p.Log.Infof("Starting health http-probe on port %v", p.HTTP.GetPort())
-			p.HTTP.RegisterHTTPHandler(livenessProbePath, p.livenessProbeHandler, "GET")
-			p.HTTP.RegisterHTTPHandler(readinessProbePath, p.readinessProbeHandler, "GET")
+	if p.StatusCheck == nil {
+		p.Log.Warnf("Unable to register probe handlers, StatusCheck is nil")
+		return nil
+	}
 
-		} else {
-			p.Log.Info("Unable to register http-probe handler, StatusCheck is nil")
-		}
+	if p.HTTP != nil {
+		p.Log.Infof("Starting health http-probe on port %v", p.HTTP.GetPort())
+		p.HTTP.RegisterHTTPHandler(livenessProbePath, p.livenessProbeHandler, "GET")
+		p.HTTP.RegisterHTTPHandler(readinessProbePath, p.readinessProbeHandler, "GET")
 	} else {
 		p.Log.Info("Unable to register http-probe handler, HTTP is nil")
 	}
 
+	if p.Prometheus != nil {
+		if err := p.registerPrometheusProbe(); err != nil {
+			return err
+		}
+	} else {
+		p.Log.Info("Unable to register prometheus-probe handler, Prometheus is nil")
+	}
+
+	return nil
+}
+
+// Close frees resources
+func (p *Plugin) Close() error {
 	return nil
 }
 
@@ -95,12 +117,4 @@ func (p *Plugin) livenessProbeHandler(formatter *render.Render) http.HandlerFunc
 			w.Write(statJSON)
 		}
 	}
-}
-
-// String returns plugin name if it was injected, "HEALTH_RPC_PROBES" otherwise.
-func (p *Plugin) String() string {
-	if len(string(p.PluginName)) > 0 {
-		return string(p.PluginName)
-	}
-	return "HEALTH_RPC_PROBES"
 }

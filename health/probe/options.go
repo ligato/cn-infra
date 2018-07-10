@@ -16,8 +16,11 @@ package probe
 
 import (
 	"github.com/ligato/cn-infra/config"
+	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logrus"
+	"github.com/ligato/cn-infra/rpc/rest"
+	"github.com/ligato/cn-infra/servicelabel"
 )
 
 // DefaultPlugin is default instance of Plugin
@@ -41,6 +44,15 @@ func NewPlugin(opts ...Option) *Plugin {
 	if deps.PluginConfig == nil {
 		deps.PluginConfig = config.ForPlugin(deps.PluginName.String())
 	}
+	if deps.ServiceLabel == nil {
+		deps.ServiceLabel = servicelabel.DefaultPlugin
+	}
+	if deps.StatusCheck == nil {
+		deps.StatusCheck = statuscheck.DefaultPlugin
+	}
+	if deps.HTTP == nil {
+		deps.HTTP = rest.DefaultPlugin
+	}
 
 	return p
 }
@@ -53,7 +65,10 @@ func UseDeps(deps Deps) Option {
 	return func(p *Plugin) {
 		p.Deps.PluginName = deps.PluginName
 		p.Deps.Log = deps.Log
-		p.Deps.HTTP = deps.HTTP
+		p.Deps.PluginConfig = deps.PluginConfig
+		p.Deps.ServiceLabel = deps.ServiceLabel
 		p.Deps.StatusCheck = deps.StatusCheck
+		p.Deps.HTTP = deps.HTTP
+		p.Deps.Prometheus = deps.Prometheus
 	}
 }
