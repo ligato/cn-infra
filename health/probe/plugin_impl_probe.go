@@ -23,6 +23,7 @@ import (
 	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/health/statuscheck/model/status"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logrus"
 	prom "github.com/ligato/cn-infra/rpc/prometheus"
 	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/ligato/cn-infra/servicelabel"
@@ -45,10 +46,30 @@ type Deps struct {
 	PluginName          core.PluginName      // inject
 	config.PluginConfig                      // inject
 	ServiceLabel        servicelabel.ReaderAPI
-	//local.PluginInfraDeps                          // inject
-	StatusCheck statuscheck.StatusReader // inject
-	HTTP        rest.HTTPHandlers        // inject
-	Prometheus  prom.API                 // inject
+	StatusCheck         statuscheck.StatusReader // inject
+	HTTP                rest.HTTPHandlers        // inject
+	Prometheus          prom.API                 // inject
+}
+
+func (d *Deps) Defaults() {
+	if d.PluginName == "" {
+		d.PluginName = "probe"
+	}
+	if d.Log == nil {
+		d.Log = logging.ForPlugin(d.PluginName.String(), logrus.DefaultRegistry)
+	}
+	if d.PluginConfig == nil {
+		d.PluginConfig = config.ForPlugin(d.PluginName.String())
+	}
+	if d.ServiceLabel == nil {
+		d.ServiceLabel = servicelabel.DefaultPlugin
+	}
+	if d.StatusCheck == nil {
+		d.StatusCheck = statuscheck.DefaultPlugin
+	}
+	if d.HTTP == nil {
+		d.HTTP = rest.DefaultPlugin
+	}
 }
 
 // Init does nothing

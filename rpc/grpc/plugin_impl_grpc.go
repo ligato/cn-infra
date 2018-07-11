@@ -26,6 +26,7 @@ import (
 	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/ligato/cn-infra/utils/safeclose"
 )
@@ -52,6 +53,18 @@ type Deps struct {
 	PluginName core.PluginName
 	config.PluginConfig
 	HTTP rest.HTTPHandlers
+}
+
+func (d *Deps) SetDefaults() {
+	if d.PluginName == "" {
+		d.PluginName = "grpc"
+	}
+	if d.Log == nil {
+		d.Log = logging.ForPlugin(d.PluginName.String(), logrus.DefaultRegistry)
+	}
+	if d.PluginConfig == nil {
+		d.PluginConfig = config.ForPlugin(d.PluginName.String())
+	}
 }
 
 // Init prepares GRPC netListener for registration of individual service

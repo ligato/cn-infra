@@ -19,12 +19,12 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/unrolled/render"
-
 	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/rpc/rest"
+	"github.com/unrolled/render"
 )
 
 // LoggerData encapsulates parameters of a logger represented as strings.
@@ -42,6 +42,7 @@ const (
 // Plugin allows to manage log levels of the loggers using HTTP.
 type Plugin struct {
 	Deps
+
 	*Conf
 }
 
@@ -51,9 +52,23 @@ type Deps struct {
 	Log                 logging.PluginLogger //inject
 	PluginName          core.PluginName      //inject
 	config.PluginConfig                      //inject
+	LogRegistry         logging.Registry     // inject
+	HTTP                rest.HTTPHandlers    // inject
+}
 
-	LogRegistry logging.Registry  // inject
-	HTTP        rest.HTTPHandlers // inject
+func (d *Deps) Defaults() {
+	if d.PluginName == "" {
+		d.PluginName = "logs"
+	}
+	if d.Log == nil {
+		d.Log = logging.ForPlugin(d.PluginName.String(), logrus.DefaultRegistry)
+	}
+	if d.PluginConfig == nil {
+		d.PluginConfig = config.ForPlugin(d.PluginName.String())
+	}
+	if d.LogRegistry == nil {
+		d.LogRegistry = logrus.DefaultRegistry
+	}
 }
 
 // NewConf creates default configuration with InfoLevel & empty loggers.

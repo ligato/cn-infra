@@ -1,10 +1,5 @@
 package resync
 
-import (
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
-)
-
 // DefaultPlugin is a default instance of Plugin.
 var DefaultPlugin = NewPlugin()
 
@@ -16,13 +11,6 @@ func NewPlugin(opts ...Option) *Plugin {
 		o(p)
 	}
 
-	if p.Deps.PluginName == "" {
-		p.Deps.PluginName = "resync"
-	}
-	if p.Deps.Log == nil {
-		p.Deps.Log = logging.ForPlugin(p.Deps.PluginName.String(), logrus.DefaultRegistry)
-	}
-
 	return p
 }
 
@@ -32,7 +20,6 @@ type Option func(*Plugin)
 // UseDeps returns Option which injects a particular set of dependencies.
 func UseDeps(deps Deps) Option {
 	return func(p *Plugin) {
-		p.Deps.PluginName = deps.PluginName
-		p.Deps.Log = deps.Log
+		p.Deps = deps
 	}
 }

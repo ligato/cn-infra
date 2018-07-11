@@ -22,6 +22,7 @@ import (
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -43,6 +44,7 @@ var (
 // Plugin struct holds all plugin-related data.
 type Plugin struct {
 	Deps
+
 	sync.Mutex
 	// regs is a map of URL path(symbolic names) to registries. Registries group metrics and can be exposed at different urls.
 	regs map[string]*registry
@@ -52,9 +54,20 @@ type Plugin struct {
 type Deps struct {
 	Log        logging.PluginLogger
 	PluginName core.PluginName
-	//local.PluginInfraDeps // inject
 	// HTTP server used to expose metrics
 	HTTP rest.HTTPHandlers // inject
+}
+
+func (d *Deps) SetDefaults() {
+	if d.PluginName == "" {
+		d.PluginName = "prometheus"
+	}
+	if d.Log == nil {
+		d.Log = logging.ForPlugin(d.PluginName.String(), logrus.DefaultRegistry)
+	}
+	if d.HTTP == nil {
+		d.HTTP = rest.DefaultPlugin
+	}
 }
 
 type registry struct {

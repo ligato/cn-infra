@@ -14,14 +14,6 @@
 
 package kafka
 
-import (
-	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/health/statuscheck"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
-	"github.com/ligato/cn-infra/servicelabel"
-)
-
 // DefaultPlugin is a default instance of Plugin.
 var DefaultPlugin = NewPlugin()
 
@@ -31,22 +23,6 @@ func NewPlugin(opts ...Option) *Plugin {
 
 	for _, o := range opts {
 		o(p)
-	}
-
-	if p.Deps.PluginName == "" {
-		p.Deps.PluginName = "kafka"
-	}
-	if p.Deps.Log == nil {
-		p.Deps.Log = logging.ForPlugin(p.Deps.PluginName.String(), logrus.DefaultRegistry)
-	}
-	if p.Deps.PluginConfig == nil {
-		p.Deps.PluginConfig = config.ForPlugin(p.Deps.PluginName.String())
-	}
-	if p.Deps.StatusCheck == nil {
-		p.Deps.StatusCheck = statuscheck.DefaultPlugin
-	}
-	if p.Deps.ServiceLabel == nil {
-		p.Deps.ServiceLabel = servicelabel.DefaultPlugin
 	}
 
 	return p

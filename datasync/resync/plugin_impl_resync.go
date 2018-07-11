@@ -20,6 +20,7 @@ import (
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logrus"
 )
 
 const (
@@ -38,9 +39,17 @@ type Plugin struct {
 // Deps groups dependencies injected into the plugin so that they are
 // logically separated from other plugin fields.
 type Deps struct {
-	//local.PluginLogDeps // inject
 	Log        logging.PluginLogger
 	PluginName core.PluginName // inject
+}
+
+func (d *Deps) Defaults() {
+	if d.PluginName == "" {
+		d.PluginName = "resync"
+	}
+	if d.Log == nil {
+		d.Log = logging.ForPlugin(d.PluginName.String(), logrus.DefaultRegistry)
+	}
 }
 
 // Name implements PluginNamed

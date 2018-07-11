@@ -24,6 +24,7 @@ import (
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/health/statuscheck/model/status"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logrus"
 )
 
 const (
@@ -63,6 +64,15 @@ type Deps struct {
 	Log        logging.PluginLogger       // inject
 	PluginName core.PluginName            // inject
 	Transport  datasync.KeyProtoValWriter // inject (optional)
+}
+
+func (d *Deps) Defaults() {
+	if d.PluginName == "" {
+		d.PluginName = "status-check"
+	}
+	if d.Log == nil {
+		d.Log = logging.ForPlugin(d.PluginName.String(), logrus.DefaultRegistry)
+	}
 }
 
 // Name implements PluginNamed

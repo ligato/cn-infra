@@ -25,6 +25,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/servicelabel"
 )
 
@@ -44,9 +45,26 @@ type Deps struct {
 	Log          logging.PluginLogger // inject
 	PluginName   core.PluginName      // inject
 	ServiceLabel servicelabel.ReaderAPI
-	//local.PluginInfraDeps                      // inject
-	KvPlugin   keyval.KvProtoPlugin // inject
-	ResyncOrch resync.Subscriber    // inject
+	KvPlugin     keyval.KvProtoPlugin // inject
+	ResyncOrch   resync.Subscriber    // inject
+}
+
+func (d *Deps) Defaults() {
+	if d.PluginName == "" {
+		prefix := "kvdb"
+		if d.KvPlugin != nil {
+			if kvdb, ok := d.KvPlugin.(core.PluginNamed); ok {
+				prefix = kvdb.Name()
+			}
+		}
+		d.PluginName = core.PluginName(prefix + "-datasync")
+	}
+	if d.Log == nil {
+		d.Log = logging.ForPlugin(d.PluginName.String(), logrus.DefaultRegistry)
+	}
+	if d.ServiceLabel == nil {
+		d.ServiceLabel = servicelabel.DefaultPlugin
+	}
 }
 
 // Name implements PluginNamed

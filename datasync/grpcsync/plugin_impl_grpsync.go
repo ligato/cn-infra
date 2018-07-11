@@ -23,12 +23,19 @@ import (
 // Plugin grpcsync implements Plugin interface, therefore can be loaded with other plugins.
 type Plugin struct {
 	Deps
+
 	Adapter datasync.KeyValProtoWatcher
 }
 
 // Deps - gRPC Plugin dependencies
 type Deps struct {
 	GRPC grpc.Server
+}
+
+func (d *Deps) Defaults() {
+	if d.GRPC == nil {
+		d.GRPC = grpc.DefaultPlugin
+	}
 }
 
 // Init registers new gRPC service and instantiates plugin.Adapter.

@@ -1,8 +1,7 @@
 package grpcsync
 
-import (
-	"github.com/ligato/cn-infra/rpc/grpc"
-)
+// DefaultPlugin is a default instance of Plugin.
+var DefaultPlugin = NewPlugin()
 
 // NewPlugin creates a new Plugin with the provided Options.
 func NewPlugin(opts ...Option) *Plugin {
@@ -10,10 +9,6 @@ func NewPlugin(opts ...Option) *Plugin {
 
 	for _, o := range opts {
 		o(p)
-	}
-
-	if p.Deps.GRPC == nil {
-		p.Deps.GRPC = grpc.DefaultPlugin
 	}
 
 	return p

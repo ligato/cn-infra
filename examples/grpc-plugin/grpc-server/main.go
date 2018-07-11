@@ -4,12 +4,12 @@ import (
 	"errors"
 	"log"
 
-	"github.com/ligato/cn-infra/agent"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/examples/helloworld/helloworld"
 
+	"github.com/ligato/cn-infra/agent"
+	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/rpc/grpc"
 )
 
@@ -22,10 +22,10 @@ const PluginName = "example"
 
 func main() {
 	// Init close channel to stop the example after everything was logged
-	/*exampleFinished := make(chan struct{})
+	//exampleFinished := make(chan struct{})
 
 	// Start Agent with ExamplePlugin & FlavorRPC (reused cn-infra plugins).
-	agent := rpc.NewAgent(rpc.WithPlugins(func(flavor *rpc.FlavorRPC) []*core.NamedPlugin {
+	/*agent := rpc.NewAgent(rpc.WithPlugins(func(flavor *rpc.FlavorRPC) []*core.NamedPlugin {
 		examplePlug := &ExamplePlugin{
 			exampleFinished: exampleFinished,
 			Deps: Deps{
@@ -37,6 +37,20 @@ func main() {
 	}))
 	core.EventLoopWithInterrupt(agent, exampleFinished)*/
 
+	/*rest.DefaultPlugin = rest.NewPlugin(
+		rest.UseConf(rest.Config{Endpoint: ":1234"}),
+	)
+
+	grpc.DefaultPlugin = grpc.NewPlugin(
+		grpc.UseConf(grpc.Config{Endpoint: ":3333"}),
+	)*/
+
+	/*myGRPC := grpc.NewPlugin(
+		grpc.UseDeps(grpc.Deps{
+			HTTP: myRest,
+		}),
+	)*/
+
 	p := &ExamplePlugin{
 		Deps: Deps{
 			Log:  logging.ForPlugin(PluginName, logrus.DefaultRegistry),
@@ -45,21 +59,20 @@ func main() {
 	}
 
 	a := agent.NewAgent(agent.AllPlugins(p))
+
 	if err := a.Run(); err != nil {
 		log.Fatal(err)
 	}
 }
 
-// ExamplePlugin presents the PluginLogger API.
+// ExamplePlugin presents main plugin.
 type ExamplePlugin struct {
 	Deps
-	//exampleFinished chan struct{}
 }
 
-// Deps - dependencies for ExamplePlugin
+// Deps are dependencies for ExamplePlugin.
 type Deps struct {
-	Log logging.PluginLogger
-	//local.PluginLogDeps
+	Log  logging.PluginLogger
 	GRPC grpc.Server
 }
 
@@ -85,6 +98,7 @@ func (*GreeterService) SayHello(ctx context.Context, request *helloworld.HelloRe
 	if request.Name == "" {
 		return nil, errors.New("not filled name in the request")
 	}
+	logrus.DefaultLogger().Infof("greeting client: %v", request.Name)
 
 	return &helloworld.HelloReply{Message: "hello " + request.Name}, nil
 }

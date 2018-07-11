@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/unrolled/render"
 
 	"github.com/ligato/cn-infra/config"
@@ -68,6 +69,18 @@ type Deps struct {
 	// user password, the default staticAuthenticator is instantiated.
 	// By default the authenticator is disabled.
 	Authenticator BasicHTTPAuthenticator //inject
+}
+
+func (d *Deps) Defaults() {
+	if d.PluginName == "" {
+		d.PluginName = "http"
+	}
+	if d.Log == nil {
+		d.Log = logging.ForPlugin(d.PluginName.String(), logrus.DefaultRegistry)
+	}
+	if d.PluginConfig == nil {
+		d.PluginConfig = config.ForPlugin(d.PluginName.String())
+	}
 }
 
 // Init is the plugin entry point called by Agent Core

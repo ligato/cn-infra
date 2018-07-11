@@ -14,28 +14,12 @@
 
 package msgsync
 
-import (
-	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
-)
-
 // NewPlugin creates a new Plugin with the provided Options.
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
 	for _, o := range opts {
 		o(p)
-	}
-
-	if p.Deps.PluginName == "" {
-		p.Deps.PluginName = "msgsync"
-	}
-	if p.Deps.Log == nil {
-		p.Deps.Log = logging.ForPlugin(p.Deps.PluginName.String(), logrus.DefaultRegistry)
-	}
-	if p.Deps.PluginConfig == nil {
-		p.Deps.PluginConfig = config.ForPlugin(p.Deps.PluginName.String())
 	}
 
 	return p

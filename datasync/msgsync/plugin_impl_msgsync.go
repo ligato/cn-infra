@@ -18,8 +18,11 @@ import (
 	"errors"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/messaging"
 )
 
@@ -27,6 +30,7 @@ import (
 // to a particular topic (unless the messaging.Mux is not disabled).
 type Plugin struct {
 	Deps // inject
+
 	Cfg
 	adapter messaging.ProtoPublisher
 }
@@ -36,6 +40,18 @@ type Plugin struct {
 type Deps struct {
 	local.PluginInfraDeps               // inject
 	Messaging             messaging.Mux // inject
+}
+
+func (d *Deps) Defaults() {
+	if d.PluginName == "" {
+		d.PluginName = "msgsync"
+	}
+	if d.Log == nil {
+		d.Log = logging.ForPlugin(d.PluginName.String(), logrus.DefaultRegistry)
+	}
+	if d.PluginConfig == nil {
+		d.PluginConfig = config.ForPlugin(d.PluginName.String())
+	}
 }
 
 // Cfg groups configurations fields. It can be extended with other fields

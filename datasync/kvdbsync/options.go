@@ -14,35 +14,12 @@
 
 package kvdbsync
 
-import (
-	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
-	"github.com/ligato/cn-infra/servicelabel"
-)
-
 // NewPlugin creates a new Plugin with the provided Options.
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
 	for _, o := range opts {
 		o(p)
-	}
-
-	if p.Deps.PluginName == "" {
-		prefix := "kvdb"
-		if p.Deps.KvPlugin != nil {
-			if kvdb, ok := p.Deps.KvPlugin.(core.PluginNamed); ok {
-				prefix = kvdb.Name()
-			}
-		}
-		p.Deps.PluginName = core.PluginName(prefix + "-datasync")
-	}
-	if p.Deps.Log == nil {
-		p.Deps.Log = logging.ForPlugin(p.Deps.PluginName.String(), logrus.DefaultRegistry)
-	}
-	if p.Deps.ServiceLabel == nil {
-		p.Deps.ServiceLabel = servicelabel.DefaultPlugin
 	}
 
 	return p

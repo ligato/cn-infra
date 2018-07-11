@@ -59,6 +59,12 @@ func main() {
 	}))
 	core.EventLoopWithInterrupt(agent, exampleFinished)*/
 
+	/*etcdPlug := etcd.NewPlugin(
+		etcd.UseConf(etcd.Config{
+			Endpoints:[]string{":1234"},
+		}),
+	)*/
+
 	etcdDataSync := kvdbsync.NewPlugin(
 		kvdbsync.UseDeps(kvdbsync.Deps{
 			KvPlugin:   etcd.DefaultPlugin,

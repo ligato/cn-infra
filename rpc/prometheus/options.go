@@ -1,11 +1,5 @@
 package prometheus
 
-import (
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
-	"github.com/ligato/cn-infra/rpc/rest"
-)
-
 // DefaultPlugin is a default instance of Plugin.
 var DefaultPlugin = NewPlugin()
 
@@ -15,16 +9,6 @@ func NewPlugin(opts ...Option) *Plugin {
 
 	for _, o := range opts {
 		o(p)
-	}
-
-	if p.Deps.PluginName == "" {
-		p.Deps.PluginName = "prometheus"
-	}
-	if p.Deps.Log == nil {
-		p.Deps.Log = logging.ForPlugin(p.Deps.PluginName.String(), logrus.DefaultRegistry)
-	}
-	if p.Deps.HTTP == nil {
-		p.Deps.HTTP = rest.DefaultPlugin
 	}
 
 	return p

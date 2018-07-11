@@ -21,6 +21,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logrus"
 )
 
 const (
@@ -46,7 +47,21 @@ type Deps struct {
 	PluginName          core.PluginName                // inject
 	config.PluginConfig                                // inject
 	StatusCheck         statuscheck.PluginStatusWriter // inject
-	//local.PluginInfraDeps //inject
+}
+
+func (d *Deps) Defaults() {
+	if d.PluginName == "" {
+		d.PluginName = "redis"
+	}
+	if d.Log == nil {
+		d.Log = logging.ForPlugin(d.PluginName.String(), logrus.DefaultRegistry)
+	}
+	if d.PluginConfig == nil {
+		d.PluginConfig = config.ForPlugin(d.PluginName.String())
+	}
+	if d.StatusCheck == nil {
+		d.StatusCheck = statuscheck.DefaultPlugin
+	}
 }
 
 // Init retrieves redis configuration and establishes a new connection

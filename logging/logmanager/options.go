@@ -1,11 +1,5 @@
 package logmanager
 
-import (
-	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
-)
-
 // DefaultPlugin is a default instance of Plugin.
 var DefaultPlugin = NewPlugin()
 
@@ -15,19 +9,6 @@ func NewPlugin(opts ...Option) *Plugin {
 
 	for _, o := range opts {
 		o(p)
-	}
-
-	if p.Deps.PluginName == "" {
-		p.Deps.PluginName = "logs"
-	}
-	if p.Deps.Log == nil {
-		p.Deps.Log = logging.ForPlugin(p.Deps.PluginName.String(), logrus.DefaultRegistry)
-	}
-	if p.Deps.PluginConfig == nil {
-		p.Deps.PluginConfig = config.ForPlugin(p.Deps.PluginName.String())
-	}
-	if p.Deps.LogRegistry == nil {
-		p.Deps.LogRegistry = logrus.DefaultRegistry
 	}
 
 	return p
