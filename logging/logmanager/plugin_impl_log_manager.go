@@ -17,6 +17,7 @@ package logmanager
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/unrolled/render"
@@ -24,6 +25,7 @@ import (
 	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging"
+	log "github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/rpc/rest"
 )
 
@@ -91,22 +93,43 @@ func (lm *Plugin) Init() error {
 		}
 		lm.Log.Debugf("logs config: %+v", lm.Conf)
 
+		// Set deafult log level
 		if lm.Conf.DefaultLevel != "" {
 			if err := lm.LogRegistry.SetLevel("default", lm.Conf.DefaultLevel); err != nil {
-				lm.Log.Warn("setting default log level failed:", err)
-			} else {
-				lm.Log.Debugf("default log level to %q", lm.Conf.DefaultLevel)
+				lm.Log.Warnf("setting default log level failed: %v", err)
 			}
 		}
 
-		// try to set log levels (note, not all of them might exist yet)
-		for _, cfgLogger := range lm.Conf.Loggers {
-			if err := lm.LogRegistry.SetLevel(cfgLogger.Name, cfgLogger.Level); err != nil {
-				//intentionally just log warn & not propagate the error (it is minor thing to interrupt startup)
-				lm.Log.Warn("setting level failed:", err)
+		// Put log/level entries from configuration file to the registry. All new loggers' log levels will
+		// be set according to registry database (it only affects new loggers).
+		for _, logCfgEntry := range lm.Conf.Loggers {
+			if err := lm.LogRegistry.SetLevel(logCfgEntry.Name, logCfgEntry.Level); err != nil {
+				// Intentionally just log warn & not propagate the error (it is minor thing to interrupt startup)
+				lm.Log.Warnf("setting log level %s for logger %s failed: %v", logCfgEntry.Level,
+					logCfgEntry.Name, err)
 			}
 		}
 
+		// All loggers created up to this point were created with initial log level set (defined
+		// via INITIAL_LOGLVL env. variable with value 'info' by default), so let's set log level for them
+		// according to configuration file
+		for loggerName := range lm.LogRegistry.ListLoggers() {
+			logger, exists := lm.LogRegistry.Lookup(loggerName)
+			if !exists {
+				continue
+			}
+			// Set default level
+			if lm.Conf.DefaultLevel != "" {
+				logger.SetLevel(stringToLogLevel(lm.Conf.DefaultLevel))
+			}
+			// Eventually search config file for particular logger
+			for _, cfgLogger := range lm.Conf.Loggers {
+				if loggerName == cfgLogger.Name {
+					logger.SetLevel(stringToLogLevel(cfgLogger.Level))
+					break
+				}
+			}
+		}
 	}
 
 	return nil
@@ -180,4 +203,24 @@ func (lm *Plugin) listLoggersHandler(formatter *render.Render) http.HandlerFunc 
 	return func(w http.ResponseWriter, req *http.Request) {
 		formatter.JSON(w, http.StatusOK, lm.listLoggers())
 	}
+}
+
+func stringToLogLevel(level string) log.LogLevel {
+	level = strings.ToLower(level)
+	switch level {
+	case "debug":
+		return log.DebugLevel
+	case "info":
+		return log.InfoLevel
+	case "warn":
+		return log.WarnLevel
+	case "error":
+		return log.ErrorLevel
+	case "fatal":
+		return log.FatalLevel
+	case "panic":
+		return log.PanicLevel
+	}
+
+	return log.InfoLevel
 }
