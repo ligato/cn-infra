@@ -15,10 +15,8 @@
 package rest
 
 import (
-	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/logging/logrus"
@@ -29,21 +27,6 @@ import (
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/utils/safeclose"
 )
-
-const (
-	// DefaultHTTPPort is used during HTTP server startup unless different port was configured
-	DefaultHTTPPort = "9191"
-	// DefaultIP 0.0.0.0
-	DefaultIP = "0.0.0.0"
-	// DefaultEndpoint 0.0.0.0:9191
-	DefaultEndpoint = DefaultIP + ":" + DefaultHTTPPort
-)
-
-// BasicHTTPAuthenticator is a delegate that implements basic HTTP authentication
-type BasicHTTPAuthenticator interface {
-	// Authenticate returns true if user is authenticated successfully, false otherwise.
-	Authenticate(user string, pass string) bool
-}
 
 // Plugin struct holds all plugin-related data.
 type Plugin struct {
@@ -170,45 +153,4 @@ func (plugin *Plugin) String() string {
 // Name returns the name of the plugin
 func (plugin *Plugin) Name() string {
 	return plugin.PluginName.String()
-}
-
-func auth(fn http.HandlerFunc, auth BasicHTTPAuthenticator) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		user, pass, _ := r.BasicAuth()
-		if !auth.Authenticate(user, pass) {
-			w.Header().Set("WWW-Authenticate", "Provide valid username and password")
-			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
-			return
-		}
-		fn(w, r)
-	}
-}
-
-// staticAuthenticator is default implementation of BasicHTTPAuthenticator
-type staticAuthenticator struct {
-	credentials map[string]string
-}
-
-// newStaticAuthenticator creates new instance of static authenticator.
-// Argument `users` is a slice of colon-separated username and password couples.
-func newStaticAuthenticator(users []string) (*staticAuthenticator, error) {
-	sa := &staticAuthenticator{credentials: map[string]string{}}
-	for _, u := range users {
-		fields := strings.Split(u, ":")
-		if len(fields) != 2 {
-			return nil, fmt.Errorf("invalid format of basic auth entry '%v' expected 'user:pass'", u)
-		}
-		sa.credentials[fields[0]] = fields[1]
-	}
-	return sa, nil
-}
-
-// Authenticate looks up the given user name and password in the internal map.
-// If match is found returns true, false otherwise.
-func (sa *staticAuthenticator) Authenticate(user string, pass string) bool {
-	password, found := sa.credentials[user]
-	if !found {
-		return false
-	}
-	return pass == password
 }

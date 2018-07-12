@@ -24,6 +24,15 @@ import (
 	"github.com/namsral/flag"
 )
 
+const (
+	// DefaultHTTPPort is a port used by default
+	DefaultHTTPPort = "9191"
+	// DefaultHost is a host used by default
+	DefaultHost = "0.0.0.0"
+	// DefaultEndpoint 0.0.0.0:9191
+	DefaultEndpoint = DefaultHost + ":" + DefaultHTTPPort
+)
+
 // PluginConfig tries :
 // - to load flag <plugin-name>-port and then FixConfig() just in case
 // - alternatively <plugin-name>-config and then FixConfig() just in case
@@ -31,7 +40,7 @@ import (
 func PluginConfig(pluginCfg config.PluginConfig, cfg *Config, pluginName core.PluginName) error {
 	portFlag := flag.Lookup(httpPortFlag(pluginName))
 	if portFlag != nil && portFlag.Value != nil && portFlag.Value.String() != "" && cfg != nil {
-		cfg.Endpoint = DefaultIP + ":" + portFlag.Value.String()
+		cfg.Endpoint = DefaultHost + ":" + portFlag.Value.String()
 	}
 
 	if pluginCfg != nil {
@@ -48,12 +57,17 @@ func PluginConfig(pluginCfg config.PluginConfig, cfg *Config, pluginName core.Pl
 
 // DefaultConfig returns new instance of config with default endpoint
 func DefaultConfig() *Config {
-	return &Config{Endpoint: DefaultEndpoint}
+	return &Config{
+		Endpoint: DefaultEndpoint,
+	}
 }
 
 // FixConfig fill default values for empty fields
 func FixConfig(cfg *Config) {
-	if cfg != nil && cfg.Endpoint == "" {
+	if cfg == nil {
+		return
+	}
+	if cfg.Endpoint == "" {
 		cfg.Endpoint = DefaultEndpoint
 	}
 }
