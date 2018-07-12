@@ -54,7 +54,7 @@ type Plugin struct {
 
 	// If plugin was not connected during init phase, the channel can be used to notify dbsync that the plugin was
 	// able to connect Consul after initialization
-	initNotifChan chan struct{}
+	initNotifChan <-chan func()
 }
 
 // Deps lists dependencies of the Consul plugin.
@@ -100,7 +100,7 @@ func ConfigToClient(cfg *Config) (*api.Config, error) {
 
 // Init initializes Consul plugin.
 func (plugin *Plugin) Init() (err error) {
-	plugin.initNotifChan = make(chan struct{})
+	plugin.initNotifChan = make(chan func())
 	cfg, err := plugin.getConfig()
 	if err != nil || plugin.disabled {
 		return err
@@ -154,7 +154,7 @@ func (plugin *Plugin) DoResync() {
 }
 
 // GetInitNotificationChan returns post-init notification channel
-func (plugin *Plugin) GetInitNotificationChan() chan struct{} {
+func (plugin *Plugin) GetInitNotificationChan() <-chan func() {
 	return plugin.initNotifChan
 }
 

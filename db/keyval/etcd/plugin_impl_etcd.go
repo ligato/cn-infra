@@ -52,7 +52,7 @@ type Plugin struct {
 
 	// If plugin was not connected during init phase, the channel can be used to notify dbsync that the plugin was
 	// able to connect Redis after initialization, and receive notification that the registration was successful
-	initNotifChan chan struct{}
+	initNotifChan chan func()
 }
 
 // Deps lists dependencies of the etcd plugin.
@@ -72,7 +72,7 @@ type Deps struct {
 // Check clientv3.New from coreos/etcd for possible errors returned in case
 // the connection cannot be established.
 func (plugin *Plugin) Init() (err error) {
-	plugin.initNotifChan = make(chan struct{})
+	plugin.initNotifChan = make(chan func())
 	// Read ETCD configuration file. Returns error if does not exists.
 	etcdCfg, err := plugin.getEtcdConfig()
 	if err != nil || plugin.disabled {
@@ -102,12 +102,9 @@ func (plugin *Plugin) Init() (err error) {
 					// Configure connection and set as connected
 					plugin.configureConnection(etcdCfg)
 					plugin.connected = true
+					resyncCallback := func() { plugin.DoResync() }
 					// Notify the dbsync that the database is available and can be registered
-					plugin.initNotifChan <- struct{}{}
-					// Wait until registration is done
-					<-plugin.initNotifChan
-					// Trigger resync (for all datastores)
-					plugin.DoResync()
+					plugin.initNotifChan <- resyncCallback
 					return
 				}
 			}
@@ -160,7 +157,7 @@ func (plugin *Plugin) Connected() bool {
 }
 
 // GetInitNotificationChan returns post-init notification channel
-func (plugin *Plugin) GetInitNotificationChan() chan struct{} {
+func (plugin *Plugin) GetInitNotificationChan() <-chan func() {
 	return plugin.initNotifChan
 }
 

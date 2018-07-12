@@ -93,14 +93,13 @@ func (plugin *Plugin) AfterInit() error {
 	// If not connected, start a watcher which waits to initialize kv plugin even after the initialization phase
 	go func() {
 		// Wait for notification that the connector plugin is ready
-		<-plugin.KvPlugin.GetInitNotificationChan()
+		callback := <-plugin.KvPlugin.GetInitNotificationChan()
 		// Initialize and register
 		err := plugin.initKvPlugin()
 		if err != nil {
 			plugin.Log.Errorf("Init KV plugin %v failed: %v", plugin.KvPlugin.GetPluginName(), err)
 		}
-		// Notify kv plugin that the registration is done
-		plugin.KvPlugin.GetInitNotificationChan() <- struct{}{}
+		callback()
 		return
 	}()
 	return nil

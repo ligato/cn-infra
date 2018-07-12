@@ -41,7 +41,7 @@ type Plugin struct {
 	protoWrapper *kvproto.ProtoWrapper
 	// If plugin was not connected during init phase, the channel can be used to notify dbsync that the plugin was
 	// able to connect Redis after initialization
-	initNotifChan chan struct{}
+	initNotifChan chan func()
 }
 
 // Deps lists dependencies of the redis plugin.
@@ -56,6 +56,7 @@ type Deps struct {
 // will be of os.PathError type. An untyped error is returned in case the file
 // doesn't contain a valid YAML configuration.
 func (plugin *Plugin) Init() (err error) {
+	plugin.initNotifChan = make(chan func())
 	redisCfg, err := plugin.getRedisConfig()
 	if err != nil || plugin.disabled {
 		return err
@@ -125,7 +126,7 @@ func (plugin *Plugin) Connected() bool {
 }
 
 // GetInitNotificationChan returns post-init notification channel
-func (plugin *Plugin) GetInitNotificationChan() chan struct{} {
+func (plugin *Plugin) GetInitNotificationChan() <-chan func() {
 	return plugin.initNotifChan
 }
 

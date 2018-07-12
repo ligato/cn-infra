@@ -40,8 +40,9 @@ type KvProtoPlugin interface {
 	// to particular datastore
 	Connected() bool
 	// Returns read-only channel which can be used by previously-disabled plugin to notify
-	// reader, that the plugin is finally initialized and enabled
-	GetInitNotificationChan() chan struct{}
+	// reader, that the plugin is finally initialized and enabled and run callback function
+	// when needed.
+	GetInitNotificationChan() <-chan func()
 	// Returns plugin's name
 	GetPluginName() core.PluginName
 }
