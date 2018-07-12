@@ -73,9 +73,9 @@ func (a *agent) Start() error {
 
 func (a *agent) startSignalWrapper() error {
 	logrus.DefaultLogger().WithFields(logging.Fields{
-		"CommitHash": a.opts.CommitHash,
-		"BuildDate":  a.opts.BuildDate,
-	}).Infof("Starting agent %v", a.opts.BuildVersion)
+		"CommitHash": CommitHash,
+		"BuildDate":  BuildDate,
+	}).Infof("Starting agent %v", BuildVersion)
 
 	// If we want to properly handle cleanup when a SIG comes in *during*
 	// agent startup (ie, clean up after its finished) we need to register

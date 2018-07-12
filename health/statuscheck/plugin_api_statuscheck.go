@@ -26,6 +26,15 @@ import (
 // of a plugin.
 type PluginState string
 
+const (
+	// Init state means that the initialization of the plugin is in progress.
+	Init PluginState = "init"
+	// OK state means that the plugin is healthy.
+	OK PluginState = "ok"
+	// Error state means that some error has occurred in the plugin.
+	Error PluginState = "error"
+)
+
 // PluginStateProbe defines parameters of a function used for plugin state
 // probing, referred to as "probe".
 type PluginStateProbe func() (PluginState, error)

@@ -45,10 +45,6 @@ func init() {
 
 // Options specifies option list for the Agent
 type Options struct {
-	BuildVersion string
-	BuildDate    string
-	CommitHash   string
-
 	QuitSignals []os.Signal
 	QuitChan    chan struct{}
 	ctx         context.Context
@@ -58,9 +54,6 @@ type Options struct {
 
 func newOptions(opts ...Option) Options {
 	opt := Options{
-		BuildVersion: BuildVersion,
-		BuildDate:    BuildDate,
-		CommitHash:   CommitHash,
 		QuitSignals: []os.Signal{
 			os.Interrupt,
 			syscall.SIGTERM,
@@ -81,9 +74,9 @@ type Option func(*Options)
 // Version returns an Option that sets the version of the Agent to the entered string
 func Version(buildVer, buildDate, commitHash string) Option {
 	return func(o *Options) {
-		o.BuildVersion = buildVer
-		o.BuildDate = buildDate
-		o.CommitHash = commitHash
+		BuildVersion = buildVer
+		BuildDate = buildDate
+		CommitHash = commitHash
 	}
 }
 
