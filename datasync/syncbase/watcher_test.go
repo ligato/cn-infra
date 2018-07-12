@@ -16,8 +16,10 @@ package syncbase
 
 import (
 	"context"
+	"github.com/gogo/protobuf/proto"
 	"github.com/ligato/cn-infra/datasync"
-	"github.com/onsi/gomega"
+	"github.com/ligato/cn-infra/datasync/syncbase/msg"
+	. "github.com/onsi/gomega"
 	"testing"
 )
 
@@ -27,7 +29,7 @@ func TestDeleteNonExisting(t *testing.T) {
 
 	const subPrefix = "/sub/prefix/"
 
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 
 	var changes []datasync.ChangeEvent
 
@@ -38,8 +40,8 @@ func TestDeleteNonExisting(t *testing.T) {
 
 	// register watcher
 	wr, err := reg.Watch("resyncname", changeCh, resynCh, subPrefix)
-	gomega.Expect(err).To(gomega.BeNil())
-	gomega.Expect(wr).NotTo(gomega.BeNil())
+	Expect(err).To(BeNil())
+	Expect(wr).NotTo(BeNil())
 
 	// collect the change events
 	go func() {
@@ -63,11 +65,11 @@ func TestDeleteNonExisting(t *testing.T) {
 	changesToBePropagated[subPrefix+"new"] = NewChange(subPrefix+"new", nil, 0, datasync.Put)
 
 	err = reg.PropagateChanges(changesToBePropagated)
-	gomega.Expect(err).To(gomega.BeNil())
+	Expect(err).To(BeNil())
 
-	gomega.Expect(len(changes)).To(gomega.BeEquivalentTo(1))
-	gomega.Expect(changes[0].GetKey()).To(gomega.BeEquivalentTo(subPrefix + "new"))
-	gomega.Expect(changes[0].GetChangeType()).To(gomega.BeEquivalentTo(datasync.Put))
+	Expect(len(changes)).To(BeEquivalentTo(1))
+	Expect(changes[0].GetKey()).To(BeEquivalentTo(subPrefix + "new"))
+	Expect(changes[0].GetChangeType()).To(BeEquivalentTo(datasync.Put))
 
 	// clear the changes
 	changes = nil
@@ -77,11 +79,145 @@ func TestDeleteNonExisting(t *testing.T) {
 	deleteItemThatExists[subPrefix+"new"] = NewChange(subPrefix+"new", nil, 0, datasync.Delete)
 
 	err = reg.PropagateChanges(deleteItemThatExists)
-	gomega.Expect(err).To(gomega.BeNil())
+	Expect(err).To(BeNil())
 
-	gomega.Expect(len(changes)).To(gomega.BeEquivalentTo(1))
-	gomega.Expect(changes[0].GetKey()).To(gomega.BeEquivalentTo(subPrefix + "new"))
-	gomega.Expect(changes[0].GetChangeType()).To(gomega.BeEquivalentTo(datasync.Delete))
+	Expect(len(changes)).To(BeEquivalentTo(1))
+	Expect(changes[0].GetKey()).To(BeEquivalentTo(subPrefix + "new"))
+	Expect(changes[0].GetChangeType()).To(BeEquivalentTo(datasync.Delete))
+
+	cancelFnc()
+
+}
+
+// TestRuntimeResync verifies that prev value in *Events contain expected value in case of runtime resync
+func TestRuntimeResync(t *testing.T) {
+
+	const subPrefix = "/sub/prefix/"
+
+	RegisterTestingT(t)
+
+	var changes []datasync.ChangeEvent
+	var resyncChanges []datasync.KeyVal
+	ctx, cancelFnc := context.WithCancel(context.Background())
+
+	changeCh := make(chan datasync.ChangeEvent)
+	resynCh := make(chan datasync.ResyncEvent)
+	reg := NewRegistry()
+
+	// register watcher
+	wr, err := reg.Watch("resyncname", changeCh, resynCh, subPrefix)
+	Expect(err).To(BeNil())
+	Expect(wr).NotTo(BeNil())
+
+	// collect  events
+	go func() {
+		for {
+			select {
+			case c := <-changeCh:
+				changes = append(changes, c)
+				c.Done(nil)
+			case r := <-resynCh:
+				for _, v := range r.GetValues() {
+					for {
+						kv, done := v.GetNext()
+						if done {
+							break
+						}
+						resyncChanges = append(resyncChanges, kv)
+					}
+				}
+				r.Done(nil)
+			case <-ctx.Done():
+				break
+			}
+		}
+	}()
+
+	createData := func(s string) proto.Message {
+		value := msg.PingRequest{}
+		value.Message = s
+		return &value
+	}
+
+	// 1. execute the first set of changes
+	changesToBePropagated := make(map[string]datasync.ChangeValue)
+
+	changesToBePropagated[subPrefix+"A"] = NewChange(subPrefix+"A", createData("A"), 0, datasync.Put)
+
+	err = reg.PropagateChanges(changesToBePropagated)
+	Expect(err).To(BeNil())
+
+	Expect(len(changes)).To(BeEquivalentTo(1))
+	Expect(len(resyncChanges)).To(BeEquivalentTo(0))
+	Expect(changes[0].GetKey()).To(BeEquivalentTo(subPrefix + "A"))
+	Expect(changes[0].GetChangeType()).To(BeEquivalentTo(datasync.Put))
+
+	prev := msg.PingRequest{}
+	exists, err := changes[0].GetPrevValue(&prev)
+	Expect(err).To(BeNil())
+	Expect(exists).To(BeFalse())
+
+	changes = nil
+	resyncChanges = nil
+
+	// 2. runtime resync
+	resyncToBePropagated := make(map[string]datasync.ChangeValue)
+
+	resyncToBePropagated[subPrefix+"X"] = NewChange(subPrefix+"X", createData("X"), 0, datasync.Put)
+	resyncToBePropagated[subPrefix+"Y"] = NewChange(subPrefix+"Y", createData("Y"), 0, datasync.Put)
+
+	err = reg.PropagateResync(resyncToBePropagated)
+	Expect(err).To(BeNil())
+
+	// Since propagateResync doesn't wait for acknowledge whereas propagateChanges does 'Eventually' must be used.
+	Eventually(func() int { return len(resyncChanges) }).Should(BeEquivalentTo(2))
+	keys := []string{resyncChanges[0].GetKey(), resyncChanges[1].GetKey()}
+	Expect(keys).To(ContainElement(subPrefix + "X"))
+	Expect(keys).To(ContainElement(subPrefix + "Y"))
+
+	changes = nil
+	resyncChanges = nil
+
+	// 3. put a key that is supposed to be removed by resync, verify that prev value does not exist
+	changesToBePropagated[subPrefix+"A"] = NewChange(subPrefix+"A", createData("abc"), 1, datasync.Put)
+	err = reg.PropagateChanges(changesToBePropagated)
+	Expect(err).To(BeNil())
+
+	Expect(len(changes)).To(BeEquivalentTo(1))
+	Expect(changes[0].GetKey()).To(BeEquivalentTo(subPrefix + "A"))
+	Expect(changes[0].GetChangeType()).To(BeEquivalentTo(datasync.Put))
+
+	current := msg.PingRequest{}
+	prev = msg.PingRequest{}
+
+	err = changes[0].GetValue(&current)
+	Expect(err).To(BeNil())
+	Expect(current.Message).To(BeEquivalentTo("abc"))
+
+	exists, err = changes[0].GetPrevValue(&prev)
+	Expect(err).To(BeNil())
+	Expect(exists).To(BeFalse())
+	changes = nil
+	resyncChanges = nil
+
+	// 4. Update the value
+	changesToBePropagated = make(map[string]datasync.ChangeValue)
+
+	changesToBePropagated[subPrefix+"A"] = NewChange(subPrefix+"A", createData("A"), 0, datasync.Put)
+
+	err = reg.PropagateChanges(changesToBePropagated)
+	Expect(err).To(BeNil())
+
+	Expect(len(changes)).To(BeEquivalentTo(1))
+	Expect(len(resyncChanges)).To(BeEquivalentTo(0))
+	Expect(changes[0].GetKey()).To(BeEquivalentTo(subPrefix + "A"))
+	Expect(changes[0].GetChangeType()).To(BeEquivalentTo(datasync.Put))
+
+	prev = msg.PingRequest{}
+	exists, err = changes[0].GetPrevValue(&prev)
+	Expect(err).To(BeNil())
+	Expect(exists).To(BeTrue())
+	Expect(prev.Message).To(BeEquivalentTo("abc"))
 
 	cancelFnc()
 
