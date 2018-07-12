@@ -85,7 +85,7 @@ func (plugin *Plugin) Init() (err error) {
 	}
 	// Uses config file to establish connection with the database
 	plugin.connection, err = NewEtcdConnectionWithBytes(*etcdClientCfg, plugin.Log)
-	if err != nil {
+	if err != nil && etcdCfg.DelayedStart {
 		plugin.Log.Infof("ETCD server %s not reachable in init phase. Agent will continue to try to connect", etcdCfg.Endpoints)
 		// Even if the connection cannot be established during init, keep trying
 		go func(etcdCfg *Config) {
@@ -113,6 +113,9 @@ func (plugin *Plugin) Init() (err error) {
 			}
 		}(&etcdCfg)
 		return nil
+	} else if err != nil {
+		// If delayed start is not allowed
+		return fmt.Errorf("error connecting to ETCD: %v", err)
 	}
 
 	// If successful, configure and return
