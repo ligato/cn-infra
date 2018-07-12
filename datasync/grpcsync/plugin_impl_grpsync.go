@@ -32,7 +32,7 @@ type Deps struct {
 	GRPC grpc.Server
 }
 
-func (d *Deps) Defaults() {
+func (d *Deps) SetDefaults() {
 	if d.GRPC == nil {
 		d.GRPC = grpc.DefaultPlugin
 	}

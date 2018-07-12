@@ -42,7 +42,7 @@ type Deps struct {
 	Messaging             messaging.Mux // inject
 }
 
-func (d *Deps) Defaults() {
+func (d *Deps) SetDefaults() {
 	if d.PluginName == "" {
 		d.PluginName = "msgsync"
 	}

@@ -71,7 +71,7 @@ type Deps struct {
 	Authenticator BasicHTTPAuthenticator //inject
 }
 
-func (d *Deps) Defaults() {
+func (d *Deps) SetDefaults() {
 	if d.PluginName == "" {
 		d.PluginName = "http"
 	}

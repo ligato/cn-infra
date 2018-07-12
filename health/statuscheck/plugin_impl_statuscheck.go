@@ -66,7 +66,7 @@ type Deps struct {
 	Transport  datasync.KeyProtoValWriter // inject (optional)
 }
 
-func (d *Deps) Defaults() {
+func (d *Deps) SetDefaults() {
 	if d.PluginName == "" {
 		d.PluginName = "status-check"
 	}

@@ -56,7 +56,7 @@ type Deps struct {
 	HTTP                rest.HTTPHandlers    // inject
 }
 
-func (d *Deps) Defaults() {
+func (d *Deps) SetDefaults() {
 	if d.PluginName == "" {
 		d.PluginName = "logs"
 	}

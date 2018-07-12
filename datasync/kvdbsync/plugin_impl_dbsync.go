@@ -49,7 +49,7 @@ type Deps struct {
 	ResyncOrch   resync.Subscriber    // inject
 }
 
-func (d *Deps) Defaults() {
+func (d *Deps) SetDefaults() {
 	if d.PluginName == "" {
 		prefix := "kvdb"
 		if d.KvPlugin != nil {

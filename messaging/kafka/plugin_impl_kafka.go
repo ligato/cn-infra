@@ -59,7 +59,7 @@ type Deps struct {
 	ServiceLabel        servicelabel.ReaderAPI
 }
 
-func (d *Deps) Defaults() {
+func (d *Deps) SetDefaults() {
 	if d.PluginName == "" {
 		d.PluginName = "kafka"
 	}

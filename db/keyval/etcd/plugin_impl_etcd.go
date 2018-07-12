@@ -61,7 +61,7 @@ type Deps struct {
 	Resync              *resync.Plugin
 }
 
-func (d *Deps) Defaults() {
+func (d *Deps) SetDefaults() {
 	if d.PluginName == "" {
 		d.PluginName = "etcd"
 	}

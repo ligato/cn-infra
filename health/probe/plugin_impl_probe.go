@@ -51,7 +51,7 @@ type Deps struct {
 	Prometheus          prom.API                 // inject
 }
 
-func (d *Deps) Defaults() {
+func (d *Deps) SetDefaults() {
 	if d.PluginName == "" {
 		d.PluginName = "probe"
 	}

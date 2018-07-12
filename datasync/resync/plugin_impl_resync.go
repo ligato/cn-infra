@@ -43,7 +43,7 @@ type Deps struct {
 	PluginName core.PluginName // inject
 }
 
-func (d *Deps) Defaults() {
+func (d *Deps) SetDefaults() {
 	if d.PluginName == "" {
 		d.PluginName = "resync"
 	}
