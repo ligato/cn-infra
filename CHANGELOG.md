@@ -1,5 +1,9 @@
 # Release v1.4 (2018-07-12)
 
+## Breaking Changes
+  * Package **etcdv3** was renamed to **etcd**. This change may affects imports, configuration
+  file flags and file itself. In cn-infra, `--etcdv3-config` flag was changed to `--etcd-config`
+
 ## New Features
   * Support for GRPC unix domain socket type. Socket types tcp, tcp4, tcp6, unix 
   and unixpacket can be used with GRPC. Desired socket type and address/file can be 
@@ -13,7 +17,6 @@
 ## Other
   * Example configuration files with description were added to every plugin which 
   supports/uses them. 
-  * Package **etcdv3** was renamed to **etcd**
   
 ## Bugfix
   * Fixed occasional failure of method deriving config files
