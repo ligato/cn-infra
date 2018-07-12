@@ -8,7 +8,6 @@ import (
 
 	"github.com/ligato/cn-infra/agent"
 	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
 	prom "github.com/ligato/cn-infra/rpc/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -59,7 +58,7 @@ func main() {
 
 	p := &ExamplePlugin{
 		Deps: Deps{
-			Log:        logging.ForPlugin(PluginName, logrus.DefaultRegistry),
+			Log:        logging.ForPlugin(PluginName),
 			Prometheus: prom.DefaultPlugin,
 		},
 	}

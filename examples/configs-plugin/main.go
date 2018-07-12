@@ -21,7 +21,6 @@ import (
 	"github.com/ligato/cn-infra/agent"
 	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
 )
 
 // PluginName is injected as the plugin name.
@@ -60,7 +59,7 @@ func main() {
 
 	p := &ExamplePlugin{
 		Deps: Deps{
-			Log:          logging.ForPlugin(PluginName, logrus.DefaultRegistry),
+			Log:          logging.ForPlugin(PluginName),
 			PluginConfig: config.ForPlugin(PluginName),
 		},
 		exampleFinished: exampleFinished,

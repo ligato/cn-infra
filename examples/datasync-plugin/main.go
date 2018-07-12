@@ -13,7 +13,6 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/etcd"
 	"github.com/ligato/cn-infra/examples/model"
 	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/servicelabel"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"golang.org/x/net/context"
@@ -73,7 +72,7 @@ func main() {
 	)
 	p := &ExamplePlugin{
 		Deps: Deps{
-			Log:          logging.ForPlugin(PluginName, logrus.DefaultRegistry),
+			Log:          logging.ForPlugin(PluginName),
 			PluginConfig: config.ForPlugin(PluginName),
 			ServiceLabel: servicelabel.DefaultPlugin,
 			Publisher:    etcdDataSync,

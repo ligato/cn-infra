@@ -23,7 +23,6 @@ import (
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/messaging"
 	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/ligato/cn-infra/messaging/kafka/mux"
@@ -64,7 +63,7 @@ func (d *Deps) SetDefaults() {
 		d.PluginName = "kafka"
 	}
 	if d.Log == nil {
-		d.Log = logging.ForPlugin(d.PluginName.String(), logrus.DefaultRegistry)
+		d.Log = logging.ForPlugin(d.PluginName.String())
 	}
 	if d.PluginConfig == nil {
 		d.PluginConfig = config.ForPlugin(d.PluginName.String())

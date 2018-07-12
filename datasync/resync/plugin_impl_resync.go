@@ -20,7 +20,6 @@ import (
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
 )
 
 const (
@@ -48,7 +47,7 @@ func (d *Deps) SetDefaults() {
 		d.PluginName = "resync"
 	}
 	if d.Log == nil {
-		d.Log = logging.ForPlugin(d.PluginName.String(), logrus.DefaultRegistry)
+		d.Log = logging.ForPlugin(d.PluginName.String())
 	}
 }
 

@@ -23,7 +23,6 @@ import (
 	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/health/statuscheck/model/status"
 	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
 	prom "github.com/ligato/cn-infra/rpc/prometheus"
 	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/ligato/cn-infra/servicelabel"
@@ -56,7 +55,7 @@ func (d *Deps) SetDefaults() {
 		d.PluginName = "probe"
 	}
 	if d.Log == nil {
-		d.Log = logging.ForPlugin(d.PluginName.String(), logrus.DefaultRegistry)
+		d.Log = logging.ForPlugin(d.PluginName.String())
 	}
 	if d.PluginConfig == nil {
 		d.PluginConfig = config.ForPlugin(d.PluginName.String())

@@ -23,9 +23,7 @@ import (
 	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/datasync/syncbase"
 	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/servicelabel"
 )
 
@@ -60,7 +58,7 @@ func (d *Deps) SetDefaults() {
 		d.PluginName = core.PluginName(prefix + "-datasync")
 	}
 	if d.Log == nil {
-		d.Log = logging.ForPlugin(d.PluginName.String(), logrus.DefaultRegistry)
+		d.Log = logging.ForPlugin(d.PluginName.String())
 	}
 	if d.ServiceLabel == nil {
 		d.ServiceLabel = servicelabel.DefaultPlugin
@@ -70,28 +68,6 @@ func (d *Deps) SetDefaults() {
 // Name implements PluginNamed
 func (p *Plugin) Name() string {
 	return p.PluginName.String()
-}
-
-type infraDeps interface {
-	// InfraDeps for getting PlugginInfraDeps instance (logger, config, plugin name, statuscheck)
-	InfraDeps(pluginName string, opts ...local.InfraDepsOpts) *local.PluginInfraDeps
-}
-
-// OfDifferentAgent allows accessing DB of a different agent (with a particular microservice label).
-// This method is a shortcut to simplify creating new instance of a plugin
-// that is supposed to watch different agent DB.
-// Method intentionally copies instance of a plugin (assuming it has set all dependencies)
-// and sets microservice label.
-func (plugin /*intentionally without pointer receiver*/ Plugin) OfDifferentAgent(
-	microserviceLabel string, infraDeps infraDeps) *Plugin {
-
-	// plugin name suffixed by micorservice label
-	/*plugin.Deps.PluginInfraDeps = *infraDeps.InfraDeps(string(
-		plugin.Deps.PluginInfraDeps.PluginName) + "-" + microserviceLabel)
-
-	// this is important - here comes microservice label of different agent
-	plugin.Deps.PluginInfraDeps.ServiceLabel = servicelabel.OfDifferentAgent(microserviceLabel)*/
-	return &plugin // copy (no pointer receiver)
 }
 
 // Init only initializes plugin.registry.

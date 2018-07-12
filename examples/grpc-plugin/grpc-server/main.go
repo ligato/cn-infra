@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 
+	"github.com/ligato/cn-infra/rpc/rest"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/examples/helloworld/helloworld"
 
@@ -37,13 +38,11 @@ func main() {
 	}))
 	core.EventLoopWithInterrupt(agent, exampleFinished)*/
 
-	/*rest.DefaultPlugin = rest.NewPlugin(
-		rest.UseConf(rest.Config{Endpoint: ":1234"}),
+	rest.DefaultPlugin = rest.NewPlugin(
+		rest.UseConf(rest.Config{
+			Endpoint: ":1234",
+		}),
 	)
-
-	grpc.DefaultPlugin = grpc.NewPlugin(
-		grpc.UseConf(grpc.Config{Endpoint: ":3333"}),
-	)*/
 
 	/*myGRPC := grpc.NewPlugin(
 		grpc.UseDeps(grpc.Deps{
@@ -53,7 +52,7 @@ func main() {
 
 	p := &ExamplePlugin{
 		Deps: Deps{
-			Log:  logging.ForPlugin(PluginName, logrus.DefaultRegistry),
+			Log:  logging.ForPlugin(PluginName),
 			GRPC: grpc.DefaultPlugin,
 		},
 	}

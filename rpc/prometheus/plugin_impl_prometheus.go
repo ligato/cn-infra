@@ -22,7 +22,6 @@ import (
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -63,7 +62,7 @@ func (d *Deps) SetDefaults() {
 		d.PluginName = "prometheus"
 	}
 	if d.Log == nil {
-		d.Log = logging.ForPlugin(d.PluginName.String(), logrus.DefaultRegistry)
+		d.Log = logging.ForPlugin(d.PluginName.String())
 	}
 	if d.HTTP == nil {
 		d.HTTP = rest.DefaultPlugin

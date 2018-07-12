@@ -22,7 +22,6 @@ import (
 	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/unrolled/render"
 )
@@ -39,7 +38,7 @@ const (
 	levelVarName  = "level"
 )
 
-// Plugin allows to manage log levels of the loggers using HTTP.
+// Plugin allows to manage log levels of the loggers.
 type Plugin struct {
 	Deps
 
@@ -61,13 +60,13 @@ func (d *Deps) SetDefaults() {
 		d.PluginName = "logs"
 	}
 	if d.Log == nil {
-		d.Log = logging.ForPlugin(d.PluginName.String(), logrus.DefaultRegistry)
+		d.Log = logging.ForPlugin(d.PluginName.String())
 	}
 	if d.PluginConfig == nil {
 		d.PluginConfig = config.ForPlugin(d.PluginName.String())
 	}
 	if d.LogRegistry == nil {
-		d.LogRegistry = logrus.DefaultRegistry
+		d.LogRegistry = logging.DefaultRegistry
 	}
 }
 

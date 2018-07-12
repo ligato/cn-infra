@@ -5,7 +5,6 @@ import (
 
 	"github.com/ligato/cn-infra/agent"
 	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
 )
 
 // *************************************************************************
@@ -39,7 +38,7 @@ func main() {
 	core.EventLoopWithInterrupt(agent, exampleFinished)*/
 
 	p := &ExamplePlugin{
-		Log:             logging.ForPlugin(PluginName, logrus.DefaultRegistry),
+		Log:             logging.ForPlugin(PluginName),
 		exampleFinished: exampleFinished,
 	}
 	a := agent.NewAgent(

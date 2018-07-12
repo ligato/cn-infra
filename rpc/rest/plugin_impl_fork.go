@@ -66,7 +66,7 @@ func (plugin *ForkPlugin) Init() (err error) {
 	if probePort > 0 && probePort != plugin.Deps.DefaultHTTP.GetPort() {
 		childPlugNameHTTP := plugin.String() + "-HTTP"
 		plugin.newPlugin = &Plugin{Deps: Deps{
-			Log:        logging.ForPlugin(childPlugNameHTTP, plugin.Deps.Log),
+			Log:        logging.ForPlugin(childPlugNameHTTP),
 			PluginName: core.PluginName(childPlugNameHTTP),
 		}, Config: plugin.Config,
 		}

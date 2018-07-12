@@ -22,7 +22,6 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/etcd"
 	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
 
 	"github.com/ligato/cn-infra/datasync/kvdbsync"
 	"github.com/ligato/cn-infra/datasync/resync"
@@ -71,7 +70,7 @@ func main() {
 	)
 	p := &ExamplePlugin{
 		Deps: Deps{
-			Log:           logging.ForPlugin(PluginName, logrus.DefaultRegistry),
+			Log:           logging.ForPlugin(PluginName),
 			StatusMonitor: statuscheck.DefaultPlugin,
 		},
 		closeChannel: exampleFinished,

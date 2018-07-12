@@ -21,7 +21,6 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
 )
 
 const (
@@ -54,7 +53,7 @@ func (d *Deps) SetDefaults() {
 		d.PluginName = "redis"
 	}
 	if d.Log == nil {
-		d.Log = logging.ForPlugin(d.PluginName.String(), logrus.DefaultRegistry)
+		d.Log = logging.ForPlugin(d.PluginName.String())
 	}
 	if d.PluginConfig == nil {
 		d.PluginConfig = config.ForPlugin(d.PluginName.String())

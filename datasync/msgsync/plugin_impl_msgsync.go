@@ -19,10 +19,9 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/config"
+	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/messaging"
 )
 
@@ -38,8 +37,10 @@ type Plugin struct {
 // Deps groups dependencies injected into the plugin so that they are
 // logically separated from other plugin fields.
 type Deps struct {
-	local.PluginInfraDeps               // inject
-	Messaging             messaging.Mux // inject
+	Log        logging.PluginLogger // inject
+	PluginName core.PluginName      // inject
+	config.PluginConfig
+	Messaging messaging.Mux // inject
 }
 
 func (d *Deps) SetDefaults() {
@@ -47,7 +48,7 @@ func (d *Deps) SetDefaults() {
 		d.PluginName = "msgsync"
 	}
 	if d.Log == nil {
-		d.Log = logging.ForPlugin(d.PluginName.String(), logrus.DefaultRegistry)
+		d.Log = logging.ForPlugin(d.PluginName.String())
 	}
 	if d.PluginConfig == nil {
 		d.PluginConfig = config.ForPlugin(d.PluginName.String())

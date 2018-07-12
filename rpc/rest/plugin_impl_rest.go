@@ -19,7 +19,6 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/unrolled/render"
 
 	"github.com/ligato/cn-infra/config"
@@ -59,7 +58,7 @@ func (d *Deps) SetDefaults() {
 		d.PluginName = "http"
 	}
 	if d.Log == nil {
-		d.Log = logging.ForPlugin(d.PluginName.String(), logrus.DefaultRegistry)
+		d.Log = logging.ForPlugin(d.PluginName.String())
 	}
 	if d.PluginConfig == nil {
 		d.PluginConfig = config.ForPlugin(d.PluginName.String())
