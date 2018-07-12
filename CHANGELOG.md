@@ -1,3 +1,26 @@
+# Release v1.4 (2018-07-12)
+
+## New Features
+  * Support for GRPC unix domain socket type. Socket types tcp, tcp4, tcp6, unix 
+  and unixpacket can be used with GRPC. Desired socket type and address/file can be 
+  specified via grpc configuration file ([example here](rpc/grpc/grpc.conf)). More
+  information in the [readme](rpc/grpc/README.md)
+  * Rest plugin security improved. Security features are use of client/server certificates
+  (HTTPS) and basic HTTP authentication with username and password. There features 
+  are disabled by default. Info about how to use it and example can be found in the 
+  [readme](rpc/rest/README.md)
+  
+## Other
+  * Example configuration files with description were added to every plugin which 
+  supports them. 
+  * Package **etcdv3** was renamed to **etcd**
+  
+## Bugfix
+  * Fixed occasional failure of method deriving config files
+  * Fixed multiple issues in logs-lib example (logger, HTTP usage)  
+  * To prevent incorrect values in subsequent changes. Previous value of key should 
+  be correctly cleaned up if the resync was called outside of initialization phase.
+
 # Release v1.3 (2018-05-24)
 
 ## New Features
