@@ -30,6 +30,8 @@ import (
 const (
 	// healthCheckProbeKey is a key used to probe Etcd state
 	healthCheckProbeKey = "/probe-etcd-connection"
+	// ETCD reconnect interval
+	reconnectInterval = 2
 )
 
 // Plugin implements etcd plugin.
@@ -37,6 +39,8 @@ type Plugin struct {
 	Deps
 	// Plugin is disabled if there is no config file available
 	disabled bool
+	// Set if connected to ETCD db
+	connected bool
 	// ETCD connection encapsulation
 	connection *BytesConnectionEtcd
 	// Read/Write proto modelled data
@@ -45,6 +49,10 @@ type Plugin struct {
 	autoCompactDone chan struct{}
 	reconnectResync bool
 	lastConnErr     error
+
+	// If plugin was not connected during init phase, the channel can be used to notify dbsync that the plugin was
+	// able to connect Redis after initialization, and receive notification that the registration was successful
+	initNotifChan chan struct{}
 }
 
 // Deps lists dependencies of the etcd plugin.
@@ -64,6 +72,7 @@ type Deps struct {
 // Check clientv3.New from coreos/etcd for possible errors returned in case
 // the connection cannot be established.
 func (plugin *Plugin) Init() (err error) {
+	plugin.initNotifChan = make(chan struct{})
 	// Read ETCD configuration file. Returns error if does not exists.
 	etcdCfg, err := plugin.getEtcdConfig()
 	if err != nil || plugin.disabled {
@@ -77,9 +86,105 @@ func (plugin *Plugin) Init() (err error) {
 	// Uses config file to establish connection with the database
 	plugin.connection, err = NewEtcdConnectionWithBytes(*etcdClientCfg, plugin.Log)
 	if err != nil {
-		plugin.Log.Errorf("Err: %v", err)
-		return err
+		plugin.Log.Infof("ETCD server %s not reachable in init phase. Agent will continue to try to connect", etcdCfg.Endpoints)
+		// Even if the connection cannot be established during init, keep trying
+		go func(etcdCfg *Config) {
+			for {
+				time.Sleep(reconnectInterval * time.Second)
+				plugin.Log.Infof("Connecting to ETCD %v ...", etcdCfg.Endpoints)
+				plugin.connection, err = NewEtcdConnectionWithBytes(*etcdClientCfg, plugin.Log)
+				if err != nil {
+					// Do not mark it as an error
+					plugin.Log.Debugf("Repeated attempt to connect to the ETCD %s failed. Err: %s",
+						etcdCfg.Endpoints, err)
+				} else {
+					plugin.Log.Infof("ETCD server %s connected", etcdCfg.Endpoints)
+					// Configure connection and set as connected
+					plugin.configureConnection(etcdCfg)
+					plugin.connected = true
+					// Notify the dbsync that the database is available and can be registered
+					plugin.initNotifChan <- struct{}{}
+					// Wait until registration is done
+					<-plugin.initNotifChan
+					// Trigger resync (for all datastores)
+					plugin.DoResync()
+					return
+				}
+			}
+		}(&etcdCfg)
+		return nil
 	}
+
+	// If successful, configure and return
+	plugin.configureConnection(&etcdCfg)
+
+	// Mark plugin as connected at this point
+	plugin.connected = true
+
+	return nil
+}
+
+// Close shutdowns the connection.
+func (plugin *Plugin) Close() error {
+	err := safeclose.Close(plugin.autoCompactDone)
+	return err
+}
+
+// NewBroker creates new instance of prefixed broker that provides API with arguments of type proto.Message.
+func (plugin *Plugin) NewBroker(keyPrefix string) keyval.ProtoBroker {
+	return plugin.protoWrapper.NewBroker(keyPrefix)
+}
+
+// NewWatcher creates new instance of prefixed broker that provides API with arguments of type proto.Message.
+func (plugin *Plugin) NewWatcher(keyPrefix string) keyval.ProtoWatcher {
+	return plugin.protoWrapper.NewWatcher(keyPrefix)
+}
+
+// DoResync performs ETCD resync
+func (plugin *Plugin) DoResync() {
+	plugin.Resync.DoResync()
+}
+
+// Disabled returns *true* if the plugin is not in use due to missing
+// etcd configuration.
+func (plugin *Plugin) Disabled() (disabled bool) {
+	return plugin.disabled
+}
+
+// Connected returns *true* if the plugin has connection with the database.
+func (plugin *Plugin) Connected() bool {
+	return plugin.connected
+}
+
+// GetInitNotificationChan returns post-init notification channel
+func (plugin *Plugin) GetInitNotificationChan() chan struct{} {
+	return plugin.initNotifChan
+}
+
+// GetPluginName returns name of the plugin
+func (plugin *Plugin) GetPluginName() core.PluginName {
+	return plugin.PluginName
+}
+
+// PutIfNotExists puts given key-value pair into etcd if there is no value set for the key. If the put was successful
+// succeeded is true. If the key already exists succeeded is false and the value for the key is untouched.
+func (plugin *Plugin) PutIfNotExists(key string, value []byte) (succeeded bool, err error) {
+	if plugin.connection != nil {
+		return plugin.connection.PutIfNotExists(key, value)
+	}
+	return false, fmt.Errorf("connection is not established")
+}
+
+// Compact compatcs the ETCD database to the specific revision
+func (plugin *Plugin) Compact(rev ...int64) (toRev int64, err error) {
+	if plugin.connection != nil {
+		return plugin.connection.Compact(rev...)
+	}
+	return 0, fmt.Errorf("connection is not established")
+}
+
+// If ETCD is connected, complete all other procedures
+func (plugin *Plugin) configureConnection(etcdCfg *Config) {
 	plugin.reconnectResync = etcdCfg.ReconnectResync
 	if etcdCfg.AutoCompact > 0 {
 		if etcdCfg.AutoCompact < time.Duration(time.Minute*60) {
@@ -103,55 +208,16 @@ func (plugin *Plugin) Init() (err error) {
 						plugin.Log.Warn("Expected resync after ETCD reconnect could not start beacuse of missing Resync plugin")
 					}
 				}
+				plugin.connected = true
 				return statuscheck.OK, nil
 			}
 			plugin.lastConnErr = err
+			plugin.connected = false
 			return statuscheck.Error, err
 		})
 	} else {
 		plugin.Log.Warnf("Unable to start status check for etcd")
 	}
-
-	return nil
-}
-
-// Close shutdowns the connection.
-func (plugin *Plugin) Close() error {
-	err := safeclose.Close(plugin.autoCompactDone)
-	return err
-}
-
-// NewBroker creates new instance of prefixed broker that provides API with arguments of type proto.Message.
-func (plugin *Plugin) NewBroker(keyPrefix string) keyval.ProtoBroker {
-	return plugin.protoWrapper.NewBroker(keyPrefix)
-}
-
-// NewWatcher creates new instance of prefixed broker that provides API with arguments of type proto.Message.
-func (plugin *Plugin) NewWatcher(keyPrefix string) keyval.ProtoWatcher {
-	return plugin.protoWrapper.NewWatcher(keyPrefix)
-}
-
-// Disabled returns *true* if the plugin is not in use due to missing
-// etcd configuration.
-func (plugin *Plugin) Disabled() (disabled bool) {
-	return plugin.disabled
-}
-
-// PutIfNotExists puts given key-value pair into etcd if there is no value set for the key. If the put was successful
-// succeeded is true. If the key already exists succeeded is false and the value for the key is untouched.
-func (plugin *Plugin) PutIfNotExists(key string, value []byte) (succeeded bool, err error) {
-	if plugin.connection != nil {
-		return plugin.connection.PutIfNotExists(key, value)
-	}
-	return false, fmt.Errorf("connection is not established")
-}
-
-// Compact compatcs the ETCD database to the specific revision
-func (plugin *Plugin) Compact(rev ...int64) (toRev int64, err error) {
-	if plugin.connection != nil {
-		return plugin.connection.Compact(rev...)
-	}
-	return 0, fmt.Errorf("connection is not established")
 }
 
 func (plugin *Plugin) getEtcdConfig() (Config, error) {

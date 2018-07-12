@@ -15,6 +15,8 @@
 package redis
 
 import (
+	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/flavors/local"
@@ -31,15 +33,21 @@ type Plugin struct {
 	Deps
 	// Plugin is disabled if there is no config file available
 	disabled bool
+	// Set if connected to Redis db
+	connected bool
 	// Redis connection encapsulation
 	connection *BytesConnectionRedis
 	// Read/Write proto modelled data
 	protoWrapper *kvproto.ProtoWrapper
+	// If plugin was not connected during init phase, the channel can be used to notify dbsync that the plugin was
+	// able to connect Redis after initialization
+	initNotifChan chan struct{}
 }
 
 // Deps lists dependencies of the redis plugin.
 type Deps struct {
 	local.PluginInfraDeps //inject
+	Resync                *resync.Plugin
 }
 
 // Init retrieves redis configuration and establishes a new connection
@@ -64,13 +72,18 @@ func (plugin *Plugin) Init() (err error) {
 	}
 	plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.connection, &keyval.SerializerJSON{})
 
+	// Mark plugin as connected at this point
+	plugin.connected = true
+
 	// Register for providing status reports (polling mode)
 	if plugin.StatusCheck != nil {
 		plugin.StatusCheck.Register(plugin.PluginName, func() (statuscheck.PluginState, error) {
 			_, _, err := plugin.NewBroker("/").GetValue(healthCheckProbeKey, nil)
 			if err == nil {
+				plugin.connected = true
 				return statuscheck.OK, nil
 			}
+			plugin.connected = false
 			return statuscheck.Error, err
 		})
 	} else {
@@ -95,10 +108,30 @@ func (plugin *Plugin) NewWatcher(keyPrefix string) keyval.ProtoWatcher {
 	return plugin.protoWrapper.NewWatcher(keyPrefix)
 }
 
+// DoResync performs Redis resync
+func (plugin *Plugin) DoResync() {
+	plugin.Resync.DoResync()
+}
+
 // Disabled returns *true* if the plugin is not in use due to missing
 // redis configuration.
 func (plugin *Plugin) Disabled() (disabled bool) {
 	return plugin.disabled
+}
+
+// Connected returns *true* if the plugin has connection with the database.
+func (plugin *Plugin) Connected() bool {
+	return plugin.connected
+}
+
+// GetInitNotificationChan returns post-init notification channel
+func (plugin *Plugin) GetInitNotificationChan() chan struct{} {
+	return plugin.initNotifChan
+}
+
+// GetPluginName returns name of the plugin
+func (plugin *Plugin) GetPluginName() core.PluginName {
+	return plugin.PluginName
 }
 
 func (plugin *Plugin) getRedisConfig() (cfg interface{}, err error) {

@@ -22,6 +22,7 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/ligato/cn-infra/health/statuscheck"
+	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
 const (
@@ -41,6 +42,8 @@ type Plugin struct {
 
 	// Plugin is disabled if there is no config file available
 	disabled bool
+	// Set if connected to Consul db
+	connected bool
 	// Consul client encapsulation
 	client *Client
 	// Read/Write proto modelled data
@@ -48,6 +51,10 @@ type Plugin struct {
 
 	reconnectResync bool
 	lastConnErr     error
+
+	// If plugin was not connected during init phase, the channel can be used to notify dbsync that the plugin was
+	// able to connect Consul after initialization
+	initNotifChan chan struct{}
 }
 
 // Deps lists dependencies of the Consul plugin.
@@ -60,6 +67,11 @@ type Deps struct {
 // Disabled returns *true* if the plugin is not in use due to missing configuration.
 func (plugin *Plugin) Disabled() bool {
 	return plugin.disabled
+}
+
+// Connected returns *true* if the plugin has connection with the database.
+func (plugin *Plugin) Connected() bool {
+	return plugin.connected
 }
 
 func (plugin *Plugin) getConfig() (*Config, error) {
@@ -88,6 +100,7 @@ func ConfigToClient(cfg *Config) (*api.Config, error) {
 
 // Init initializes Consul plugin.
 func (plugin *Plugin) Init() (err error) {
+	plugin.initNotifChan = make(chan struct{})
 	cfg, err := plugin.getConfig()
 	if err != nil || plugin.disabled {
 		return err
@@ -104,6 +117,9 @@ func (plugin *Plugin) Init() (err error) {
 	plugin.reconnectResync = cfg.ReconnectResync
 	plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.client, &keyval.SerializerJSON{})
 
+	// Mark plugin as connected at this point
+	plugin.connected = true
+
 	// Register for providing status reports (polling mode).
 	if plugin.StatusCheck != nil {
 		plugin.StatusCheck.Register(core.PluginName(plugin.PluginName), func() (statuscheck.PluginState, error) {
@@ -118,9 +134,11 @@ func (plugin *Plugin) Init() (err error) {
 						plugin.Log.Warn("Expected resync after Consul reconnect could not start beacuse of missing Resync plugin")
 					}
 				}
+				plugin.connected = true
 				return statuscheck.OK, nil
 			}
 			plugin.lastConnErr = err
+			plugin.connected = false
 			return statuscheck.Error, err
 		})
 	} else {
@@ -130,9 +148,24 @@ func (plugin *Plugin) Init() (err error) {
 	return nil
 }
 
+// DoResync performs Consul resync
+func (plugin *Plugin) DoResync() {
+	plugin.Resync.DoResync()
+}
+
+// GetInitNotificationChan returns post-init notification channel
+func (plugin *Plugin) GetInitNotificationChan() chan struct{} {
+	return plugin.initNotifChan
+}
+
+// GetPluginName returns name of the plugin
+func (plugin *Plugin) GetPluginName() core.PluginName {
+	return plugin.PluginName
+}
+
 // Close closes Consul plugin.
 func (plugin *Plugin) Close() error {
-	return nil
+	return safeclose.Close(plugin.initNotifChan)
 }
 
 // NewBroker creates new instance of prefixed broker that provides API with arguments of type proto.Message.

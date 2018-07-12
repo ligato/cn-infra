@@ -14,6 +14,8 @@
 
 package keyval
 
+import "github.com/ligato/cn-infra/core"
+
 // Root denotes that no prefix is prepended to the keys.
 const Root = ""
 
@@ -29,9 +31,19 @@ type KvProtoPlugin interface {
 	// The prefix is removed from the key retrieved by GetKey() in ProtoWatchResp.
 	// To avoid using a prefix, pass keyval.Root constant as argument.
 	NewWatcher(keyPrefix string) ProtoWatcher
+	// DoResync can be used to call full resync for key-value datastore
+	DoResync()
 	// Disabled returns true if there was no configuration and therefore agent
 	// started without connectivity to a particular data store.
 	Disabled() bool
+	// Connected returns false if there is an configuration but kv plugin is not connected
+	// to particular datastore
+	Connected() bool
+	// Returns read-only channel which can be used by previously-disabled plugin to notify
+	// reader, that the plugin is finally initialized and enabled
+	GetInitNotificationChan() chan struct{}
+	// Returns plugin's name
+	GetPluginName() core.PluginName
 }
 
 // KvBytesPlugin provides unifying interface for different key-value datastore

@@ -100,6 +100,7 @@ func (f *AllConnectorsFlavor) Inject() bool {
 	}}
 
 	f.Redis.Deps.PluginInfraDeps = *f.InfraDeps("redis", local.WithConf())
+	f.Redis.Deps.Resync = &f.ResyncOrch
 	InjectKVDBSync(&f.RedisDataSync, &f.Redis, f.Redis.PluginName, f.FlavorLocal, &f.ResyncOrch)
 
 	f.Kafka.Deps.PluginInfraDeps = *f.InfraDeps("kafka", local.WithConf())
