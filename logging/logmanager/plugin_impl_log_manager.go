@@ -118,13 +118,6 @@ func (lm *Plugin) Init() error {
 				// Intentionally just log warn & not propagate the error (it is minor thing to interrupt startup)
 				lm.Log.Warnf("setting log level %s for logger %s failed: %v", logCfgEntry.Level,
 					logCfgEntry.Name, err)
-			} else {
-				// Check whether such a logger does not exist. If so, set the level now (override default value).
-				logger, exists := lm.LogRegistry.Lookup(logCfgEntry.Name)
-				if !exists {
-					continue
-				}
-				logger.SetLevel(stringToLogLevel(logCfgEntry.Level))
 			}
 		}
 	}
