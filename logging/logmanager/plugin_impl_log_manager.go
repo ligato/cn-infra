@@ -22,6 +22,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/unrolled/render"
 
+	"os"
+
 	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging"
@@ -82,6 +84,11 @@ type ConfLogger struct {
 
 // Init does nothing
 func (lm *Plugin) Init() error {
+	// Environmental variable is preferred before config file. If set, all logger will be created with its log level
+	// and config file processing can be skipped
+	if os.Getenv("INITIAL_LOGLVL") != "" {
+		return nil
+	}
 	if lm.PluginConfig != nil {
 		if lm.Conf == nil {
 			lm.Conf = NewConf()
