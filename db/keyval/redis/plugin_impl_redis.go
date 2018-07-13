@@ -116,7 +116,7 @@ func (plugin *Plugin) Connected() bool {
 	return plugin.connected
 }
 
-// GetInitNotificationChan returns post-init notification channel
+// OnConnect gathers functions from all plugin with Redis as dependency
 func (plugin *Plugin) OnConnect(func() error) {
 	plugin.Log.Warnf("Redis 'OnConnect()' not implemented")
 }
