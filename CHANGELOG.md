@@ -1,15 +1,17 @@
 # Release v1.4 (2018-07-12)
 
 ## Breaking Changes
-  * Package **etcdv3** was renamed to **etcd**. This change may affects imports, configuration
-  file flags and file itself. In cn-infra, `--etcdv3-config` flag was changed to `--etcd-config`
+  * Package **etcdv3** was renamed to **etcd**. This change affects imports. Also 
+  pay attention to the configuration flag which can also be influenced by the change.
+  Based on the change, flag for ETCD configuration file `--etcdv3-config` is now defined 
+  as `--etcd-config`.
 
 ## New Features
   * Support for GRPC unix domain socket type. Socket types tcp, tcp4, tcp6, unix 
   and unixpacket can be used with GRPC. Desired socket type and address/file can be 
   specified via grpc configuration file ([example here](rpc/grpc/grpc.conf)). More
   information in the [readme](rpc/grpc/README.md)
-  * Rest plugin security improved. Security features are usage of client/server certificates
+  * Rest plugin security improved. Security features are the usage of client/server certificates
   (HTTPS) and basic HTTP authentication with username and password. Those features 
   are disabled by default. Information about how to use it and example can be found in the 
   [readme](rpc/rest/README.md)
@@ -40,7 +42,6 @@
 ## Bugfix
   * Transport for statuscheck plugin fixed
   * Fixed bug where watcher was closed after server restart if database was compacted  
-  
 
 # Release v1.2 (2018-03-22)
 
