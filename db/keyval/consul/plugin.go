@@ -142,11 +142,6 @@ func (plugin *Plugin) Init() (err error) {
 	return nil
 }
 
-// DoResync performs Consul resync
-func (plugin *Plugin) DoResync() {
-	plugin.Resync.DoResync()
-}
-
 // OnConnect gathers functions from all plugin with Consul as dependency
 func (plugin *Plugin) OnConnect(func() error) {
 	plugin.Log.Warnf("Consul 'OnConnect()' not implemented")

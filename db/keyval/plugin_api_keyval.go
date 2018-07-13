@@ -31,8 +31,6 @@ type KvProtoPlugin interface {
 	// The prefix is removed from the key retrieved by GetKey() in ProtoWatchResp.
 	// To avoid using a prefix, pass keyval.Root constant as argument.
 	NewWatcher(keyPrefix string) ProtoWatcher
-	// DoResync can be used to call full resync for key-value datastore
-	DoResync()
 	// Disabled returns true if there was no configuration and therefore agent
 	// started without connectivity to a particular data store.
 	Disabled() bool

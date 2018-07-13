@@ -125,13 +125,6 @@ func (plugin *Plugin) NewWatcher(keyPrefix string) keyval.ProtoWatcher {
 	return plugin.protoWrapper.NewWatcher(keyPrefix)
 }
 
-// DoResync performs ETCD resync
-func (plugin *Plugin) DoResync() {
-	if plugin.Resync != nil {
-		plugin.Resync.DoResync()
-	}
-}
-
 // Disabled returns *true* if the plugin is not in use due to missing
 // etcd configuration.
 func (plugin *Plugin) Disabled() (disabled bool) {
@@ -197,6 +190,10 @@ func (plugin *Plugin) etcdReconnectionLoop(clientCfg *ClientConfig) {
 				if err := callback(); err != nil {
 					plugin.Log.Error(err)
 				}
+			}
+			// At the end, call resync
+			if plugin.Resync != nil {
+				plugin.Resync.DoResync()
 			}
 			plugin.Log.Debugf("Etcd reconnection loop ended")
 			return

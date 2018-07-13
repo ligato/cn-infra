@@ -95,7 +95,6 @@ func (plugin *Plugin) AfterInit() error {
 		if err := plugin.initKvPlugin(); err != nil {
 			return fmt.Errorf("init KV plugin %v failed: %v", plugin.KvPlugin.GetPluginName(), err)
 		}
-		plugin.KvPlugin.DoResync()
 		return nil
 	})
 	return nil

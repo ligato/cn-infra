@@ -105,11 +105,6 @@ func (plugin *Plugin) NewWatcher(keyPrefix string) keyval.ProtoWatcher {
 	return plugin.protoWrapper.NewWatcher(keyPrefix)
 }
 
-// DoResync performs Redis resync
-func (plugin *Plugin) DoResync() {
-	plugin.Resync.DoResync()
-}
-
 // Disabled returns *true* if the plugin is not in use due to missing
 // redis configuration.
 func (plugin *Plugin) Disabled() (disabled bool) {
