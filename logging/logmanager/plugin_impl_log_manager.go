@@ -93,41 +93,38 @@ func (lm *Plugin) Init() error {
 		}
 		lm.Log.Debugf("logs config: %+v", lm.Conf)
 
-		// Set deafult log level
+		// Handle default log level
 		if lm.Conf.DefaultLevel != "" {
 			if err := lm.LogRegistry.SetLevel("default", lm.Conf.DefaultLevel); err != nil {
 				lm.Log.Warnf("setting default log level failed: %v", err)
+			} else {
+				// All loggers created up to this point were created with initial log level set (defined
+				// via INITIAL_LOGLVL env. variable with value 'info' by default), so at first, let's set default
+				// log level for all of them.
+				for loggerName := range lm.LogRegistry.ListLoggers() {
+					logger, exists := lm.LogRegistry.Lookup(loggerName)
+					if !exists {
+						continue
+					}
+					logger.SetLevel(stringToLogLevel(lm.Conf.DefaultLevel))
+				}
 			}
 		}
 
-		// Put log/level entries from configuration file to the registry. All new loggers' log levels will
-		// be set according to registry database (it only affects new loggers).
+		// Handle config file log levels
 		for _, logCfgEntry := range lm.Conf.Loggers {
+			// Put log/level entries from configuration file to the registry.
 			if err := lm.LogRegistry.SetLevel(logCfgEntry.Name, logCfgEntry.Level); err != nil {
 				// Intentionally just log warn & not propagate the error (it is minor thing to interrupt startup)
 				lm.Log.Warnf("setting log level %s for logger %s failed: %v", logCfgEntry.Level,
 					logCfgEntry.Name, err)
-			}
-		}
-
-		// All loggers created up to this point were created with initial log level set (defined
-		// via INITIAL_LOGLVL env. variable with value 'info' by default), so let's set log level for them
-		// according to configuration file
-		for loggerName := range lm.LogRegistry.ListLoggers() {
-			logger, exists := lm.LogRegistry.Lookup(loggerName)
-			if !exists {
-				continue
-			}
-			// Set default level
-			if lm.Conf.DefaultLevel != "" {
-				logger.SetLevel(stringToLogLevel(lm.Conf.DefaultLevel))
-			}
-			// Eventually search config file for particular logger
-			for _, cfgLogger := range lm.Conf.Loggers {
-				if loggerName == cfgLogger.Name {
-					logger.SetLevel(stringToLogLevel(cfgLogger.Level))
-					break
+			} else {
+				// Check whether such a logger does not exist. If so, set the level now (override default value).
+				logger, exists := lm.LogRegistry.Lookup(logCfgEntry.Name)
+				if !exists {
+					continue
 				}
+				logger.SetLevel(stringToLogLevel(logCfgEntry.Level))
 			}
 		}
 	}
@@ -205,6 +202,7 @@ func (lm *Plugin) listLoggersHandler(formatter *render.Render) http.HandlerFunc 
 	}
 }
 
+// convert log level string representation to DebugLevel value
 func stringToLogLevel(level string) log.LogLevel {
 	level = strings.ToLower(level)
 	switch level {
