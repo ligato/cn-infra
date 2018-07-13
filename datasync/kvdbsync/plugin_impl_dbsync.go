@@ -90,18 +90,14 @@ func (plugin *Plugin) AfterInit() error {
 	if plugin.KvPlugin.Connected() {
 		return plugin.initKvPlugin()
 	}
-	// If not connected, start a watcher which waits to initialize kv plugin even after the initialization phase
-	go func() {
-		// Wait for notification that the connector plugin is ready
-		callback := <-plugin.KvPlugin.GetInitNotificationChan()
-		// Initialize and register
-		err := plugin.initKvPlugin()
-		if err != nil {
-			plugin.Log.Errorf("Init KV plugin %v failed: %v", plugin.KvPlugin.GetPluginName(), err)
+	// Define function executed on kv plugin connection
+	plugin.KvPlugin.OnConnect(func() error {
+		if err := plugin.initKvPlugin(); err != nil {
+			return fmt.Errorf("init KV plugin %v failed: %v", plugin.KvPlugin.GetPluginName(), err)
 		}
-		callback()
-		return
-	}()
+		plugin.KvPlugin.DoResync()
+		return nil
+	})
 	return nil
 }
 

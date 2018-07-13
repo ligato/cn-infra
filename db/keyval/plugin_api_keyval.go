@@ -39,10 +39,10 @@ type KvProtoPlugin interface {
 	// Connected returns false if there is an configuration but kv plugin is not connected
 	// to particular datastore
 	Connected() bool
-	// Returns read-only channel which can be used by previously-disabled plugin to notify
-	// reader, that the plugin is finally initialized and enabled and run callback function
-	// when needed.
-	GetInitNotificationChan() <-chan func()
+	// OnConnect gathers functions from all plugins with ETCD as dependency. There functions
+	// represent callback for the ETCD, executed after successful connection if delayed start
+	// is allowed
+	OnConnect(func() error)
 	// Returns plugin's name
 	GetPluginName() core.PluginName
 }

@@ -22,7 +22,6 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/ligato/cn-infra/health/statuscheck"
-	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
 const (
@@ -51,10 +50,6 @@ type Plugin struct {
 
 	reconnectResync bool
 	lastConnErr     error
-
-	// If plugin was not connected during init phase, the channel can be used to notify dbsync that the plugin was
-	// able to connect Consul after initialization
-	initNotifChan <-chan func()
 }
 
 // Deps lists dependencies of the Consul plugin.
@@ -100,7 +95,6 @@ func ConfigToClient(cfg *Config) (*api.Config, error) {
 
 // Init initializes Consul plugin.
 func (plugin *Plugin) Init() (err error) {
-	plugin.initNotifChan = make(chan func())
 	cfg, err := plugin.getConfig()
 	if err != nil || plugin.disabled {
 		return err
@@ -153,9 +147,9 @@ func (plugin *Plugin) DoResync() {
 	plugin.Resync.DoResync()
 }
 
-// GetInitNotificationChan returns post-init notification channel
-func (plugin *Plugin) GetInitNotificationChan() <-chan func() {
-	return plugin.initNotifChan
+// OnConnect gathers functions from all plugin with Consul as dependency
+func (plugin *Plugin) OnConnect(func() error) {
+	plugin.Log.Warnf("Consul 'OnConnect()' not implemented")
 }
 
 // GetPluginName returns name of the plugin
@@ -165,7 +159,7 @@ func (plugin *Plugin) GetPluginName() core.PluginName {
 
 // Close closes Consul plugin.
 func (plugin *Plugin) Close() error {
-	return safeclose.Close(plugin.initNotifChan)
+	return nil
 }
 
 // NewBroker creates new instance of prefixed broker that provides API with arguments of type proto.Message.
