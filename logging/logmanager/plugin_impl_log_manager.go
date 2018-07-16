@@ -84,11 +84,6 @@ type ConfLogger struct {
 
 // Init does nothing
 func (lm *Plugin) Init() error {
-	// Environmental variable is preferred before config file. If set, all logger will be created with its log level
-	// and config file processing can be skipped
-	if os.Getenv("INITIAL_LOGLVL") != "" {
-		return nil
-	}
 	if lm.PluginConfig != nil {
 		if lm.Conf == nil {
 			lm.Conf = NewConf()
@@ -100,9 +95,13 @@ func (lm *Plugin) Init() error {
 		}
 		lm.Log.Debugf("logs config: %+v", lm.Conf)
 
-		// Handle default log level
-		if lm.Conf.DefaultLevel != "" {
-			if err := lm.LogRegistry.SetLevel("default", lm.Conf.DefaultLevel); err != nil {
+		// Handle default log level. Prefer value from environmental variable
+		defaultLogLvl := os.Getenv("INITIAL_LOGLVL")
+		if defaultLogLvl == "" {
+			defaultLogLvl = lm.Conf.DefaultLevel
+		}
+		if defaultLogLvl != "" {
+			if err := lm.LogRegistry.SetLevel("default", defaultLogLvl); err != nil {
 				lm.Log.Warnf("setting default log level failed: %v", err)
 			} else {
 				// All loggers created up to this point were created with initial log level set (defined
@@ -113,7 +112,7 @@ func (lm *Plugin) Init() error {
 					if !exists {
 						continue
 					}
-					logger.SetLevel(stringToLogLevel(lm.Conf.DefaultLevel))
+					logger.SetLevel(stringToLogLevel(defaultLogLvl))
 				}
 			}
 		}
