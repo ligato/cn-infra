@@ -1,4 +1,4 @@
-# Release v1.4 (2018-07-12)
+# Release v1.4 (2018-07-16)
 
 ## Breaking Changes
   * Package **etcdv3** was renamed to **etcd**. This change affects imports. Also 
@@ -25,6 +25,9 @@
   * Fixed multiple issues in logs-lib example (logger, HTTP usage)  
   * To prevent incorrect values in subsequent changes, previous value of key should 
   be correctly cleaned up if the resync was called outside of initialization phase.
+  * Fixed the logger configuration file. All created loggers are correctly set with a log
+  level according to the map in file. The default log level can be also set, but keep in mind
+  that the environmental variable `INITIAL_LOGLVL` replaces the value from the config.
 
 # Release v1.3 (2018-05-24)
 
