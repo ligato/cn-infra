@@ -31,7 +31,7 @@ const (
 	// healthCheckProbeKey is a key used to probe Etcd state
 	healthCheckProbeKey = "/probe-etcd-connection"
 	// ETCD reconnect interval
-	defaultReconnectInterval = 2
+	defaultReconnectInterval time.Duration = 2
 )
 
 // Plugin implements etcd plugin.
@@ -55,7 +55,6 @@ type Plugin struct {
 	onConnection []func() error
 
 	autoCompactDone chan struct{}
-	reconnectResync bool
 	lastConnErr     error
 }
 
@@ -88,8 +87,12 @@ func (plugin *Plugin) Init() (err error) {
 	}
 	// Uses config file to establish connection with the database
 	plugin.connection, err = NewEtcdConnectionWithBytes(*etcdClientCfg, plugin.Log)
-	// Start status check (even if connection is nil)
-	plugin.startStatusCheck()
+	// Register for providing status reports (polling mode).
+	if plugin.StatusCheck != nil {
+		plugin.StatusCheck.Register(plugin.PluginName, plugin.statusCheckProbe())
+	} else {
+		plugin.Log.Warnf("Unable to start status check for etcd")
+	}
 	if err != nil && plugin.config.AllowDelayedStart {
 		// If the connection cannot be established during init, keep trying in another goroutine (if allowed) and
 		// end the init
@@ -131,14 +134,15 @@ func (plugin *Plugin) Disabled() (disabled bool) {
 	return plugin.disabled
 }
 
-// Connected returns *true* if the plugin has connection with the database.
-func (plugin *Plugin) Connected() bool {
-	return plugin.connected
-}
-
-// OnConnect gathers functions from all plugin with ETCD as dependency
+// OnConnect executes callback if plugin is connected, or gathers functions from all plugin with ETCD as dependency
 func (plugin *Plugin) OnConnect(callback func() error) {
-	plugin.onConnection = append(plugin.onConnection, callback)
+	if plugin.connected {
+		if err := callback(); err != nil {
+			plugin.Log.Error(err)
+		}
+	} else {
+		plugin.onConnection = append(plugin.onConnection, callback)
+	}
 }
 
 // GetPluginName returns name of the plugin
@@ -175,35 +179,35 @@ func (plugin *Plugin) etcdReconnectionLoop(clientCfg *ClientConfig) {
 	plugin.Log.Infof("ETCD server %s not reachable in init phase. Agent will continue to try to connect every %d second(s)",
 		plugin.config.Endpoints, interval)
 	for {
-		time.Sleep(time.Duration(interval) * time.Second)
+		time.Sleep(interval * time.Second)
+
 		plugin.Log.Infof("Connecting to ETCD %v ...", plugin.config.Endpoints)
 		plugin.connection, err = NewEtcdConnectionWithBytes(*clientCfg, plugin.Log)
 		if err != nil {
 			continue
-		} else {
-			plugin.Log.Infof("ETCD server %s connected", plugin.config.Endpoints)
-			// Configure connection and set as connected
-			plugin.configureConnection()
-			plugin.connected = true
-			// Execute callback functions
-			for _, callback := range plugin.onConnection {
-				if err := callback(); err != nil {
-					plugin.Log.Error(err)
-				}
-			}
-			// At the end, call resync
-			if plugin.Resync != nil {
-				plugin.Resync.DoResync()
-			}
-			plugin.Log.Debugf("Etcd reconnection loop ended")
-			return
 		}
+		plugin.Log.Infof("ETCD server %s connected", plugin.config.Endpoints)
+		// Configure connection and set as connected
+		plugin.configureConnection()
+		plugin.connected = true
+		// Execute callback functions (if any)
+		for _, callback := range plugin.onConnection {
+			if err := callback(); err != nil {
+				plugin.Log.Error(err)
+			}
+		}
+		// Call resync if any callback was executed. Otherwise there is nothing to resync
+		if plugin.Resync != nil && len(plugin.onConnection) > 0 {
+			plugin.Resync.DoResync()
+		}
+		plugin.Log.Debugf("Etcd reconnection loop ended")
+
+		return
 	}
 }
 
 // If ETCD is connected, complete all other procedures
 func (plugin *Plugin) configureConnection() {
-	plugin.reconnectResync = plugin.config.ReconnectResync
 	if plugin.config.AutoCompact > 0 {
 		if plugin.config.AutoCompact < time.Duration(time.Minute*60) {
 			plugin.Log.Warnf("Auto compact option for ETCD is set to less than 60 minutes!")
@@ -213,34 +217,28 @@ func (plugin *Plugin) configureConnection() {
 	plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.connection, &keyval.SerializerJSON{})
 }
 
-// Starts periodic ETCD status check
-func (plugin *Plugin) startStatusCheck() {
-	// Register for providing status reports (polling mode).
-	if plugin.StatusCheck != nil {
-		plugin.StatusCheck.Register(core.PluginName(plugin.PluginName), func() (statuscheck.PluginState, error) {
-			if plugin.connection == nil {
-				plugin.connected = false
-				return statuscheck.Error, fmt.Errorf("no ETCD connection available")
+// ETCD status check probe function
+func (plugin *Plugin) statusCheckProbe() statuscheck.PluginStateProbe {
+	return func() (statuscheck.PluginState, error) {
+		if plugin.connection == nil {
+			plugin.connected = false
+			return statuscheck.Error, fmt.Errorf("no ETCD connection available")
+		}
+		if _, _, _, err := plugin.connection.GetValue(healthCheckProbeKey); err != nil {
+			plugin.lastConnErr = err
+			plugin.connected = false
+			return statuscheck.Error, err
+		}
+		if plugin.config.ReconnectResync && plugin.lastConnErr != nil {
+			if plugin.Resync != nil {
+				plugin.Resync.DoResync()
+				plugin.lastConnErr = nil
+			} else {
+				plugin.Log.Warn("Expected resync after ETCD reconnect could not start beacuse of missing Resync plugin")
 			}
-			if _, _, _, err := plugin.connection.GetValue(healthCheckProbeKey); err != nil {
-				plugin.lastConnErr = err
-				plugin.connected = false
-				return statuscheck.Error, err
-			}
-			if plugin.reconnectResync && plugin.lastConnErr != nil {
-				plugin.Log.Info("Starting resync after ETCD reconnect")
-				if plugin.Resync != nil {
-					plugin.Resync.DoResync()
-					plugin.lastConnErr = nil
-				} else {
-					plugin.Log.Warn("Expected resync after ETCD reconnect could not start beacuse of missing Resync plugin")
-				}
-			}
-			plugin.connected = true
-			return statuscheck.OK, nil
-		})
-	} else {
-		plugin.Log.Warnf("Unable to start status check for etcd")
+		}
+		plugin.connected = true
+		return statuscheck.OK, nil
 	}
 }
 

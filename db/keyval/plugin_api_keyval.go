@@ -34,12 +34,9 @@ type KvProtoPlugin interface {
 	// Disabled returns true if there was no configuration and therefore agent
 	// started without connectivity to a particular data store.
 	Disabled() bool
-	// Connected returns false if there is an configuration but kv plugin is not connected
-	// to particular datastore
-	Connected() bool
-	// OnConnect gathers functions from all plugins with ETCD as dependency. There functions
-	// represent callback for the ETCD, executed after successful connection if delayed start
-	// is allowed
+	// OnConnect executes datasync callback if KV plugin is connected. If not, it gathers
+	// these functions from all plugins using the specific KV plugin as dependency and
+	// if delayed start is allowed, callbacks are executed after successful connection.
 	OnConnect(func() error)
 	// Returns plugin's name
 	GetPluginName() core.PluginName

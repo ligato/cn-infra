@@ -41,7 +41,7 @@ type Config struct {
 	AutoCompact           time.Duration `json:"auto-compact"`
 	ReconnectResync       bool          `json:"resync-after-reconnect"`
 	AllowDelayedStart     bool          `json:"allow-delayed-start"`
-	ReconnectInterval     int64         `json:"reconnect-interval"`
+	ReconnectInterval     time.Duration `json:"reconnect-interval"`
 }
 
 // ClientConfig extends clientv3.Config with configuration options introduced

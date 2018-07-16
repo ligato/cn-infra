@@ -41,8 +41,6 @@ type Plugin struct {
 
 	// Plugin is disabled if there is no config file available
 	disabled bool
-	// Set if connected to Consul db
-	connected bool
 	// Consul client encapsulation
 	client *Client
 	// Read/Write proto modelled data
@@ -62,11 +60,6 @@ type Deps struct {
 // Disabled returns *true* if the plugin is not in use due to missing configuration.
 func (plugin *Plugin) Disabled() bool {
 	return plugin.disabled
-}
-
-// Connected returns *true* if the plugin has connection with the database.
-func (plugin *Plugin) Connected() bool {
-	return plugin.connected
 }
 
 func (plugin *Plugin) getConfig() (*Config, error) {
@@ -111,9 +104,6 @@ func (plugin *Plugin) Init() (err error) {
 	plugin.reconnectResync = cfg.ReconnectResync
 	plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.client, &keyval.SerializerJSON{})
 
-	// Mark plugin as connected at this point
-	plugin.connected = true
-
 	// Register for providing status reports (polling mode).
 	if plugin.StatusCheck != nil {
 		plugin.StatusCheck.Register(core.PluginName(plugin.PluginName), func() (statuscheck.PluginState, error) {
@@ -128,11 +118,9 @@ func (plugin *Plugin) Init() (err error) {
 						plugin.Log.Warn("Expected resync after Consul reconnect could not start beacuse of missing Resync plugin")
 					}
 				}
-				plugin.connected = true
 				return statuscheck.OK, nil
 			}
 			plugin.lastConnErr = err
-			plugin.connected = false
 			return statuscheck.Error, err
 		})
 	} else {
@@ -142,9 +130,11 @@ func (plugin *Plugin) Init() (err error) {
 	return nil
 }
 
-// OnConnect gathers functions from all plugin with Consul as dependency
-func (plugin *Plugin) OnConnect(func() error) {
-	plugin.Log.Warnf("Consul 'OnConnect()' not implemented")
+// OnConnect executes callback from datasync
+func (plugin *Plugin) OnConnect(callback func() error) {
+	if err := callback(); err != nil {
+		plugin.Log.Error(err)
+	}
 }
 
 // GetPluginName returns name of the plugin

@@ -33,8 +33,6 @@ type Plugin struct {
 	Deps
 	// Plugin is disabled if there is no config file available
 	disabled bool
-	// Set if connected to Redis db
-	connected bool
 	// Redis connection encapsulation
 	connection *BytesConnectionRedis
 	// Read/Write proto modelled data
@@ -69,18 +67,13 @@ func (plugin *Plugin) Init() (err error) {
 	}
 	plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.connection, &keyval.SerializerJSON{})
 
-	// Mark plugin as connected at this point
-	plugin.connected = true
-
 	// Register for providing status reports (polling mode)
 	if plugin.StatusCheck != nil {
 		plugin.StatusCheck.Register(plugin.PluginName, func() (statuscheck.PluginState, error) {
 			_, _, err := plugin.NewBroker("/").GetValue(healthCheckProbeKey, nil)
 			if err == nil {
-				plugin.connected = true
 				return statuscheck.OK, nil
 			}
-			plugin.connected = false
 			return statuscheck.Error, err
 		})
 	} else {
@@ -111,14 +104,11 @@ func (plugin *Plugin) Disabled() (disabled bool) {
 	return plugin.disabled
 }
 
-// Connected returns *true* if the plugin has connection with the database.
-func (plugin *Plugin) Connected() bool {
-	return plugin.connected
-}
-
-// OnConnect gathers functions from all plugin with Redis as dependency
-func (plugin *Plugin) OnConnect(func() error) {
-	plugin.Log.Warnf("Redis 'OnConnect()' not implemented")
+// OnConnect executes callback from datasync
+func (plugin *Plugin) OnConnect(callback func() error) {
+	if err := callback(); err != nil {
+		plugin.Log.Error(err)
+	}
 }
 
 // GetPluginName returns name of the plugin

@@ -87,9 +87,6 @@ func (plugin *Plugin) AfterInit() error {
 	if plugin.KvPlugin == nil || plugin.KvPlugin.Disabled() {
 		return nil
 	}
-	if plugin.KvPlugin.Connected() {
-		return plugin.initKvPlugin()
-	}
 	// Define function executed on kv plugin connection
 	plugin.KvPlugin.OnConnect(func() error {
 		if err := plugin.initKvPlugin(); err != nil {
