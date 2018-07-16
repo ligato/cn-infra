@@ -31,7 +31,7 @@ const (
 	// healthCheckProbeKey is a key used to probe Etcd state
 	healthCheckProbeKey = "/probe-etcd-connection"
 	// ETCD reconnect interval
-	defaultReconnectInterval time.Duration = 2
+	defaultReconnectInterval time.Duration = 2000000000 // 2 seconds
 )
 
 // Plugin implements etcd plugin.
@@ -89,7 +89,7 @@ func (plugin *Plugin) Init() (err error) {
 	plugin.connection, err = NewEtcdConnectionWithBytes(*etcdClientCfg, plugin.Log)
 	// Register for providing status reports (polling mode).
 	if plugin.StatusCheck != nil {
-		plugin.StatusCheck.Register(plugin.PluginName, plugin.statusCheckProbe())
+		plugin.StatusCheck.Register(plugin.PluginName, plugin.statusCheckProbe)
 	} else {
 		plugin.Log.Warnf("Unable to start status check for etcd")
 	}
@@ -179,7 +179,7 @@ func (plugin *Plugin) etcdReconnectionLoop(clientCfg *ClientConfig) {
 	plugin.Log.Infof("ETCD server %s not reachable in init phase. Agent will continue to try to connect every %d second(s)",
 		plugin.config.Endpoints, interval)
 	for {
-		time.Sleep(interval * time.Second)
+		time.Sleep(interval)
 
 		plugin.Log.Infof("Connecting to ETCD %v ...", plugin.config.Endpoints)
 		plugin.connection, err = NewEtcdConnectionWithBytes(*clientCfg, plugin.Log)
@@ -218,28 +218,26 @@ func (plugin *Plugin) configureConnection() {
 }
 
 // ETCD status check probe function
-func (plugin *Plugin) statusCheckProbe() statuscheck.PluginStateProbe {
-	return func() (statuscheck.PluginState, error) {
-		if plugin.connection == nil {
-			plugin.connected = false
-			return statuscheck.Error, fmt.Errorf("no ETCD connection available")
-		}
-		if _, _, _, err := plugin.connection.GetValue(healthCheckProbeKey); err != nil {
-			plugin.lastConnErr = err
-			plugin.connected = false
-			return statuscheck.Error, err
-		}
-		if plugin.config.ReconnectResync && plugin.lastConnErr != nil {
-			if plugin.Resync != nil {
-				plugin.Resync.DoResync()
-				plugin.lastConnErr = nil
-			} else {
-				plugin.Log.Warn("Expected resync after ETCD reconnect could not start beacuse of missing Resync plugin")
-			}
-		}
-		plugin.connected = true
-		return statuscheck.OK, nil
+func (plugin *Plugin) statusCheckProbe() (statuscheck.PluginState, error) {
+	if plugin.connection == nil {
+		plugin.connected = false
+		return statuscheck.Error, fmt.Errorf("no ETCD connection available")
 	}
+	if _, _, _, err := plugin.connection.GetValue(healthCheckProbeKey); err != nil {
+		plugin.lastConnErr = err
+		plugin.connected = false
+		return statuscheck.Error, err
+	}
+	if plugin.config.ReconnectResync && plugin.lastConnErr != nil {
+		if plugin.Resync != nil {
+			plugin.Resync.DoResync()
+			plugin.lastConnErr = nil
+		} else {
+			plugin.Log.Warn("Expected resync after ETCD reconnect could not start beacuse of missing Resync plugin")
+		}
+	}
+	plugin.connected = true
+	return statuscheck.OK, nil
 }
 
 func (plugin *Plugin) getEtcdConfig() (*Config, error) {
