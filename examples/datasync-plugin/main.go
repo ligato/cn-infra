@@ -114,9 +114,7 @@ type ExamplePlugin struct {
 
 // Deps lists dependencies of ExamplePlugin.
 type Deps struct {
-	infra.PluginName
-	Log          logging.PluginLogger
-	PluginConfig config.PluginConfig
+	infra.Deps
 	ServiceLabel servicelabel.ReaderAPI
 	//local.PluginInfraDeps                             // injected
 	Publisher datasync.KeyProtoValWriter  // injected - To write ETCD data

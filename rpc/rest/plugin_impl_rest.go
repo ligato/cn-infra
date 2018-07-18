@@ -42,9 +42,6 @@ type Plugin struct {
 // Deps lists the dependencies of the Rest plugin.
 type Deps struct {
 	infra.Deps
-	//infra.PluginName                         //inject
-	//Log                 logging.PluginLogger //inject
-	//config.PluginConfig                      //inject
 
 	// Authenticator can be injected in a flavor inject method.
 	// If there is no authenticator injected and config contains

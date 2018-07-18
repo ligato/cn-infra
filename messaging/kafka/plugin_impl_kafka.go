@@ -18,7 +18,6 @@ import (
 	"fmt"
 
 	"github.com/Shopify/sarama"
-	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/infra"
@@ -51,11 +50,9 @@ type Plugin struct {
 // Deps groups dependencies injected into the plugin so that they are
 // logically separated from other plugin fields.
 type Deps struct {
-	infra.PluginName                                   // inject
-	Log                 logging.PluginLogger           // inject
-	config.PluginConfig                                // inject
-	StatusCheck         statuscheck.PluginStatusWriter // inject
-	ServiceLabel        servicelabel.ReaderAPI
+	infra.Deps
+	StatusCheck  statuscheck.PluginStatusWriter // inject
+	ServiceLabel servicelabel.ReaderAPI
 }
 
 // FromExistingMux is used mainly for testing purposes.
