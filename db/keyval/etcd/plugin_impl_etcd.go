@@ -31,7 +31,7 @@ const (
 	// healthCheckProbeKey is a key used to probe Etcd state
 	healthCheckProbeKey = "/probe-etcd-connection"
 	// ETCD reconnect interval
-	defaultReconnectInterval time.Duration = 2000000000 // 2 seconds
+	defaultReconnectInterval = 2 * time.Second // 2 seconds
 )
 
 // Plugin implements etcd plugin.
@@ -244,7 +244,7 @@ func (plugin *Plugin) getEtcdConfig() (*Config, error) {
 	var etcdCfg Config
 	found, err := plugin.PluginConfig.GetValue(&etcdCfg)
 	if err != nil {
-		return &etcdCfg, err
+		return nil, err
 	}
 	if !found {
 		plugin.Log.Info("ETCD config not found, skip loading this plugin")
