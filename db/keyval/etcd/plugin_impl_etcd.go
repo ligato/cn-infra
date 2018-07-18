@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"time"
 
+	"sync"
+
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval"
@@ -37,6 +39,8 @@ const (
 // Plugin implements etcd plugin.
 type Plugin struct {
 	Deps
+	sync.Mutex
+
 	// Plugin is disabled if there is no config file available
 	disabled bool
 	// Set if connected to ETCD db
@@ -136,6 +140,9 @@ func (plugin *Plugin) Disabled() (disabled bool) {
 
 // OnConnect executes callback if plugin is connected, or gathers functions from all plugin with ETCD as dependency
 func (plugin *Plugin) OnConnect(callback func() error) {
+	plugin.Lock()
+	defer plugin.Unlock()
+
 	if plugin.connected {
 		if err := callback(); err != nil {
 			plugin.Log.Error(err)
@@ -186,24 +193,31 @@ func (plugin *Plugin) etcdReconnectionLoop(clientCfg *ClientConfig) {
 		if err != nil {
 			continue
 		}
-		plugin.Log.Infof("ETCD server %s connected", plugin.config.Endpoints)
-		// Configure connection and set as connected
-		plugin.configureConnection()
-		plugin.connected = true
-		// Execute callback functions (if any)
-		for _, callback := range plugin.onConnection {
-			if err := callback(); err != nil {
-				plugin.Log.Error(err)
-			}
-		}
-		// Call resync if any callback was executed. Otherwise there is nothing to resync
-		if plugin.Resync != nil && len(plugin.onConnection) > 0 {
-			plugin.Resync.DoResync()
-		}
-		plugin.Log.Debugf("Etcd reconnection loop ended")
-
+		plugin.setupPostInitConnection()
 		return
 	}
+}
+
+func (plugin *Plugin) setupPostInitConnection() {
+	plugin.Log.Infof("ETCD server %s connected", plugin.config.Endpoints)
+
+	plugin.Lock()
+	defer plugin.Unlock()
+
+	// Configure connection and set as connected
+	plugin.configureConnection()
+	plugin.connected = true
+	// Execute callback functions (if any)
+	for _, callback := range plugin.onConnection {
+		if err := callback(); err != nil {
+			plugin.Log.Error(err)
+		}
+	}
+	// Call resync if any callback was executed. Otherwise there is nothing to resync
+	if plugin.Resync != nil && len(plugin.onConnection) > 0 {
+		plugin.Resync.DoResync()
+	}
+	plugin.Log.Debugf("Etcd reconnection loop ended")
 }
 
 // If ETCD is connected, complete all other procedures
