@@ -33,7 +33,7 @@ const (
 	// healthCheckProbeKey is a key used to probe Etcd state
 	healthCheckProbeKey = "/probe-etcd-connection"
 	// ETCD reconnect interval
-	defaultReconnectInterval = 2 * time.Second // 2 seconds
+	defaultReconnectInterval = 2 * time.Second
 )
 
 // Plugin implements etcd plugin.
