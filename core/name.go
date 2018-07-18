@@ -25,6 +25,11 @@ func (name PluginName) String() string {
 	return string(name)
 }
 
+// SetName sets plugin name.
+func (name *PluginName) SetName(n string) {
+	*name = PluginName(n)
+}
+
 // NamedPlugin represents a Plugin with a name.
 type NamedPlugin struct {
 	PluginName

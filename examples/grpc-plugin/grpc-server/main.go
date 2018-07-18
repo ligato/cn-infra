@@ -44,6 +44,7 @@ func main() {
 			grpc.UseDeps(func(deps *grpc.Deps) {
 				deps.HTTP = &rest.DefaultPlugin //rest.NewPlugin()
 				//deps.PluginName = core.PluginName("myGRPC")
+				deps.SetName("myGRPC")
 			}),
 		),
 		//GRPC: &grpc.DefaultPlugin,
