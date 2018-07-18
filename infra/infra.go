@@ -1,5 +1,10 @@
 package infra
 
+import (
+	"github.com/ligato/cn-infra/config"
+	"github.com/ligato/cn-infra/logging"
+)
+
 // Plugin interface defines plugin's basic life-cycle methods.
 type Plugin interface {
 
@@ -15,6 +20,7 @@ type Plugin interface {
 
 // PostInit interface defines an optional method for plugins with complex initialization.
 type PostInit interface {
+
 	// AfterInit is called once Init() of all plugins have returned without error.
 	AfterInit() error
 }
@@ -32,4 +38,10 @@ func (name PluginName) String() string {
 // SetName sets plugin name.
 func (name *PluginName) SetName(n string) {
 	*name = PluginName(n)
+}
+
+type Deps struct {
+	PluginName
+	Log logging.PluginLogger
+	config.PluginConfig
 }

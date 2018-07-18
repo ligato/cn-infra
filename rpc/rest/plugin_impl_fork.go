@@ -28,6 +28,8 @@ import (
 // ForkPlugin checks the configuration and based on this it
 // delegates API calls to new instance or existing instance of HTTP server
 type ForkPlugin struct {
+	// TODO: merge this with normal http plugin
+
 	Deps ForkDeps
 	*Config
 
@@ -73,11 +75,12 @@ func (plugin *ForkPlugin) Init() (err error) {
 	plugin.Deps.Log.WithField("probePort", probePort).Info("init")
 	if probePort > 0 && probePort != plugin.Deps.DefaultHTTP.GetPort() {
 		childPlugNameHTTP := plugin.String() + "-HTTP"
-		plugin.newPlugin = &Plugin{Deps: Deps{
-			Log:        logging.ForPlugin(childPlugNameHTTP),
-			PluginName: infra.PluginName(childPlugNameHTTP),
-		}, Config: plugin.Config,
-		}
+		plug := &Plugin{}
+		plug.Log = logging.ForPlugin(childPlugNameHTTP)
+		plug.PluginName = infra.PluginName(childPlugNameHTTP)
+		plug.Config = plugin.Config
+
+		plugin.newPlugin = plug
 
 		plugin.delegate = plugin.newPlugin
 	} else {

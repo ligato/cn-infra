@@ -26,9 +26,7 @@ var DefaultPlugin Plugin = *NewPlugin()
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
-	p.Deps = Deps{
-		PluginName: "http-rest",
-	}
+	p.PluginName = "http-rest"
 
 	for _, o := range opts {
 		o(p)

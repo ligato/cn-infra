@@ -21,9 +21,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/unrolled/render"
 
-	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/infra"
-	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
@@ -43,9 +41,11 @@ type Plugin struct {
 
 // Deps lists the dependencies of the Rest plugin.
 type Deps struct {
-	infra.PluginName                         //inject
-	Log                 logging.PluginLogger //inject
-	config.PluginConfig                      //inject
+	infra.Deps
+	//infra.PluginName                         //inject
+	//Log                 logging.PluginLogger //inject
+	//config.PluginConfig                      //inject
+
 	// Authenticator can be injected in a flavor inject method.
 	// If there is no authenticator injected and config contains
 	// user password, the default staticAuthenticator is instantiated.
