@@ -18,11 +18,11 @@ import (
 	"errors"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/datasync/syncbase"
 	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
 )
@@ -40,11 +40,11 @@ type Plugin struct {
 // Deps groups dependencies injected into the plugin so that they are
 // logically separated from other plugin fields.
 type Deps struct {
-	core.PluginName                      // inject
-	Log             logging.PluginLogger // inject
-	ServiceLabel    servicelabel.ReaderAPI
-	KvPlugin        keyval.KvProtoPlugin // inject
-	ResyncOrch      resync.Subscriber    // inject
+	infra.PluginName                      // inject
+	Log              logging.PluginLogger // inject
+	ServiceLabel     servicelabel.ReaderAPI
+	KvPlugin         keyval.KvProtoPlugin // inject
+	ResyncOrch       resync.Subscriber    // inject
 }
 
 // Init only initializes plugin.registry.

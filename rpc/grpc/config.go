@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/namsral/flag"
 	"google.golang.org/grpc"
 )
@@ -80,7 +80,7 @@ func (cfg *Config) GetPort() int {
 }
 
 // DeclareGRPCPortFlag declares GRPC port (with usage & default value) a flag for a particular plugin name
-func DeclareGRPCPortFlag(pluginName core.PluginName) {
+func DeclareGRPCPortFlag(pluginName infra.PluginName) {
 	plugNameUpper := strings.ToUpper(string(pluginName))
 
 	usage := "Configure Agent' " + plugNameUpper + " net listener (port & timeouts); also set via '" +
@@ -88,6 +88,6 @@ func DeclareGRPCPortFlag(pluginName core.PluginName) {
 	flag.String(grpcPortFlag(pluginName), "", usage)
 }
 
-func grpcPortFlag(pluginName core.PluginName) string {
+func grpcPortFlag(pluginName infra.PluginName) string {
 	return strings.ToLower(string(pluginName)) + "-port"
 }

@@ -19,12 +19,11 @@ import (
 	"time"
 
 	"github.com/ligato/cn-infra/agent"
+	"github.com/ligato/cn-infra/datasync/kvdbsync"
+	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval/etcd"
 	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/logging"
-
-	"github.com/ligato/cn-infra/datasync/kvdbsync"
-	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
@@ -89,6 +88,11 @@ type ExamplePlugin struct {
 	exampleFinished chan struct{}
 }
 
+// String return plugin name.
+func (plugin *ExamplePlugin) String() string {
+	return PluginName
+}
+
 // Init starts the consumer.
 func (plugin *ExamplePlugin) Init() error {
 	return nil
@@ -96,7 +100,6 @@ func (plugin *ExamplePlugin) Init() error {
 
 // AfterInit starts the publisher and prepares for the shutdown.
 func (plugin *ExamplePlugin) AfterInit() error {
-
 	go plugin.checkStatus(plugin.exampleFinished)
 
 	return nil

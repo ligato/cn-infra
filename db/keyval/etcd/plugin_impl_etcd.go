@@ -19,11 +19,11 @@ import (
 	"time"
 
 	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/health/statuscheck"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/utils/safeclose"
 )
@@ -53,7 +53,7 @@ type Plugin struct {
 // Deps lists dependencies of the etcd plugin.
 // If injected, etcd plugin will use StatusCheck to signal the connection status.
 type Deps struct {
-	core.PluginName                                    // inject
+	infra.PluginName                                   // inject
 	Log                 logging.PluginLogger           // inject
 	config.PluginConfig                                // inject
 	StatusCheck         statuscheck.PluginStatusWriter // inject

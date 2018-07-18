@@ -18,7 +18,7 @@ package core
 // to be defined as a publicly accessible string constant.
 // It is used to obtain the appropriate instance of the registry
 // (there are multiple instances).
-type PluginName string
+/*type PluginName string
 
 // String returns the PluginName.
 func (name PluginName) String() string {
@@ -59,3 +59,4 @@ func NamePlugin(name string, plugin Plugin) *NamedPlugin {
 		Plugin:     plugin,
 	}
 }
+*/

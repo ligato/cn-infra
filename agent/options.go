@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"syscall"
 
-	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logrus"
 )
@@ -51,8 +51,8 @@ type Options struct {
 	QuitChan    chan struct{}
 	ctx         context.Context
 
-	Plugins   []core.PluginNamed
-	pluginMap map[core.Plugin]struct{}
+	Plugins   []infra.Plugin
+	pluginMap map[infra.Plugin]struct{}
 }
 
 func newOptions(opts ...Option) Options {
@@ -62,7 +62,7 @@ func newOptions(opts ...Option) Options {
 			syscall.SIGTERM,
 			syscall.SIGKILL,
 		},
-		pluginMap: make(map[core.Plugin]struct{}),
+		pluginMap: make(map[infra.Plugin]struct{}),
 	}
 
 	for _, o := range opts {
@@ -106,7 +106,7 @@ func QuitOnClose(ch chan struct{}) Option {
 }
 
 // Plugins creates an Option that adds a list of Plugins to the Agent's Plugin list
-func Plugins(plugins ...core.PluginNamed) Option {
+func Plugins(plugins ...infra.Plugin) Option {
 	return func(o *Options) {
 		o.Plugins = append(o.Plugins, plugins...)
 	}
@@ -114,7 +114,7 @@ func Plugins(plugins ...core.PluginNamed) Option {
 
 // AllPlugins creates an Option that adds all of the nested
 // plugins recursively to the Agent's plugin list.
-func AllPlugins(plugins ...core.Plugin) Option {
+func AllPlugins(plugins ...infra.Plugin) Option {
 	return func(o *Options) {
 		infraLogger.Debugf("AllPlugins with %d plugins", len(plugins))
 
@@ -132,18 +132,19 @@ func AllPlugins(plugins ...core.Plugin) Option {
 				infraLogger.Debugf(" - plugin: %v (%v)", plug, reflect.TypeOf(plug))
 			}
 
-			p, ok := plugin.(core.PluginNamed)
+			// TODO: set plugin name to typ.String() if empty
+			/*p, ok := plugin.(core.PluginNamed)
 			if !ok {
 				p = core.NamePlugin(typ.String(), plugin)
-			}
+			}*/
 
-			o.Plugins = append(o.Plugins, p)
+			o.Plugins = append(o.Plugins, plugin)
 		}
 	}
 }
 
-func findPlugins(val reflect.Value, uniqueness map[core.Plugin]struct{}, x ...int) (
-	res []core.PluginNamed, err error,
+func findPlugins(val reflect.Value, uniqueness map[infra.Plugin]struct{}, x ...int) (
+	res []infra.Plugin, err error,
 ) {
 	n := 0
 	if len(x) > 0 {
@@ -206,7 +207,7 @@ func findPlugins(val reflect.Value, uniqueness map[core.Plugin]struct{}, x ...in
 
 		logf("-> field %d: %v - %v (%v)", i, field.Name, field.Type, fieldVal.Kind())
 
-		var fieldPlug core.PluginNamed
+		var fieldPlug infra.Plugin
 
 		plug, implementsPlugin := isFieldPlugin(field, fieldVal)
 		if implementsPlugin {
@@ -222,13 +223,13 @@ func findPlugins(val reflect.Value, uniqueness map[core.Plugin]struct{}, x ...in
 			}
 
 			uniqueness[plug] = struct{}{}
-			p, ok := plug.(core.PluginNamed)
+			/*p, ok := plug.(core.PluginNamed)
 			if !ok {
 				p = core.NamePlugin(field.Name, plug)
-			}
-			fieldPlug = p
+			}*/
+			fieldPlug = plug
 
-			logf(" + FOUND PLUGIN: %v - %v (%v)", p.Name(), field.Name, field.Type)
+			logf(" + FOUND PLUGIN: %v - %v (%v)", plug.String(), field.Name, field.Type)
 
 			/*var pp core.Plugin = plug
 			if np, ok := p.(*core.NamedPlugin); ok {
@@ -259,9 +260,9 @@ func findPlugins(val reflect.Value, uniqueness map[core.Plugin]struct{}, x ...in
 	return res, nil
 }
 
-var pluginType = reflect.TypeOf((*core.Plugin)(nil)).Elem()
+var pluginType = reflect.TypeOf((*infra.Plugin)(nil)).Elem()
 
-func isFieldPlugin(field reflect.StructField, fieldVal reflect.Value) (core.Plugin, bool) {
+func isFieldPlugin(field reflect.StructField, fieldVal reflect.Value) (infra.Plugin, bool) {
 	//logrus.DefaultLogger().Debugf(" - is field plugin: %v (%v) %v", field.Type, fieldVal.Kind(), fieldVal)
 
 	switch fieldVal.Kind() {
@@ -269,14 +270,14 @@ func isFieldPlugin(field reflect.StructField, fieldVal reflect.Value) (core.Plug
 		ptrType := reflect.PtrTo(fieldVal.Type())
 		if ptrType.Implements(pluginType) {
 			if fieldVal.CanAddr() {
-				if plug, ok := fieldVal.Addr().Interface().(core.Plugin); ok {
+				if plug, ok := fieldVal.Addr().Interface().(infra.Plugin); ok {
 					return plug, true
 				}
 			}
 			return nil, true
 		}
 	case reflect.Ptr, reflect.Interface:
-		if plug, ok := fieldVal.Interface().(core.Plugin); ok {
+		if plug, ok := fieldVal.Interface().(infra.Plugin); ok {
 			if fieldVal.IsNil() {
 				return nil, true
 			}

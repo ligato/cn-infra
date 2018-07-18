@@ -74,7 +74,6 @@ type Deps struct {
 	Log logging.PluginLogger
 	//PluginConfig config.PluginConfig
 	//ServiceLabel servicelabel.ReaderAPI
-	//local.PluginInfraDeps
 	Prometheus prom.API
 }
 
@@ -92,6 +91,11 @@ type ExamplePlugin struct {
 const customRegistry = "/custom"
 
 const orderLabel = "order"
+
+// String return plugin name.
+func (plugin *ExamplePlugin) String() string {
+	return PluginName
+}
 
 // Init creates metric registries and adds gauges
 func (plugin *ExamplePlugin) Init() error {

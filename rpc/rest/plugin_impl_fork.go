@@ -20,7 +20,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/unrolled/render"
 )
@@ -48,7 +48,7 @@ type ForkDeps struct {
 	DefaultHTTP HTTPHandlers //inject
 
 	Log                 logging.PluginLogger //inject
-	PluginName          core.PluginName      //inject
+	PluginName          infra.PluginName     //inject
 	config.PluginConfig                      //inject
 }
 
@@ -75,7 +75,7 @@ func (plugin *ForkPlugin) Init() (err error) {
 		childPlugNameHTTP := plugin.String() + "-HTTP"
 		plugin.newPlugin = &Plugin{Deps: Deps{
 			Log:        logging.ForPlugin(childPlugNameHTTP),
-			PluginName: core.PluginName(childPlugNameHTTP),
+			PluginName: infra.PluginName(childPlugNameHTTP),
 		}, Config: plugin.Config,
 		}
 

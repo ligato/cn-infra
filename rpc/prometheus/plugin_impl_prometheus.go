@@ -20,7 +20,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/prometheus/client_golang/prometheus"
@@ -51,7 +51,7 @@ type Plugin struct {
 
 // Deps lists dependencies of the plugin.
 type Deps struct {
-	core.PluginName
+	infra.PluginName
 	Log logging.PluginLogger
 	// HTTP server used to expose metrics
 	HTTP rest.HTTPHandlers // inject

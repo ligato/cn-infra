@@ -19,8 +19,8 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/messaging"
 )
@@ -37,8 +37,8 @@ type Plugin struct {
 // Deps groups dependencies injected into the plugin so that they are
 // logically separated from other plugin fields.
 type Deps struct {
-	core.PluginName                      // inject
-	Log             logging.PluginLogger // inject
+	infra.PluginName                      // inject
+	Log              logging.PluginLogger // inject
 	config.PluginConfig
 	Messaging messaging.Mux // inject
 }

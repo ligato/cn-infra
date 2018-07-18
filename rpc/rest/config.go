@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/namsral/flag"
 )
 
@@ -37,7 +37,7 @@ const (
 // - to load flag <plugin-name>-port and then FixConfig() just in case
 // - alternatively <plugin-name>-config and then FixConfig() just in case
 // - alternatively DefaultConfig()
-func PluginConfig(pluginCfg config.PluginConfig, cfg *Config, pluginName core.PluginName) error {
+func PluginConfig(pluginCfg config.PluginConfig, cfg *Config, pluginName infra.PluginName) error {
 	portFlag := flag.Lookup(httpPortFlag(pluginName))
 	if portFlag != nil && portFlag.Value != nil && portFlag.Value.String() != "" && cfg != nil {
 		cfg.Endpoint = DefaultHost + ":" + portFlag.Value.String()
@@ -150,7 +150,7 @@ func (cfg *Config) UseHTTPS() bool {
 }
 
 // DeclareHTTPPortFlag declares http port (with usage & default value) a flag for a particular plugin name
-func DeclareHTTPPortFlag(pluginName core.PluginName, defaultPortOpts ...uint) {
+func DeclareHTTPPortFlag(pluginName infra.PluginName, defaultPortOpts ...uint) {
 	var defaultPort string
 	if len(defaultPortOpts) > 0 {
 		defaultPort = string(defaultPortOpts[0])
@@ -165,6 +165,6 @@ func DeclareHTTPPortFlag(pluginName core.PluginName, defaultPortOpts ...uint) {
 	flag.String(httpPortFlag(pluginName), defaultPort, usage)
 }
 
-func httpPortFlag(pluginName core.PluginName) string {
+func httpPortFlag(pluginName infra.PluginName) string {
 	return strings.ToLower(string(pluginName)) + "-port"
 }

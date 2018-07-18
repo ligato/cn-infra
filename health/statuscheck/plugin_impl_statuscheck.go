@@ -21,9 +21,9 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/ligato/cn-infra/agent"
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/health/statuscheck/model/status"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 )
 
@@ -52,9 +52,9 @@ type Plugin struct {
 
 // Deps lists the dependencies of statuscheck plugin.
 type Deps struct {
-	core.PluginName                            // inject
-	Log             logging.PluginLogger       // inject
-	Transport       datasync.KeyProtoValWriter // inject (optional)
+	infra.PluginName                            // inject
+	Log              logging.PluginLogger       // inject
+	Transport        datasync.KeyProtoValWriter // inject (optional)
 }
 
 // Init prepares the initial status data.
@@ -117,7 +117,7 @@ func (p *Plugin) Close() error {
 }
 
 // Register a plugin for status change reporting.
-func (p *Plugin) Register(pluginName core.PluginName, probe PluginStateProbe) {
+func (p *Plugin) Register(pluginName infra.PluginName, probe PluginStateProbe) {
 	p.access.Lock()
 	defer p.access.Unlock()
 
@@ -138,13 +138,13 @@ func (p *Plugin) Register(pluginName core.PluginName, probe PluginStateProbe) {
 }
 
 // ReportStateChange can be used to report a change in the status of a previously registered plugin.
-func (p *Plugin) ReportStateChange(pluginName core.PluginName, state PluginState, lastError error) {
+func (p *Plugin) ReportStateChange(pluginName infra.PluginName, state PluginState, lastError error) {
 	p.reportStateChange(pluginName, state, lastError)
 }
 
 // ReportStateChangeWithMeta can be used to report a change in the status of a previously registered plugin and report
 // the specific metadata state
-func (p *Plugin) ReportStateChangeWithMeta(pluginName core.PluginName, state PluginState, lastError error, meta proto.Message) {
+func (p *Plugin) ReportStateChangeWithMeta(pluginName infra.PluginName, state PluginState, lastError error, meta proto.Message) {
 	p.reportStateChange(pluginName, state, lastError)
 
 	switch data := meta.(type) {
@@ -155,7 +155,7 @@ func (p *Plugin) ReportStateChangeWithMeta(pluginName core.PluginName, state Plu
 	}
 }
 
-func (p *Plugin) reportStateChange(pluginName core.PluginName, state PluginState, lastError error) {
+func (p *Plugin) reportStateChange(pluginName infra.PluginName, state PluginState, lastError error) {
 	p.access.Lock()
 	defer p.access.Unlock()
 
@@ -253,7 +253,7 @@ func (p *Plugin) publishAgentData() error {
 }
 
 // publishPluginData writes the current plugin state into ETCD.
-func (p *Plugin) publishPluginData(pluginName core.PluginName, pluginStat *status.PluginStatus) error {
+func (p *Plugin) publishPluginData(pluginName infra.PluginName, pluginStat *status.PluginStatus) error {
 	pluginStat.LastUpdate = time.Now().Unix()
 	if p.Transport != nil {
 		return p.Transport.Put(status.PluginStatusKey(string(pluginName)), pluginStat)
@@ -268,7 +268,7 @@ func (p *Plugin) publishAllData() {
 
 	p.publishAgentData()
 	for name, s := range p.pluginStat {
-		p.publishPluginData(core.PluginName(name), s)
+		p.publishPluginData(infra.PluginName(name), s)
 	}
 }
 
@@ -283,7 +283,7 @@ func (p *Plugin) periodicProbing(ctx context.Context) {
 		case <-time.After(PeriodicProbingTimeout):
 			for pluginName, probe := range p.pluginProbe {
 				state, lastErr := probe()
-				p.ReportStateChange(core.PluginName(pluginName), state, lastErr)
+				p.ReportStateChange(infra.PluginName(pluginName), state, lastErr)
 				// just check in-between probes if the plugin is closing
 				select {
 				case <-ctx.Done():

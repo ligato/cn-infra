@@ -16,7 +16,6 @@ package grpc
 
 import (
 	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/rpc/rest"
 )
@@ -66,12 +65,5 @@ func UseDeps(cb func(*Deps)) Option {
 func UseHTTP(h rest.HTTPHandlers) Option {
 	return func(p *Plugin) {
 		p.Deps.HTTP = h
-	}
-}
-
-// UseName returns Option that sets custom name.
-func UseName(name string) Option {
-	return func(p *Plugin) {
-		p.Deps.PluginName = core.PluginName(name)
 	}
 }

@@ -17,7 +17,7 @@ package kvdbsync
 import (
 	"fmt"
 
-	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
 )
@@ -41,7 +41,7 @@ func NewPlugin(opts ...Option) *Plugin {
 			prefix = kvdb.String()
 		}
 	}
-	p.Deps.PluginName = core.PluginName(prefix + "-datasync")
+	p.Deps.PluginName = infra.PluginName(prefix + "-datasync")
 
 	if p.Deps.Log == nil {
 		p.Deps.Log = logging.ForPlugin(p.String())

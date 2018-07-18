@@ -20,7 +20,7 @@ import (
 	"strconv"
 
 	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/ligato/cn-infra/utils/safeclose"
@@ -50,7 +50,7 @@ type Plugin struct {
 
 // Deps is a list of injected dependencies of the GRPC plugin.
 type Deps struct {
-	core.PluginName
+	infra.PluginName
 	Log          logging.PluginLogger
 	PluginConfig config.PluginConfig
 	HTTP         rest.HTTPHandlers

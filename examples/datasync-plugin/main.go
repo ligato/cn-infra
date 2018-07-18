@@ -12,6 +12,7 @@ import (
 	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval/etcd"
 	"github.com/ligato/cn-infra/examples/model"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
 	"github.com/ligato/cn-infra/utils/safeclose"
@@ -75,14 +76,15 @@ func main() {
 	)
 
 	p := &ExamplePlugin{
+		Deps: Deps{
+			PluginName:   PluginName,
+			Log:          logging.ForPlugin(PluginName),
+			PluginConfig: config.ForPlugin(PluginName),
+			ServiceLabel: &servicelabel.DefaultPlugin,
+			Publisher:    etcdDataSync,
+			Watcher:      etcdDataSync,
+		},
 		exampleFinished: make(chan struct{}),
-	}
-	p.Deps = Deps{
-		Log:          logging.ForPlugin(PluginName),
-		PluginConfig: config.ForPlugin(PluginName),
-		ServiceLabel: &servicelabel.DefaultPlugin,
-		Publisher:    etcdDataSync,
-		Watcher:      etcdDataSync,
 	}
 
 	a := agent.NewAgent(
@@ -112,17 +114,13 @@ type ExamplePlugin struct {
 
 // Deps lists dependencies of ExamplePlugin.
 type Deps struct {
+	infra.PluginName
 	Log          logging.PluginLogger
 	PluginConfig config.PluginConfig
 	ServiceLabel servicelabel.ReaderAPI
 	//local.PluginInfraDeps                             // injected
 	Publisher datasync.KeyProtoValWriter  // injected - To write ETCD data
 	Watcher   datasync.KeyValProtoWatcher // injected - To watch ETCD data
-}
-
-// Name implements PluginNamed
-func (p *ExamplePlugin) Name() string {
-	return PluginName
 }
 
 // Init starts the consumer.

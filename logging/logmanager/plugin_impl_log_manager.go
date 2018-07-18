@@ -20,7 +20,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/unrolled/render"
@@ -48,7 +48,7 @@ type Plugin struct {
 // Deps groups dependencies injected into the plugin so that they are
 // logically separated from other plugin fields.
 type Deps struct {
-	core.PluginName                          //inject
+	infra.PluginName                         //inject
 	Log                 logging.PluginLogger //inject
 	config.PluginConfig                      //inject
 	LogRegistry         logging.Registry     // inject

@@ -16,8 +16,8 @@ package statuscheck
 
 import (
 	"github.com/gogo/protobuf/proto"
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/health/statuscheck/model/status"
+	"github.com/ligato/cn-infra/infra"
 )
 
 //go:generate protoc --proto_path=model/status --gogo_out=model/status model/status/status.proto
@@ -45,19 +45,19 @@ type PluginStatusWriter interface {
 	// If <probe> is not nil, Statuscheck will periodically probe the plugin
 	// state through the provided function. Otherwise, it is expected that the
 	// plugin itself will report state updates through ReportStateChange().
-	Register(pluginName core.PluginName, probe PluginStateProbe)
+	Register(pluginName infra.PluginName, probe PluginStateProbe)
 
 	// ReportStateChange can be used to report a change in the status
 	// of a previously registered plugin. It is not a bug, however, to report
 	// the same status in consecutive calls. Statuscheck is smart enough
 	// to detect an actual status change and propagate only updates to remote
 	// clients.
-	ReportStateChange(pluginName core.PluginName, state PluginState, lastError error)
+	ReportStateChange(pluginName infra.PluginName, state PluginState, lastError error)
 
 	// ReportStateChangeWithMeta can be used to report a change in the status
 	// of a previously registered plugin with added metadata value stored in
 	// global agent status. Metadata type is specified in statuscheck model.
-	ReportStateChangeWithMeta(pluginName core.PluginName, state PluginState, lastError error, meta proto.Message)
+	ReportStateChangeWithMeta(pluginName infra.PluginName, state PluginState, lastError error, meta proto.Message)
 }
 
 // AgentStatusReader allows to lookup agent status by other plugins.

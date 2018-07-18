@@ -18,9 +18,9 @@ import (
 	"errors"
 
 	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/db/sql"
 	"github.com/ligato/cn-infra/health/statuscheck"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/willfaught/gockle"
@@ -42,7 +42,7 @@ type Plugin struct {
 // Deps is here to group injected dependencies of plugin
 // to not mix with other plugin fields.
 type Deps struct {
-	core.PluginName                                    // inject
+	infra.PluginName                                   // inject
 	Log                 logging.PluginLogger           // inject
 	config.PluginConfig                                // inject
 	StatusCheck         statuscheck.PluginStatusWriter // inject

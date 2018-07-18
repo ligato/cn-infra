@@ -15,12 +15,6 @@
 package main
 
 import (
-	"os"
-
-	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/flavors/connectors"
-	"github.com/ligato/cn-infra/flavors/local"
-	"github.com/ligato/cn-infra/flavors/rpc"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logrus"
 )
@@ -28,7 +22,7 @@ import (
 func main() {
 	logrus.DefaultLogger().SetLevel(logging.DebugLevel)
 
-	loc := &local.FlavorLocal{}
+	/*loc := &local.FlavorLocal{}
 	connectors := connectors.AllConnectorsFlavor{FlavorLocal: loc}
 	rpcs := rpc.FlavorRPC{FlavorLocal: loc}
 	agent := core.NewAgent(core.Inject(&connectors, &rpcs))
@@ -36,5 +30,7 @@ func main() {
 	err := core.EventLoopWithInterrupt(agent, nil)
 	if err != nil {
 		os.Exit(1)
-	}
+	}*/
+
+	// TODO: use new agent with options
 }

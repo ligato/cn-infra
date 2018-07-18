@@ -22,7 +22,7 @@ import (
 	"github.com/unrolled/render"
 
 	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/utils/safeclose"
 )
@@ -43,7 +43,7 @@ type Plugin struct {
 
 // Deps lists the dependencies of the Rest plugin.
 type Deps struct {
-	core.PluginName                          //inject
+	infra.PluginName                         //inject
 	Log                 logging.PluginLogger //inject
 	config.PluginConfig                      //inject
 	// Authenticator can be injected in a flavor inject method.

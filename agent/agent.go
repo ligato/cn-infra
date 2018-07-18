@@ -21,7 +21,7 @@ import (
 
 	"github.com/namsral/flag"
 
-	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/utils/once"
 )
@@ -119,26 +119,22 @@ func (a *agent) start() error {
 	infraLogger.Debugf("starting %d plugins", len(a.opts.Plugins))
 
 	// Init plugins
-	for _, p := range a.opts.Plugins {
-		infraLogger.Debugf("=> Init(): %v", p.Name())
-		if err := p.Init(); err != nil {
+	for _, plugin := range a.opts.Plugins {
+		infraLogger.Debugf("=> Init(): %v", plugin)
+		if err := plugin.Init(); err != nil {
 			return err
 		}
 	}
 
 	// AfterInit plugins
-	for _, p := range a.opts.Plugins {
-		var plug core.Plugin = p
-		if np, ok := p.(*core.NamedPlugin); ok {
-			plug = np.Plugin
-		}
-		if postPlugin, ok := plug.(core.PostInit); ok {
-			infraLogger.Debugf("=> AfterInit(): %v", p.Name())
+	for _, plugin := range a.opts.Plugins {
+		if postPlugin, ok := plugin.(infra.PostInit); ok {
+			infraLogger.Debugf("=> AfterInit(): %v", plugin)
 			if err := postPlugin.AfterInit(); err != nil {
 				return err
 			}
 		} else {
-			infraLogger.Debugf("-- plugin %v has no AfterInit()", p)
+			infraLogger.Debugf("-- plugin %v has no AfterInit()", plugin)
 		}
 	}
 

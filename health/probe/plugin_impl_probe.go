@@ -19,9 +19,9 @@ import (
 	"net/http"
 
 	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/health/statuscheck/model/status"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 	prom "github.com/ligato/cn-infra/rpc/prometheus"
 	"github.com/ligato/cn-infra/rpc/rest"
@@ -41,7 +41,7 @@ type Plugin struct {
 
 // Deps lists dependencies of REST plugin.
 type Deps struct {
-	core.PluginName                          // inject
+	infra.PluginName                         // inject
 	Log                 logging.PluginLogger // inject
 	config.PluginConfig                      // inject
 	ServiceLabel        servicelabel.ReaderAPI
