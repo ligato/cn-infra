@@ -16,6 +16,7 @@ package agent
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"reflect"
 	"syscall"
@@ -35,11 +36,12 @@ var (
 	CommitHash string
 )
 
-var infraLogger = logrus.NewLogger("infra")
+var infraLogger = logrus.NewLogger("agent")
 
 func init() {
 	if os.Getenv("DEBUG_INFRA") != "" {
 		infraLogger.SetLevel(logging.DebugLevel)
+		infraLogger.Debugf("infra debug logger enabled")
 	}
 }
 
@@ -49,7 +51,8 @@ type Options struct {
 	QuitChan    chan struct{}
 	ctx         context.Context
 
-	Plugins []core.PluginNamed
+	Plugins   []core.PluginNamed
+	pluginMap map[core.Plugin]struct{}
 }
 
 func newOptions(opts ...Option) Options {
@@ -59,6 +62,7 @@ func newOptions(opts ...Option) Options {
 			syscall.SIGTERM,
 			syscall.SIGKILL,
 		},
+		pluginMap: make(map[core.Plugin]struct{}),
 	}
 
 	for _, o := range opts {
@@ -94,8 +98,8 @@ func QuitSignals(sigs ...os.Signal) Option {
 	}
 }
 
-// QuitOn returns an Option that will set channel which stops Agent on close
-func QuitOn(ch chan struct{}) Option {
+// QuitOnClose returns an Option that will set channel which stops Agent on close
+func QuitOnClose(ch chan struct{}) Option {
 	return func(o *Options) {
 		o.QuitChan = ch
 	}
@@ -112,32 +116,35 @@ func Plugins(plugins ...core.PluginNamed) Option {
 // plugins recursively to the Agent's plugin list.
 func AllPlugins(plugins ...core.Plugin) Option {
 	return func(o *Options) {
-		uniqueness := map[core.Plugin]interface{}{}
+		infraLogger.Debugf("AllPlugins with %d plugins", len(plugins))
+
 		for _, plugin := range plugins {
-			plugins, err := findPlugins(reflect.ValueOf(plugin), uniqueness)
+			infraLogger.Debugf("recursively searching for deps in: %v", plugin)
+
+			plugins, err := findPlugins(reflect.ValueOf(plugin), o.pluginMap)
 			if err != nil {
 				panic(err)
 			}
 			o.Plugins = append(o.Plugins, plugins...)
 			typ := reflect.TypeOf(plugin)
-			logrus.DefaultLogger().Debugf("recursively found %d plugins inside %v", len(plugins), typ)
+			infraLogger.Debugf("recursively found %d plugins inside %v", len(plugins), typ)
 			for _, plug := range plugins {
-				logrus.DefaultLogger().Debugf(" - plugin: %v %v", reflect.TypeOf(plug), plug)
+				infraLogger.Debugf(" - plugin: %v (%v)", plug, reflect.TypeOf(plug))
 			}
+
 			p, ok := plugin.(core.PluginNamed)
 			if !ok {
 				p = core.NamePlugin(typ.String(), plugin)
 			}
+
 			o.Plugins = append(o.Plugins, p)
 		}
 	}
 }
 
-type depDefaults interface {
-	SetDefaults()
-}
-
-func findPlugins(val reflect.Value, uniqueness map[core.Plugin]interface{}, x ...int) (res []core.PluginNamed, err error) {
+func findPlugins(val reflect.Value, uniqueness map[core.Plugin]struct{}, x ...int) (
+	res []core.PluginNamed, err error,
+) {
 	n := 0
 	if len(x) > 0 {
 		n = x[0]
@@ -146,7 +153,8 @@ func findPlugins(val reflect.Value, uniqueness map[core.Plugin]interface{}, x ..
 		for i := 0; i < n; i++ {
 			f = "\t" + f
 		}
-		infraLogger.Debugf(f, a...)
+		//infraLogger.Debugf(f, a...)
+		fmt.Printf(f+"\n", a...)
 	}
 
 	typ := val.Type()
@@ -190,6 +198,7 @@ func findPlugins(val reflect.Value, uniqueness map[core.Plugin]interface{}, x ..
 
 		// PkgPath is empty for exported fields
 		if exported := field.PkgPath == ""; !exported {
+			logf(" - skip unexported: %v", field.Name)
 			continue
 		}
 
@@ -212,39 +221,33 @@ func findPlugins(val reflect.Value, uniqueness map[core.Plugin]interface{}, x ..
 				continue
 			}
 
-			uniqueness[plug] = nil
+			uniqueness[plug] = struct{}{}
 			p, ok := plug.(core.PluginNamed)
 			if !ok {
 				p = core.NamePlugin(field.Name, plug)
 			}
 			fieldPlug = p
 
-			var pp core.Plugin = plug
+			logf(" + FOUND PLUGIN: %v - %v (%v)", p.Name(), field.Name, field.Type)
+
+			/*var pp core.Plugin = plug
 			if np, ok := p.(*core.NamedPlugin); ok {
 				pp = np.Plugin
-			}
-			if defPlug, ok := pp.(depDefaults); ok {
-				logf(" - filling plugin defaults: %v", p)
-				defPlug.SetDefaults()
-			}
-
-			logf(" + FOUND PLUGIN: %v - %v (%v)", p.Name(), field.Name, field.Type)
+			}*/
 		}
-
-		var l []core.PluginNamed
 
 		// do recursive inspection only for plugins and fields Deps
 		if fieldPlug != nil || (field.Name == "Deps" && fieldVal.Kind() == reflect.Struct) {
+			//var l []core.PluginNamed
 			// try to inspect structure recursively
-			l, err = findPlugins(fieldVal, uniqueness, n+1)
+			l, err := findPlugins(fieldVal, uniqueness, n+1)
 			if err != nil {
 				logf(" - Bad field: %v %v", field.Name, err)
 				continue
 			}
+			//logf(" - listed %v plugins from %v (%v)", len(l), field.Name, field.Type)
+			res = append(res, l...)
 		}
-
-		//logf(" - listed %v plugins from %v (%v)", len(l), field.Name, field.Type)
-		res = append(res, l...)
 
 		if fieldPlug != nil {
 			res = append(res, fieldPlug)

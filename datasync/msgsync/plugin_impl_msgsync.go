@@ -37,22 +37,10 @@ type Plugin struct {
 // Deps groups dependencies injected into the plugin so that they are
 // logically separated from other plugin fields.
 type Deps struct {
-	Log        logging.PluginLogger // inject
-	PluginName core.PluginName      // inject
+	core.PluginName                      // inject
+	Log             logging.PluginLogger // inject
 	config.PluginConfig
 	Messaging messaging.Mux // inject
-}
-
-func (d *Deps) SetDefaults() {
-	if d.PluginName == "" {
-		d.PluginName = "msgsync"
-	}
-	if d.Log == nil {
-		d.Log = logging.ForPlugin(d.PluginName.String())
-	}
-	if d.PluginConfig == nil {
-		d.PluginConfig = config.ForPlugin(d.PluginName.String())
-	}
 }
 
 // Cfg groups configurations fields. It can be extended with other fields
@@ -102,12 +90,4 @@ func (plugin *Plugin) Put(key string, data proto.Message, opts ...datasync.PutOp
 // Close resources.
 func (plugin *Plugin) Close() error {
 	return nil
-}
-
-// String returns Deps.PluginName if set, "pub-msgsync" otherwise.
-func (plugin *Plugin) String() string {
-	if len(plugin.PluginName) == 0 {
-		return "pub-msgsync"
-	}
-	return string(plugin.PluginName)
 }

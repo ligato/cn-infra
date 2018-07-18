@@ -40,34 +40,11 @@ type Plugin struct {
 // Deps groups dependencies injected into the plugin so that they are
 // logically separated from other plugin fields.
 type Deps struct {
-	Log          logging.PluginLogger // inject
-	PluginName   core.PluginName      // inject
-	ServiceLabel servicelabel.ReaderAPI
-	KvPlugin     keyval.KvProtoPlugin // inject
-	ResyncOrch   resync.Subscriber    // inject
-}
-
-func (d *Deps) SetDefaults() {
-	if d.PluginName == "" {
-		prefix := "kvdb"
-		if d.KvPlugin != nil {
-			if kvdb, ok := d.KvPlugin.(core.PluginNamed); ok {
-				prefix = kvdb.Name()
-			}
-		}
-		d.PluginName = core.PluginName(prefix + "-datasync")
-	}
-	if d.Log == nil {
-		d.Log = logging.ForPlugin(d.PluginName.String())
-	}
-	if d.ServiceLabel == nil {
-		d.ServiceLabel = servicelabel.DefaultPlugin
-	}
-}
-
-// Name implements PluginNamed
-func (p *Plugin) Name() string {
-	return p.PluginName.String()
+	core.PluginName                      // inject
+	Log             logging.PluginLogger // inject
+	ServiceLabel    servicelabel.ReaderAPI
+	KvPlugin        keyval.KvProtoPlugin // inject
+	ResyncOrch      resync.Subscriber    // inject
 }
 
 // Init only initializes plugin.registry.
@@ -150,12 +127,4 @@ func (plugin *Plugin) Delete(key string, opts ...datasync.DelOption) (existed bo
 // Close resources.
 func (plugin *Plugin) Close() error {
 	return nil
-}
-
-// String returns Deps.PluginName if set, "kvdbsync" otherwise.
-func (plugin *Plugin) String() string {
-	if len(plugin.PluginName) == 0 {
-		return "kvdbsync"
-	}
-	return string(plugin.PluginName)
 }

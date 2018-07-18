@@ -52,6 +52,14 @@ type ForkDeps struct {
 	config.PluginConfig                      //inject
 }
 
+// String returns plugin name (if not set defaults to "HTTP-FORK")
+func (plugin *ForkPlugin) String() string {
+	if plugin.Deps.PluginName != "" {
+		return string(plugin.Deps.PluginName)
+	}
+	return "HTTP-FORK"
+}
+
 // Init checks config if the port is different that it creates ne HTTP server
 func (plugin *ForkPlugin) Init() (err error) {
 	if plugin.Config == nil {
@@ -83,6 +91,24 @@ func (plugin *ForkPlugin) Init() (err error) {
 	return err
 }
 
+// AfterInit starts the HTTP server.
+// (only if port was different in Init())
+func (plugin *ForkPlugin) AfterInit() error {
+	if plugin.newPlugin != nil {
+		return plugin.newPlugin.AfterInit()
+	}
+	return nil
+}
+
+// Close stops the HTTP server.
+// (only if port was different in Init())
+func (plugin *ForkPlugin) Close() error {
+	if plugin.newPlugin != nil {
+		return plugin.newPlugin.Close()
+	}
+	return nil
+}
+
 // RegisterHTTPHandler registers HTTP <handler> at the given <path>.
 // (delegated call)
 func (plugin *ForkPlugin) RegisterHTTPHandler(path string,
@@ -104,30 +130,4 @@ func (plugin *ForkPlugin) GetPort() int {
 		return plugin.delegate.GetPort()
 	}
 	return 0
-}
-
-// AfterInit starts the HTTP server.
-// (only if port was different in Init())
-func (plugin *ForkPlugin) AfterInit() error {
-	if plugin.newPlugin != nil {
-		return plugin.newPlugin.AfterInit()
-	}
-	return nil
-}
-
-// Close stops the HTTP server.
-// (only if port was different in Init())
-func (plugin *ForkPlugin) Close() error {
-	if plugin.newPlugin != nil {
-		return plugin.newPlugin.Close()
-	}
-	return nil
-}
-
-// String returns plugin name (if not set defaults to "HTTP-FORK")
-func (plugin *ForkPlugin) String() string {
-	if plugin.Deps.PluginName != "" {
-		return string(plugin.Deps.PluginName)
-	}
-	return "HTTP-FORK"
 }

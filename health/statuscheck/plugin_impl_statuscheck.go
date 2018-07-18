@@ -52,23 +52,9 @@ type Plugin struct {
 
 // Deps lists the dependencies of statuscheck plugin.
 type Deps struct {
-	Log        logging.PluginLogger       // inject
-	PluginName core.PluginName            // inject
-	Transport  datasync.KeyProtoValWriter // inject (optional)
-}
-
-func (d *Deps) SetDefaults() {
-	if d.PluginName == "" {
-		d.PluginName = "status-check"
-	}
-	if d.Log == nil {
-		d.Log = logging.ForPlugin(d.PluginName.String())
-	}
-}
-
-// Name implements PluginNamed
-func (p *Plugin) Name() string {
-	return p.PluginName.String()
+	core.PluginName                            // inject
+	Log             logging.PluginLogger       // inject
+	Transport       datasync.KeyProtoValWriter // inject (optional)
 }
 
 // Init prepares the initial status data.

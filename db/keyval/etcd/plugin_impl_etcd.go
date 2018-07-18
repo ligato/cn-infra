@@ -53,31 +53,11 @@ type Plugin struct {
 // Deps lists dependencies of the etcd plugin.
 // If injected, etcd plugin will use StatusCheck to signal the connection status.
 type Deps struct {
+	core.PluginName                                    // inject
 	Log                 logging.PluginLogger           // inject
-	PluginName          core.PluginName                // inject
 	config.PluginConfig                                // inject
 	StatusCheck         statuscheck.PluginStatusWriter // inject
 	Resync              *resync.Plugin
-}
-
-func (d *Deps) SetDefaults() {
-	if d.PluginName == "" {
-		d.PluginName = "etcd"
-	}
-	if d.Log == nil {
-		d.Log = logging.ForPlugin(d.PluginName.String())
-	}
-	if d.PluginConfig == nil {
-		d.PluginConfig = config.ForPlugin(d.PluginName.String())
-	}
-	if d.StatusCheck == nil {
-		d.StatusCheck = statuscheck.DefaultPlugin
-	}
-}
-
-// Name implements PluginNamed
-func (p *Plugin) Name() string {
-	return p.PluginName.String()
 }
 
 // Init retrieves ETCD configuration and establishes a new connection
@@ -119,7 +99,7 @@ func (plugin *Plugin) Init() (err error) {
 
 	// Register for providing status reports (polling mode).
 	if plugin.StatusCheck != nil {
-		plugin.StatusCheck.Register(core.PluginName(plugin.PluginName), func() (statuscheck.PluginState, error) {
+		plugin.StatusCheck.Register(plugin.PluginName, func() (statuscheck.PluginState, error) {
 			_, _, _, err := plugin.connection.GetValue(healthCheckProbeKey)
 			if err == nil {
 				if plugin.reconnectResync && plugin.lastConnErr != nil {

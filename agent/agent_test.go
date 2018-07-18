@@ -16,14 +16,11 @@ package agent_test // Different name from package agent to insure we test with t
 
 import (
 	"fmt"
-	"sync"
-	"testing"
-
-	"time"
-
 	"os"
-
+	"sync"
 	"syscall"
+	"testing"
+	"time"
 
 	"github.com/ligato/cn-infra/agent"
 	"github.com/ligato/cn-infra/core"

@@ -59,7 +59,7 @@ func main() {
 	p := &ExamplePlugin{
 		Deps: Deps{
 			Log:        logging.ForPlugin(PluginName),
-			Prometheus: prom.DefaultPlugin,
+			Prometheus: &prom.DefaultPlugin,
 		},
 	}
 

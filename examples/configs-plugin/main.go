@@ -66,7 +66,7 @@ func main() {
 	}
 	a := agent.NewAgent(
 		agent.AllPlugins(p),
-		agent.QuitOn(exampleFinished),
+		agent.QuitOnClose(exampleFinished),
 	)
 	if err := a.Run(); err != nil {
 		log.Fatal(err)

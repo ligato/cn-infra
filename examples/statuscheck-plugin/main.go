@@ -37,9 +37,6 @@ import (
 const PluginName = "example"
 
 func main() {
-	// Init close channel used to stop the example.
-	exampleFinished := make(chan struct{})
-
 	// Start Agent with ExamplePlugin, ETCDPlugin & FlavorLocal (reused cn-infra plugins).
 	/*agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
 		etcdPlug := &etcd.Plugin{}
@@ -63,22 +60,20 @@ func main() {
 	core.EventLoopWithInterrupt(agent, nil)*/
 
 	etcdDataSync := kvdbsync.NewPlugin(
-		kvdbsync.UseDeps(kvdbsync.Deps{
-			KvPlugin:   etcd.DefaultPlugin,
-			ResyncOrch: resync.DefaultPlugin,
+		kvdbsync.UseDeps(func(deps *kvdbsync.Deps) {
+			deps.KvPlugin = &etcd.DefaultPlugin
+			deps.ResyncOrch = &resync.DefaultPlugin
 		}),
 	)
 	p := &ExamplePlugin{
-		Deps: Deps{
-			Log:           logging.ForPlugin(PluginName),
-			StatusMonitor: statuscheck.DefaultPlugin,
-		},
-		closeChannel: exampleFinished,
+		Log:             logging.ForPlugin(PluginName),
+		StatusMonitor:   &statuscheck.DefaultPlugin,
+		exampleFinished: make(chan struct{}),
 	}
 
 	a := agent.NewAgent(
 		agent.AllPlugins(etcdDataSync, p),
-		agent.QuitOn(exampleFinished),
+		agent.QuitOnClose(p.exampleFinished),
 	)
 	if err := a.Run(); err != nil {
 		log.Fatal(err)
@@ -87,16 +82,11 @@ func main() {
 
 // ExamplePlugin demonstrates the usage of datasync API.
 type ExamplePlugin struct {
-	Deps
+	Log           logging.PluginLogger
+	StatusMonitor statuscheck.StatusReader
 
 	// Fields below are used to properly finish the example.
-	closeChannel chan struct{}
-}
-
-type Deps struct {
-	Log logging.PluginLogger
-	//local.PluginInfraDeps // injected
-	StatusMonitor statuscheck.StatusReader
+	exampleFinished chan struct{}
 }
 
 // Init starts the consumer.
@@ -107,7 +97,7 @@ func (plugin *ExamplePlugin) Init() error {
 // AfterInit starts the publisher and prepares for the shutdown.
 func (plugin *ExamplePlugin) AfterInit() error {
 
-	go plugin.checkStatus(plugin.closeChannel)
+	go plugin.checkStatus(plugin.exampleFinished)
 
 	return nil
 }
@@ -131,5 +121,5 @@ func (plugin *ExamplePlugin) checkStatus(closeCh chan struct{}) {
 
 // Close shutdowns the consumer and channels used to propagate data resync and data change events.
 func (plugin *ExamplePlugin) Close() error {
-	return safeclose.Close(plugin.closeChannel)
+	return safeclose.Close(plugin.exampleFinished)
 }

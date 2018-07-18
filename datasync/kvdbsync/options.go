@@ -14,12 +14,37 @@
 
 package kvdbsync
 
+import (
+	"fmt"
+
+	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/servicelabel"
+)
+
 // NewPlugin creates a new Plugin with the provided Options.
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
+	p.Deps = Deps{
+		PluginName:   "kvdb",
+		ServiceLabel: &servicelabel.DefaultPlugin,
+	}
+
 	for _, o := range opts {
 		o(p)
+	}
+
+	prefix := p.String()
+	if p.Deps.KvPlugin != nil {
+		if kvdb, ok := p.Deps.KvPlugin.(fmt.Stringer); ok {
+			prefix = kvdb.String()
+		}
+	}
+	p.Deps.PluginName = core.PluginName(prefix + "-datasync")
+
+	if p.Deps.Log == nil {
+		p.Deps.Log = logging.ForPlugin(p.String())
 	}
 
 	return p
@@ -28,9 +53,9 @@ func NewPlugin(opts ...Option) *Plugin {
 // Option is a function that acts on a Plugin to inject some settings.
 type Option func(*Plugin)
 
-// UseDeps returns Option which injects a particular set of dependencies.
-func UseDeps(deps Deps) Option {
+// UseDeps returns Option that can inject custom dependencies.
+func UseDeps(cb func(*Deps)) Option {
 	return func(p *Plugin) {
-		p.Deps = deps
+		cb(&p.Deps)
 	}
 }

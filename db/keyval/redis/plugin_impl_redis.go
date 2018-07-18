@@ -42,25 +42,10 @@ type Plugin struct {
 
 // Deps lists dependencies of the redis plugin.
 type Deps struct {
+	core.PluginName                                    // inject
 	Log                 logging.PluginLogger           // inject
-	PluginName          core.PluginName                // inject
 	config.PluginConfig                                // inject
 	StatusCheck         statuscheck.PluginStatusWriter // inject
-}
-
-func (d *Deps) SetDefaults() {
-	if d.PluginName == "" {
-		d.PluginName = "redis"
-	}
-	if d.Log == nil {
-		d.Log = logging.ForPlugin(d.PluginName.String())
-	}
-	if d.PluginConfig == nil {
-		d.PluginConfig = config.ForPlugin(d.PluginName.String())
-	}
-	if d.StatusCheck == nil {
-		d.StatusCheck = statuscheck.DefaultPlugin
-	}
 }
 
 // Init retrieves redis configuration and establishes a new connection

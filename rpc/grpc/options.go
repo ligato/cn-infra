@@ -14,33 +14,64 @@
 
 package grpc
 
-// DefaultPlugin is a default instance of Plugin.
-var DefaultPlugin = NewPlugin()
+import (
+	"github.com/ligato/cn-infra/config"
+	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/rpc/rest"
+)
 
-// NewPlugin creates a new Plugin with the provided Options.
+// DefaultPlugin is a default instance of Plugin.
+var DefaultPlugin Plugin = *NewPlugin()
+
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
+
+	p.Deps = Deps{
+		PluginName: "grpc",
+		// HTTP: &rest.DefaultPlugin, // turned off by default
+	}
 
 	for _, o := range opts {
 		o(p)
 	}
 
+	if p.Deps.Log == nil {
+		p.Deps.Log = logging.ForPlugin(p.String())
+	}
+	if p.Deps.PluginConfig == nil {
+		p.Deps.PluginConfig = config.ForPlugin(p.String())
+	}
+
 	return p
 }
 
-// Option is a function that acts on a Plugin to inject some settings.
 type Option func(*Plugin)
-
-// UseDeps returns Option which injects a particular set of dependencies.
-func UseDeps(deps Deps) Option {
-	return func(p *Plugin) {
-		p.Deps = deps
-	}
-}
 
 // UseConf returns Option which injects a particular configuration.
 func UseConf(conf Config) Option {
 	return func(p *Plugin) {
 		p.Config = &conf
+	}
+}
+
+// UseDeps returns Option that can inject custom dependencies.
+func UseDeps(cb func(*Deps)) Option {
+	return func(p *Plugin) {
+		cb(&p.Deps)
+	}
+}
+
+// UseHTTP returns Option that sets HTTP handlers.
+func UseHTTP(h rest.HTTPHandlers) Option {
+	return func(p *Plugin) {
+		p.Deps.HTTP = h
+	}
+}
+
+// UseName returns Option that sets custom name.
+func UseName(name string) Option {
+	return func(p *Plugin) {
+		p.Deps.PluginName = core.PluginName(name)
 	}
 }

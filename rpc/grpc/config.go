@@ -21,6 +21,7 @@ import (
 	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/core"
 	"github.com/namsral/flag"
+	"google.golang.org/grpc"
 )
 
 // Config is a configuration for GRPC netListener
@@ -51,6 +52,16 @@ type Config struct {
 	// Supported only gzip.
 	//TODO Compression string
 	//TODO TLS/credentials
+}
+
+func (cfg *Config) getGrpcOptions() (opts []grpc.ServerOption) {
+	switch {
+	case cfg.MaxConcurrentStreams > 0:
+		opts = append(opts, grpc.MaxConcurrentStreams(cfg.MaxConcurrentStreams))
+	case cfg.MaxMsgSize > 0:
+		opts = append(opts, grpc.MaxMsgSize(cfg.MaxMsgSize))
+	}
+	return
 }
 
 // GetPort parses suffix from endpoint & returns integer after last ":" (otherwise it returns 0)

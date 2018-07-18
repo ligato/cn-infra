@@ -32,12 +32,6 @@ type Deps struct {
 	GRPC grpc.Server
 }
 
-func (d *Deps) SetDefaults() {
-	if d.GRPC == nil {
-		d.GRPC = grpc.DefaultPlugin
-	}
-}
-
 // Init registers new gRPC service and instantiates plugin.Adapter.
 func (plugin *Plugin) Init() error {
 	grpcAdapter := NewAdapter(plugin.GRPC.GetServer())

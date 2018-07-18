@@ -43,8 +43,8 @@ type Plugin struct {
 
 // Deps lists the dependencies of the Rest plugin.
 type Deps struct {
+	core.PluginName                          //inject
 	Log                 logging.PluginLogger //inject
-	PluginName          core.PluginName      //inject
 	config.PluginConfig                      //inject
 	// Authenticator can be injected in a flavor inject method.
 	// If there is no authenticator injected and config contains
@@ -53,23 +53,9 @@ type Deps struct {
 	Authenticator BasicHTTPAuthenticator //inject
 }
 
-func (d *Deps) SetDefaults() {
-	if d.PluginName == "" {
-		d.PluginName = "http"
-	}
-	if d.Log == nil {
-		d.Log = logging.ForPlugin(d.PluginName.String())
-	}
-	if d.PluginConfig == nil {
-		d.PluginConfig = config.ForPlugin(d.PluginName.String())
-	}
-}
-
 // Init is the plugin entry point called by Agent Core
 // - It prepares Gorilla MUX HTTP Router
 func (plugin *Plugin) Init() (err error) {
-	plugin.Log.Debugf("REST Init()")
-
 	if plugin.Config == nil {
 		plugin.Config = DefaultConfig()
 	}
@@ -96,8 +82,6 @@ func (plugin *Plugin) Init() (err error) {
 
 // AfterInit starts the HTTP server.
 func (plugin *Plugin) AfterInit() (err error) {
-	plugin.Log.Debugf("REST AfterInit()")
-
 	cfgCopy := *plugin.Config
 
 	if plugin.listenAndServe != nil {
@@ -139,17 +123,4 @@ func (plugin *Plugin) GetPort() int {
 // Close stops the HTTP server.
 func (plugin *Plugin) Close() error {
 	return safeclose.Close(plugin.server)
-}
-
-// String returns plugin name (if not set defaults to "HTTP")
-func (plugin *Plugin) String() string {
-	if plugin.Deps.PluginName != "" {
-		return string(plugin.Deps.PluginName)
-	}
-	return "HTTP"
-}
-
-// Name returns the name of the plugin
-func (plugin *Plugin) Name() string {
-	return plugin.PluginName.String()
 }

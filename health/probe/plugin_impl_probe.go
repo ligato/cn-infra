@@ -41,34 +41,13 @@ type Plugin struct {
 
 // Deps lists dependencies of REST plugin.
 type Deps struct {
+	core.PluginName                          // inject
 	Log                 logging.PluginLogger // inject
-	PluginName          core.PluginName      // inject
 	config.PluginConfig                      // inject
 	ServiceLabel        servicelabel.ReaderAPI
 	StatusCheck         statuscheck.StatusReader // inject
 	HTTP                rest.HTTPHandlers        // inject
 	Prometheus          prom.API                 // inject
-}
-
-func (d *Deps) SetDefaults() {
-	if d.PluginName == "" {
-		d.PluginName = "probe"
-	}
-	if d.Log == nil {
-		d.Log = logging.ForPlugin(d.PluginName.String())
-	}
-	if d.PluginConfig == nil {
-		d.PluginConfig = config.ForPlugin(d.PluginName.String())
-	}
-	if d.ServiceLabel == nil {
-		d.ServiceLabel = servicelabel.DefaultPlugin
-	}
-	if d.StatusCheck == nil {
-		d.StatusCheck = statuscheck.DefaultPlugin
-	}
-	if d.HTTP == nil {
-		d.HTTP = rest.DefaultPlugin
-	}
 }
 
 // Init does nothing

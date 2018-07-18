@@ -135,17 +135,25 @@ type PluginLogger interface {
 	LoggerFactory
 }
 
+// ForPlugin is used to initialize plugin logger by name
+// and optionally created children (their name prefixed by plugin logger name)
+func ForPlugin(name string) PluginLogger {
+	if logger, found := DefaultRegistry.Lookup(name); found {
+		DefaultLogger.Warnf("using plugin logger that was already initialized, unique plugin name should be used")
+		return &pluginLogger{
+			Logger:        logger,
+			LoggerFactory: &prefixedLoggerFactory{name, DefaultRegistry},
+		}
+	}
+	return NewPluginLogger(name, DefaultRegistry)
+}
+
+// NewPluginLogger creates new logger with given LoggerFactory.
 func NewPluginLogger(name string, factory LoggerFactory) PluginLogger {
 	return &pluginLogger{
 		Logger:        factory.NewLogger(name),
 		LoggerFactory: &prefixedLoggerFactory{name, factory},
 	}
-}
-
-// ForPlugin is used to initialize plugin logger by name
-// and optionally created children (their name prefixed by plugin logger name)
-func ForPlugin(name string) PluginLogger {
-	return NewPluginLogger(name, DefaultRegistry)
 }
 
 type pluginLogger struct {

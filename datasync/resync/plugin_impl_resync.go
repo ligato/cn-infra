@@ -38,22 +38,8 @@ type Plugin struct {
 // Deps groups dependencies injected into the plugin so that they are
 // logically separated from other plugin fields.
 type Deps struct {
-	Log        logging.PluginLogger
-	PluginName core.PluginName // inject
-}
-
-func (d *Deps) SetDefaults() {
-	if d.PluginName == "" {
-		d.PluginName = "resync"
-	}
-	if d.Log == nil {
-		d.Log = logging.ForPlugin(d.PluginName.String())
-	}
-}
-
-// Name implements PluginNamed
-func (p *Plugin) Name() string {
-	return p.PluginName.String()
+	core.PluginName // inject
+	Log             logging.PluginLogger
 }
 
 // Init initializes variables.

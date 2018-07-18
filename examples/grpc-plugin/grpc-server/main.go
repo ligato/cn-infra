@@ -4,14 +4,13 @@ import (
 	"errors"
 	"log"
 
-	"github.com/ligato/cn-infra/rpc/rest"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc/examples/helloworld/helloworld"
-
 	"github.com/ligato/cn-infra/agent"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/rpc/grpc"
+	"github.com/ligato/cn-infra/rpc/rest"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc/examples/helloworld/helloworld"
 )
 
 // *************************************************************************
@@ -19,43 +18,90 @@ import (
 // Server.RegisterService(descriptor, service)
 // ************************************************************************/
 
-const PluginName = "example"
+const PluginName = "myPlugin"
 
 func main() {
-	// Init close channel to stop the example after everything was logged
-	//exampleFinished := make(chan struct{})
+	// --------------------
+	// ALL DEFAULT
+	// --------------------
 
-	// Start Agent with ExamplePlugin & FlavorRPC (reused cn-infra plugins).
-	/*agent := rpc.NewAgent(rpc.WithPlugins(func(flavor *rpc.FlavorRPC) []*core.NamedPlugin {
-		examplePlug := &ExamplePlugin{
-			exampleFinished: exampleFinished,
-			Deps: Deps{
-				PluginLogDeps: *flavor.LogDeps("example"),
-				GRPC:          &flavor.GRPC,
-			},
-		}
-		return []*core.NamedPlugin{{examplePlug.PluginName, examplePlug}}
-	}))
-	core.EventLoopWithInterrupt(agent, exampleFinished)*/
+	/*p := &ExamplePlugin{
+		Deps: Deps{
+			PluginName: PluginName,
+			Log:        logging.ForPlugin(PluginName),
+			GRPC:       &grpc.DefaultPlugin,
+		},
+	}*/
 
-	rest.DefaultPlugin = rest.NewPlugin(
+	// --------------------
+	// CUSTOM INSTANCE
+	// --------------------
+
+	p := &ExamplePlugin{
+		GRPC: grpc.NewPlugin(
+			//grpc.UseName("myGRPC"),
+			grpc.UseHTTP(&rest.DefaultPlugin),
+			grpc.UseDeps(func(deps *grpc.Deps) {
+				deps.HTTP = &rest.DefaultPlugin //rest.NewPlugin()
+				//deps.PluginName = core.PluginName("myGRPC")
+			}),
+		),
+		//GRPC: &grpc.DefaultPlugin,
+		Log: logging.ForPlugin(PluginName),
+	}
+
+	// --------------------
+	// CHANGE GLOBAL DEFAULT
+	// --------------------
+
+	/*rest.DefaultPlugin = *rest.NewPlugin(
 		rest.UseConf(rest.Config{
 			Endpoint: ":1234",
 		}),
 	)
+	p := &ExamplePlugin{
+		Deps: Deps{
+			PluginName: PluginName,
+			Log:        logging.ForPlugin(PluginName),
+			GRPC:       grpc.DefaultPlugin,
+		},
+	}*/
+
+	// --------------------
+	// DISABLE DEP
+	// --------------------
 
 	/*myGRPC := grpc.NewPlugin(
 		grpc.UseDeps(grpc.Deps{
-			HTTP: myRest,
+			HTTP: rest.Disabled,
 		}),
-	)*/
+	)
+
+	//rest.DefaultPlugin = rest.NewPlugin(rest.UseDisabled())*/
+
+	// --------------------
+	// INIT AGENT
+	// --------------------
+
+	/*myGRPC := grpc.NewPlugin(
+		//grpc.UseCustom(grpc.PluginDeps{}),
+		//grpc.UseDefaults(),
+		grpc.UseDeps(grpc.Deps{
+			//Log: logging.ForPlugin("myGRPC"),
+			//HTTP: httpPlug,
+			//HTTP: rest.Disabled,
+			//HTTP: NewPlugin(UseDisabled()),
+		}),
+	)
 
 	p := &ExamplePlugin{
 		Deps: Deps{
-			Log:  logging.ForPlugin(PluginName),
-			GRPC: grpc.DefaultPlugin,
+			PluginName: PluginName,
+			Log:        logging.ForPlugin(PluginName),
+			GRPC:       myGRPC,
+			//GRPC: grpc.DefaultPlugin,
 		},
-	}
+	}*/
 
 	a := agent.NewAgent(agent.AllPlugins(p))
 
@@ -66,18 +112,17 @@ func main() {
 
 // ExamplePlugin presents main plugin.
 type ExamplePlugin struct {
-	Deps
-}
-
-// Deps are dependencies for ExamplePlugin.
-type Deps struct {
 	Log  logging.PluginLogger
 	GRPC grpc.Server
 }
 
+func (plugin *ExamplePlugin) String() string {
+	return PluginName
+}
+
 // Init demonstrates the usage of PluginLogger API.
 func (plugin *ExamplePlugin) Init() error {
-	plugin.Log.Info("Example Init")
+	plugin.Log.Info("Registering greeter")
 
 	helloworld.RegisterGreeterServer(plugin.GRPC.GetServer(), &GreeterService{})
 

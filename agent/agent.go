@@ -23,7 +23,6 @@ import (
 
 	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/utils/once"
 )
 
@@ -72,7 +71,7 @@ func (a *agent) Start() error {
 }
 
 func (a *agent) startSignalWrapper() error {
-	logrus.DefaultLogger().WithFields(logging.Fields{
+	logging.DefaultLogger.WithFields(logging.Fields{
 		"CommitHash": CommitHash,
 		"BuildDate":  BuildDate,
 	}).Infof("Starting agent %v", BuildVersion)
@@ -100,11 +99,11 @@ func (a *agent) startSignalWrapper() error {
 		// Wait for signal or agent stop
 		select {
 		case <-a.opts.QuitChan:
-			logrus.DefaultLogger().Info("Quit channel closed, stopping.")
+			logging.DefaultLogger.Info("Quit channel closed, stopping.")
 		case <-quit:
-			logrus.DefaultLogger().Info("Context canceled, stopping.")
+			logging.DefaultLogger.Info("Context canceled, stopping.")
 		case s := <-sig:
-			logrus.DefaultLogger().Infof("Signal %v received, stopping.", s)
+			logging.DefaultLogger.Infof("Signal %v received, stopping.", s)
 		case <-a.After():
 		}
 		// Doesn't hurt to call Stop twice, its idempotent because of the
@@ -117,14 +116,16 @@ func (a *agent) startSignalWrapper() error {
 }
 
 func (a *agent) start() error {
-	logrus.DefaultLogger().Debugf("initializing %d plugins", len(a.opts.Plugins))
+	infraLogger.Debugf("starting %d plugins", len(a.opts.Plugins))
+
 	// Init plugins
 	for _, p := range a.opts.Plugins {
-		logrus.DefaultLogger().Debugf("Init: %v", p.Name())
+		infraLogger.Debugf("=> Init(): %v", p.Name())
 		if err := p.Init(); err != nil {
 			return err
 		}
 	}
+
 	// AfterInit plugins
 	for _, p := range a.opts.Plugins {
 		var plug core.Plugin = p
@@ -132,17 +133,19 @@ func (a *agent) start() error {
 			plug = np.Plugin
 		}
 		if postPlugin, ok := plug.(core.PostInit); ok {
+			infraLogger.Debugf("=> AfterInit(): %v", p.Name())
 			if err := postPlugin.AfterInit(); err != nil {
 				return err
 			}
 		} else {
-			logrus.DefaultLogger().Debugf("plugin %v has no AfterInit", p)
+			infraLogger.Debugf("-- plugin %v has no AfterInit()", p)
 		}
 	}
 
 	a.stopCh = make(chan struct{}) // If we are started, we have a stopCh to signal stopping
 
-	logrus.DefaultLogger().Info("Agent Started")
+	logging.DefaultLogger.Infof("Agent started with %d plugins", len(a.opts.Plugins))
+
 	return nil
 }
 
@@ -154,7 +157,7 @@ func (a *agent) Stop() error {
 func (a *agent) stop() error {
 	if a.stopCh == nil {
 		err := errors.New("attempted to stop an agent that wasn't Started")
-		logrus.DefaultLogger().Error(err)
+		logging.DefaultLogger.Error(err)
 		return err
 	}
 	defer close(a.stopCh)
@@ -166,7 +169,8 @@ func (a *agent) stop() error {
 		}
 	}
 
-	logrus.DefaultLogger().Info("Agent Stopped.")
+	logging.DefaultLogger.Info("Agent stopped")
+
 	return nil
 }
 
@@ -176,7 +180,7 @@ func (a *agent) stop() error {
 func (a *agent) Wait() error {
 	if a.stopCh == nil {
 		err := errors.New("attempted to wait on an agent that wasn't Started")
-		logrus.DefaultLogger().Error(err)
+		logging.DefaultLogger.Error(err)
 		return err
 	}
 	<-a.stopCh

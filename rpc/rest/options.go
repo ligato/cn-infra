@@ -14,15 +14,31 @@
 
 package rest
 
+import (
+	"github.com/ligato/cn-infra/config"
+	"github.com/ligato/cn-infra/logging"
+)
+
 // DefaultPlugin is a default instance of Plugin.
-var DefaultPlugin = NewPlugin()
+var DefaultPlugin Plugin = *NewPlugin()
 
 // NewPlugin creates a new Plugin with the provided Options.
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
+	p.Deps = Deps{
+		PluginName: "http-rest",
+	}
+
 	for _, o := range opts {
 		o(p)
+	}
+
+	if p.Deps.Log == nil {
+		p.Deps.Log = logging.ForPlugin(p.String())
+	}
+	if p.Deps.PluginConfig == nil {
+		p.Deps.PluginConfig = config.ForPlugin(p.String())
 	}
 
 	return p
@@ -31,16 +47,23 @@ func NewPlugin(opts ...Option) *Plugin {
 // Option is a function that acts on a Plugin to inject some settings.
 type Option func(*Plugin)
 
-// UseDeps returns Option which injects a particular set of dependencies.
-func UseDeps(deps Deps) Option {
-	return func(p *Plugin) {
-		p.Deps = deps
-	}
-}
-
 // UseConf returns Option which injects a particular configuration.
 func UseConf(conf Config) Option {
 	return func(p *Plugin) {
 		p.Config = &conf
+	}
+}
+
+// UseDeps returns Option that can inject custom dependencies.
+func UseDeps(cb func(*Deps)) Option {
+	return func(p *Plugin) {
+		cb(&p.Deps)
+	}
+}
+
+// UseAuthenticator returns an Option which sets HTTP Authenticator.
+func UseAuthenticator(a BasicHTTPAuthenticator) Option {
+	return func(p *Plugin) {
+		p.Deps.Authenticator = a
 	}
 }

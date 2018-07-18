@@ -42,25 +42,10 @@ type Plugin struct {
 // Deps is here to group injected dependencies of plugin
 // to not mix with other plugin fields.
 type Deps struct {
+	core.PluginName                                    // inject
 	Log                 logging.PluginLogger           // inject
-	PluginName          core.PluginName                // inject
 	config.PluginConfig                                // inject
 	StatusCheck         statuscheck.PluginStatusWriter // inject
-}
-
-func (d *Deps) SetDefaults() {
-	if d.PluginName == "" {
-		d.PluginName = "cassandra"
-	}
-	if d.Log == nil {
-		d.Log = logging.ForPlugin(d.PluginName.String())
-	}
-	if d.PluginConfig == nil {
-		d.PluginConfig = config.ForPlugin(d.PluginName.String())
-	}
-	if d.StatusCheck == nil {
-		d.StatusCheck = statuscheck.DefaultPlugin
-	}
 }
 
 var (
@@ -114,7 +99,7 @@ func (p *Plugin) Init() (err error) {
 	// Register for providing status reports (polling mode)
 	if p.StatusCheck != nil {
 		if p.session != nil {
-			p.StatusCheck.Register(core.PluginName(p.String()), func() (statuscheck.PluginState, error) {
+			p.StatusCheck.Register(p.PluginName, func() (statuscheck.PluginState, error) {
 				broker := p.NewBroker()
 				err := broker.Exec(`select keyspace_name from system_schema.keyspaces`)
 				if err == nil {
@@ -151,12 +136,4 @@ func (p *Plugin) NewBroker() sql.Broker {
 func (p *Plugin) Close() error {
 	safeclose.Close(p.session)
 	return nil
-}
-
-// String returns if set Deps.PluginName or "cassa-client" otherwise
-func (p *Plugin) String() string {
-	if len(p.Deps.PluginName) == 0 {
-		return "cassa-client"
-	}
-	return string(p.Deps.PluginName)
 }

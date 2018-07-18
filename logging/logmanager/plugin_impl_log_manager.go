@@ -48,26 +48,11 @@ type Plugin struct {
 // Deps groups dependencies injected into the plugin so that they are
 // logically separated from other plugin fields.
 type Deps struct {
+	core.PluginName                          //inject
 	Log                 logging.PluginLogger //inject
-	PluginName          core.PluginName      //inject
 	config.PluginConfig                      //inject
 	LogRegistry         logging.Registry     // inject
 	HTTP                rest.HTTPHandlers    // inject
-}
-
-func (d *Deps) SetDefaults() {
-	if d.PluginName == "" {
-		d.PluginName = "logs"
-	}
-	if d.Log == nil {
-		d.Log = logging.ForPlugin(d.PluginName.String())
-	}
-	if d.PluginConfig == nil {
-		d.PluginConfig = config.ForPlugin(d.PluginName.String())
-	}
-	if d.LogRegistry == nil {
-		d.LogRegistry = logging.DefaultRegistry
-	}
 }
 
 // NewConf creates default configuration with InfoLevel & empty loggers.

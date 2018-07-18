@@ -51,22 +51,10 @@ type Plugin struct {
 
 // Deps lists dependencies of the plugin.
 type Deps struct {
-	Log        logging.PluginLogger
-	PluginName core.PluginName
+	core.PluginName
+	Log logging.PluginLogger
 	// HTTP server used to expose metrics
 	HTTP rest.HTTPHandlers // inject
-}
-
-func (d *Deps) SetDefaults() {
-	if d.PluginName == "" {
-		d.PluginName = "prometheus"
-	}
-	if d.Log == nil {
-		d.Log = logging.ForPlugin(d.PluginName.String())
-	}
-	if d.HTTP == nil {
-		d.HTTP = rest.DefaultPlugin
-	}
 }
 
 type registry struct {

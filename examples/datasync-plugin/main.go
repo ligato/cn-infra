@@ -31,9 +31,6 @@ import (
 const PluginName = "example"
 
 func main() {
-	// Init close channel used to stop the example.
-	exampleFinished := make(chan struct{})
-
 	// Start Agent with ExamplePlugin, ETCDPlugin & FlavorLocal (reused cn-infra plugins).
 	/*agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
 		etcdPlug := &etcd.Plugin{}
@@ -64,26 +61,33 @@ func main() {
 		}),
 	)*/
 
+	//etcd.DefaultPlugin = etcd.NewPlugin(
+	//		etcd.UseConf(etcd.Config{
+	//			Endpoints:[]string{":1234"},
+	//		}),
+	//	)
+
 	etcdDataSync := kvdbsync.NewPlugin(
-		kvdbsync.UseDeps(kvdbsync.Deps{
-			KvPlugin:   etcd.DefaultPlugin,
-			ResyncOrch: resync.DefaultPlugin,
+		kvdbsync.UseDeps(func(deps *kvdbsync.Deps) {
+			deps.KvPlugin = &etcd.DefaultPlugin
+			deps.ResyncOrch = &resync.DefaultPlugin
 		}),
 	)
+
 	p := &ExamplePlugin{
-		Deps: Deps{
-			Log:          logging.ForPlugin(PluginName),
-			PluginConfig: config.ForPlugin(PluginName),
-			ServiceLabel: servicelabel.DefaultPlugin,
-			Publisher:    etcdDataSync,
-			Watcher:      etcdDataSync,
-		},
-		closeChannel: exampleFinished,
+		exampleFinished: make(chan struct{}),
+	}
+	p.Deps = Deps{
+		Log:          logging.ForPlugin(PluginName),
+		PluginConfig: config.ForPlugin(PluginName),
+		ServiceLabel: &servicelabel.DefaultPlugin,
+		Publisher:    etcdDataSync,
+		Watcher:      etcdDataSync,
 	}
 
 	a := agent.NewAgent(
 		agent.AllPlugins(p),
-		agent.QuitOn(exampleFinished),
+		agent.QuitOnClose(p.exampleFinished),
 	)
 	if err := a.Run(); err != nil {
 		log.Fatal(err)
@@ -103,7 +107,7 @@ type ExamplePlugin struct {
 	eventCounter  uint8
 	publisherDone bool
 
-	closeChannel chan struct{}
+	exampleFinished chan struct{}
 }
 
 // Deps lists dependencies of ExamplePlugin.
@@ -280,7 +284,7 @@ func (plugin *ExamplePlugin) closeExample() {
 			plugin.cancel()
 			plugin.Log.Infof("etcd/datasync example finished, sending shutdown ...")
 			// Close the example
-			close(plugin.closeChannel)
+			close(plugin.exampleFinished)
 			break
 		}
 	}

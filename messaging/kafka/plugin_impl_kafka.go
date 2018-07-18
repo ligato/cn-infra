@@ -51,29 +51,11 @@ type Plugin struct {
 // Deps groups dependencies injected into the plugin so that they are
 // logically separated from other plugin fields.
 type Deps struct {
+	core.PluginName                                    // inject
 	Log                 logging.PluginLogger           // inject
-	PluginName          core.PluginName                // inject
 	config.PluginConfig                                // inject
 	StatusCheck         statuscheck.PluginStatusWriter // inject
 	ServiceLabel        servicelabel.ReaderAPI
-}
-
-func (d *Deps) SetDefaults() {
-	if d.PluginName == "" {
-		d.PluginName = "kafka"
-	}
-	if d.Log == nil {
-		d.Log = logging.ForPlugin(d.PluginName.String())
-	}
-	if d.PluginConfig == nil {
-		d.PluginConfig = config.ForPlugin(d.PluginName.String())
-	}
-	if d.StatusCheck == nil {
-		d.StatusCheck = statuscheck.DefaultPlugin
-	}
-	if d.ServiceLabel == nil {
-		d.ServiceLabel = servicelabel.DefaultPlugin
-	}
 }
 
 // FromExistingMux is used mainly for testing purposes.

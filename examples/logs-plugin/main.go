@@ -24,9 +24,6 @@ import (
 const PluginName = "example"
 
 func main() {
-	// Init close channel to stop the example after everything was logged
-	exampleFinished := make(chan struct{})
-
 	// Start Agent with ExamplePlugin & LocalFlavor (reused cn-infra plugins).
 	/*agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
 		examplePlug := &ExamplePlugin{
@@ -38,12 +35,12 @@ func main() {
 	core.EventLoopWithInterrupt(agent, exampleFinished)*/
 
 	p := &ExamplePlugin{
+		exampleFinished: make(chan struct{}),
 		Log:             logging.ForPlugin(PluginName),
-		exampleFinished: exampleFinished,
 	}
 	a := agent.NewAgent(
 		agent.AllPlugins(p),
-		agent.QuitOn(exampleFinished),
+		agent.QuitOnClose(p.exampleFinished),
 	)
 	if err := a.Run(); err != nil {
 		log.Fatal(err)
@@ -53,9 +50,12 @@ func main() {
 // ExamplePlugin presents the PluginLogger API.
 type ExamplePlugin struct {
 	Log logging.PluginLogger
-	//local.PluginLogDeps
 
 	exampleFinished chan struct{}
+}
+
+func (plugin *ExamplePlugin) String() string {
+	return PluginName
 }
 
 // Init demonstrates the usage of PluginLogger API.
@@ -94,9 +94,16 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	childLogger2 := plugin.Log.NewLogger("childLogger2")
 	childLogger2.Debug("Debug log using childLogger2!")
 
+	return nil
+}
+
+// AfterInit demonstrates the usage of PluginLogger API.
+func (plugin *ExamplePlugin) AfterInit() (err error) {
+	late := plugin.Log.NewLogger("late")
+	late.Debugf("late debug message")
+
 	// End the example
 	plugin.Log.Info("logs in plugin example finished, sending shutdown ...")
-
 	close(plugin.exampleFinished)
 
 	return nil
@@ -105,11 +112,6 @@ func (plugin *ExamplePlugin) Init() (err error) {
 // Close implements Plugin interface..
 func (plugin *ExamplePlugin) Close() (err error) {
 	return nil
-}
-
-// Name implements PluginNamed interface.
-func (plugin *ExamplePlugin) Name() string {
-	return PluginName
 }
 
 // showPanicLog demonstrates panic log + recovering.
