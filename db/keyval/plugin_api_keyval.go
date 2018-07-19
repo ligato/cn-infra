@@ -14,6 +14,8 @@
 
 package keyval
 
+import "github.com/ligato/cn-infra/core"
+
 // Root denotes that no prefix is prepended to the keys.
 const Root = ""
 
@@ -32,6 +34,12 @@ type KvProtoPlugin interface {
 	// Disabled returns true if there was no configuration and therefore agent
 	// started without connectivity to a particular data store.
 	Disabled() bool
+	// OnConnect executes datasync callback if KV plugin is connected. If not, it gathers
+	// these functions from all plugins using the specific KV plugin as dependency and
+	// if delayed start is allowed, callbacks are executed after successful connection.
+	OnConnect(func() error)
+	// Returns plugin's name
+	GetPluginName() core.PluginName
 }
 
 // KvBytesPlugin provides unifying interface for different key-value datastore
