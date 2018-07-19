@@ -11,9 +11,7 @@ var DefaultPlugin Plugin = *NewPlugin()
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
-	p.Deps = Deps{
-		PluginName: "resync",
-	}
+	p.PluginName = "resync"
 
 	for _, o := range opts {
 		o(p)

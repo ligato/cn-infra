@@ -12,10 +12,8 @@ var DefaultPlugin Plugin = *NewPlugin()
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
-	p.Deps = Deps{
-		PluginName: "prometheus",
-		HTTP:       &rest.DefaultPlugin,
-	}
+	p.PluginName = "prometheus"
+	p.HTTP = &rest.DefaultPlugin
 
 	for _, o := range opts {
 		o(p)

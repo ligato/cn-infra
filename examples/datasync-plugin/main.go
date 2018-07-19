@@ -6,13 +6,11 @@ import (
 	"time"
 
 	"github.com/ligato/cn-infra/agent"
-	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/kvdbsync"
 	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval/etcd"
 	"github.com/ligato/cn-infra/examples/model"
-	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
 	"github.com/ligato/cn-infra/utils/safeclose"
@@ -77,9 +75,7 @@ func main() {
 
 	p := &ExamplePlugin{
 		Deps: Deps{
-			PluginName:   PluginName,
 			Log:          logging.ForPlugin(PluginName),
-			PluginConfig: config.ForPlugin(PluginName),
 			ServiceLabel: &servicelabel.DefaultPlugin,
 			Publisher:    etcdDataSync,
 			Watcher:      etcdDataSync,
@@ -114,11 +110,15 @@ type ExamplePlugin struct {
 
 // Deps lists dependencies of ExamplePlugin.
 type Deps struct {
-	infra.Deps
+	Log          logging.PluginLogger
 	ServiceLabel servicelabel.ReaderAPI
-	//local.PluginInfraDeps                             // injected
-	Publisher datasync.KeyProtoValWriter  // injected - To write ETCD data
-	Watcher   datasync.KeyValProtoWatcher // injected - To watch ETCD data
+	Publisher    datasync.KeyProtoValWriter  // injected - To write ETCD data
+	Watcher      datasync.KeyValProtoWatcher // injected - To watch ETCD data
+}
+
+// String returns plugin name
+func (plugin *ExamplePlugin) String() string {
+	return PluginName
 }
 
 // Init starts the consumer.

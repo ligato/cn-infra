@@ -26,10 +26,8 @@ var DefaultPlugin Plugin = *NewPlugin()
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
-	p.Deps = Deps{
-		PluginName: "grpc",
-		// HTTP: &rest.DefaultPlugin, // turned off by default
-	}
+	p.PluginName = "http-rest"
+	//p.HTTP= &rest.DefaultPlugin // turned off by default
 
 	for _, o := range opts {
 		o(p)

@@ -13,11 +13,9 @@ var DefaultPlugin Plugin = *NewPlugin()
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
-	p.Deps = Deps{
-		PluginName:  "logs",
-		LogRegistry: logging.DefaultRegistry,
-		HTTP:        &rest.DefaultPlugin,
-	}
+	p.PluginName = "logs"
+	p.LogRegistry = logging.DefaultRegistry
+	p.HTTP = &rest.DefaultPlugin
 
 	for _, o := range opts {
 		o(p)

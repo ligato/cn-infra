@@ -25,9 +25,7 @@ var DefaultPlugin Plugin = *NewPlugin()
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
-	p.Deps = Deps{
-		PluginName: "status-check",
-	}
+	p.PluginName = "status-check"
 
 	for _, o := range opts {
 		o(p)

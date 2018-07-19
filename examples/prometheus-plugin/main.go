@@ -71,9 +71,7 @@ func main() {
 
 // Deps group dependencies of the ExamplePlugin
 type Deps struct {
-	Log logging.PluginLogger
-	//PluginConfig config.PluginConfig
-	//ServiceLabel servicelabel.ReaderAPI
+	Log        logging.PluginLogger
 	Prometheus prom.API
 }
 

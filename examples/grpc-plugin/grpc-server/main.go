@@ -21,52 +21,59 @@ import (
 const PluginName = "myPlugin"
 
 func main() {
+
 	// --------------------
 	// ALL DEFAULT
 	// --------------------
 
-	/*p := &ExamplePlugin{
-		Deps: Deps{
-			PluginName: PluginName,
-			Log:        logging.ForPlugin(PluginName),
-			GRPC:       &grpc.DefaultPlugin,
-		},
-	}*/
-
-	// --------------------
-	// CUSTOM INSTANCE
-	// --------------------
-
 	p := &ExamplePlugin{
-		GRPC: grpc.NewPlugin(
-			//grpc.UseName("myGRPC"),
-			grpc.UseHTTP(&rest.DefaultPlugin),
-			grpc.UseDeps(func(deps *grpc.Deps) {
-				deps.HTTP = &rest.DefaultPlugin
-				//deps.PluginName = infra.PluginName("myGRPC")
-				deps.SetName("myGRPC")
-			}),
-		),
-		//GRPC: &grpc.DefaultPlugin,
-		Log: logging.ForPlugin(PluginName),
+		GRPC: &grpc.DefaultPlugin,
+		Log:  logging.ForPlugin(PluginName),
 	}
 
 	// --------------------
 	// CHANGE GLOBAL DEFAULT
 	// --------------------
 
-	/*rest.DefaultPlugin = *rest.NewPlugin(
+	rest.DefaultPlugin = *rest.NewPlugin(
 		rest.UseConf(rest.Config{
 			Endpoint: ":1234",
 		}),
 	)
+
 	p := &ExamplePlugin{
-		Deps: Deps{
-			PluginName: PluginName,
-			Log:        logging.ForPlugin(PluginName),
-			GRPC:       grpc.DefaultPlugin,
-		},
-	}*/
+		GRPC: &grpc.DefaultPlugin,
+		Log:  logging.ForPlugin(PluginName),
+	}
+
+	// --------------------
+	// CUSTOM INSTANCE
+	// --------------------
+
+	myRest := rest.NewPlugin(
+		rest.UseConf(rest.Config{
+			Endpoint: ":1234",
+		}),
+	)
+
+	p := &ExamplePlugin{
+		GRPC: grpc.NewPlugin(
+			grpc.UseHTTP(myRest),
+		),
+		Log: logging.ForPlugin(PluginName),
+	}
+
+	// OR CHANGE ANY DEPENDENCY
+
+	p := &ExamplePlugin{
+		GRPC: grpc.NewPlugin(
+			grpc.UseDeps(func(deps *grpc.Deps) {
+				deps.HTTP = myRest
+				deps.SetName("myGRPC")
+			}),
+		),
+		Log: logging.ForPlugin(PluginName),
+	}
 
 	// --------------------
 	// DISABLE DEP

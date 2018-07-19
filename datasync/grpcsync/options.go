@@ -11,9 +11,7 @@ var DefaultPlugin = *NewPlugin()
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
-	p.Deps = Deps{
-		GRPC: &grpc.DefaultPlugin,
-	}
+	p.GRPC = &grpc.DefaultPlugin
 
 	for _, o := range opts {
 		o(p)

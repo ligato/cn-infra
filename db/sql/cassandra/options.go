@@ -13,10 +13,8 @@ var DefaultPlugin Plugin = *NewPlugin()
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
-	p.Deps = Deps{
-		PluginName:  "cassandra",
-		StatusCheck: &statuscheck.DefaultPlugin,
-	}
+	p.PluginName = "cassandra"
+	p.StatusCheck = &statuscheck.DefaultPlugin
 
 	for _, o := range opts {
 		o(p)

@@ -26,10 +26,8 @@ import (
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
-	p.Deps = Deps{
-		PluginName:   "kvdb",
-		ServiceLabel: &servicelabel.DefaultPlugin,
-	}
+	p.PluginName = "kvdb"
+	p.ServiceLabel = &servicelabel.DefaultPlugin
 
 	for _, o := range opts {
 		o(p)

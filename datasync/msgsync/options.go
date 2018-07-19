@@ -23,10 +23,7 @@ import (
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
-	p.Deps = Deps{
-		PluginName: "msgsync",
-		// HTTP: &rest.DefaultPlugin, // turned off by default
-	}
+	p.PluginName = "msgsync"
 
 	for _, o := range opts {
 		o(p)

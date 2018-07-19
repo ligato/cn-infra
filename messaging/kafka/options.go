@@ -28,11 +28,9 @@ var DefaultPlugin Plugin = *NewPlugin()
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
-	p.Deps = Deps{
-		PluginName:   "kafka",
-		StatusCheck:  &statuscheck.DefaultPlugin,
-		ServiceLabel: &servicelabel.DefaultPlugin,
-	}
+	p.PluginName = "kafka"
+	p.StatusCheck = &statuscheck.DefaultPlugin
+	p.ServiceLabel = &servicelabel.DefaultPlugin
 
 	for _, o := range opts {
 		o(p)

@@ -29,12 +29,10 @@ var DefaultPlugin Plugin = *NewPlugin()
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
-	p.Deps = Deps{
-		PluginName:   "probe",
-		HTTP:         &rest.DefaultPlugin,
-		ServiceLabel: &servicelabel.DefaultPlugin,
-		StatusCheck:  &statuscheck.DefaultPlugin,
-	}
+	p.PluginName = "probe"
+	p.HTTP = &rest.DefaultPlugin
+	p.ServiceLabel = &servicelabel.DefaultPlugin
+	p.StatusCheck = &statuscheck.DefaultPlugin
 
 	for _, o := range opts {
 		o(p)
