@@ -15,18 +15,18 @@
 package bolt
 
 import (
-	"log"
-	"github.com/ligato/cn-infra/db/keyval/kvproto"
-	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/boltdb/bolt"
 	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/boltdb/bolt"
+	"github.com/ligato/cn-infra/db/keyval/kvproto"
+	"github.com/ligato/cn-infra/flavors/local"
+	"log"
 )
 
 // Config represents configuration for Bolt plugin.
 type Config struct {
-	DbPath         	string `json:"db-path"`
-	BucketSeparator	string `json:"bucket-separator"`
+	DbPath          string `json:"db-path"`
+	BucketSeparator string `json:"bucket-separator"`
 }
 
 // Plugin implements bolt plugin.
@@ -69,6 +69,7 @@ func (plugin *Plugin) getConfig() (*Config, error) {
 	return &cfg, nil
 }
 
+// Init initializes Bolt plugin.
 func (plugin *Plugin) Init() (err error) {
 	cfg, err := plugin.getConfig()
 	if err != nil || plugin.disabled {
@@ -76,12 +77,12 @@ func (plugin *Plugin) Init() (err error) {
 	}
 
 	plugin.client = &Client{}
-	plugin.client.db_path, err = bolt.Open(cfg.DbPath, 432, nil)
-	plugin.client.bucket_separator = cfg.BucketSeparator
+	plugin.client.dbPath, err = bolt.Open(cfg.DbPath, 432, nil)
+	plugin.client.bucketSeparator = cfg.BucketSeparator
 	if err != nil {
 		log.Fatal(err)
 		plugin.disabled = true
-		return  err
+		return err
 	}
 
 	plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.client, &keyval.SerializerJSON{})
@@ -90,9 +91,10 @@ func (plugin *Plugin) Init() (err error) {
 	return nil
 }
 
+// Close closes Bolt plugin.
 func (plugin *Plugin) Close() error {
 	if !plugin.disabled {
-		plugin.client.db_path.Close()
+		plugin.client.dbPath.Close()
 	}
 	return nil
 }

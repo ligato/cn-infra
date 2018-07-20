@@ -19,9 +19,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ligato/cn-infra/logging/logrus"
-	"github.com/ligato/cn-infra/logging"
 	"github.com/boltdb/bolt"
+	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logrus"
 	. "github.com/onsi/gomega"
 )
 
@@ -45,11 +45,11 @@ func setupTest(t *testing.T, newDB bool) *Client {
 
 	var err error
 	client := &Client{}
-	client.db_path, err = bolt.Open(DbPath, 432, nil)
+	client.dbPath, err = bolt.Open(DbPath, 432, nil)
 	if err != nil {
-		return  nil
+		return nil
 	}
-	client.bucket_separator = BucketSeparator
+	client.bucketSeparator = BucketSeparator
 
 	return client
 }
@@ -80,7 +80,7 @@ func TestGet(t *testing.T) {
 	var key = "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop1"
 	var value = ([]byte)("val")
 
-	err := client.Put( key, value)
+	err := client.Put(key, value)
 	Expect(err).ToNot(HaveOccurred())
 	data, found, _, err := client.GetValue(key)
 	Expect(found).To(BeTrue())
@@ -91,10 +91,10 @@ func TestDelete(t *testing.T) {
 	client := setupTest(t, true)
 	defer client.teardownTest()
 
-	var key= "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop2"
-	var value= ([]byte)("val")
+	var key = "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop2"
+	var value = ([]byte)("val")
 
-	err := client.Put( key, value)
+	err := client.Put(key, value)
 	Expect(err).ToNot(HaveOccurred())
 	existed, err := client.Delete(key)
 	Expect(err).ToNot(HaveOccurred())
@@ -113,12 +113,12 @@ func TestPutInTxn(t *testing.T) {
 	txn := client.NewTxn()
 	Expect(txn).ToNot(BeNil())
 
-	var key1= "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop0"
-	var value1= ([]byte)("bvi_loop1")
-	var key2= "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop1"
-	var value2= ([]byte)("bvi_loop2")
-	var key3= "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop2"
-	var value3= ([]byte)("bvi_loop3")
+	var key1 = "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop0"
+	var value1 = ([]byte)("bvi_loop1")
+	var key2 = "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop1"
+	var value2 = ([]byte)("bvi_loop2")
+	var key3 = "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop2"
+	var value3 = ([]byte)("bvi_loop3")
 
 	txn.Put(key1, value1)
 	txn.Put(key2, value2)
@@ -136,12 +136,12 @@ func TestDeleteInTxn(t *testing.T) {
 	txn := client.NewTxn()
 	Expect(txn).ToNot(BeNil())
 
-	var key1= "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop0"
-	var value1= ([]byte)("bvi_loop1")
-	var key2= "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop1"
-	var value2= ([]byte)("bvi_loop2")
-	var key3= "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop2"
-	var value3= ([]byte)("bvi_loop3")
+	var key1 = "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop0"
+	var value1 = ([]byte)("bvi_loop1")
+	var key2 = "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop1"
+	var value2 = ([]byte)("bvi_loop2")
+	var key3 = "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop2"
+	var value3 = ([]byte)("bvi_loop3")
 
 	txn.Put(key1, value1)
 	txn.Put(key2, value2)
@@ -157,16 +157,16 @@ func TestListKeys(t *testing.T) {
 	client := setupTest(t, true)
 	defer client.teardownTest()
 
-	var key1= "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop0"
-	var value1= ([]byte)("val 1")
-	var key2= "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop1"
-	var value2= ([]byte)("val 2")
-	var key3= "/vnf-agent/agent_vpp_1/vpp/config/v1/bd/b1"
-	var value3= ([]byte)("val 3")
-	var key4= "/vnf-agent/agent_vpp_1/vpp/config/v1/bd/b2"
-	var value4= ([]byte)("val 4")
-	var key5= "/vnf-agent/agent_vpp_1/vpp/config/v2/bd/b1"
-	var value5= ([]byte)("val 5")
+	var key1 = "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop0"
+	var value1 = ([]byte)("val 1")
+	var key2 = "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop1"
+	var value2 = ([]byte)("val 2")
+	var key3 = "/vnf-agent/agent_vpp_1/vpp/config/v1/bd/b1"
+	var value3 = ([]byte)("val 3")
+	var key4 = "/vnf-agent/agent_vpp_1/vpp/config/v1/bd/b2"
+	var value4 = ([]byte)("val 4")
+	var key5 = "/vnf-agent/agent_vpp_1/vpp/config/v2/bd/b1"
+	var value5 = ([]byte)("val 5")
 
 	txn := client.NewTxn()
 	Expect(txn).ToNot(BeNil())
@@ -179,7 +179,7 @@ func TestListKeys(t *testing.T) {
 
 	keys, err := client.ListKeys("/vnf-agent/agent_vpp_1/vpp/config/")
 	Expect(err).ToNot(HaveOccurred())
-	expectedKeys := []string{ "v1/bd/b1", "v1/bd/b2", "v1/interface/bvi_loop0", "v1/interface/bvi_loop1", "v2/bd/b1" }
+	expectedKeys := []string{"v1/bd/b1", "v1/bd/b2", "v1/interface/bvi_loop0", "v1/interface/bvi_loop1", "v2/bd/b1"}
 	for i := 0; i <= len(expectedKeys); i++ {
 		k, _, all := keys.GetNext()
 		if i == len(expectedKeys) {
@@ -197,14 +197,14 @@ func TestListVals(t *testing.T) {
 	client := setupTest(t, true)
 	defer client.teardownTest()
 
-	var key1= "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop0"
-	var value1= ([]byte)("val 1")
-	var key2= "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop1"
-	var value2= ([]byte)("val 2")
-	var key3= "/vnf-agent/agent_vpp_1/vpp/config/v1/bd/b1"
-	var value3= ([]byte)("val 3")
-	var key4= "/vnf-agent/agent_vpp_1/vpp/config/v1/bd/b2"
-	var value4= ([]byte)("val 4")
+	var key1 = "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop0"
+	var value1 = ([]byte)("val 1")
+	var key2 = "/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop1"
+	var value2 = ([]byte)("val 2")
+	var key3 = "/vnf-agent/agent_vpp_1/vpp/config/v1/bd/b1"
+	var value3 = ([]byte)("val 3")
+	var key4 = "/vnf-agent/agent_vpp_1/vpp/config/v1/bd/b2"
+	var value4 = ([]byte)("val 4")
 
 	txn := client.NewTxn()
 	Expect(txn).ToNot(BeNil())
@@ -216,8 +216,8 @@ func TestListVals(t *testing.T) {
 
 	keyVals, err := client.ListValues("/vnf-agent/agent_vpp_1/vpp/config/v1/")
 	Expect(err).ToNot(HaveOccurred())
-	expectedKeys := []string{ "bd/b1", "bd/b2", "interface/bvi_loop0", "interface/bvi_loop1" }
-	expectedValues := [][]byte{ ([]byte)("val 3"), ([]byte)("val 4"), ([]byte)("val 1"), ([]byte)("val 2") }
+	expectedKeys := []string{"bd/b1", "bd/b2", "interface/bvi_loop0", "interface/bvi_loop1"}
+	expectedValues := [][]byte{([]byte)("val 3"), ([]byte)("val 4"), ([]byte)("val 1"), ([]byte)("val 2")}
 	for i := 0; i <= len(expectedKeys); i++ {
 		kv, all := keyVals.GetNext()
 		if i == len(expectedKeys) {

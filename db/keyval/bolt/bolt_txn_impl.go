@@ -15,8 +15,8 @@
 package bolt
 
 import (
-	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/boltdb/bolt"
+	"github.com/ligato/cn-infra/db/keyval"
 	"log"
 )
 
@@ -24,9 +24,9 @@ import (
 // multiple operations in a more efficient way in contrast to executing
 // them one by one.
 type txn struct {
-	readonly	bool
-	separator 	string
-	kv  		*bolt.Tx
+	readonly  bool
+	separator string
+	kv        *bolt.Tx
 }
 
 // Put adds a new 'put' operation to a previously created transaction.
