@@ -71,7 +71,7 @@ func (plugin *Plugin) AfterInit() error {
 	// Define function executed on kv plugin connection
 	plugin.KvPlugin.OnConnect(func() error {
 		if err := plugin.initKvPlugin(); err != nil {
-			return fmt.Errorf("init KV plugin %v failed: %v", plugin.KvPlugin.GetPluginName(), err)
+			return fmt.Errorf("init KV plugin %v failed: %v", plugin.KvPlugin.String(), err)
 		}
 		return nil
 	})

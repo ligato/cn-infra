@@ -16,10 +16,9 @@ package etcd
 
 import (
 	"fmt"
-	"time"
 	"sync"
+	"time"
 
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
