@@ -112,11 +112,6 @@ func (plugin *Plugin) OnConnect(callback func() error) {
 	}
 }
 
-// GetPluginName returns name of the plugin
-func (plugin *Plugin) GetPluginName() infra.PluginName {
-	return plugin.PluginName
-}
-
 func (plugin *Plugin) getRedisConfig() (cfg interface{}, err error) {
 	found, _ := plugin.PluginConfig.GetValue(&struct{}{})
 	if !found {

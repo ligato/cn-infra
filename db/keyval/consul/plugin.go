@@ -112,11 +112,6 @@ func (plugin *Plugin) OnConnect(callback func() error) {
 	}
 }
 
-// GetPluginName returns name of the plugin
-func (plugin *Plugin) GetPluginName() core.PluginName {
-	return plugin.PluginName
-}
-
 // Close closes Consul plugin.
 func (plugin *Plugin) Close() error {
 	return nil
