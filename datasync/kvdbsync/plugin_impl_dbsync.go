@@ -15,7 +15,7 @@
 package kvdbsync
 
 import (
-	"errors"
+	"fmt"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/ligato/cn-infra/datasync"
@@ -61,7 +61,24 @@ func (plugin *Plugin) Init() error {
 // The order of plugins in flavor is not important to resync
 // since Watch() is called in Plugin.Init() and Resync.Register()
 // is called in Plugin.AfterInit().
+//
+// If provided connection is not ready (not connected), AfterInit starts new goroutine in order to
+// 'wait' for the connection. After that, the new transport watcher is built as usual.
 func (plugin *Plugin) AfterInit() error {
+	if plugin.KvPlugin == nil || plugin.KvPlugin.Disabled() {
+		return nil
+	}
+	// Define function executed on kv plugin connection
+	plugin.KvPlugin.OnConnect(func() error {
+		if err := plugin.initKvPlugin(); err != nil {
+			return fmt.Errorf("init KV plugin %v failed: %v", plugin.KvPlugin.GetPluginName(), err)
+		}
+		return nil
+	})
+	return nil
+}
+
+func (plugin *Plugin) initKvPlugin() error {
 	if plugin.KvPlugin != nil && !plugin.KvPlugin.Disabled() {
 		db := plugin.KvPlugin.NewBroker(plugin.ServiceLabel.GetAgentPrefix())
 		dbW := plugin.KvPlugin.NewWatcher(plugin.ServiceLabel.GetAgentPrefix())
@@ -106,7 +123,7 @@ func (plugin *Plugin) Put(key string, data proto.Message, opts ...datasync.PutOp
 		return plugin.adapter.db.Put(key, data, opts...)
 	}
 
-	return errors.New("Transport adapter is not ready yet. (Probably called before AfterInit)")
+	return fmt.Errorf("transport adapter is not ready yet. (Probably called before AfterInit)")
 }
 
 // Delete propagates this call to a particular kvdb.Plugin unless the kvdb.Plugin is Disabled().
@@ -121,7 +138,7 @@ func (plugin *Plugin) Delete(key string, opts ...datasync.DelOption) (existed bo
 		return plugin.adapter.db.Delete(key, opts...)
 	}
 
-	return false, errors.New("Transport adapter is not ready yet. (Probably called before AfterInit)")
+	return false, fmt.Errorf("transport adapter is not ready yet. (Probably called before AfterInit)")
 }
 
 // Close resources.

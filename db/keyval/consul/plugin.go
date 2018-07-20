@@ -105,6 +105,18 @@ func (plugin *Plugin) Init() (err error) {
 	return nil
 }
 
+// OnConnect executes callback from datasync
+func (plugin *Plugin) OnConnect(callback func() error) {
+	if err := callback(); err != nil {
+		plugin.Log.Error(err)
+	}
+}
+
+// GetPluginName returns name of the plugin
+func (plugin *Plugin) GetPluginName() core.PluginName {
+	return plugin.PluginName
+}
+
 // Close closes Consul plugin.
 func (plugin *Plugin) Close() error {
 	return nil

@@ -15,6 +15,7 @@
 package redis
 
 import (
+	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/health/statuscheck"
@@ -42,11 +43,12 @@ type Plugin struct {
 type Deps struct {
 	infra.Deps
 	StatusCheck statuscheck.PluginStatusWriter // inject
+	Resync      *resync.Plugin
 }
 
 // Init retrieves redis configuration and establishes a new connection
 // with the redis data store.
-// If the configuration file doesn't exist or cannot be read, the returned error
+// If the configuration file doesn't exist or cannot be read, the returned errora
 // will be of os.PathError type. An untyped error is returned in case the file
 // doesn't contain a valid YAML configuration.
 func (plugin *Plugin) Init() (err error) {
@@ -101,6 +103,18 @@ func (plugin *Plugin) NewWatcher(keyPrefix string) keyval.ProtoWatcher {
 // redis configuration.
 func (plugin *Plugin) Disabled() (disabled bool) {
 	return plugin.disabled
+}
+
+// OnConnect executes callback from datasync
+func (plugin *Plugin) OnConnect(callback func() error) {
+	if err := callback(); err != nil {
+		plugin.Log.Error(err)
+	}
+}
+
+// GetPluginName returns name of the plugin
+func (plugin *Plugin) GetPluginName() infra.PluginName {
+	return plugin.PluginName
 }
 
 func (plugin *Plugin) getRedisConfig() (cfg interface{}, err error) {
