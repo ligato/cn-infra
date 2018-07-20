@@ -25,52 +25,13 @@ import (
 )
 
 const (
-	// DefaultHTTPPort is a port used by default
-	DefaultHTTPPort = "9191"
 	// DefaultHost is a host used by default
 	DefaultHost = "0.0.0.0"
+	// DefaultHTTPPort is a port used by default
+	DefaultHTTPPort = "9191"
 	// DefaultEndpoint 0.0.0.0:9191
 	DefaultEndpoint = DefaultHost + ":" + DefaultHTTPPort
 )
-
-// PluginConfig tries :
-// - to load flag <plugin-name>-port and then FixConfig() just in case
-// - alternatively <plugin-name>-config and then FixConfig() just in case
-// - alternatively DefaultConfig()
-func PluginConfig(pluginCfg config.PluginConfig, cfg *Config, pluginName infra.PluginName) error {
-	portFlag := flag.Lookup(httpPortFlag(pluginName))
-	if portFlag != nil && portFlag.Value != nil && portFlag.Value.String() != "" && cfg != nil {
-		cfg.Endpoint = DefaultHost + ":" + portFlag.Value.String()
-	}
-
-	if pluginCfg != nil {
-		_, err := pluginCfg.GetValue(cfg)
-		if err != nil {
-			return err
-		}
-	}
-
-	FixConfig(cfg)
-
-	return nil
-}
-
-// DefaultConfig returns new instance of config with default endpoint
-func DefaultConfig() *Config {
-	return &Config{
-		Endpoint: DefaultEndpoint,
-	}
-}
-
-// FixConfig fill default values for empty fields
-func FixConfig(cfg *Config) {
-	if cfg == nil {
-		return
-	}
-	if cfg.Endpoint == "" {
-		cfg.Endpoint = DefaultEndpoint
-	}
-}
 
 // Config is a configuration for HTTP server
 // It is meant to be extended with security (TLS...)
@@ -127,6 +88,46 @@ type Config struct {
 	// ClientCerts is a slice of the root certificate authorities
 	// that servers uses to verify a client certificate
 	ClientCerts []string `json:"client-cert-files"`
+}
+
+// DefaultConfig returns new instance of config with default endpoint
+func DefaultConfig() *Config {
+	return &Config{
+		Endpoint: DefaultEndpoint,
+	}
+}
+
+// PluginConfig tries :
+// - to load flag <plugin-name>-port and then FixConfig() just in case
+// - alternatively <plugin-name>-config and then FixConfig() just in case
+// - alternatively DefaultConfig()
+func PluginConfig(pluginCfg config.PluginConfig, cfg *Config, pluginName infra.PluginName) error {
+	portFlag := flag.Lookup(httpPortFlag(pluginName))
+
+	if portFlag != nil && portFlag.Value != nil && portFlag.Value.String() != "" && cfg != nil {
+		cfg.Endpoint = DefaultHost + ":" + portFlag.Value.String()
+	}
+
+	if pluginCfg != nil {
+		_, err := pluginCfg.GetValue(cfg)
+		if err != nil {
+			return err
+		}
+	}
+
+	FixConfig(cfg)
+
+	return nil
+}
+
+// FixConfig fill default values for empty fields
+func FixConfig(cfg *Config) {
+	if cfg == nil {
+		return
+	}
+	if cfg.Endpoint == "" {
+		cfg.Endpoint = DefaultEndpoint
+	}
 }
 
 // GetPort parses suffix from endpoint & returns integer after last ":" (otherwise it returns 0)

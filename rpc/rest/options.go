@@ -15,6 +15,8 @@
 package rest
 
 import (
+	"fmt"
+
 	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/logging"
 )
@@ -36,7 +38,10 @@ func NewPlugin(opts ...Option) *Plugin {
 		p.Deps.Log = logging.ForPlugin(p.String())
 	}
 	if p.Deps.PluginConfig == nil {
-		p.Deps.PluginConfig = config.ForPlugin(p.String())
+		p.Deps.PluginConfig = config.ForPlugin(p.String(), func(flags *config.FlagSet) {
+			flags.String(httpPortFlag(p.PluginName), DefaultHTTPPort,
+				fmt.Sprintf("Configure %q server port", p.String()))
+		})
 	}
 
 	return p

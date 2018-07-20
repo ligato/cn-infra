@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"strings"
@@ -14,14 +15,18 @@ import (
 const (
 	// FlagSuffix is added to plugin name while loading plugins configuration.
 	FlagSuffix = "-config"
+
 	// EnvSuffix is added to plugin name while loading plugins configuration from ENV variable.
 	EnvSuffix = "_CONFIG"
+
 	// DirFlag as flag name (see implementation in declareFlags())
 	// is used to define default directory where config files reside.
 	// This flag name is derived from the name of the plugin.
 	DirFlag = "config-dir"
+
 	// DirDefault holds a default value "." for flag, which represents current working directory.
 	DirDefault = "."
+
 	// DirUsage used as a flag (see implementation in declareFlags()).
 	DirUsage = "Location of the config files; can also be set via 'CONFIG_DIR' env variable."
 )
@@ -41,8 +46,10 @@ type PluginConfig interface {
 }
 
 var (
-	PluginFlags = make(map[string]*flag.FlagSet)
+	PluginFlags = make(map[string]*FlagSet)
 )
+
+type FlagSet = flag.FlagSet
 
 // ForPlugin returns API that is injectable to a particular Plugin
 // and is used to read it's configuration.
@@ -52,37 +59,29 @@ var (
 // opts (used to define flag (if it was not already defined)):
 // - default value
 // - usage
-func ForPlugin(pluginName string, opts ...string) PluginConfig {
-	flagSet := flag.NewFlagSet(pluginName, flag.ExitOnError)
+func ForPlugin(name string, moreFlags ...func(*FlagSet)) PluginConfig {
+	cfgFlag := name + FlagSuffix
+	cfgFlagDefault := name + ".conf"
+	cfgFlagUsage := fmt.Sprintf(
+		"Location of the %q plugin config file; can also be set via %q env variable.",
+		cfgFlagDefault, strings.ToUpper(name)+EnvSuffix)
 
-	flgName := pluginName + FlagSuffix
+	flagSet := flag.NewFlagSet(name, flag.ExitOnError)
+	flagSet.String(cfgFlag, cfgFlagDefault, cfgFlagUsage)
 
-	var flagDefault, flagUsage string
-	if len(opts) > 0 && opts[0] != "" {
-		flagDefault = opts[0]
-	} else {
-		flagDefault = pluginName + ".conf"
-	}
-	if len(opts) > 1 && opts[1] != "" {
-		flagUsage = opts[1]
-	} else {
-		flagUsage = "Location of the '" + pluginName +
-			"' plugin configuration file; can also be set via '" +
-			strings.ToUpper(pluginName) + EnvSuffix + "' env variable."
+	for _, more := range moreFlags {
+		more(flagSet)
 	}
 
-	flagSet.String(flgName, flagDefault, flagUsage)
+	PluginFlags[name] = flagSet
 
-	PluginFlags[pluginName] = flagSet
-
-	plugConfig := &pluginConfig{
-		pluginName: pluginName,
+	return &pluginConfig{
+		configFlag: cfgFlag,
 	}
-	return plugConfig
 }
 
 type pluginConfig struct {
-	pluginName string
+	configFlag string
 	access     sync.Mutex
 	cfg        string
 }
@@ -139,8 +138,7 @@ func (p *pluginConfig) GetConfigName() string {
 }
 
 func (p *pluginConfig) getConfigName() string {
-	flgName := p.pluginName + FlagSuffix
-	flg := flag.CommandLine.Lookup(flgName)
+	flg := flag.CommandLine.Lookup(p.configFlag)
 	if flg != nil {
 		flgVal := flg.Value.String()
 
@@ -161,6 +159,5 @@ func (p *pluginConfig) getConfigName() string {
 			}
 		}
 	}
-
 	return ""
 }
