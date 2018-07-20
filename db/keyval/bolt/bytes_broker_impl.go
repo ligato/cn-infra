@@ -72,7 +72,7 @@ func createBucket(tx *bolt.Tx, bucketNames [][]byte) (*bolt.Bucket, error) {
 	var errBucket string
 	var err error
 	for _, bucketName = range bucketNames {
-		errBucket = fmt.Sprint("%s//%s", errBucket, bucketName)
+		errBucket = fmt.Sprintf("%s//%s", errBucket, bucketName)
 		if bucket == nil {
 			bucket, err = tx.CreateBucketIfNotExists(bucketName)
 		} else {
@@ -91,7 +91,7 @@ func findBucket(tx *bolt.Tx, bucketNames [][]byte) (*bolt.Bucket, error) {
 	var bucketName []byte
 	var errBucket string
 	for _, bucketName = range bucketNames {
-		errBucket = fmt.Sprint("%s//%s", errBucket, bucketName)
+		errBucket = fmt.Sprintf("%s//%s", errBucket, bucketName)
 		if bucket == nil {
 			bucket = tx.Bucket(bucketName)
 		} else {

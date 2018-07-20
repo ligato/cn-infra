@@ -80,6 +80,7 @@ func (plugin *Plugin) Init() (err error) {
 	plugin.client.bucket_separator = cfg.BucketSeparator
 	if err != nil {
 		log.Fatal(err)
+		plugin.disabled = true
 		return  err
 	}
 
@@ -90,7 +91,9 @@ func (plugin *Plugin) Init() (err error) {
 }
 
 func (plugin *Plugin) Close() error {
-	plugin.client.db_path.Close()
+	if !plugin.disabled {
+		plugin.client.db_path.Close()
+	}
 	return nil
 }
 
