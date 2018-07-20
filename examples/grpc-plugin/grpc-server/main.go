@@ -26,16 +26,16 @@ func main() {
 	// ALL DEFAULT
 	// --------------------
 
-	p := &ExamplePlugin{
+	/*p := &ExamplePlugin{
 		GRPC: &grpc.DefaultPlugin,
 		Log:  logging.ForPlugin(PluginName),
-	}
+	}*/
 
 	// --------------------
 	// CHANGE GLOBAL DEFAULT
 	// --------------------
 
-	rest.DefaultPlugin = *rest.NewPlugin(
+	/*rest.DefaultPlugin = *rest.NewPlugin(
 		rest.UseConf(rest.Config{
 			Endpoint: ":1234",
 		}),
@@ -44,7 +44,7 @@ func main() {
 	p := &ExamplePlugin{
 		GRPC: &grpc.DefaultPlugin,
 		Log:  logging.ForPlugin(PluginName),
-	}
+	}*/
 
 	// --------------------
 	// CUSTOM INSTANCE
@@ -65,7 +65,7 @@ func main() {
 
 	// OR CHANGE ANY DEPENDENCY
 
-	p := &ExamplePlugin{
+	/*p := &ExamplePlugin{
 		GRPC: grpc.NewPlugin(
 			grpc.UseDeps(func(deps *grpc.Deps) {
 				deps.HTTP = myRest
@@ -73,7 +73,7 @@ func main() {
 			}),
 		),
 		Log: logging.ForPlugin(PluginName),
-	}
+	}*/
 
 	// --------------------
 	// DISABLE DEP
@@ -111,7 +111,9 @@ func main() {
 		},
 	}*/
 
-	a := agent.NewAgent(agent.AllPlugins(p))
+	a := agent.NewAgent(
+		agent.AllPlugins(p),
+	)
 
 	if err := a.Run(); err != nil {
 		log.Fatal(err)

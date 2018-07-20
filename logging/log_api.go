@@ -139,7 +139,7 @@ type PluginLogger interface {
 // and optionally created children (their name prefixed by plugin logger name)
 func ForPlugin(name string) PluginLogger {
 	if logger, found := DefaultRegistry.Lookup(name); found {
-		DefaultLogger.Warnf("using plugin logger that was already initialized, unique plugin name should be used")
+		DefaultLogger.Debugf("using plugin logger for %q that was already initialized", name)
 		return &pluginLogger{
 			Logger:        logger,
 			LoggerFactory: &prefixedLoggerFactory{name, DefaultRegistry},

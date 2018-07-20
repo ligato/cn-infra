@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/ligato/cn-infra/config"
 	"github.com/namsral/flag"
 
 	"github.com/ligato/cn-infra/infra"
@@ -26,14 +27,24 @@ import (
 	"github.com/ligato/cn-infra/utils/once"
 )
 
-// Agent implements startup & shutdown procedures.
+// Variables set by the compiler using ldflags
+var (
+	// BuildVersion describes version for the build. It is usually set using `git describe --always --tags --dirty`.
+	BuildVersion = "dev"
+	// BuildDate describes time of the build.
+	BuildDate string
+	// CommitHash describes commit hash for the build.
+	CommitHash string
+)
+
+// Agent implements startup & shutdown procedures for plugins.
 type Agent interface {
 	Run() error
 	Start() error
+	Stop() error
 	Wait() error
 	After() <-chan struct{}
 	Error() error
-	Stop() error
 	Options() Options
 }
 
@@ -41,6 +52,19 @@ type Agent interface {
 func NewAgent(opts ...Option) Agent {
 	options := newOptions(opts...)
 
+	for _, p := range options.plugins {
+		name := p.String()
+		if plugSet, ok := config.PluginFlags[name]; ok {
+			agentLogger.Debugf("registering flags for: %q", name)
+
+			plugSet.VisitAll(func(f *flag.Flag) {
+				flag.Var(f.Value, f.Name, f.Usage)
+			})
+		}
+	}
+	if flag.Lookup(config.DirFlag) == nil {
+		flag.String(config.DirFlag, config.DirDefault, config.DirUsage)
+	}
 	if !flag.Parsed() {
 		flag.Parse()
 	}
@@ -93,8 +117,8 @@ func (a *agent) startSignalWrapper() error {
 
 	go func() {
 		var quit <-chan struct{}
-		if a.opts.ctx != nil {
-			quit = a.opts.ctx.Done()
+		if a.opts.Context != nil {
+			quit = a.opts.Context.Done()
 		}
 		// Wait for signal or agent stop
 		select {
@@ -116,31 +140,31 @@ func (a *agent) startSignalWrapper() error {
 }
 
 func (a *agent) start() error {
-	infraLogger.Debugf("starting %d plugins", len(a.opts.Plugins))
+	agentLogger.Debugf("starting %d plugins", len(a.opts.plugins))
 
 	// Init plugins
-	for _, plugin := range a.opts.Plugins {
-		infraLogger.Debugf("=> Init(): %v", plugin)
+	for _, plugin := range a.opts.plugins {
+		agentLogger.Debugf("=> Init(): %v", plugin)
 		if err := plugin.Init(); err != nil {
 			return err
 		}
 	}
 
 	// AfterInit plugins
-	for _, plugin := range a.opts.Plugins {
+	for _, plugin := range a.opts.plugins {
 		if postPlugin, ok := plugin.(infra.PostInit); ok {
-			infraLogger.Debugf("=> AfterInit(): %v", plugin)
+			agentLogger.Debugf("=> AfterInit(): %v", plugin)
 			if err := postPlugin.AfterInit(); err != nil {
 				return err
 			}
 		} else {
-			infraLogger.Debugf("-- plugin %v has no AfterInit()", plugin)
+			agentLogger.Debugf("-- plugin %v has no AfterInit()", plugin)
 		}
 	}
 
 	a.stopCh = make(chan struct{}) // If we are started, we have a stopCh to signal stopping
 
-	logging.DefaultLogger.Infof("Agent started with %d plugins", len(a.opts.Plugins))
+	logging.DefaultLogger.Infof("Agent started with %d plugins", len(a.opts.plugins))
 
 	return nil
 }
@@ -159,7 +183,7 @@ func (a *agent) stop() error {
 	defer close(a.stopCh)
 
 	// Close plugins
-	for _, p := range a.opts.Plugins {
+	for _, p := range a.opts.plugins {
 		if err := p.Close(); err != nil {
 			return err
 		}

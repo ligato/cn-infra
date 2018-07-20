@@ -5,12 +5,13 @@ import (
 )
 
 // DefaultPlugin is a default instance of Plugin.
-var DefaultPlugin = *NewPlugin()
+var DefaultPlugin Plugin = *NewPlugin()
 
 // NewPlugin creates a new Plugin with the provided Options.
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
+	p.PluginName = "grpcsync"
 	p.GRPC = &grpc.DefaultPlugin
 
 	for _, o := range opts {

@@ -17,6 +17,7 @@ package grpcsync
 import (
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/syncbase"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/rpc/grpc"
 )
 
@@ -29,13 +30,17 @@ type Plugin struct {
 
 // Deps - gRPC Plugin dependencies
 type Deps struct {
+	infra.PluginName
 	GRPC grpc.Server
 }
 
 // Init registers new gRPC service and instantiates plugin.Adapter.
 func (plugin *Plugin) Init() error {
 	grpcAdapter := NewAdapter(plugin.GRPC.GetServer())
-	plugin.Adapter = &syncbase.Adapter{Watcher: grpcAdapter}
+
+	plugin.Adapter = &syncbase.Adapter{
+		Watcher: grpcAdapter,
+	}
 
 	return nil
 }
