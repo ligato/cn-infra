@@ -38,7 +38,7 @@ type NamedMapping interface {
 
 	// ListFields returns a map of fields (secondary indexes) and their values
 	// currently associated with the item identified by <name>.
-	ListFields(name string) map[string] /* field */ []string /* values */
+	ListFields(name string) map[string][]string // field -> values
 
 	// Watch subscribes to receive notifications about the changes in the
 	// mapping. To receive changes through a channel, ToChan utility can be used.
