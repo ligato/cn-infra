@@ -70,5 +70,5 @@ func (client *Client) DecryptArbitrary(inData []byte) (data []byte, err error) {
 
 // Wrap wraps core broker watcher with support for decrypting encrypted keys
 func (client *Client) Wrap(cbw keyval.CoreBrokerWatcher, decrypter Decrypter) keyval.CoreBrokerWatcher {
-	return keyval.CoreBrokerWatcher(NewCoreBrokerWatcherWrapper(cbw, decrypter, client.DecryptArbitrary))
+	return NewCoreBrokerWatcherWrapper(cbw, decrypter, client.DecryptArbitrary)
 }
