@@ -102,7 +102,7 @@ type Logger interface {
 	LogWithLevel
 }
 
-// LogFactory is API for the plugins that want to create their own loggers.
+// LoggerFactory is API for the plugins that want to create their own loggers.
 type LoggerFactory interface {
 	NewLogger(name string) Logger
 }

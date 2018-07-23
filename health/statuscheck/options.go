@@ -38,7 +38,7 @@ func NewPlugin(opts ...Option) *Plugin {
 	return p
 }
 
-// Option is a function that acts on a Plugin to inject some settings.
+// Option is a function that can be used in NewPlugin to customize Plugin.
 type Option func(*Plugin)
 
 // UseDeps returns Option that can inject custom dependencies.

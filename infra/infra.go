@@ -36,6 +36,12 @@ func (name *PluginName) SetName(n string) {
 	*name = PluginName(n)
 }
 
+// Deps defines common dependencies for use in Plugins.
+// It can easily be embedded in Deps for Plugin:
+// type Deps struct {
+//     infra.Deps
+//     // other dependencies
+// }
 type Deps struct {
 	PluginName
 	Log logging.PluginLogger

@@ -17,7 +17,6 @@ import (
 // This file contains GRPC service exposure example. To register service use
 // Server.RegisterService(descriptor, service)
 // ************************************************************************/
-
 const PluginName = "myPlugin"
 
 func main() {
@@ -126,6 +125,7 @@ type ExamplePlugin struct {
 	GRPC grpc.Server
 }
 
+// String return name of the plugin.
 func (plugin *ExamplePlugin) String() string {
 	return PluginName
 }
@@ -139,6 +139,7 @@ func (plugin *ExamplePlugin) Init() error {
 	return nil
 }
 
+// Close closes the plugin.
 func (plugin *ExamplePlugin) Close() error {
 	return nil
 }

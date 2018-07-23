@@ -69,6 +69,7 @@ type ExamplePlugin struct {
 	exampleFinished chan struct{}
 }
 
+// Deps defines dependencies for ExamplePlugin.
 type Deps struct {
 	infra.PluginName
 	Log          logging.PluginLogger
@@ -112,10 +113,12 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	return nil
 }
 
+// Close closes the plugin.
 func (plugin *ExamplePlugin) Close() (err error) {
 	return nil
 }
 
+// Name returns name of the plugin.
 func (plugin *ExamplePlugin) Name() string {
 	return PluginName
 }

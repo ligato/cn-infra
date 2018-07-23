@@ -28,9 +28,9 @@ import (
 )
 
 var (
-	// frequency of periodic writes of state data into ETCD
+	// PeriodicWriteTimeout is frequency of periodic writes of state data into ETCD.
 	PeriodicWriteTimeout = time.Second * 10
-	// frequency of periodic plugin state probing
+	// PeriodicProbingTimeout is frequency of periodic plugin state probing.
 	PeriodicProbingTimeout = time.Second * 5
 )
 
