@@ -32,38 +32,16 @@ import (
 // ETCD plugin is monitored by status check plugin.
 // ExamplePlugin periodically prints the status.
 // ************************************************************************/
-
 const PluginName = "example"
 
 func main() {
-	// Start Agent with ExamplePlugin, ETCDPlugin & FlavorLocal (reused cn-infra plugins).
-	/*agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
-		etcdPlug := &etcd.Plugin{}
-		etcdDataSync := &kvdbsync.Plugin{}
-		resyncOrch := &resync.Plugin{}
-
-		etcdPlug.Deps.PluginInfraDeps = *flavor.InfraDeps("etcd", local.WithConf())
-		resyncOrch.Deps.PluginLogDeps = *flavor.LogDeps("etcd-resync")
-		connectors.InjectKVDBSync(etcdDataSync, etcdPlug, etcdPlug.PluginName, flavor, resyncOrch)
-
-		examplePlug := &ExamplePlugin{closeChannel: exampleFinished}
-		examplePlug.PluginInfraDeps = *flavor.InfraDeps("statuscheck-example")
-		examplePlug.StatusMonitor = &flavor.StatusCheck // Inject status check
-
-		return []*core.NamedPlugin{
-			{etcdPlug.PluginName, etcdPlug},
-			{etcdDataSync.PluginName, etcdDataSync},
-			{resyncOrch.PluginName, resyncOrch},
-			{examplePlug.PluginName, examplePlug}}
-	}))
-	core.EventLoopWithInterrupt(agent, nil)*/
-
 	etcdDataSync := kvdbsync.NewPlugin(
 		kvdbsync.UseDeps(func(deps *kvdbsync.Deps) {
 			deps.KvPlugin = &etcd.DefaultPlugin
 			deps.ResyncOrch = &resync.DefaultPlugin
 		}),
 	)
+
 	p := &ExamplePlugin{
 		Log:             logging.ForPlugin(PluginName),
 		StatusMonitor:   &statuscheck.DefaultPlugin,

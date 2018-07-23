@@ -46,9 +46,11 @@ type PluginConfig interface {
 }
 
 var (
+	// PluginFlags is used for storing flags for Plugins before agent starts.
 	PluginFlags = make(map[string]*FlagSet)
 )
 
+// FlagSet is a type alias for flag.FlagSet.
 type FlagSet = flag.FlagSet
 
 // ForPlugin returns API that is injectable to a particular Plugin

@@ -21,7 +21,7 @@ import (
 )
 
 // DefaultPlugin is a default instance of Plugin.
-var DefaultPlugin Plugin = *NewPlugin()
+var DefaultPlugin = *NewPlugin()
 
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}

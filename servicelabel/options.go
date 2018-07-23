@@ -1,7 +1,7 @@
 package servicelabel
 
 // DefaultPlugin is a default instance of Plugin.
-var DefaultPlugin Plugin = *NewPlugin()
+var DefaultPlugin = *NewPlugin()
 
 // NewPlugin creates a new Plugin with the provided Options.
 func NewPlugin(opts ...Option) *Plugin {

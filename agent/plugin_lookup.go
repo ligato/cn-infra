@@ -174,8 +174,6 @@ func isFieldPlugin(field reflect.StructField, fieldVal reflect.Value) (infra.Plu
 				return nil, true
 			}
 			return plug, true
-		} else {
-			//logrus.DefaultLogger().Debugf(" - does not implement Plugin: %v", field.Type.Implements(pluginType))
 		}
 	}
 

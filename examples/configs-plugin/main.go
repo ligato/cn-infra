@@ -20,6 +20,7 @@ import (
 
 	"github.com/ligato/cn-infra/agent"
 	"github.com/ligato/cn-infra/config"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 )
 
@@ -30,7 +31,6 @@ import (
 // The flag name is composed of the plugin name and the suffix config.FlagSuffix.
 // The default (flag value) filename for the configuration file is the plugin
 // name with the extension ".conf".
-
 const PluginName = "example"
 
 // *************************************************************************
@@ -43,30 +43,17 @@ const PluginName = "example"
 // ************************************************************************/
 
 func main() {
-	// Init close channel to stop the example after everything was logged.
-	exampleFinished := make(chan struct{})
-
-	// Start Agent with ExampleFlavor
-	// (combination of ExamplePlugin & Local flavor)
-	/*agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
-		examplePlug := &ExamplePlugin{
-			exampleFinished: exampleFinished,
-			PluginInfraDeps: *flavor.InfraDeps(PluginName, local.WithConf()),
-		}
-		return []*core.NamedPlugin{{examplePlug.PluginName, examplePlug}}
-	}))
-	core.EventLoopWithInterrupt(agent, exampleFinished)*/
-
 	p := &ExamplePlugin{
 		Deps: Deps{
+			PluginName:   infra.PluginName(PluginName),
 			Log:          logging.ForPlugin(PluginName),
 			PluginConfig: config.ForPlugin(PluginName),
 		},
-		exampleFinished: exampleFinished,
+		exampleFinished: make(chan struct{}),
 	}
 	a := agent.NewAgent(
 		agent.AllPlugins(p),
-		agent.QuitOnClose(exampleFinished),
+		agent.QuitOnClose(p.exampleFinished),
 	)
 	if err := a.Run(); err != nil {
 		log.Fatal(err)
@@ -77,15 +64,15 @@ func main() {
 type ExamplePlugin struct {
 	Deps
 
-	*Conf // it is possible to set config value programmatically (can be overridden)
+	Conf *Conf // it is possible to set config value programmatically (can be overridden)
 
 	exampleFinished chan struct{}
 }
 
 type Deps struct {
+	infra.PluginName
 	Log          logging.PluginLogger
 	PluginConfig config.PluginConfig
-	//local.PluginInfraDeps // this field is usually injected in flavor
 }
 
 // Conf - example config binding
