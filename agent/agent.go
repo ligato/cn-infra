@@ -71,7 +71,7 @@ func NewAgent(opts ...Option) Agent {
 		for _, p := range options.Plugins {
 			name := p.String()
 			agentLogger.Debugf("registering flags for: %q", name)
-			config.RegiterFlagsFor(name)
+			config.RegisterFlagsFor(name)
 		}
 		if flag.Lookup(config.DirFlag) == nil {
 			flag.String(config.DirFlag, config.DirDefault, config.DirUsage)

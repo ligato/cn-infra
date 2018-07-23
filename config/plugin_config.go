@@ -52,7 +52,7 @@ type FlagSet = flag.FlagSet
 var pluginFlags = make(map[string]*FlagSet)
 
 // RegisterFlagsFor registers defined flags for plugin with given name.
-func RegiterFlagsFor(name string) {
+func RegisterFlagsFor(name string) {
 	if plugSet, ok := pluginFlags[name]; ok {
 		plugSet.VisitAll(func(f *flag.Flag) {
 			flag.Var(f.Value, f.Name, f.Usage)

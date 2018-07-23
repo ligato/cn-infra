@@ -31,7 +31,7 @@ func TestForPluginWithConfigFile(t *testing.T) {
 	pluginConfig := config.ForPlugin(pluginWithConfigFileName)
 	Expect(pluginConfig).ShouldNot(BeNil())
 
-	config.RegiterFlagsFor(pluginWithConfigFileName)
+	config.RegisterFlagsFor(pluginWithConfigFileName)
 	Expect(pluginConfig.GetConfigName()).Should(BeEquivalentTo(flagDefault))
 }
 
@@ -41,7 +41,7 @@ func TestForPluginWithoutConfigFile(t *testing.T) {
 	pluginConfig := config.ForPlugin(pluginName)
 	Expect(pluginConfig).ShouldNot(BeNil())
 
-	config.RegiterFlagsFor(pluginName)
+	config.RegisterFlagsFor(pluginName)
 	configName := pluginConfig.GetConfigName()
 	Expect(configName).Should(BeEquivalentTo(""))
 }
@@ -55,7 +55,7 @@ func TestForPluginWithSpecifiedConfigFile(t *testing.T) {
 	})
 	Expect(pluginConfig).ShouldNot(BeNil())
 
-	config.RegiterFlagsFor(pluginName)
+	config.RegisterFlagsFor(pluginName)
 	configName := pluginConfig.GetConfigName()
 	Expect(configName).Should(BeEquivalentTo(configFileName))
 }
