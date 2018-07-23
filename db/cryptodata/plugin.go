@@ -16,8 +16,17 @@ package cryptodata
 
 import (
 	"github.com/ligato/cn-infra/flavors/local"
-	"crypto/rsa"
+	"io/ioutil"
+	"encoding/pem"
+	"crypto/x509"
+	"errors"
 )
+
+// Config is used to read private key from file
+type Config struct {
+	// Private key file is used to create rsa.PrivateKey from this PEM path
+	PrivateKeyFiles []string `json:"private-key-files"`
+}
 
 // Deps lists dependencies of the cryptodata plugin.
 type Deps struct {
@@ -28,11 +37,9 @@ type Deps struct {
 type Plugin struct {
 	Deps
 	// Client provides crypto support
-	Client
+	*Client
 	// Plugin is disabled if there is no config file available
 	disabled bool
-	// List of private keys required from config
-	privateKeys []*rsa.PrivateKey
 }
 
 // Init initializes cryptodata plugin.
@@ -49,7 +56,42 @@ func (plugin *Plugin) Init() (err error) {
 		return nil
 	}
 
-	plugin.Client, err = NewClient(config)
+	// Read client config and create it
+	clientConfig := ClientConfig{}
+	for _, file := range config.PrivateKeyFiles {
+		bytes, err := ioutil.ReadFile(file)
+		if err != nil {
+			return err
+		}
+
+		block, rest := pem.Decode(bytes)
+		if block == nil {
+			return errors.New("failed to decode PEM for key " + file)
+		}
+
+		for {
+			privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+			if err != nil {
+				return err
+			}
+
+			privateKey.Precompute()
+			err = privateKey.Validate()
+			if err != nil {
+				return err
+			}
+
+			clientConfig.PrivateKeys = append(clientConfig.PrivateKeys, privateKey)
+
+			if rest == nil {
+				break
+			}
+
+			block, rest = pem.Decode(rest)
+		}
+	}
+
+	plugin.Client = NewClient(clientConfig)
 	return
 }
 

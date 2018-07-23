@@ -16,33 +16,55 @@ package main
 
 import (
 	"fmt"
-	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/db/cryptodata"
 	"os"
+	"io/ioutil"
+	"encoding/pem"
+	"crypto/x509"
+	"crypto/rsa"
 )
 
 func main() {
-	// Parse configuration containing paths to private keys
-	var cfg cryptodata.Config
-	err := config.ParseConfigFromYamlFile("cryptodata.conf", &cfg)
+	// Read private key
+	bytes, err := ioutil.ReadFile("key.pem")
 	if err != nil {
-		fmt.Printf("Error %v\n", err)
-		return
+		panic(err)
+	}
+	block, _ := pem.Decode(bytes)
+	if block == nil {
+		panic("failed to decode PEM for key key.pem")
+	}
+	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		panic(err)
 	}
 
-	// Create cryptodata client
-	client, err := cryptodata.NewClient(cfg)
+	// Read public key
+	bytes, err = ioutil.ReadFile("key-pub.pem")
 	if err != nil {
-		fmt.Printf("Error %v\n", err)
-		return
+		panic(err)
 	}
+	block, _ = pem.Decode(bytes)
+	if block == nil {
+		panic("failed to decode PEM for key key-pub.pem")
+	}
+	pubInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		panic(err)
+	}
+	publicKey := pubInterface.(*rsa.PublicKey)
+
+	// Create cryptodata client
+	client := cryptodata.NewClient(cryptodata.ClientConfig{
+		PrivateKeys: []*rsa.PrivateKey{privateKey},
+	})
 
 	// Pass 1st argument from CLI as string to encrypt
 	input := []byte(os.Args[1])
 	fmt.Printf("Input %v\n", string(input))
 
-	// Encrypt input string using public key from private key
-	encrypted, err := client.EncryptArbitrary(input)
+	// Encrypt input string using public key
+	encrypted, err := client.EncryptArbitrary(input, publicKey)
 	if err != nil {
 		fmt.Printf("Error %v\n", err)
 		return

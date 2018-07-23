@@ -16,46 +16,49 @@ package cryptodata
 
 import (
 	"crypto/rsa"
-	"crypto/rand"
 	"github.com/ligato/cn-infra/db/keyval"
 	"errors"
+	"crypto/rand"
+	"io"
 )
+
+// ClientConfig is result of converting Config.PrivateKeyFile to PrivateKey
+type ClientConfig struct {
+	// Private key is used to decrypt encrypted keys while reading them from store
+	PrivateKeys []*rsa.PrivateKey
+	// Reader used for encrypting/decrypting
+	Reader io.Reader
+}
 
 // Client handles encrypting/decrypting and wrapping data
 type Client struct {
 	ClientConfig
 }
 
-// NewClient creates new client from provided config
-func NewClient(config Config) (client Client, err error) {
-	client = Client{}
-	err = client.UpdateConfig(config)
-	return
-}
-
-// UpdateConfig updates private key configuration for client
-func (client *Client) UpdateConfig(config Config) (err error) {
-	client.ClientConfig, err = ReadCryptoConfig(config)
-	return
-}
-
-// EncryptArbitrary decrypts arbitrary input data
-func (client *Client) EncryptArbitrary(inData []byte) (data []byte, err error) {
-	for _, key := range client.PrivateKeys {
-		data, err := rsa.EncryptPKCS1v15(rand.Reader, &key.PublicKey, inData)
-
-		if err == nil {
-			return data, nil
-		}
+// NewClient creates new client from provided config and reader
+func NewClient(clientConfig ClientConfig) (client *Client) {
+	client = &Client{
+		ClientConfig: clientConfig,
 	}
 
-	return nil, errors.New("failed to encrypt data due to all private keys failing")
+	// If reader is nil use default rand.Reader
+	if client.Reader == nil {
+		client.Reader = rand.Reader
+	}
+
+	return
+}
+
+// EncryptArbitrary decrypts arbitrary input data using provided public key
+func (client *Client) EncryptArbitrary(inData []byte, pub *rsa.PublicKey) (data []byte, err error) {
+	data, err = rsa.EncryptPKCS1v15(client.Reader, pub, inData)
+	return
 }
 
 // DecryptArbitrary decrypts arbitrary input data
 func (client *Client) DecryptArbitrary(inData []byte) (data []byte, err error) {
 	for _, key := range client.PrivateKeys {
-		data, err := rsa.DecryptPKCS1v15(rand.Reader, key, inData)
+		data, err := rsa.DecryptPKCS1v15(client.Reader, key, inData)
 
 		if err == nil {
 			return data, nil
