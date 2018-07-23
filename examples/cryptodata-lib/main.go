@@ -66,16 +66,26 @@ func main() {
 	// Encrypt input string using public key
 	encrypted, err := client.EncryptData(input, publicKey)
 	if err != nil {
-		fmt.Printf("Error %v\n", err)
-		return
+		panic(err)
 	}
-	fmt.Printf("Encrypted %v\n", encrypted)
+	fmt.Printf("Encrypted %v\n", string(encrypted))
 
 	// Decrypt previously encrypted input string
 	decrypted, err := client.DecryptData(encrypted)
 	if err != nil {
-		fmt.Printf("Error %v\n", err)
-		return
+		panic(err)
 	}
 	fmt.Printf("Decrypted %v\n", string(decrypted))
+
+	// Try to decrypt JSON with encrypted data
+	encryptedJSON := fmt.Sprintf(`{ "encrypted": "true", "payload": "$crypto$%v" }`, string(encrypted))
+	fmt.Printf("Encrypted json \n%v\n", encryptedJSON)
+
+	decrypter := &cryptodata.DecrypterJSON{}
+	decryptedJSON, err := decrypter.Decrypt([]byte(encryptedJSON), client.DecryptData)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Decrypted json \n%v\n", string(decryptedJSON))
 }

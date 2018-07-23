@@ -20,6 +20,7 @@ import (
 	"errors"
 	"crypto/rand"
 	"io"
+	"encoding/base64"
 )
 
 // ClientConfig is result of converting Config.PrivateKeyFile to PrivateKey
@@ -52,11 +53,17 @@ func NewClient(clientConfig ClientConfig) (client *Client) {
 // EncryptData encrypts input data using provided public key
 func (client *Client) EncryptData(inData []byte, pub *rsa.PublicKey) (data []byte, err error) {
 	data, err = rsa.EncryptPKCS1v15(client.Reader, pub, inData)
+	data = []byte(base64.URLEncoding.EncodeToString(data))
 	return
 }
 
 // DecryptData decrypts input data
 func (client *Client) DecryptData(inData []byte) (data []byte, err error) {
+	inData, err = base64.URLEncoding.DecodeString(string(inData))
+	if err != nil {
+		return
+	}
+
 	for _, key := range client.PrivateKeys {
 		data, err := rsa.DecryptPKCS1v15(client.Reader, key, inData)
 
