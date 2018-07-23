@@ -131,6 +131,27 @@ func (mem *memNamedMapping) ListAllNames() (names []string) {
 	return ret
 }
 
+// ListFields returns a map of fields (secondary indexes) and their values
+// currently associated with the item identified by <name>.
+func (mem *memNamedMapping) ListFields(name string) map[string][]string {
+	mem.access.RLock()
+	defer mem.access.RUnlock()
+
+	fields := make(map[string][]string)
+
+	item, found := mem.nameToIdx[name]
+	if found {
+		for field := range item.indexed {
+			fields[field] = []string{}
+			for _, value := range item.indexed[field] {
+				fields[field] = append(fields[field], value)
+			}
+		}
+	}
+
+	return fields
+}
+
 // ListNames looks up the items by secondary indexes. It returns all
 // names matching the selection.
 func (mem *memNamedMapping) ListNames(field string, value string) []string {
