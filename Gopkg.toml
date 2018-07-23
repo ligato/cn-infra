@@ -25,7 +25,12 @@
 #   unused-packages = true
 
 required = [
-    "github.com/grpc-ecosystem/grpc-gateway/runtime"
+    "github.com/grpc-ecosystem/grpc-gateway/runtime",
+    "k8s.io/code-generator/cmd/client-gen",
+    "k8s.io/code-generator/cmd/deepcopy-gen",
+    "k8s.io/code-generator/cmd/defaulter-gen",
+    "k8s.io/code-generator/cmd/informer-gen",
+    "k8s.io/code-generator/cmd/lister-gen"
 ]
 
 [[constraint]]
@@ -73,8 +78,8 @@ required = [
   version = "0.5.0"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/golang/protobuf"
+  version = "1.1.0"
 
 [[constraint]]
   name = "github.com/gorilla/mux"
@@ -124,6 +129,28 @@ required = [
   name = "github.com/ugorji/go"
   revision = "ded73eae5db7e7a0ef6f55aace87a2873c5d2b74"
 
+[[override]]
+  name = "k8s.io/api"
+  version = "kubernetes-1.10.4"
+
+[[override]]
+  name = "k8s.io/apimachinery"
+  version = "kubernetes-1.10.4"
+
+[[override]]
+  name = "k8s.io/code-generator"
+  version = "kubernetes-1.10.4"
+
+[[constraint]]
+  name = "k8s.io/client-go"
+  version = "7.0.0"
+
 [prune]
   go-tests = true
   unused-packages = true
+
+  [[prune.project]]
+    name = "k8s.io/code-generator"
+    unused-packages = false
+    go-tests = false
+

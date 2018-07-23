@@ -20,6 +20,8 @@ plugins.
 Current examples:
 * **[cassandra-lib](cassandra-lib)** shows how to use the Cassandra data
   broker API to access the Cassandra database,
+* **[crd-plugin](crd-plugin)** shows how to build a plugin capable of
+  exposing and implementing custom resource definitions,
 * **[datasync-plugin](datasync-plugin)** demonstrates the usage
   of the data synchronization APIs of the datasync package inside
   an example plugin,
