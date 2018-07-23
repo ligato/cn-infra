@@ -53,10 +53,3 @@ func UseDeps(cb func(*Deps)) Option {
 		cb(&p.Deps)
 	}
 }
-
-// UseConf returns Option which injects a particular configuration.
-func UseConf(conf Config) Option {
-	return func(p *Plugin) {
-		p.Config = &conf
-	}
-}

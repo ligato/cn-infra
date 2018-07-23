@@ -45,13 +45,20 @@ type PluginConfig interface {
 	GetConfigName() string
 }
 
-var (
-	// PluginFlags is used for storing flags for Plugins before agent starts.
-	PluginFlags = make(map[string]*FlagSet)
-)
-
 // FlagSet is a type alias for flag.FlagSet.
 type FlagSet = flag.FlagSet
+
+// pluginFlags is used for storing flags for Plugins before agent starts.
+var pluginFlags = make(map[string]*FlagSet)
+
+// RegisterFlagsFor registers defined flags for plugin with given name.
+func RegiterFlagsFor(name string) {
+	if plugSet, ok := pluginFlags[name]; ok {
+		plugSet.VisitAll(func(f *flag.Flag) {
+			flag.Var(f.Value, f.Name, f.Usage)
+		})
+	}
+}
 
 // ForPlugin returns API that is injectable to a particular Plugin
 // and is used to read it's configuration.
@@ -62,20 +69,22 @@ type FlagSet = flag.FlagSet
 // - default value
 // - usage
 func ForPlugin(name string, moreFlags ...func(*FlagSet)) PluginConfig {
-	cfgFlag := name + FlagSuffix
-	cfgFlagDefault := name + ".conf"
-	cfgFlagUsage := fmt.Sprintf(
-		"Location of the %q plugin config file; can also be set via %q env variable.",
-		cfgFlagDefault, strings.ToUpper(name)+EnvSuffix)
-
 	flagSet := flag.NewFlagSet(name, flag.ExitOnError)
-	flagSet.String(cfgFlag, cfgFlagDefault, cfgFlagUsage)
 
 	for _, more := range moreFlags {
 		more(flagSet)
 	}
 
-	PluginFlags[name] = flagSet
+	cfgFlag := name + FlagSuffix
+	if flagSet.Lookup(cfgFlag) == nil {
+		cfgFlagDefault := name + ".conf"
+		cfgFlagUsage := fmt.Sprintf(
+			"Location of the %q plugin config file; can also be set via %q env variable.",
+			cfgFlagDefault, strings.ToUpper(name)+EnvSuffix)
+		flagSet.String(cfgFlag, cfgFlagDefault, cfgFlagUsage)
+	}
+
+	pluginFlags[name] = flagSet
 
 	return &pluginConfig{
 		configFlag: cfgFlag,
@@ -142,9 +151,7 @@ func (p *pluginConfig) GetConfigName() string {
 func (p *pluginConfig) getConfigName() string {
 	flg := flag.CommandLine.Lookup(p.configFlag)
 	if flg != nil {
-		flgVal := flg.Value.String()
-
-		if flgVal != "" {
+		if flgVal := flg.Value.String(); flgVal != "" {
 			// if exist value from flag
 			if _, err := os.Stat(flgVal); !os.IsNotExist(err) {
 				return flgVal

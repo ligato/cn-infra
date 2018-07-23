@@ -16,6 +16,7 @@ package agent
 
 import (
 	"errors"
+	"flag"
 	"os"
 	"os/signal"
 
@@ -23,7 +24,6 @@ import (
 	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/utils/once"
-	"github.com/namsral/flag"
 )
 
 // Variables set by the compiler using ldflags
@@ -67,20 +67,15 @@ type Agent interface {
 func NewAgent(opts ...Option) Agent {
 	options := newOptions(opts...)
 
-	for _, p := range options.Plugins {
-		name := p.String()
-		if plugSet, ok := config.PluginFlags[name]; ok {
-			agentLogger.Debugf("registering flags for: %q", name)
-
-			plugSet.VisitAll(func(f *flag.Flag) {
-				flag.Var(f.Value, f.Name, f.Usage)
-			})
-		}
-	}
-	if flag.Lookup(config.DirFlag) == nil {
-		flag.String(config.DirFlag, config.DirDefault, config.DirUsage)
-	}
 	if !flag.Parsed() {
+		for _, p := range options.Plugins {
+			name := p.String()
+			agentLogger.Debugf("registering flags for: %q", name)
+			config.RegiterFlagsFor(name)
+		}
+		if flag.Lookup(config.DirFlag) == nil {
+			flag.String(config.DirFlag, config.DirDefault, config.DirUsage)
+		}
 		flag.Parse()
 	}
 
