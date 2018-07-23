@@ -21,6 +21,7 @@ examples:
 	cd examples/kafka-lib && make build
 	cd examples/logs-lib && make build
 	cd examples/redis-lib && make build
+	cd examples/cryptodata-lib && go build
 
 # Build plugin examples
 examples-plugin:
