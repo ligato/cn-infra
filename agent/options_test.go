@@ -16,34 +16,11 @@ package agent_test
 
 import (
 	"testing"
-	"time"
 
 	"github.com/ligato/cn-infra/agent"
-	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/infra"
 	. "github.com/onsi/gomega"
 )
-
-const (
-	testVersion        = "1.0"
-	testMaxStartupTime = 1 * time.Hour
-)
-
-func TestVersion(t *testing.T) {
-	RegisterTestingT(t)
-	agent := agent.NewAgent(agent.Version(testVersion))
-	Expect(agent).ToNot(BeNil())
-	Expect(agent.Options()).ToNot(BeNil())
-	Expect(agent.Options().Version).To(Equal(testVersion))
-
-}
-
-func TestMaxStartupTime(t *testing.T) {
-	RegisterTestingT(t)
-	agent := agent.NewAgent(agent.MaxStartupTime(testMaxStartupTime))
-	Expect(agent).ToNot(BeNil())
-	Expect(agent.Options()).ToNot(BeNil())
-	Expect(agent.Options().MaxStartupTime).To(Equal(testMaxStartupTime))
-}
 
 func TestDescendantPluginsNoDep(t *testing.T) {
 	RegisterTestingT(t)
@@ -60,6 +37,7 @@ func TestDescendantPluginsOneLevelDep(t *testing.T) {
 	RegisterTestingT(t)
 
 	plugin := &PluginOneDep{}
+	plugin.SetName("OneDep")
 	agent := agent.NewAgent(agent.AllPlugins(plugin))
 	Expect(agent).ToNot(BeNil())
 	Expect(agent.Options()).ToNot(BeNil())
@@ -72,14 +50,18 @@ func TestDescendantPluginsOneLevelDep(t *testing.T) {
 func TestDescendantPluginsTwoLevelsDeep(t *testing.T) {
 	RegisterTestingT(t)
 	plugin := &PluginTwoLevelDeps{}
+	plugin.SetName("TwoDep")
+	plugin.PluginTwoLevelDep1.SetName("Dep1")
+	plugin.PluginTwoLevelDep2.SetName("Dep2")
 	agent := agent.NewAgent(agent.AllPlugins(plugin))
 	Expect(agent).ToNot(BeNil())
 	Expect(agent.Options()).ToNot(BeNil())
 	Expect(agent.Options().Plugins).ToNot(BeNil())
-	Expect(len(agent.Options().Plugins)).To(Equal(3))
-	Expect(agent.Options().Plugins[0]).To(Equal(&plugin.PluginTwoLevelDep1))
-	Expect(agent.Options().Plugins[1]).To(Equal(&plugin.PluginTwoLevelDep1.Plugin2))
-	Expect(agent.Options().Plugins[2]).To(Equal(plugin))
+	Expect(len(agent.Options().Plugins)).To(Equal(4))
+	Expect(agent.Options().Plugins[0]).To(Equal(&plugin.PluginTwoLevelDep1.Plugin2))
+	Expect(agent.Options().Plugins[1]).To(Equal(&plugin.PluginTwoLevelDep1))
+	Expect(agent.Options().Plugins[2]).To(Equal(&plugin.PluginTwoLevelDep2))
+	Expect(agent.Options().Plugins[3]).To(Equal(plugin))
 
 }
 
@@ -87,37 +69,34 @@ func TestDescendantPluginsTwoLevelsDeep(t *testing.T) {
 
 // PluginNoDeps contains no plugins.
 type PluginNoDeps struct {
-	pluginName core.PluginName
-	Plugin1    MissignCloseMethod
-	Plugin2    struct {
+	infra.PluginName
+	Plugin1 MissignCloseMethod
+	Plugin2 struct {
 		Dep1B string
 	}
 }
 
 func (p *PluginNoDeps) Init() error  { return nil }
 func (p *PluginNoDeps) Close() error { return nil }
-func (p *PluginNoDeps) Name() string { return string(p.pluginName) }
 
 // PluginOneDep contains one plugin (another is missing Close method).
 type PluginOneDep struct {
-	pluginName core.PluginName
-	Plugin1    MissignCloseMethod
-	Plugin2    TestPlugin
+	infra.PluginName
+	Plugin1 MissignCloseMethod
+	Plugin2 TestPlugin
 }
 
 func (p *PluginOneDep) Init() error  { return nil }
 func (p *PluginOneDep) Close() error { return nil }
-func (p *PluginOneDep) Name() string { return string(p.pluginName) }
 
 type PluginTwoLevelDeps struct {
-	pluginName         core.PluginName
+	infra.PluginName
 	PluginTwoLevelDep1 PluginOneDep
 	PluginTwoLevelDep2 TestPlugin
 }
 
 func (p *PluginTwoLevelDeps) Init() error  { return nil }
 func (p *PluginTwoLevelDeps) Close() error { return nil }
-func (p *PluginTwoLevelDeps) Name() string { return string(p.pluginName) }
 
 // MissignCloseMethod implements only Init() but not Close() method.
 type MissignCloseMethod struct {

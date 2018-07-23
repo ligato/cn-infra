@@ -28,8 +28,8 @@ type Options struct {
 	QuitSignals []os.Signal
 	QuitChan    chan struct{}
 	Context     context.Context
+	Plugins     []infra.Plugin
 
-	plugins     []infra.Plugin
 	pluginMap   map[infra.Plugin]struct{}
 	pluginNames map[string]struct{}
 }
@@ -87,7 +87,7 @@ func QuitOnClose(ch chan struct{}) Option {
 // Plugins creates an Option that adds a list of Plugins to the Agent's Plugin list
 func Plugins(plugins ...infra.Plugin) Option {
 	return func(o *Options) {
-		o.plugins = append(o.plugins, plugins...)
+		o.Plugins = append(o.Plugins, plugins...)
 	}
 }
 
@@ -115,7 +115,7 @@ func AllPlugins(plugins ...infra.Plugin) Option {
 				}
 				o.pluginNames[plug.String()] = struct{}{}
 			}
-			o.plugins = append(o.plugins, foundPlugins...)
+			o.Plugins = append(o.Plugins, foundPlugins...)
 
 			// TODO: perhaps set plugin name to typ.Strilng() if it's empty
 			/*p, ok := plugin.(core.PluginNamed)
@@ -127,7 +127,7 @@ func AllPlugins(plugins ...infra.Plugin) Option {
 				agentLogger.Fatalf("plugin with name %q already registered, custom name should be used", plugin.String())
 			}
 			o.pluginNames[plugin.String()] = struct{}{}
-			o.plugins = append(o.plugins, plugin)
+			o.Plugins = append(o.Plugins, plugin)
 		}
 	}
 }

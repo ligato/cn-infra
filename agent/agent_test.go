@@ -23,14 +23,12 @@ import (
 	"time"
 
 	"github.com/ligato/cn-infra/agent"
-	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging/logrus"
 	. "github.com/onsi/gomega"
 )
 
 const (
-	defaultVersion                = "dev"
-	defaultMaxStartupTime         = time.Second * 15
 	stopUnstartedAgentErrorString = "attempted to stop an agent that wasn't Started"
 	waitUnstartedAgentErrorString = "attempted to wait on an agent that wasn't Started"
 	initFailedErrorString         = "Init failed"
@@ -45,8 +43,6 @@ func TestEmptyAgent(t *testing.T) {
 	agent := agent.NewAgent()
 	Expect(agent).NotTo(BeNil())
 	Expect(agent.Options()).NotTo(BeNil())
-	Expect(agent.Options().Version).To(Equal(defaultVersion))
-	Expect(agent.Options().MaxStartupTime).To(Equal(defaultMaxStartupTime))
 	Expect(agent.Options().Plugins).To(BeNil())
 	err := agent.Start()
 	Expect(err).To(BeNil())
@@ -91,8 +87,6 @@ func TestAgentWithPlugin(t *testing.T) {
 
 	agent := agent.NewAgent(agent.Plugins(np1))
 	Expect(agent.Options()).NotTo(BeNil())
-	Expect(agent.Options().Version).To(Equal(defaultVersion))
-	Expect(agent.Options().MaxStartupTime).To(Equal(defaultMaxStartupTime))
 	Expect(agent.Options().Plugins).ToNot(BeNil())
 	Expect(len(agent.Options().Plugins)).To(Equal(1))
 	Expect(agent.Options().Plugins[0]).To(Equal(np1))
@@ -253,15 +247,13 @@ func TestAgentWithPluginsReceiveSignal(t *testing.T) {
 func TestAgentWithNamedPlugin(t *testing.T) {
 	RegisterTestingT(t)
 	p := NewTestPlugin(false, false, false)
-	np := core.NamePlugin(defaultPluginName, p)
-	agent := agent.NewAgent(agent.Plugins(np))
+	p.SetName(defaultPluginName)
+	agent := agent.NewAgent(agent.Plugins(p))
 	Expect(agent).NotTo(BeNil())
 	Expect(agent.Options()).NotTo(BeNil())
-	Expect(agent.Options().Version).To(Equal(defaultVersion))
-	Expect(agent.Options().MaxStartupTime).To(Equal(defaultMaxStartupTime))
 	Expect(agent.Options().Plugins).ToNot(BeNil())
 	Expect(len(agent.Options().Plugins)).To(Equal(1))
-	Expect(agent.Options().Plugins[0]).To(Equal(np))
+	Expect(agent.Options().Plugins[0]).To(Equal(p))
 	err := agent.Start()
 	Expect(err).To(BeNil())
 	err = agent.Stop()
@@ -274,8 +266,6 @@ func TestAgentWithPluginNoAfterInit(t *testing.T) {
 	agent := agent.NewAgent(agent.Plugins(p))
 	Expect(agent).NotTo(BeNil())
 	Expect(agent.Options()).NotTo(BeNil())
-	Expect(agent.Options().Version).To(Equal(defaultVersion))
-	Expect(agent.Options().MaxStartupTime).To(Equal(defaultMaxStartupTime))
 	Expect(agent.Options().Plugins).ToNot(BeNil())
 	Expect(len(agent.Options().Plugins)).To(Equal(1))
 	Expect(agent.Options().Plugins[0]).To(Equal(p))
@@ -297,7 +287,7 @@ func (*TestPluginNoAfterInit) Init() error {
 	return nil
 }
 
-func (*TestPluginNoAfterInit) Name() string {
+func (*TestPluginNoAfterInit) String() string {
 	return defaultPluginName
 }
 
@@ -313,11 +303,15 @@ type TestPlugin struct {
 	afterInitCalled bool
 	closeCalled     bool
 
-	pluginName core.PluginName
+	infra.PluginName
 }
 
 func NewTestPlugin(failInit, failAfterInit, failClose bool) *TestPlugin {
-	return &TestPlugin{failInit: failInit, failAfterInit: failAfterInit, failClose: failClose}
+	return &TestPlugin{
+		failInit:      failInit,
+		failAfterInit: failAfterInit,
+		failClose:     failClose,
+	}
 }
 
 func (p *TestPlugin) Init() error {
@@ -364,8 +358,4 @@ func (p *TestPlugin) Closed() bool {
 	p.Lock()
 	defer p.Unlock()
 	return p.closeCalled
-}
-
-func (p *TestPlugin) Name() string {
-	return string(p.pluginName)
 }

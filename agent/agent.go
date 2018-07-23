@@ -67,7 +67,7 @@ type Agent interface {
 func NewAgent(opts ...Option) Agent {
 	options := newOptions(opts...)
 
-	for _, p := range options.plugins {
+	for _, p := range options.Plugins {
 		name := p.String()
 		if plugSet, ok := config.PluginFlags[name]; ok {
 			agentLogger.Debugf("registering flags for: %q", name)
@@ -168,10 +168,10 @@ func (a *agent) startSignalWrapper() error {
 }
 
 func (a *agent) start() error {
-	agentLogger.Debugf("starting %d plugins", len(a.opts.plugins))
+	agentLogger.Debugf("starting %d plugins", len(a.opts.Plugins))
 
 	// Init plugins
-	for _, plugin := range a.opts.plugins {
+	for _, plugin := range a.opts.Plugins {
 		agentLogger.Debugf("=> Init(): %v", plugin)
 		if err := plugin.Init(); err != nil {
 			return err
@@ -179,7 +179,7 @@ func (a *agent) start() error {
 	}
 
 	// AfterInit plugins
-	for _, plugin := range a.opts.plugins {
+	for _, plugin := range a.opts.Plugins {
 		if postPlugin, ok := plugin.(infra.PostInit); ok {
 			agentLogger.Debugf("=> AfterInit(): %v", plugin)
 			if err := postPlugin.AfterInit(); err != nil {
@@ -192,7 +192,7 @@ func (a *agent) start() error {
 
 	a.stopCh = make(chan struct{}) // If we are started, we have a stopCh to signal stopping
 
-	logging.DefaultLogger.Infof("Agent started with %d plugins", len(a.opts.plugins))
+	logging.DefaultLogger.Infof("Agent started with %d plugins", len(a.opts.Plugins))
 
 	return nil
 }
@@ -206,7 +206,7 @@ func (a *agent) stop() error {
 	defer close(a.stopCh)
 
 	// Close plugins
-	for _, p := range a.opts.plugins {
+	for _, p := range a.opts.Plugins {
 		if err := p.Close(); err != nil {
 			return err
 		}
