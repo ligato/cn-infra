@@ -15,10 +15,10 @@
 package pluginstatusmap
 
 import (
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/health/statuscheck/model/status"
 	"github.com/ligato/cn-infra/idxmap"
 	"github.com/ligato/cn-infra/idxmap/mem"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging/logrus"
 )
 
@@ -34,7 +34,7 @@ type PluginStatusIdxMap interface {
 
 	// WatchNameToIdx allows to subscribe for watching changes in pluginStatusMap
 	// mapping.
-	WatchNameToIdx(subscriber core.PluginName, pluginChannel chan PluginStatusEvent)
+	WatchNameToIdx(subscriber infra.PluginName, pluginChannel chan PluginStatusEvent)
 }
 
 // PluginStatusIdxMapRW exposes not only PluginStatusIdxMap but also write methods.
@@ -49,7 +49,7 @@ type PluginStatusIdxMapRW interface {
 }
 
 // NewPluginStatusMap is a constructor for PluginStatusIdxMapRW.
-func NewPluginStatusMap(owner core.PluginName) PluginStatusIdxMapRW {
+func NewPluginStatusMap(owner infra.PluginName) PluginStatusIdxMapRW {
 	return &pluginStatusMap{
 		mapping: mem.NewNamedMapping(logrus.DefaultLogger(), "plugin_status", IndexPluginStatus),
 	}
@@ -130,7 +130,7 @@ func (swi *pluginStatusMap) castdata(meta interface{}) *status.PluginStatus {
 }
 
 // WatchNameToIdx allows to subscribe for watching changes in pluginStatusMap mapping
-func (swi *pluginStatusMap) WatchNameToIdx(subscriber core.PluginName, pluginChannel chan PluginStatusEvent) {
+func (swi *pluginStatusMap) WatchNameToIdx(subscriber infra.PluginName, pluginChannel chan PluginStatusEvent) {
 	swi.mapping.Watch(subscriber, func(event idxmap.NamedMappingGenericEvent) {
 		pluginChannel <- PluginStatusEvent{
 			NamedMappingEvent: event.NamedMappingEvent,

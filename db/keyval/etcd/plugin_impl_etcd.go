@@ -16,16 +16,14 @@ package etcd
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
-	"sync"
-
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
-	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/ligato/cn-infra/health/statuscheck"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
@@ -65,8 +63,9 @@ type Plugin struct {
 // Deps lists dependencies of the etcd plugin.
 // If injected, etcd plugin will use StatusCheck to signal the connection status.
 type Deps struct {
-	local.PluginInfraDeps
-	Resync *resync.Plugin
+	infra.Deps
+	StatusCheck statuscheck.PluginStatusWriter // inject
+	Resync      *resync.Plugin
 }
 
 // Init retrieves ETCD configuration and establishes a new connection
@@ -153,7 +152,7 @@ func (plugin *Plugin) OnConnect(callback func() error) {
 }
 
 // GetPluginName returns name of the plugin
-func (plugin *Plugin) GetPluginName() core.PluginName {
+func (plugin *Plugin) GetPluginName() infra.PluginName {
 	return plugin.PluginName
 }
 
@@ -263,7 +262,6 @@ func (plugin *Plugin) getEtcdConfig() (*Config, error) {
 	if !found {
 		plugin.Log.Info("ETCD config not found, skip loading this plugin")
 		plugin.disabled = true
-		return &etcdCfg, nil
 	}
 	return &etcdCfg, nil
 }

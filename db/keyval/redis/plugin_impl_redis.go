@@ -15,12 +15,11 @@
 package redis
 
 import (
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
-	"github.com/ligato/cn-infra/flavors/local"
 	"github.com/ligato/cn-infra/health/statuscheck"
+	"github.com/ligato/cn-infra/infra"
 )
 
 const (
@@ -31,6 +30,7 @@ const (
 // Plugin implements redis plugin.
 type Plugin struct {
 	Deps
+
 	// Plugin is disabled if there is no config file available
 	disabled bool
 	// Redis connection encapsulation
@@ -41,8 +41,9 @@ type Plugin struct {
 
 // Deps lists dependencies of the redis plugin.
 type Deps struct {
-	local.PluginInfraDeps //inject
-	Resync                *resync.Plugin
+	infra.Deps
+	StatusCheck statuscheck.PluginStatusWriter // inject
+	Resync      *resync.Plugin
 }
 
 // Init retrieves redis configuration and establishes a new connection
@@ -109,11 +110,6 @@ func (plugin *Plugin) OnConnect(callback func() error) {
 	if err := callback(); err != nil {
 		plugin.Log.Error(err)
 	}
-}
-
-// GetPluginName returns name of the plugin
-func (plugin *Plugin) GetPluginName() core.PluginName {
-	return plugin.PluginName
 }
 
 func (plugin *Plugin) getRedisConfig() (cfg interface{}, err error) {

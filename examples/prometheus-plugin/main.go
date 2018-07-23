@@ -2,14 +2,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/flavors/local"
-	prom "github.com/ligato/cn-infra/rpc/prometheus"
-	"github.com/ligato/cn-infra/rpc/rest"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"log"
 	"math/rand"
 	"time"
+
+	"github.com/ligato/cn-infra/agent"
+	"github.com/ligato/cn-infra/logging"
+	prom "github.com/ligato/cn-infra/rpc/prometheus"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // *************************************************************************
@@ -24,9 +25,12 @@ import (
 //       curl localhost:9191/custom
 // ************************************************************************/
 
+// PluginName represents name of plugin.
+const PluginName = "example"
+
 func main() {
 	// Init close channel used to stop the example.
-	exampleFinished := make(chan struct{}, 1)
+	/*exampleFinished := make(chan struct{})
 
 	// Start Agent with ExamplePlugin, REST, prometheus plugin & FlavorLocal (reused cn-infra plugins).
 	agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
@@ -51,12 +55,24 @@ func main() {
 			{prometheusPlugin.PluginName, prometheusPlugin},
 			{examplePlug.PluginName, examplePlug}}
 	}))
-	core.EventLoopWithInterrupt(agent, exampleFinished)
+	core.EventLoopWithInterrupt(agent, exampleFinished)*/
+
+	p := &ExamplePlugin{
+		Deps: Deps{
+			Log:        logging.ForPlugin(PluginName),
+			Prometheus: &prom.DefaultPlugin,
+		},
+	}
+
+	a := agent.NewAgent(agent.AllPlugins(p))
+	if err := a.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // Deps group dependencies of the ExamplePlugin
 type Deps struct {
-	local.PluginInfraDeps
+	Log        logging.PluginLogger
 	Prometheus prom.API
 }
 
@@ -74,6 +90,11 @@ type ExamplePlugin struct {
 const customRegistry = "/custom"
 
 const orderLabel = "order"
+
+// String return plugin name.
+func (plugin *ExamplePlugin) String() string {
+	return PluginName
+}
 
 // Init creates metric registries and adds gauges
 func (plugin *ExamplePlugin) Init() error {
@@ -163,7 +184,6 @@ func (plugin *ExamplePlugin) decrementCounter() {
 			}
 			plugin.counterVal--
 			plugin.temporaryCounter.Set(float64(plugin.counterVal))
-
 		}
 	}
 }

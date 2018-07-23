@@ -1,14 +1,9 @@
 package main
 
 import (
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/datasync/kvdbsync"
-	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/db/keyval/redis"
-	"github.com/ligato/cn-infra/flavors/connectors"
-	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/logging"
 )
 
 // Main allows running Example Plugin as a statically linked binary with Agent Core Plugins. Close channel and plugins
@@ -16,10 +11,10 @@ import (
 // and example plugin which demonstrates use of Redis flavor.
 func main() {
 	// Init close channel used to stop the example
-	exampleFinished := make(chan struct{}, 1)
+	//exampleFinished := make(chan struct{})
 
 	// Start Agent with ExamplePlugin, RedisPlugin & FlavorLocal (reused cn-infra plugins).
-	agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
+	/*agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
 		redisPlug := &redis.Plugin{}
 		redisDataSync := &kvdbsync.Plugin{}
 		resyncOrch := &resync.Plugin{}
@@ -28,7 +23,7 @@ func main() {
 		resyncOrch.Deps.PluginLogDeps = *flavor.LogDeps("redis-resync")
 		connectors.InjectKVDBSync(redisDataSync, redisPlug, redisPlug.PluginName, flavor, resyncOrch)
 
-		examplePlug := &ExamplePlugin{closeChannel: &exampleFinished}
+		examplePlug := &ExamplePlugin{closeChannel: exampleFinished}
 		examplePlug.Deps.PluginLogDeps = *flavor.LogDeps("redis-example")
 		examplePlug.Deps.DB = redisPlug          // Inject redis to example plugin.
 		examplePlug.Deps.Watcher = redisDataSync // Inject datasync watcher to example plugin.
@@ -39,21 +34,24 @@ func main() {
 			{resyncOrch.PluginName, resyncOrch},
 			{examplePlug.PluginName, examplePlug}}
 	}))
-	core.EventLoopWithInterrupt(agent, exampleFinished)
+	core.EventLoopWithInterrupt(agent, exampleFinished)*/
+
+	// TODO: use new agent with options
 }
 
 // ExamplePlugin to depict the use of Redis flavor
 type ExamplePlugin struct {
 	Deps // plugin dependencies are injected
 
-	closeChannel *chan struct{}
+	closeChannel chan struct{}
 }
 
 // Deps is a helper struct which is grouping all dependencies injected to the plugin
 type Deps struct {
-	local.PluginLogDeps                             // injected
-	Watcher             datasync.KeyValProtoWatcher // injected
-	DB                  keyval.KvProtoPlugin        // injected
+	//local.PluginLogDeps                             // injected
+	Log     logging.PluginLogger
+	Watcher datasync.KeyValProtoWatcher // injected
+	DB      keyval.KvProtoPlugin        // injected
 }
 
 // Init is meant for registering the watcher
@@ -74,6 +72,6 @@ func (plugin *ExamplePlugin) AfterInit() (err error) {
 // Close is called by Agent Core when the Agent is shutting down. It is supposed to clean up resources that were
 // allocated by the plugin during its lifetime
 func (plugin *ExamplePlugin) Close() error {
-	*plugin.closeChannel <- struct{}{}
+	close(plugin.closeChannel)
 	return nil
 }

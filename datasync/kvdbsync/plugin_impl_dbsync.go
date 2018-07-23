@@ -22,7 +22,8 @@ import (
 	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/datasync/syncbase"
 	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/infra"
+	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
 )
 
@@ -36,34 +37,14 @@ type Plugin struct {
 	registry *syncbase.Registry
 }
 
-type infraDeps interface {
-	// InfraDeps for getting PlugginInfraDeps instance (logger, config, plugin name, statuscheck)
-	InfraDeps(pluginName string, opts ...local.InfraDepsOpts) *local.PluginInfraDeps
-}
-
-// OfDifferentAgent allows accessing DB of a different agent (with a particular microservice label).
-// This method is a shortcut to simplify creating new instance of a plugin
-// that is supposed to watch different agent DB.
-// Method intentionally copies instance of a plugin (assuming it has set all dependencies)
-// and sets microservice label.
-func (plugin /*intentionally without pointer receiver*/ Plugin) OfDifferentAgent(
-	microserviceLabel string, infraDeps infraDeps) *Plugin {
-
-	// plugin name suffixed by micorservice label
-	plugin.Deps.PluginInfraDeps = *infraDeps.InfraDeps(string(
-		plugin.Deps.PluginInfraDeps.PluginName) + "-" + microserviceLabel)
-
-	// this is important - here comes microservice label of different agent
-	plugin.Deps.PluginInfraDeps.ServiceLabel = servicelabel.OfDifferentAgent(microserviceLabel)
-	return &plugin // copy (no pointer receiver)
-}
-
 // Deps groups dependencies injected into the plugin so that they are
 // logically separated from other plugin fields.
 type Deps struct {
-	local.PluginInfraDeps                      // inject
-	ResyncOrch            resync.Subscriber    // inject
-	KvPlugin              keyval.KvProtoPlugin // inject
+	infra.PluginName                      // inject
+	Log              logging.PluginLogger // inject
+	ServiceLabel     servicelabel.ReaderAPI
+	KvPlugin         keyval.KvProtoPlugin // inject
+	ResyncOrch       resync.Subscriber    // inject
 }
 
 // Init only initializes plugin.registry.
@@ -90,7 +71,7 @@ func (plugin *Plugin) AfterInit() error {
 	// Define function executed on kv plugin connection
 	plugin.KvPlugin.OnConnect(func() error {
 		if err := plugin.initKvPlugin(); err != nil {
-			return fmt.Errorf("init KV plugin %v failed: %v", plugin.KvPlugin.GetPluginName(), err)
+			return fmt.Errorf("init KV plugin %v failed: %v", plugin.KvPlugin.String(), err)
 		}
 		return nil
 	})
@@ -163,12 +144,4 @@ func (plugin *Plugin) Delete(key string, opts ...datasync.DelOption) (existed bo
 // Close resources.
 func (plugin *Plugin) Close() error {
 	return nil
-}
-
-// String returns Deps.PluginName if set, "kvdbsync" otherwise.
-func (plugin *Plugin) String() string {
-	if len(plugin.PluginName) == 0 {
-		return "kvdbsync"
-	}
-	return string(plugin.PluginName)
 }

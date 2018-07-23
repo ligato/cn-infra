@@ -15,16 +15,15 @@
 package main
 
 import (
+	"log"
 	"time"
 
-	"github.com/ligato/cn-infra/db/keyval/etcd"
-	"github.com/ligato/cn-infra/health/statuscheck"
-
-	"github.com/ligato/cn-infra/core"
+	"github.com/ligato/cn-infra/agent"
 	"github.com/ligato/cn-infra/datasync/kvdbsync"
 	"github.com/ligato/cn-infra/datasync/resync"
-	"github.com/ligato/cn-infra/flavors/connectors"
-	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/db/keyval/etcd"
+	"github.com/ligato/cn-infra/health/statuscheck"
+	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
@@ -34,40 +33,44 @@ import (
 // ExamplePlugin periodically prints the status.
 // ************************************************************************/
 
+// PluginName represents name of plugin.
+const PluginName = "example"
+
 func main() {
-	// Init close channel used to stop the example.
-	exampleFinished := make(chan struct{}, 1)
+	etcdDataSync := kvdbsync.NewPlugin(
+		kvdbsync.UseDeps(func(deps *kvdbsync.Deps) {
+			deps.KvPlugin = &etcd.DefaultPlugin
+			deps.ResyncOrch = &resync.DefaultPlugin
+		}),
+	)
 
-	// Start Agent with ExamplePlugin, ETCDPlugin & FlavorLocal (reused cn-infra plugins).
-	agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
-		etcdPlug := &etcd.Plugin{}
-		etcdDataSync := &kvdbsync.Plugin{}
-		resyncOrch := &resync.Plugin{}
+	p := &ExamplePlugin{
+		Log:             logging.ForPlugin(PluginName),
+		StatusMonitor:   &statuscheck.DefaultPlugin,
+		exampleFinished: make(chan struct{}),
+	}
 
-		etcdPlug.Deps.PluginInfraDeps = *flavor.InfraDeps("etcd", local.WithConf())
-		resyncOrch.Deps.PluginLogDeps = *flavor.LogDeps("etcd-resync")
-		connectors.InjectKVDBSync(etcdDataSync, etcdPlug, etcdPlug.PluginName, flavor, resyncOrch)
-
-		examplePlug := &ExamplePlugin{closeChannel: exampleFinished}
-		examplePlug.PluginInfraDeps = *flavor.InfraDeps("statuscheck-example")
-		examplePlug.StatusMonitor = &flavor.StatusCheck // Inject status check
-
-		return []*core.NamedPlugin{
-			{etcdPlug.PluginName, etcdPlug},
-			{etcdDataSync.PluginName, etcdDataSync},
-			{resyncOrch.PluginName, resyncOrch},
-			{examplePlug.PluginName, examplePlug}}
-	}))
-	core.EventLoopWithInterrupt(agent, nil)
+	a := agent.NewAgent(
+		agent.AllPlugins(etcdDataSync, p),
+		agent.QuitOnClose(p.exampleFinished),
+	)
+	if err := a.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // ExamplePlugin demonstrates the usage of datasync API.
 type ExamplePlugin struct {
-	local.PluginInfraDeps // injected
-	StatusMonitor         statuscheck.StatusReader
+	Log           logging.PluginLogger
+	StatusMonitor statuscheck.StatusReader
 
 	// Fields below are used to properly finish the example.
-	closeChannel chan struct{}
+	exampleFinished chan struct{}
+}
+
+// String return plugin name.
+func (plugin *ExamplePlugin) String() string {
+	return PluginName
 }
 
 // Init starts the consumer.
@@ -77,8 +80,7 @@ func (plugin *ExamplePlugin) Init() error {
 
 // AfterInit starts the publisher and prepares for the shutdown.
 func (plugin *ExamplePlugin) AfterInit() error {
-
-	go plugin.checkStatus(plugin.closeChannel)
+	go plugin.checkStatus(plugin.exampleFinished)
 
 	return nil
 }
@@ -102,5 +104,5 @@ func (plugin *ExamplePlugin) checkStatus(closeCh chan struct{}) {
 
 // Close shutdowns the consumer and channels used to propagate data resync and data change events.
 func (plugin *ExamplePlugin) Close() error {
-	return safeclose.Close(plugin.closeChannel)
+	return safeclose.Close(plugin.exampleFinished)
 }

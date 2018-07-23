@@ -15,10 +15,13 @@
 package main
 
 import (
+	"log"
 	"time"
 
-	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/agent"
+	"github.com/ligato/cn-infra/config"
+	"github.com/ligato/cn-infra/infra"
+	"github.com/ligato/cn-infra/logging"
 )
 
 // PluginName is injected as the plugin name.
@@ -40,26 +43,37 @@ const PluginName = "example"
 // ************************************************************************/
 
 func main() {
-	// Init close channel to stop the example after everything was logged.
-	exampleFinished := make(chan struct{}, 1)
-
-	// Start Agent with ExampleFlavor
-	// (combination of ExamplePlugin & Local flavor)
-	agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
-		examplePlug := &ExamplePlugin{
-			exampleFinished: exampleFinished,
-			PluginInfraDeps: *flavor.InfraDeps(PluginName, local.WithConf()),
-		}
-		return []*core.NamedPlugin{{examplePlug.PluginName, examplePlug}}
-	}))
-	core.EventLoopWithInterrupt(agent, exampleFinished)
+	p := &ExamplePlugin{
+		Deps: Deps{
+			PluginName:   infra.PluginName(PluginName),
+			Log:          logging.ForPlugin(PluginName),
+			PluginConfig: config.ForPlugin(PluginName),
+		},
+		exampleFinished: make(chan struct{}),
+	}
+	a := agent.NewAgent(
+		agent.AllPlugins(p),
+		agent.QuitOnClose(p.exampleFinished),
+	)
+	if err := a.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // ExamplePlugin demonstrates the use of injected Config plugin.
 type ExamplePlugin struct {
-	local.PluginInfraDeps // this field is usually injected in flavor
-	*Conf                 // it is possible to set config value programmatically (can be overridden)
-	exampleFinished       chan struct{}
+	Deps
+
+	Conf *Conf // it is possible to set config value programmatically (can be overridden)
+
+	exampleFinished chan struct{}
+}
+
+// Deps defines dependencies for ExamplePlugin.
+type Deps struct {
+	infra.PluginName
+	Log          logging.PluginLogger
+	PluginConfig config.PluginConfig
 }
 
 // Conf - example config binding
@@ -92,8 +106,19 @@ func (plugin *ExamplePlugin) Init() (err error) {
 		plugin.Log.Info("Loaded plugin config - default")
 	}
 	plugin.Log.Info("Plugin Config ", plugin.Conf)
+
 	time.Sleep(plugin.Conf.Sleep)
-	plugin.exampleFinished <- struct{}{}
+	close(plugin.exampleFinished)
 
 	return nil
+}
+
+// Close closes the plugin.
+func (plugin *ExamplePlugin) Close() (err error) {
+	return nil
+}
+
+// Name returns name of the plugin.
+func (plugin *ExamplePlugin) Name() string {
+	return PluginName
 }

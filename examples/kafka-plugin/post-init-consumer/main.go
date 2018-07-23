@@ -3,11 +3,9 @@ package main
 import (
 	"time"
 
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/examples/model"
-	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/messaging"
-	"github.com/ligato/cn-infra/messaging/kafka"
 	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
@@ -18,10 +16,10 @@ import (
 
 func main() {
 	// Init close channel used to stop the example
-	exampleFinished := make(chan struct{}, 1)
+	//exampleFinished := make(chan struct{})
 
 	// Start Agent with ExamplePlugin, KafkaPlugin & FlavorLocal (reused cn-infra plugins).
-	agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
+	/*agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
 		kafkaPlug := &kafka.Plugin{}
 		kafkaPlug.Deps.PluginInfraDeps = *flavor.InfraDeps("kafka", local.WithConf())
 
@@ -34,7 +32,9 @@ func main() {
 			{examplePlug.PluginName, examplePlug}}
 	}))
 
-	core.EventLoopWithInterrupt(agent, exampleFinished)
+	core.EventLoopWithInterrupt(agent, exampleFinished)*/
+
+	// TODO: use new agent with options
 }
 
 // ExamplePlugin demonstrates the use of Kafka plugin API from another plugin.
@@ -55,8 +55,9 @@ type ExamplePlugin struct {
 
 // Deps lists dependencies of ExamplePlugin.
 type Deps struct {
-	Kafka               messaging.Mux // injected
-	local.PluginLogDeps               // injected
+	Kafka messaging.Mux // injected
+	//local.PluginLogDeps               // injected
+	Log logging.PluginLogger
 }
 
 const (
@@ -120,7 +121,7 @@ func (plugin *ExamplePlugin) closeExample() {
 
 			plugin.Log.Info("kafka example finished, sending shutdown ...")
 
-			plugin.closeChannel <- struct{}{}
+			close(plugin.closeChannel)
 			break
 		}
 	}
