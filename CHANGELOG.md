@@ -1,3 +1,9 @@
+# Release v1.4.1 (2018-07-23)
+
+## Bugfix
+  * Fixed issue in Consul client that caused brokers to incorrectly
+  trim prefixes and thus storing invalid revisions for resync.
+
 # Release v1.4 (2018-07-16)
 
 ## Breaking Changes

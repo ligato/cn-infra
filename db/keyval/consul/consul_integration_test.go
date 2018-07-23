@@ -149,16 +149,74 @@ func TestListKeysPrefixed(t *testing.T) {
 	}
 }
 
+func TestListKeysPrefixedSlash(t *testing.T) {
+	ctx := setupTest(t)
+	defer ctx.teardownTest()
+
+	ctx.testSrv.PopulateKV(t, map[string][]byte{
+		"myprefix/key/1": []byte("val1"),
+		"myprefix/key/2": []byte("val2"),
+		"myprefix/anb/7": []byte("xxx"),
+		"key/x":          []byte("valx"),
+	})
+
+	client := ctx.client.NewBroker("/myprefix/")
+	kvi, err := client.ListKeys("key/")
+	Expect(err).ToNot(HaveOccurred())
+	Expect(kvi).NotTo(BeNil())
+
+	expectedKeys := []string{"key/1", "key/2"}
+	for i := 0; i <= len(expectedKeys); i++ {
+		key, _, all := kvi.GetNext()
+		if i == len(expectedKeys) {
+			Expect(all).To(BeTrue())
+			break
+		}
+		Expect(all).To(BeFalse())
+		// verify that prefix of BytesBrokerWatcherEtcd is trimmed
+		Expect(key).To(BeEquivalentTo(expectedKeys[i]))
+	}
+}
+
 func TestListValues(t *testing.T) {
 	ctx := setupTest(t)
 	defer ctx.teardownTest()
 
 	ctx.testSrv.PopulateKV(t, map[string][]byte{
-		"key/1": []byte("val1"),
-		"key/2": []byte("val2"),
+		"key/1":  []byte("val1"),
+		"key/2":  []byte("val2"),
+		"foo/22": []byte("bar33"),
 	})
 
 	kvi, err := ctx.client.ListValues("key")
+	Expect(err).ToNot(HaveOccurred())
+	Expect(kvi).NotTo(BeNil())
+
+	expectedKeys := []string{"key/1", "key/2"}
+	for i := 0; i <= len(expectedKeys); i++ {
+		kv, all := kvi.GetNext()
+		if i == len(expectedKeys) {
+			Expect(all).To(BeTrue())
+			break
+		}
+		Expect(kv).NotTo(BeNil())
+		Expect(all).To(BeFalse())
+		// verify that prefix of BytesBrokerWatcherEtcd is trimmed
+		Expect(kv.GetKey()).To(BeEquivalentTo(expectedKeys[i]))
+	}
+}
+
+func TestListValuesSlash(t *testing.T) {
+	ctx := setupTest(t)
+	defer ctx.teardownTest()
+
+	ctx.testSrv.PopulateKV(t, map[string][]byte{
+		"key/1":  []byte("val1"),
+		"key/2":  []byte("val2"),
+		"foo/22": []byte("bar33"),
+	})
+
+	kvi, err := ctx.client.ListValues("/key")
 	Expect(err).ToNot(HaveOccurred())
 	Expect(kvi).NotTo(BeNil())
 
@@ -181,23 +239,56 @@ func TestListValuesPrefixed(t *testing.T) {
 	defer ctx.teardownTest()
 
 	ctx.testSrv.PopulateKV(t, map[string][]byte{
-		"myprefix/key/1": []byte("val1"),
-		"myprefix/key/2": []byte("val2"),
-		"key/x":          []byte("valx"),
+		"myprefix/key/at/1": []byte("val1"),
+		"myprefix/key/at/2": []byte("val2"),
+		"myprefix/key/bt/3": []byte("val3"),
+		"key/x":             []byte("valx"),
 	})
 
 	client := ctx.client.NewBroker("myprefix/")
-	kvi, err := client.ListValues("key")
+	kvi, err := client.ListValues("key/at/")
 	Expect(err).ToNot(HaveOccurred())
 	Expect(kvi).NotTo(BeNil())
 
-	expectedKeys := []string{"key/1", "key/2"}
+	expectedKeys := []string{"key/at/1", "key/at/2"}
 	for i := 0; i <= len(expectedKeys); i++ {
 		kv, all := kvi.GetNext()
 		if i == len(expectedKeys) {
 			Expect(all).To(BeTrue())
 			break
 		}
+		t.Logf("%+v", kv.GetKey())
+		Expect(kv).NotTo(BeNil())
+		Expect(all).To(BeFalse())
+		// verify that prefix of BytesBrokerWatcherEtcd is trimmed
+		Expect(kv.GetKey()).To(BeEquivalentTo(expectedKeys[i]))
+	}
+}
+
+func TestListValuesPrefixedSlash(t *testing.T) {
+	ctx := setupTest(t)
+	defer ctx.teardownTest()
+
+	ctx.testSrv.PopulateKV(t, map[string][]byte{
+		"myprefix/key/at/1": []byte("val1"),
+		"myprefix/key/at/2": []byte("val2"),
+		"myprefix/key/bt/3": []byte("val3"),
+		"key/x":             []byte("valx"),
+	})
+
+	client := ctx.client.NewBroker("/myprefix/")
+	kvi, err := client.ListValues("key/at/")
+	Expect(err).ToNot(HaveOccurred())
+	Expect(kvi).NotTo(BeNil())
+
+	expectedKeys := []string{"key/at/1", "key/at/2"}
+	for i := 0; i <= len(expectedKeys); i++ {
+		kv, all := kvi.GetNext()
+		if i == len(expectedKeys) {
+			Expect(all).To(BeTrue())
+			break
+		}
+		t.Logf("%+v", kv.GetKey())
 		Expect(kv).NotTo(BeNil())
 		Expect(all).To(BeFalse())
 		// verify that prefix of BytesBrokerWatcherEtcd is trimmed
