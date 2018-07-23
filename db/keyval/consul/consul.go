@@ -295,7 +295,7 @@ func (c *Client) watchPrefix(ctx context.Context, prefix string) <-chan watchRes
 					if oldPair, ok := oldPairsMap[pair.Key]; ok {
 						prevVal = oldPair.Value
 					}
-					consulLogger.Warnf(" * modified key: %v prevValue: %v prevModify: %v", pair.Key, len(pair.Value), len(prevVal))
+					consulLogger.Debugf(" * modified key: %v prevValue: %v prevModify: %v", pair.Key, len(pair.Value), len(prevVal))
 					evs = append(evs, &watchEvent{
 						Type:      datasync.Put,
 						Key:       pair.Key,
