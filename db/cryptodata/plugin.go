@@ -15,11 +15,11 @@
 package cryptodata
 
 import (
-	"github.com/ligato/cn-infra/flavors/local"
 	"io/ioutil"
 	"encoding/pem"
 	"crypto/x509"
 	"errors"
+	"github.com/ligato/cn-infra/infra"
 )
 
 // Config is used to read private key from file
@@ -30,7 +30,7 @@ type Config struct {
 
 // Deps lists dependencies of the cryptodata plugin.
 type Deps struct {
-	local.PluginInfraDeps
+	infra.Deps
 }
 
 // Plugin implements cryptodata as plugin.
