@@ -24,6 +24,8 @@ import (
 // There is also created custom metrics registry exposed accessible:
 //       curl localhost:9191/custom
 // ************************************************************************/
+
+// PluginName represents name of plugin.
 const PluginName = "example"
 
 func main() {

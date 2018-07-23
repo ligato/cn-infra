@@ -17,6 +17,8 @@ import (
 // This file contains GRPC service exposure example. To register service use
 // Server.RegisterService(descriptor, service)
 // ************************************************************************/
+
+// PluginName represents name of plugin.
 const PluginName = "myPlugin"
 
 func main() {

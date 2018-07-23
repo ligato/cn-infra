@@ -20,6 +20,8 @@ import (
 // Global log levels can be changed locally with the Logger.SetLevel()
 // or remotely using REST (but different flavor must be used: rpc.RpcFlavor).
 // ************************************************************************/
+
+// PluginName represents name of plugin.
 const PluginName = "example"
 
 func main() {

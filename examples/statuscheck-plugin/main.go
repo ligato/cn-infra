@@ -32,6 +32,8 @@ import (
 // ETCD plugin is monitored by status check plugin.
 // ExamplePlugin periodically prints the status.
 // ************************************************************************/
+
+// PluginName represents name of plugin.
 const PluginName = "example"
 
 func main() {

@@ -26,6 +26,8 @@ import (
 // The consumer is notified with each change and reports the events into
 // the log.
 // ************************************************************************/
+
+// PluginName represents name of plugin.
 const PluginName = "example"
 
 func main() {
