@@ -25,9 +25,9 @@ type CoreBrokerWatcherWrapper struct {
 	// Wrapped BytesBroker
 	bytesWrap *BytesBrokerWrapper
 	// Function used for decrypting arbitrary data later
-	decryptArbitrary DecryptArbitrary
-	// Decrypter is used to decrypt data
-	decrypter Decrypter
+	decryptFunc DecryptFunc
+	// ArbitraryDecrypter is used to decrypt data
+	decrypter ArbitraryDecrypter
 }
 
 // BytesBrokerWrapper wraps keyval.BytesBroker with additional support of reading encrypted data
@@ -35,22 +35,22 @@ type BytesBrokerWrapper struct {
 	// Wrapped BytesBroker
 	keyval.BytesBroker
 	// Function used for decrypting arbitrary data later
-	decryptArbitrary DecryptArbitrary
-	// Decrypter is used to decrypt data
-	decrypter Decrypter
+	decryptFunc DecryptFunc
+	// ArbitraryDecrypter is used to decrypt data
+	decrypter ArbitraryDecrypter
 }
 
 // NewCoreBrokerWatcherWrapper creates wrapper for provided CoreBrokerWatcher, adding support for decrypting encrypted
 // data
-func NewCoreBrokerWatcherWrapper(cbw keyval.CoreBrokerWatcher, decrypter Decrypter, decryptArbitrary DecryptArbitrary) *CoreBrokerWatcherWrapper {
+func NewCoreBrokerWatcherWrapper(cbw keyval.CoreBrokerWatcher, decrypter ArbitraryDecrypter, decryptFunc DecryptFunc) *CoreBrokerWatcherWrapper {
 	return &CoreBrokerWatcherWrapper{
 		CoreBrokerWatcher: cbw,
-		decryptArbitrary:  decryptArbitrary,
+		decryptFunc:       decryptFunc,
 		decrypter:         decrypter,
 		bytesWrap: &BytesBrokerWrapper{
-			BytesBroker:      cbw,
-			decryptArbitrary: decryptArbitrary,
-			decrypter:        decrypter,
+			BytesBroker: cbw,
+			decryptFunc: decryptFunc,
+			decrypter:   decrypter,
 		},
 	}
 }
@@ -60,9 +60,9 @@ func NewCoreBrokerWatcherWrapper(cbw keyval.CoreBrokerWatcher, decrypter Decrypt
 // To avoid using a prefix, pass keyval.Root constant as argument.
 func (cbw *CoreBrokerWatcherWrapper) NewBroker(prefix string) keyval.BytesBroker {
 	return &BytesBrokerWrapper{
-		BytesBroker:      cbw.CoreBrokerWatcher.NewBroker(prefix),
-		decryptArbitrary: cbw.decryptArbitrary,
-		decrypter:        cbw.decrypter,
+		BytesBroker: cbw.CoreBrokerWatcher.NewBroker(prefix),
+		decryptFunc: cbw.decryptFunc,
+		decrypter:   cbw.decrypter,
 	}
 }
 
@@ -70,7 +70,7 @@ func (cbw *CoreBrokerWatcherWrapper) NewBroker(prefix string) keyval.BytesBroker
 func (cbb *BytesBrokerWrapper) GetValue(key string) (data []byte, found bool, revision int64, err error) {
 	data, found, revision, err = cbb.BytesBroker.GetValue(key)
 	if err == nil {
-		data, err = cbb.decrypter.Decrypt(data, cbb.decryptArbitrary)
+		data, err = cbb.decrypter.Decrypt(data, cbb.decryptFunc)
 	}
 	return
 }

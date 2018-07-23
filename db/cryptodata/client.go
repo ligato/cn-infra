@@ -49,14 +49,14 @@ func NewClient(clientConfig ClientConfig) (client *Client) {
 	return
 }
 
-// EncryptArbitrary decrypts arbitrary input data using provided public key
-func (client *Client) EncryptArbitrary(inData []byte, pub *rsa.PublicKey) (data []byte, err error) {
+// EncryptData encrypts input data using provided public key
+func (client *Client) EncryptData(inData []byte, pub *rsa.PublicKey) (data []byte, err error) {
 	data, err = rsa.EncryptPKCS1v15(client.Reader, pub, inData)
 	return
 }
 
-// DecryptArbitrary decrypts arbitrary input data
-func (client *Client) DecryptArbitrary(inData []byte) (data []byte, err error) {
+// DecryptData decrypts input data
+func (client *Client) DecryptData(inData []byte) (data []byte, err error) {
 	for _, key := range client.PrivateKeys {
 		data, err := rsa.DecryptPKCS1v15(client.Reader, key, inData)
 
@@ -69,6 +69,6 @@ func (client *Client) DecryptArbitrary(inData []byte) (data []byte, err error) {
 }
 
 // Wrap wraps core broker watcher with support for decrypting encrypted keys
-func (client *Client) Wrap(cbw keyval.CoreBrokerWatcher, decrypter Decrypter) keyval.CoreBrokerWatcher {
-	return NewCoreBrokerWatcherWrapper(cbw, decrypter, client.DecryptArbitrary)
+func (client *Client) Wrap(cbw keyval.CoreBrokerWatcher, decrypter ArbitraryDecrypter) keyval.CoreBrokerWatcher {
+	return NewCoreBrokerWatcherWrapper(cbw, decrypter, client.DecryptData)
 }

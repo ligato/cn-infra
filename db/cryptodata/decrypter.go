@@ -24,22 +24,22 @@ const cryptoPrefix = "$crypto$"
 
 var encryptedJSONRegex = regexp.MustCompile(`"encrypted"\s*:\s*"true"`)
 
-// DecryptArbitrary is function that decrypts arbitrary data
-type DecryptArbitrary func(inData []byte) (data [] byte, err error)
+// DecryptFunc is function that decrypts arbitrary data
+type DecryptFunc func(inData []byte) (data [] byte, err error)
 
-// Decrypter is interface for decrypting groups of data
-type Decrypter interface {
+// ArbitraryDecrypter is interface for decrypting groups of data
+type ArbitraryDecrypter interface {
 	// Decrypt decrypts input data using provided decrypting function for arbitrary data
-	Decrypt(inData []byte, decryptArbitrary DecryptArbitrary) (data []byte, err error)
+	Decrypt(inData []byte, decryptFunc DecryptFunc) (data []byte, err error)
 }
 
-// DecrypterJSON is Decrypter implementations that can decrypt JSON values
+// DecrypterJSON is ArbitraryDecrypter implementations that can decrypt JSON values
 type DecrypterJSON struct{}
 
 // Decrypt tries to decrypt JSON data that are encrypted based on "encrypted": "true" presence in it.
 // Then it parses data as JSON as tries to lookup all top-level values that begin with $crypto$ and decrypt them
 // using provided arbitrary decrypt function.
-func (DecrypterJSON) Decrypt(inData []byte, decryptArbitrary DecryptArbitrary) (data []byte, err error) {
+func (DecrypterJSON) Decrypt(inData []byte, decryptFunc DecryptFunc) (data []byte, err error) {
 	data = inData
 
 	if !encryptedJSONRegex.Match(inData) {
@@ -68,7 +68,7 @@ func (DecrypterJSON) Decrypt(inData []byte, decryptArbitrary DecryptArbitrary) (
 		}
 
 		stringVal = strings.TrimPrefix(stringVal, cryptoPrefix)
-		arbitraryData, err := decryptArbitrary([]byte(stringVal))
+		arbitraryData, err := decryptFunc([]byte(stringVal))
 		if err == nil {
 			jsonData[k] = string(arbitraryData)
 		}

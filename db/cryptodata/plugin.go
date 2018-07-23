@@ -18,7 +18,6 @@ import (
 	"io/ioutil"
 	"encoding/pem"
 	"crypto/x509"
-	"errors"
 	"github.com/ligato/cn-infra/infra"
 )
 
@@ -64,30 +63,30 @@ func (plugin *Plugin) Init() (err error) {
 			return err
 		}
 
-		block, rest := pem.Decode(bytes)
-		if block == nil {
-			return errors.New("failed to decode PEM for key " + file)
-		}
-
 		for {
+			block, rest := pem.Decode(bytes)
+			if block == nil {
+				break
+			}
+
 			privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 			if err != nil {
 				return err
 			}
 
-			privateKey.Precompute()
 			err = privateKey.Validate()
 			if err != nil {
 				return err
 			}
 
+			privateKey.Precompute()
 			clientConfig.PrivateKeys = append(clientConfig.PrivateKeys, privateKey)
 
 			if rest == nil {
 				break
 			}
 
-			block, rest = pem.Decode(rest)
+			bytes = rest
 		}
 	}
 

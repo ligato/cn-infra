@@ -64,7 +64,7 @@ func main() {
 	fmt.Printf("Input %v\n", string(input))
 
 	// Encrypt input string using public key
-	encrypted, err := client.EncryptArbitrary(input, publicKey)
+	encrypted, err := client.EncryptData(input, publicKey)
 	if err != nil {
 		fmt.Printf("Error %v\n", err)
 		return
@@ -72,7 +72,7 @@ func main() {
 	fmt.Printf("Encrypted %v\n", encrypted)
 
 	// Decrypt previously encrypted input string
-	decrypted, err := client.DecryptArbitrary(encrypted)
+	decrypted, err := client.DecryptData(encrypted)
 	if err != nil {
 		fmt.Printf("Error %v\n", err)
 		return
