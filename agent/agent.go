@@ -20,11 +20,10 @@ import (
 	"os/signal"
 
 	"github.com/ligato/cn-infra/config"
-	"github.com/namsral/flag"
-
 	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/utils/once"
+	"github.com/namsral/flag"
 )
 
 // Variables set by the compiler using ldflags
@@ -39,16 +38,32 @@ var (
 
 // Agent implements startup & shutdown procedures for plugins.
 type Agent interface {
+	// Run is a blocking call which starts the agent with all of its plugins,
+	// waits for a signal from OS (SIGINT, SIGTERM by default), context cancellation or
+	// close of quit channel (can be set via options) and then stops the agent.
+	// Returns nil if all the plugins were intialized and closed successfully.
 	Run() error
+	// Start starts the agent with all the plugins, calling their Init() and optionally AfterInit().
+	// Returns nil if all the plugins were initialized successfully.
 	Start() error
+	// Stop stops the agent with all the plugins, calling their Close().
+	// Returns nil if all the plugins were closed successfully.
 	Stop() error
-	Wait() error
-	After() <-chan struct{}
-	Error() error
+	// Options returns all agent's options configured via constructor.
 	Options() Options
+
+	// Wait waits until agent is stopped  and returns same error as Stop().
+	Wait() error
+	// After returns a channel that is closed before the agents is stopped.
+	// Note: It is not certain the all plugins are stopped, see Error()..
+	After() <-chan struct{}
+	// Error returns an error that occurret when the agent was stopped.
+	// Note: This essentially just calls Stop()..
+	Error() error
 }
 
-// NewAgent creates a new Agent
+// NewAgent creates a new agent using given options and registers all flags
+// defined for plugins via config.ForPlugin.
 func NewAgent(opts ...Option) Agent {
 	options := newOptions(opts...)
 
@@ -92,6 +107,19 @@ func (a *agent) Options() Options {
 // running after Start returns.
 func (a *agent) Start() error {
 	return a.startOnce.Do(a.startSignalWrapper)
+}
+
+// Stop the Agent.  Calls close on all Plugins
+func (a *agent) Stop() error {
+	return a.stopOnce.Do(a.stop)
+}
+
+// Run runs the agent.  Run will not return until a SIGINT, SIGTERM, or SIGKILL is received
+func (a *agent) Run() error {
+	if err := a.Start(); err != nil {
+		return err
+	}
+	return a.Wait()
 }
 
 func (a *agent) startSignalWrapper() error {
@@ -169,11 +197,6 @@ func (a *agent) start() error {
 	return nil
 }
 
-// Stop the Agent.  Calls close on all Plugins
-func (a *agent) Stop() error {
-	return a.stopOnce.Do(a.stop)
-}
-
 func (a *agent) stop() error {
 	if a.stopCh == nil {
 		err := errors.New("attempted to stop an agent that wasn't Started")
@@ -208,14 +231,6 @@ func (a *agent) Wait() error {
 	// If we get here, a.Stop() has already been called, and we are simply
 	// retrieving the error if any squirreled away by stopOnce
 	return a.Stop()
-}
-
-// Run runs the agent.  Run will not return until a SIGINT, SIGTERM, or SIGKILL is received
-func (a *agent) Run() error {
-	if err := a.Start(); err != nil {
-		return err
-	}
-	return a.Wait()
 }
 
 // After returns a channel that will be closed when the agent is Stopped.
