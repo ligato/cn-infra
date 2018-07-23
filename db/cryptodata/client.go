@@ -23,8 +23,7 @@ import (
 
 // Client handles encrypting/decrypting and wrapping data
 type Client struct {
-	// List of private keys required from config
-	privateKeys []*rsa.PrivateKey
+	ClientConfig
 }
 
 // NewClient creates new client from provided config
@@ -36,17 +35,13 @@ func NewClient(config Config) (client Client, err error) {
 
 // UpdateConfig updates private key configuration for client
 func (client *Client) UpdateConfig(config Config) (err error) {
-	var clientConfig ClientConfig
-	err = ReadCryptoConfig(config, &clientConfig)
-	if err == nil {
-		client.privateKeys = clientConfig.PrivateKeys
-	}
+	client.ClientConfig, err = ReadCryptoConfig(config)
 	return
 }
 
 // EncryptArbitrary decrypts arbitrary input data
 func (client *Client) EncryptArbitrary(inData []byte) (data []byte, err error) {
-	for _, key := range client.privateKeys {
+	for _, key := range client.PrivateKeys {
 		data, err := rsa.EncryptPKCS1v15(rand.Reader, &key.PublicKey, inData)
 
 		if err == nil {
@@ -59,7 +54,7 @@ func (client *Client) EncryptArbitrary(inData []byte) (data []byte, err error) {
 
 // DecryptArbitrary decrypts arbitrary input data
 func (client *Client) DecryptArbitrary(inData []byte) (data []byte, err error) {
-	for _, key := range client.privateKeys {
+	for _, key := range client.PrivateKeys {
 		data, err := rsa.DecryptPKCS1v15(rand.Reader, key, inData)
 
 		if err == nil {

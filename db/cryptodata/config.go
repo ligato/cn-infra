@@ -35,35 +35,37 @@ type ClientConfig struct {
 }
 
 // ReadCryptoConfig reads private key from PEM path
-func ReadCryptoConfig(config Config, clientConfig *ClientConfig) (error) {
+func ReadCryptoConfig(config Config) (clientConfig ClientConfig, err error) {
+	clientConfig = ClientConfig{}
+
 	if len(config.PrivateKeyFiles) == 0 {
-		return nil
+		return
 	}
 
 	for _, file := range config.PrivateKeyFiles {
 		bytes, err := ioutil.ReadFile(file)
 		if err != nil {
-			return err
+			return clientConfig, err
 		}
 
 		block, _ := pem.Decode(bytes)
 		if block == nil {
-			return errors.New("failed to decode PEM for key " + file)
+			return clientConfig, errors.New("failed to decode PEM for key " + file)
 		}
 
 		privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 		if err != nil {
-			return err
+			return clientConfig, err
 		}
 
 		privateKey.Precompute()
 		err = privateKey.Validate()
 		if err != nil {
-			return err
+			return clientConfig, err
 		}
 
 		clientConfig.PrivateKeys = append(clientConfig.PrivateKeys, privateKey)
 	}
 
-	return nil
+	return
 }

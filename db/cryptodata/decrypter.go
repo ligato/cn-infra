@@ -20,6 +20,8 @@ import (
 	"strings"
 )
 
+const cryptoPrefix = "$crypto$"
+
 var encryptedJSONRegex = regexp.MustCompile(`"encrypted"\s*:\s*"true"`)
 
 // DecryptArbitrary is function that decrypts arbitrary data
@@ -28,7 +30,7 @@ type DecryptArbitrary func(inData []byte) (data [] byte, err error)
 // Decrypter is interface for decrypting groups of data
 type Decrypter interface {
 	// Decrypt decrypts input data using provided decrypting function for arbitrary data
-	Decrypt(inData []byte, decryptArbitrary DecryptArbitrary) (data []byte)
+	Decrypt(inData []byte, decryptArbitrary DecryptArbitrary) (data []byte, err error)
 }
 
 // DecrypterJSON is Decrypter implementations that can decrypt JSON values
@@ -37,43 +39,41 @@ type DecrypterJSON struct{}
 // Decrypt tries to decrypt JSON data that are encrypted based on "encrypted": "true" presence in it.
 // Then it parses data as JSON as tries to lookup all top-level values that begin with $crypto$ and decrypt them
 // using provided arbitrary decrypt function.
-func (DecrypterJSON) Decrypt(inData []byte, decryptArbitrary DecryptArbitrary) (data []byte) {
+func (DecrypterJSON) Decrypt(inData []byte, decryptArbitrary DecryptArbitrary) (data []byte, err error) {
 	data = inData
 
 	if !encryptedJSONRegex.Match(inData) {
 		return
 	}
 
-	var jsonData interface{}
-	err := json.Unmarshal(inData, &jsonData)
+	var jsonData map[string]interface{}
+	err = json.Unmarshal(inData, &jsonData)
 	if err != nil {
 		return
 	}
 
-	jsonMap, ok := jsonData.(map[string]interface{})
-	if !ok {
-		return
-	}
-
-	for k, v := range jsonMap {
-		stringVal, ok := v.(string)
-		prefix := "$crypto$"
-
-		if !ok || !strings.HasPrefix(stringVal, prefix) {
+	for k, v := range jsonData {
+		var stringVal string
+		switch t := v.(type) {
+		case string:
+			stringVal = t
+		case []byte:
+			stringVal = string(t)
+		default:
 			continue
 		}
 
-		stringVal = strings.TrimPrefix(stringVal, prefix)
+		if !strings.HasPrefix(stringVal, cryptoPrefix) {
+			continue
+		}
+
+		stringVal = strings.TrimPrefix(stringVal, cryptoPrefix)
 		arbitraryData, err := decryptArbitrary([]byte(stringVal))
 		if err == nil {
-			jsonMap[k] = string(arbitraryData)
+			jsonData[k] = string(arbitraryData)
 		}
 	}
 
-	jsonBytes, err := json.Marshal(jsonMap)
-	if err == nil {
-		data = jsonBytes
-	}
-
+	data, err = json.Marshal(jsonData)
 	return
 }

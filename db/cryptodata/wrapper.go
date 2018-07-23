@@ -70,7 +70,7 @@ func (cbw *CoreBrokerWatcherWrapper) NewBroker(prefix string) keyval.BytesBroker
 func (cbb *BytesBrokerWrapper) GetValue(key string) (data []byte, found bool, revision int64, err error) {
 	data, found, revision, err = cbb.BytesBroker.GetValue(key)
 	if err == nil {
-		data = cbb.decrypter.Decrypt(data, cbb.decryptArbitrary)
+		data, err = cbb.decrypter.Decrypt(data, cbb.decryptArbitrary)
 	}
 	return
 }
