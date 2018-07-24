@@ -202,6 +202,7 @@ func (a *agent) stop() error {
 
 	// Close plugins
 	for _, p := range a.opts.Plugins {
+		agentLogger.Debugf("=> Close(): %v", p)
 		if err := p.Close(); err != nil {
 			return err
 		}
