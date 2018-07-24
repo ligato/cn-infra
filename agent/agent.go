@@ -16,7 +16,6 @@ package agent
 
 import (
 	"errors"
-	"flag"
 	"os"
 	"os/signal"
 
@@ -24,6 +23,7 @@ import (
 	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/utils/once"
+	"github.com/namsral/flag"
 )
 
 // Variables set by the compiler using ldflags

@@ -91,7 +91,6 @@ func findPlugins(val reflect.Value, uniqueness map[infra.Plugin]struct{}, x ...i
 
 		// PkgPath is empty for exported fields
 		if exported := field.PkgPath == ""; !exported {
-			logf(" - skip unexported: %v", field.Name)
 			continue
 		}
 
