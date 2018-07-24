@@ -22,6 +22,7 @@ import (
 	"encoding/pem"
 	"crypto/x509"
 	"crypto/rsa"
+	"encoding/base64"
 )
 
 func main() {
@@ -61,25 +62,28 @@ func main() {
 
 	// Pass 1st argument from CLI as string to encrypt
 	input := []byte(os.Args[1])
-	fmt.Printf("Input %v\n", string(input))
+	fmt.Printf("> Input value:\n%v\n", string(input))
 
 	// Encrypt input string using public key
 	encrypted, err := client.EncryptData(input, publicKey)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Encrypted %v\n", string(encrypted))
+	fmt.Printf("> Encrypted value:\n%v\n", encrypted)
 
 	// Decrypt previously encrypted input string
 	decrypted, err := client.DecryptData(encrypted)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Decrypted %v\n", string(decrypted))
+	fmt.Printf("> Decrypted value:\n%v\n", string(decrypted))
+
+	// Encode the string to base64 in order to make it compatible with JSON decrypter
+	encryptedBase64 := base64.URLEncoding.EncodeToString(encrypted)
 
 	// Try to decrypt JSON with encrypted data
-	encryptedJSON := fmt.Sprintf(`{ "encrypted": "true", "value": { "payload": "$crypto$%v" } }`, string(encrypted))
-	fmt.Printf("Encrypted json \n%v\n", encryptedJSON)
+	encryptedJSON := fmt.Sprintf(`{"encrypted":true,"value":{"payload":"$crypto$%v"}}`, encryptedBase64)
+	fmt.Printf("> Encrypted json:\n%v\n", encryptedJSON)
 
 	decrypter := cryptodata.NewDecrypterJSON()
 	decryptedJSON, err := decrypter.Decrypt([]byte(encryptedJSON), client.DecryptData)
@@ -87,5 +91,5 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("Decrypted json \n%v\n", string(decryptedJSON))
+	fmt.Printf("> Decrypted json:\n%v\n", string(decryptedJSON))
 }

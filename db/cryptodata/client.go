@@ -20,7 +20,6 @@ import (
 	"errors"
 	"crypto/rand"
 	"io"
-	"encoding/base64"
 	"hash"
 	"crypto/sha256"
 )
@@ -61,18 +60,11 @@ func NewClient(clientConfig ClientConfig) (client *Client) {
 
 // EncryptData encrypts input data using provided public key
 func (client *Client) EncryptData(inData []byte, pub *rsa.PublicKey) (data []byte, err error) {
-	data, err = rsa.EncryptOAEP(client.Hash, client.Reader, pub, inData, nil)
-	data = []byte(base64.URLEncoding.EncodeToString(data))
-	return
+	return rsa.EncryptOAEP(client.Hash, client.Reader, pub, inData, nil)
 }
 
 // DecryptData decrypts input data
 func (client *Client) DecryptData(inData []byte) (data []byte, err error) {
-	inData, err = base64.URLEncoding.DecodeString(string(inData))
-	if err != nil {
-		return
-	}
-
 	for _, key := range client.PrivateKeys {
 		data, err := rsa.DecryptOAEP(client.Hash, client.Reader, key, inData, nil)
 
