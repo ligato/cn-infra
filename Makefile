@@ -37,6 +37,7 @@ examples-plugin:
 	cd examples/simple-agent && go build -i -v ${LDFLAGS}
 	cd examples/statuscheck-plugin && go build -i -v ${LDFLAGS}
 	cd examples/prometheus-plugin && go build -i -v ${LDFLAGS}
+	cd examples/cryptodata-plugin && go build -i -v ${LDFLAGS}
 
 # Clean examples
 clean-examples:

@@ -67,6 +67,11 @@ func (cbw *CoreBrokerWatcherWrapper) NewBroker(prefix string) keyval.BytesBroker
 }
 
 // GetValue retrieves and tries to decrypt one item under the provided key.
+func (cbw *CoreBrokerWatcherWrapper) GetValue(key string) (data []byte, found bool, revision int64, err error) {
+	return cbw.bytesWrap.GetValue(key)
+}
+
+// GetValue retrieves and tries to decrypt one item under the provided key.
 func (cbb *BytesBrokerWrapper) GetValue(key string) (data []byte, found bool, revision int64, err error) {
 	data, found, revision, err = cbb.BytesBroker.GetValue(key)
 	if err == nil {

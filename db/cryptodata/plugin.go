@@ -36,7 +36,7 @@ type Deps struct {
 type Plugin struct {
 	Deps
 	// Client provides crypto support
-	*Client
+	*ClientWithConfig
 	// Plugin is disabled if there is no config file available
 	disabled bool
 }
@@ -60,6 +60,7 @@ func (plugin *Plugin) Init() (err error) {
 	for _, file := range config.PrivateKeyFiles {
 		bytes, err := ioutil.ReadFile(file)
 		if err != nil {
+			plugin.Log.Infof("%v", err)
 			return err
 		}
 
@@ -71,11 +72,13 @@ func (plugin *Plugin) Init() (err error) {
 
 			privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 			if err != nil {
+				plugin.Log.Infof("%v", err)
 				return err
 			}
 
 			err = privateKey.Validate()
 			if err != nil {
+				plugin.Log.Infof("%v", err)
 				return err
 			}
 
@@ -90,8 +93,13 @@ func (plugin *Plugin) Init() (err error) {
 		}
 	}
 
-	plugin.Client = NewClient(clientConfig)
+	plugin.ClientWithConfig = NewClient(clientConfig)
 	return
+}
+
+// Close closes cryptodata plugin.
+func (plugin *Plugin) Close() error {
+	return nil
 }
 
 // Disabled returns *true* if the plugin is not in use due to missing configuration.

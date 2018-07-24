@@ -24,6 +24,16 @@ import (
 	"crypto/sha256"
 )
 
+// Client handles encrypting/decrypting and wrapping data
+type Client interface {
+	// EncryptData encrypts input data using provided public key
+	EncryptData(inData []byte, pub *rsa.PublicKey) (data []byte, err error)
+	// DecryptData decrypts input data
+	DecryptData(inData []byte) (data []byte, err error)
+	// Wrap wraps core broker watcher with support for decrypting encrypted keys
+	Wrap(cbw keyval.CoreBrokerWatcher, decrypter ArbitraryDecrypter) keyval.CoreBrokerWatcher
+}
+
 // ClientConfig is result of converting Config.PrivateKeyFile to PrivateKey
 type ClientConfig struct {
 	// Private key is used to decrypt encrypted keys while reading them from store
@@ -34,37 +44,37 @@ type ClientConfig struct {
 	Hash hash.Hash
 }
 
-// Client handles encrypting/decrypting and wrapping data
-type Client struct {
+// ClientWithConfig implements client and client configuration
+type ClientWithConfig struct {
 	ClientConfig
 }
 
 // NewClient creates new client from provided config and reader
-func NewClient(clientConfig ClientConfig) (client *Client) {
-	client = &Client{
+func NewClient(clientConfig ClientConfig) *ClientWithConfig {
+	client := &ClientWithConfig{
 		ClientConfig: clientConfig,
 	}
 
 	// If reader is nil use default rand.Reader
-	if client.Reader == nil {
+	if clientConfig.Reader == nil {
 		client.Reader = rand.Reader
 	}
 
 	// If hash is nil use default sha256
-	if client.Hash == nil {
+	if clientConfig.Hash == nil {
 		client.Hash = sha256.New()
 	}
 
-	return
+	return client
 }
 
-// EncryptData encrypts input data using provided public key
-func (client *Client) EncryptData(inData []byte, pub *rsa.PublicKey) (data []byte, err error) {
+// EncryptData implements Client.EncryptData
+func (client *ClientWithConfig) EncryptData(inData []byte, pub *rsa.PublicKey) (data []byte, err error) {
 	return rsa.EncryptOAEP(client.Hash, client.Reader, pub, inData, nil)
 }
 
-// DecryptData decrypts input data
-func (client *Client) DecryptData(inData []byte) (data []byte, err error) {
+// DecryptData implements Client.DecryptData
+func (client *ClientWithConfig) DecryptData(inData []byte) (data []byte, err error) {
 	for _, key := range client.PrivateKeys {
 		data, err := rsa.DecryptOAEP(client.Hash, client.Reader, key, inData, nil)
 
@@ -76,7 +86,7 @@ func (client *Client) DecryptData(inData []byte) (data []byte, err error) {
 	return nil, errors.New("failed to decrypt data due to no private key matching")
 }
 
-// Wrap wraps core broker watcher with support for decrypting encrypted keys
-func (client *Client) Wrap(cbw keyval.CoreBrokerWatcher, decrypter ArbitraryDecrypter) keyval.CoreBrokerWatcher {
+// Wrap implements Client.Wrap
+func (client *ClientWithConfig) Wrap(cbw keyval.CoreBrokerWatcher, decrypter ArbitraryDecrypter) keyval.CoreBrokerWatcher {
 	return NewCoreBrokerWatcherWrapper(cbw, decrypter, client.DecryptData)
 }
