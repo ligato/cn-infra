@@ -66,20 +66,25 @@ func (d DecrypterJSON) Decrypt(inData []byte, decryptFunc DecryptFunc) (data []b
 		return
 	}
 
-	jsonData = d.decryptJSON(jsonData, decryptFunc)
+	jsonData, err = d.decryptJSON(jsonData, decryptFunc)
 	data, err = json.Marshal(jsonData)
 	return
 }
 
 // decryptJSON recursively navigates JSON structure and tries to decrypt all string values with Prefix
-func (d DecrypterJSON) decryptJSON(data map[string]interface{}, decryptFunc DecryptFunc) map[string]interface{} {
+func (d DecrypterJSON) decryptJSON(data map[string]interface{}, decryptFunc DecryptFunc) (map[string]interface{}, error) {
 	for k, v := range data {
 		var stringVal string
 		switch t := v.(type) {
 		case string:
 			stringVal = t
 		case map[string]interface{}:
-			v = d.decryptJSON(t, decryptFunc)
+			val, err := d.decryptJSON(t, decryptFunc)
+			if err != nil {
+				return nil, err
+			}
+
+			v = val
 			continue
 		default:
 			continue
@@ -91,10 +96,12 @@ func (d DecrypterJSON) decryptJSON(data map[string]interface{}, decryptFunc Decr
 
 		stringVal = strings.TrimPrefix(stringVal, d.Prefix)
 		arbitraryData, err := decryptFunc([]byte(stringVal))
-		if err == nil {
-			data[k] = string(arbitraryData)
+		if err != nil {
+			return nil, err
 		}
+
+		data[k] = string(arbitraryData)
 	}
 
-	return data
+	return data, nil
 }
