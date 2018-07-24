@@ -7,6 +7,8 @@ var DefaultPlugin = *NewPlugin()
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
+	p.PluginName = "service-label"
+
 	for _, o := range opts {
 		o(p)
 	}
