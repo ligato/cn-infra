@@ -72,7 +72,6 @@ func (plugin *ExamplePlugin) Init() error {
 	bytes, err := ioutil.ReadFile("../cryptodata-lib/key-pub.pem")
 	if err != nil {
 		return err
-		panic(err)
 	}
 	block, _ := pem.Decode(bytes)
 	if block == nil {
@@ -80,9 +79,12 @@ func (plugin *ExamplePlugin) Init() error {
 	}
 	pubInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	publicKey := pubInterface.(*rsa.PublicKey)
+	publicKey, ok := pubInterface.(*rsa.PublicKey)
+	if !ok {
+		return errors.New("failed to convert public key to rsa.PublicKey")
+	}
 
 	// Create ETCD connection
 	etcdFileConfig := &etcd.Config{}
@@ -121,12 +123,12 @@ func (plugin *ExamplePlugin) Init() error {
 		return err
 	}
 
-	decryptedJson, _, _, err := dbWrapped.GetValue(key)
+	decryptedJSON, _, _, err := dbWrapped.GetValue(key)
 	if err != nil {
 		return err
 	}
 
-	plugin.Log.Info("Got value %v", string(decryptedJson))
+	plugin.Log.Info("Got value %v", string(decryptedJSON))
 	return nil
 }
 
