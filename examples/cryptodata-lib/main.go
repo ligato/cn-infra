@@ -81,7 +81,7 @@ func main() {
 	encryptedJSON := fmt.Sprintf(`{ "encrypted": "true", "payload": "$crypto$%v" }`, string(encrypted))
 	fmt.Printf("Encrypted json \n%v\n", encryptedJSON)
 
-	decrypter := &cryptodata.DecrypterJSON{}
+	decrypter := cryptodata.NewDecrypterJSON()
 	decryptedJSON, err := decrypter.Decrypt([]byte(encryptedJSON), client.DecryptData)
 	if err != nil {
 		panic(err)

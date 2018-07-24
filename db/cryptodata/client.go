@@ -21,6 +21,8 @@ import (
 	"crypto/rand"
 	"io"
 	"encoding/base64"
+	"hash"
+	"crypto/sha256"
 )
 
 // ClientConfig is result of converting Config.PrivateKeyFile to PrivateKey
@@ -29,6 +31,8 @@ type ClientConfig struct {
 	PrivateKeys []*rsa.PrivateKey
 	// Reader used for encrypting/decrypting
 	Reader io.Reader
+	// Hash function used for hashing while encrypting
+	Hash hash.Hash
 }
 
 // Client handles encrypting/decrypting and wrapping data
@@ -47,12 +51,17 @@ func NewClient(clientConfig ClientConfig) (client *Client) {
 		client.Reader = rand.Reader
 	}
 
+	// If hash is nil use default sha256
+	if client.Hash == nil {
+		client.Hash = sha256.New()
+	}
+
 	return
 }
 
 // EncryptData encrypts input data using provided public key
 func (client *Client) EncryptData(inData []byte, pub *rsa.PublicKey) (data []byte, err error) {
-	data, err = rsa.EncryptPKCS1v15(client.Reader, pub, inData)
+	data, err = rsa.EncryptOAEP(client.Hash, client.Reader, pub, inData, nil)
 	data = []byte(base64.URLEncoding.EncodeToString(data))
 	return
 }
@@ -65,7 +74,7 @@ func (client *Client) DecryptData(inData []byte) (data []byte, err error) {
 	}
 
 	for _, key := range client.PrivateKeys {
-		data, err := rsa.DecryptPKCS1v15(client.Reader, key, inData)
+		data, err := rsa.DecryptOAEP(client.Hash, client.Reader, key, inData, nil)
 
 		if err == nil {
 			return data, nil

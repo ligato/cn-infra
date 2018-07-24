@@ -21,8 +21,8 @@ import (
 )
 
 const cryptoPrefix = "$crypto$"
+var encryptedJSONRegex = regexp.MustCompile(`^{\s*"encrypted"\s*:\s*"true"`)
 
-var encryptedJSONRegex = regexp.MustCompile(`"encrypted"\s*:\s*"true"`)
 
 // DecryptFunc is function that decrypts arbitrary data
 type DecryptFunc func(inData []byte) (data [] byte, err error)
@@ -34,15 +34,29 @@ type ArbitraryDecrypter interface {
 }
 
 // DecrypterJSON is ArbitraryDecrypter implementations that can decrypt JSON values
-type DecrypterJSON struct{}
+type DecrypterJSON struct {
+	// Prefix that is required for matching and decrypting values
+	Prefix string
+	// Present checks if JSON string matches regex in order to start decrypting (and exit early if not)
+	Present *regexp.Regexp
+}
+
+// NewDecrypterJSON creates new JSON decrypter with default values for Prefix and Present being
+// $crypto$ and ^{\s*"encrypted"\s*:\s*"true"
+func NewDecrypterJSON() *DecrypterJSON {
+	return &DecrypterJSON{
+		Prefix: cryptoPrefix,
+		Present: encryptedJSONRegex,
+	}
+}
 
 // Decrypt tries to decrypt JSON data that are encrypted based on "encrypted": "true" presence in it.
 // Then it parses data as JSON as tries to lookup all top-level values that begin with $crypto$ and decrypt them
 // using provided arbitrary decrypt function.
-func (DecrypterJSON) Decrypt(inData []byte, decryptFunc DecryptFunc) (data []byte, err error) {
+func (d DecrypterJSON) Decrypt(inData []byte, decryptFunc DecryptFunc) (data []byte, err error) {
 	data = inData
 
-	if !encryptedJSONRegex.Match(inData) {
+	if !d.Present.Match(inData) {
 		return
 	}
 
@@ -52,28 +66,35 @@ func (DecrypterJSON) Decrypt(inData []byte, decryptFunc DecryptFunc) (data []byt
 		return
 	}
 
-	for k, v := range jsonData {
+	jsonData = d.decryptJSON(jsonData, decryptFunc)
+	data, err = json.Marshal(jsonData)
+	return
+}
+
+// decryptJSON recursively navigates JSON structure and tries to decrypt all string values with Prefix
+func (d DecrypterJSON) decryptJSON(data map[string]interface{}, decryptFunc DecryptFunc) map[string]interface{} {
+	for k, v := range data {
 		var stringVal string
 		switch t := v.(type) {
 		case string:
 			stringVal = t
-		case []byte:
-			stringVal = string(t)
+		case map[string]interface{}:
+			v = d.decryptJSON(t, decryptFunc)
+			continue
 		default:
 			continue
 		}
 
-		if !strings.HasPrefix(stringVal, cryptoPrefix) {
+		if !strings.HasPrefix(stringVal, d.Prefix) {
 			continue
 		}
 
-		stringVal = strings.TrimPrefix(stringVal, cryptoPrefix)
+		stringVal = strings.TrimPrefix(stringVal, d.Prefix)
 		arbitraryData, err := decryptFunc([]byte(stringVal))
 		if err == nil {
-			jsonData[k] = string(arbitraryData)
+			data[k] = string(arbitraryData)
 		}
 	}
 
-	data, err = json.Marshal(jsonData)
-	return
+	return data
 }
