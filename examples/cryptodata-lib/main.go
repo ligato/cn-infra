@@ -78,7 +78,7 @@ func main() {
 	fmt.Printf("Decrypted %v\n", string(decrypted))
 
 	// Try to decrypt JSON with encrypted data
-	encryptedJSON := fmt.Sprintf(`{ "encrypted": "true", "payload": "$crypto$%v" }`, string(encrypted))
+	encryptedJSON := fmt.Sprintf(`{ "encrypted": "true", "value": { "payload": "$crypto$%v" } }`, string(encrypted))
 	fmt.Printf("Encrypted json \n%v\n", encryptedJSON)
 
 	decrypter := cryptodata.NewDecrypterJSON()

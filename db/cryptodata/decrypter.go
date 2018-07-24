@@ -88,12 +88,12 @@ func (d DecrypterJSON) decryptJSON(data map[string]interface{}, decryptFunc Decr
 
 			data[k] = string(arbitraryData)
 		case map[string]interface{}:
-			val, err := d.decryptJSON(t, decryptFunc)
+			v, err := d.decryptJSON(t, decryptFunc)
 			if err != nil {
 				return nil, err
 			}
 
-			v = val
+			data[k] = v
 		}
 	}
 
