@@ -21,7 +21,7 @@ import (
 )
 
 // DecryptFunc is function that decrypts arbitrary data
-type DecryptFunc func(inData []byte) (data [] byte, err error)
+type DecryptFunc func(inData []byte) (data []byte, err error)
 
 // CheckEncryptedFunc is used to check if JSON data is encrypted
 type CheckEncryptedFunc func(inData []byte) (isEncrypted bool)
@@ -32,7 +32,8 @@ type EncryptionCheck struct {
 	IsEncrypted bool `json:"encrypted"`
 }
 
-// ArbitraryDecrypter is interface for decrypting groups of data
+// ArbitraryDecrypter represents decrypter that looks for encrypted values inside arbitrary data and returns
+// the data with the values decrypted
 type ArbitraryDecrypter interface {
 	// Decrypt decrypts input data using provided decrypting function for arbitrary data
 	Decrypt(inData []byte, decryptFunc DecryptFunc) (data []byte, err error)
@@ -42,7 +43,8 @@ type ArbitraryDecrypter interface {
 type DecrypterJSON struct {
 	// Prefix that is required for matching and decrypting values
 	Prefix string
-	// CheckEncrypted checks if provided data are marked as encrypted
+	// CheckEncrypted checks if provided data are marked as encrypted.
+	// By default this function tries to unmarshal JSON to EncryptionCheck and check the IsEncrypted being true
 	CheckEncrypted CheckEncryptedFunc
 }
 
@@ -59,7 +61,9 @@ func NewDecrypterJSON() *DecrypterJSON {
 	}
 }
 
-// Decrypt tries to decrypt JSON data that are encrypted based on `CheckEncrypted` function return true on data.
+
+// Decrypt tries to find encrypted values in JSON data and decrypt them. It uses CheckEncrypted function on the
+// data to check if it contains any encrypted data.
 // Then it parses data as JSON as tries to lookup all values that begin with `Prefix`, then trim prefix, base64
 // decode the data and decrypt them using provided decrypt function.
 func (d DecrypterJSON) Decrypt(inData []byte, decryptFunc DecryptFunc) ([]byte, error) {

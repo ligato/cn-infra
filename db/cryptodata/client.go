@@ -30,7 +30,7 @@ type ClientAPI interface {
 	EncryptData(inData []byte, pub *rsa.PublicKey) (data []byte, err error)
 	// DecryptData decrypts input data
 	DecryptData(inData []byte) (data []byte, err error)
-	// Wrap wraps core broker watcher with support for decrypting encrypted keys
+	// Wrap wraps core broker watcher with support for decrypting encrypted data in values
 	Wrap(cbw keyval.CoreBrokerWatcher, decrypter ArbitraryDecrypter) keyval.CoreBrokerWatcher
 }
 
