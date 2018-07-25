@@ -25,6 +25,14 @@ import (
 	"encoding/base64"
 )
 
+// JSONData are example data to be decrypted
+const JSONData = `{
+  "encrypted":true,
+  "value": {
+	 "payload": "$crypto$%v"
+  }
+}`
+
 func main() {
 	// Read private key
 	bytes, err := ioutil.ReadFile("key.pem")
@@ -82,7 +90,7 @@ func main() {
 	encryptedBase64 := base64.URLEncoding.EncodeToString(encrypted)
 
 	// Try to decrypt JSON with encrypted data
-	encryptedJSON := fmt.Sprintf(`{"encrypted":true,"value":{"payload":"$crypto$%v"}}`, encryptedBase64)
+	encryptedJSON := fmt.Sprintf(JSONData, encryptedBase64)
 	fmt.Printf("> Encrypted json:\n%v\n", encryptedJSON)
 
 	decrypter := cryptodata.NewDecrypterJSON()

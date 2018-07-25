@@ -34,6 +34,14 @@ import (
 // PluginName represents name of plugin.
 const PluginName = "example"
 
+// JSONData are example data sent to db
+const JSONData = `{
+  "encrypted":true,
+  "value": {
+	 "payload": "$crypto$%v"
+  }
+}`
+
 func main() {
 	// Start Agent with ExamplePlugin using ETCDPlugin CryptoDataPlugin, logger and service label.
 	p := &ExamplePlugin{
@@ -56,7 +64,7 @@ type Deps struct {
 	CryptoData   cryptodata.ClientAPI
 }
 
-// ExamplePlugin demonstrates the usage of datasync API.
+// ExamplePlugin demonstrates the usage of cryptodata API.
 type ExamplePlugin struct {
 	Deps
 	db *etcd.BytesConnectionEtcd
@@ -70,52 +78,29 @@ func (plugin *ExamplePlugin) String() string {
 // Init starts the consumer.
 func (plugin *ExamplePlugin) Init() error {
 	// Read public key
-	bytes, err := ioutil.ReadFile("../cryptodata-lib/key-pub.pem")
+	publicKey, err := readPublicKey("../cryptodata-lib/key-pub.pem")
 	if err != nil {
 		return err
-	}
-	block, _ := pem.Decode(bytes)
-	if block == nil {
-		return errors.New("failed to decode PEM for key key-pub.pem")
-	}
-	pubInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return err
-	}
-	publicKey, ok := pubInterface.(*rsa.PublicKey)
-	if !ok {
-		return errors.New("failed to convert public key to rsa.PublicKey")
 	}
 
 	// Create ETCD connection
-	etcdFileConfig := &etcd.Config{}
-	err = config.ParseConfigFromYamlFile("etcd.conf", etcdFileConfig)
-	if err != nil {
-		return err
-	}
-
-	etcdConfig, err := etcd.ConfigToClient(etcdFileConfig)
-	if err != nil {
-		return err
-	}
-
-	plugin.db, err = etcd.NewEtcdConnectionWithBytes(*etcdConfig, plugin.Log)
+	plugin.db, err = plugin.newEtcdConnection("etcd.conf")
 	if err != nil {
 		return err
 	}
 
 	// Prepare data
-	value := "hello-world"
-	encryptedValue, err := plugin.CryptoData.EncryptData([]byte(value), publicKey)
+	data, err := plugin.encryptData("hello-world", publicKey)
 	if err != nil {
 		return err
 	}
-	encryptedBase64Value := base64.URLEncoding.EncodeToString(encryptedValue)
-	encryptedJSON := fmt.Sprintf(`{"encrypted":true,"value":{"payload":"$crypto$%v"}}`, encryptedBase64Value)
+	encryptedJSON := fmt.Sprintf(JSONData, data)
 	plugin.Log.Infof("Putting value %v", encryptedJSON)
 
-	// Put
+	// Prepare path for storing the data
 	key := plugin.etcdKey("value")
+
+	// Put JSON data to ETCD
 	err = plugin.db.Put(key, []byte(encryptedJSON))
 	if err != nil {
 		return err
@@ -124,13 +109,13 @@ func (plugin *ExamplePlugin) Init() error {
 	// Wrap ETCD connection with crypto layer
 	dbWrapped := plugin.CryptoData.Wrap(plugin.db, cryptodata.NewDecrypterJSON())
 
-	// Get while decrypting
+	// Get JSON data from ETCD and decrypt them with crypto layer
 	decryptedJSON, _, _, err := dbWrapped.GetValue(key)
 	if err != nil {
 		return err
 	}
-
 	plugin.Log.Infof("Got value %v", string(decryptedJSON))
+
 	return nil
 }
 
@@ -145,4 +130,52 @@ func (plugin *ExamplePlugin) Close() error {
 // The ETCD key prefix used for this example
 func (plugin *ExamplePlugin) etcdKey(label string) string {
 	return "/vnf-agent/" + plugin.ServiceLabel.GetAgentLabel() + "/api/v1/example/db/simple/" + label
+}
+
+// encryptData first encrypts the provided value using crypto layer and then encodes
+// the data with base64 for JSON compatibility
+func (plugin *ExamplePlugin) encryptData(value string, publicKey *rsa.PublicKey) (string, error) {
+	encryptedValue, err := plugin.CryptoData.EncryptData([]byte(value), publicKey)
+	if err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(encryptedValue), nil
+}
+
+// newEtcdConnection creates new ETCD bytes connection from provided etcd config path
+func (plugin *ExamplePlugin) newEtcdConnection(configPath string) (*etcd.BytesConnectionEtcd, error) {
+	etcdFileConfig := &etcd.Config{}
+	err := config.ParseConfigFromYamlFile(configPath, etcdFileConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	etcdConfig, err := etcd.ConfigToClient(etcdFileConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return etcd.NewEtcdConnectionWithBytes(*etcdConfig, plugin.Log)
+}
+
+// readPublicKey reads rsa public key from PEM file on provided path
+func readPublicKey(path string) (*rsa.PublicKey, error) {
+	bytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	block, _ := pem.Decode(bytes)
+	if block == nil {
+		return nil, errors.New("failed to decode PEM for key " + path)
+	}
+	pubInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	publicKey, ok := pubInterface.(*rsa.PublicKey)
+	if !ok {
+		return nil, errors.New("failed to convert public key to rsa.PublicKey")
+	}
+
+	return publicKey, nil
 }
