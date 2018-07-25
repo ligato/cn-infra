@@ -111,8 +111,8 @@ func (plugin *ExamplePlugin) Init() error {
 		return err
 	}
 
-	// Wrap ETCD connection with crypto layer
-	dbWrapped := plugin.CryptoData.Wrap(plugin.db, cryptodata.NewDecrypterJSON())
+	// WrapBytes ETCD connection with crypto layer
+	dbWrapped := plugin.CryptoData.WrapBytes(plugin.db, cryptodata.NewDecrypterJSON())
 
 	// Get JSON data from ETCD and decrypt them with crypto layer
 	decryptedJSON, _, _, err := dbWrapped.GetValue(key)

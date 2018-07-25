@@ -28,15 +28,11 @@ import (
 	"github.com/pkg/errors"
 	"encoding/base64"
 	"github.com/ligato/cn-infra/db/keyval"
-	"reflect"
 	"github.com/ligato/cn-infra/examples/cryptodata-proto-plugin/ipsec"
 )
 
 // PluginName represents name of plugin.
 const PluginName = "example"
-
-// TunnelName represents name of test tunnel
-const TunnelName = "tunnel"
 
 func main() {
 	// Start Agent with ExamplePlugin using ETCDPlugin, CryptoDataPlugin, logger and service label.
@@ -97,17 +93,17 @@ func (plugin *ExamplePlugin) Init() error {
 	encryptedData := &ipsec.TunnelInterfaces{
 		Tunnels: []*ipsec.TunnelInterfaces_Tunnel{
 			{
-				Name: "tunnel1",
+				Name:           "tunnel1",
 				LocalCryptoKey: key1,
-				IpAddresses: []string {
+				IpAddresses: []string{
 					"192.168.0.1",
 					"192.168.0.2",
 				},
 			},
 			{
-				Name: "tunnel2",
+				Name:            "tunnel2",
 				RemoteCryptoKey: key2,
-				IpAddresses: []string {
+				IpAddresses: []string{
 					"192.168.0.5",
 					"192.168.0.8",
 				},
@@ -119,8 +115,16 @@ func (plugin *ExamplePlugin) Init() error {
 	// Prepare path for storing the data
 	key := plugin.etcdKey(ipsec.KeyPrefix)
 
-	// Prepare broker
-	broker := plugin.KvProto.NewBroker(keyval.Root)
+	// Prepare mapping
+	decrypter := cryptodata.NewDecrypterProto()
+	decrypter.RegisterMapping(
+		&ipsec.TunnelInterfaces{},
+		[]string{"Tunnels", "LocalCryptoKey"},
+		[]string{"Tunnels", "RemoteCryptoKey"},
+	)
+
+	// Prepare broker with crypto layer
+	broker := plugin.CryptoData.WrapProto(plugin.KvProto, decrypter).NewBroker(keyval.Root)
 
 	// Put proto data to ETCD
 	err = broker.Put(key, encryptedData)
@@ -128,21 +132,9 @@ func (plugin *ExamplePlugin) Init() error {
 		return err
 	}
 
-	// Wrap broker with crypto layer
-	brokerWrapped := cryptodata.ProtoBrokerWrapper{
-		ProtoBroker: broker,
-		CryptoMap: map[reflect.Type][][]string{
-			reflect.TypeOf(&ipsec.TunnelInterfaces{}): {
-				{"Tunnels", "LocalCryptoKey"},
-				{"Tunnels", "RemoteCryptoKey"},
-			},
-		},
-		DecryptFunc: plugin.CryptoData.DecryptData,
-	}
-
 	// Get proto data from ETCD and decrypt them with crypto layer
 	decryptedData := &ipsec.TunnelInterfaces{}
-	_, _, err = brokerWrapped.GetValue(key, decryptedData)
+	_, _, err = broker.GetValue(key, decryptedData)
 	if err != nil {
 		return err
 	}
