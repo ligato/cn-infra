@@ -20,7 +20,7 @@ import (
 	"encoding/base64"
 )
 
-// DecryptFunc is function that decrypts arbitrary data
+// DecryptFunc is function that decrypts input data
 type DecryptFunc func(inData []byte) (data []byte, err error)
 
 // CheckEncryptedFunc is used to check if JSON data is encrypted
@@ -35,7 +35,7 @@ type EncryptionCheck struct {
 // ArbitraryDecrypter represents decrypter that looks for encrypted values inside arbitrary data and returns
 // the data with the values decrypted
 type ArbitraryDecrypter interface {
-	// Decrypt decrypts input data using provided decrypting function for arbitrary data
+	// Decrypt processes input data and decrypts specific fields using decryptFunc
 	Decrypt(inData []byte, decryptFunc DecryptFunc) (data []byte, err error)
 }
 
