@@ -16,18 +16,16 @@ package cryptodata
 
 import (
 	"github.com/golang/protobuf/proto"
-	"strings"
 	"reflect"
-	"fmt"
 	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/pkg/errors"
 	"encoding/base64"
+	"fmt"
 )
 
 type ProtoBrokerWrapper struct {
 	keyval.ProtoBroker
 	DecryptFunc DecryptFunc
-	CryptoMap map[reflect.Type][]string
+	CryptoMap   map[reflect.Type][][]string
 }
 
 func (db *ProtoBrokerWrapper) GetValue(key string, reqObj proto.Message) (bool, int64, error) {
@@ -41,48 +39,57 @@ func (db *ProtoBrokerWrapper) GetValue(key string, reqObj proto.Message) (bool, 
 		return found, revision, err
 	}
 
-	for _, v := range values {
-		reflected, err := getValueFromStruct(v, reqObj)
-		if err != nil {
+	for _, path := range values {
+		if err := db.decryptStruct(path, reqObj); err != nil {
 			return found, revision, err
 		}
-
-		if reflected.Kind() != reflect.String {
-			return found, revision, errors.New("reflected value is not string")
-		}
-
-		reflectedString := reflected.String()
-		decodedReflectedString, err := base64.URLEncoding.DecodeString(reflectedString)
-		if err != nil {
-			return found, revision, err
-		}
-
-		decryptedBytes, err := db.DecryptFunc(decodedReflectedString)
-		if err != nil {
-			return found, revision, err
-		}
-
-		reflected.SetString(string(decryptedBytes))
 	}
 
 	return found, revision, err
 }
 
-func getValueFromStruct(keyWithDots string, object interface{}) (*reflect.Value, error) {
-    keySlice := strings.Split(keyWithDots, ".")
-    v := reflect.ValueOf(object)
+func (db *ProtoBrokerWrapper) decryptStruct(path []string, object interface{}) (error) {
+	v, ok := object.(reflect.Value)
+	if !ok {
+		v = reflect.ValueOf(object)
+	}
 
-    for _, key := range keySlice {
-        if v.Kind() == reflect.Ptr {
-            v = v.Elem()
-        }
+	for pathIndex, key := range path {
+		if v.Kind() == reflect.Ptr {
+			v = v.Elem()
+		}
 
-        if v.Kind() != reflect.Struct {
-            return nil, fmt.Errorf("only accepts structs; got %T", v)
-        }
+		if v.Kind() == reflect.Struct {
+			v = v.FieldByName(key)
+		}
 
-        v = v.FieldByName(key)
-    }
+		if v.Kind() == reflect.Slice {
+			for i := 0; i < v.Len(); i++ {
+				if err := db.decryptStruct(path[pathIndex:], v.Index(i)); err != nil {
+					return err
+				}
+			}
 
-	return &v, nil
+			return nil
+		}
+
+		if v.Kind() == reflect.String {
+			decoded, err := base64.URLEncoding.DecodeString(v.String())
+			if err != nil {
+				return err
+			}
+
+			decrypted, err := db.DecryptFunc(decoded)
+			if err != nil {
+				return err
+			}
+
+			v.SetString(string(decrypted))
+			return nil
+		}
+
+		return fmt.Errorf("failed to process path on %v", v)
+	}
+
+	return nil
 }

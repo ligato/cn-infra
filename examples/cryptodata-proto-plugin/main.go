@@ -28,15 +28,18 @@ import (
 	"github.com/pkg/errors"
 	"encoding/base64"
 	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/examples/model"
 	"reflect"
+	"github.com/ligato/cn-infra/examples/cryptodata-proto-plugin/ipsec"
 )
 
 // PluginName represents name of plugin.
 const PluginName = "example"
 
+// TunnelName represents name of test tunnel
+const TunnelName = "tunnel"
+
 func main() {
-	// Start Agent with ExamplePlugin using ETCDPlugin CryptoDataPlugin, logger and service label.
+	// Start Agent with ExamplePlugin using ETCDPlugin, CryptoDataPlugin, logger and service label.
 	p := &ExamplePlugin{
 		Deps: Deps{
 			Log:          logging.ForPlugin(PluginName),
@@ -83,19 +86,25 @@ func (plugin *ExamplePlugin) Init() error {
 	}
 
 	// Prepare data
-	data, err := plugin.encryptData("hello-world", publicKey)
+	ip1, err := plugin.encryptData("192.168.0.1", publicKey)
 	if err != nil {
 		return err
 	}
-	encryptedData := &etcdexample.EtcdExample{
-		StringVal: data,
-		Uint32Val: 10,
-		BoolVal:   true,
+	ip2, err := plugin.encryptData("192.168.0.3", publicKey)
+	if err != nil {
+		return err
+	}
+	encryptedData := &ipsec.TunnelInterfaces_Tunnel{
+		Name: TunnelName,
+		IpAddresses: []string{
+			ip1,
+			ip2,
+		},
 	}
 	plugin.Log.Infof("Putting value %v", encryptedData)
 
 	// Prepare path for storing the data
-	key := plugin.etcdKey("value")
+	key := plugin.etcdKey(ipsec.TunnelKey(TunnelName))
 
 	// Prepare broker
 	broker := plugin.KvProto.NewBroker(keyval.Root)
@@ -109,19 +118,19 @@ func (plugin *ExamplePlugin) Init() error {
 	// Wrap broker with crypto layer
 	brokerWrapped := cryptodata.ProtoBrokerWrapper{
 		ProtoBroker: broker,
-		CryptoMap: map[reflect.Type][]string{
-			reflect.TypeOf(&etcdexample.EtcdExample{}): { "StringVal" },
+		CryptoMap: map[reflect.Type][][]string{
+			reflect.TypeOf(&ipsec.TunnelInterfaces_Tunnel{}): {{"IpAddresses"}},
 		},
 		DecryptFunc: plugin.CryptoData.DecryptData,
 	}
 
 	// Get proto data from ETCD and decrypt them with crypto layer
-	decryptedData := &etcdexample.EtcdExample{}
+	decryptedData := &ipsec.TunnelInterfaces_Tunnel{}
 	_, _, err = brokerWrapped.GetValue(key, decryptedData)
 	if err != nil {
 		return err
 	}
-	plugin.Log.Infof("Got value %v", decryptedData.StringVal)
+	plugin.Log.Infof("Got value %v", decryptedData)
 
 	// Close agent and example
 	close(plugin.exampleFinished)
