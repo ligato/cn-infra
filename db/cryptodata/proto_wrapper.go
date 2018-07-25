@@ -65,7 +65,15 @@ func (db *ProtoBrokerWrapper) decryptStruct(path []string, object interface{}) (
 
 		if v.Kind() == reflect.Slice {
 			for i := 0; i < v.Len(); i++ {
-				if err := db.decryptStruct(path[pathIndex:], v.Index(i)); err != nil {
+				val := v.Index(i)
+				kind := val.Kind()
+				index := pathIndex
+
+				if kind == reflect.Struct || kind == reflect.Ptr {
+					index += 1
+				}
+
+				if err := db.decryptStruct(path[index:], val); err != nil {
 					return err
 				}
 			}
@@ -74,7 +82,12 @@ func (db *ProtoBrokerWrapper) decryptStruct(path []string, object interface{}) (
 		}
 
 		if v.Kind() == reflect.String {
-			decoded, err := base64.URLEncoding.DecodeString(v.String())
+			val := v.String()
+			if val == "" {
+				continue
+			}
+
+			decoded, err := base64.URLEncoding.DecodeString(val)
 			if err != nil {
 				return err
 			}

@@ -86,25 +86,28 @@ func (plugin *ExamplePlugin) Init() error {
 	}
 
 	// Prepare data
-	ip1, err := plugin.encryptData("192.168.0.1", publicKey)
+	key1, err := plugin.encryptData("cryptoKey1", publicKey)
 	if err != nil {
 		return err
 	}
-	ip2, err := plugin.encryptData("192.168.0.3", publicKey)
+	key2, err := plugin.encryptData("cryptoKey2", publicKey)
 	if err != nil {
 		return err
 	}
-	encryptedData := &ipsec.TunnelInterfaces_Tunnel{
-		Name: TunnelName,
-		IpAddresses: []string{
-			ip1,
-			ip2,
+	encryptedData := &ipsec.TunnelInterfaces{
+		Tunnels: []*ipsec.TunnelInterfaces_Tunnel{
+			{
+				LocalCryptoKey: key1,
+			},
+			{
+				RemoteCryptoKey: key2,
+			},
 		},
 	}
 	plugin.Log.Infof("Putting value %v", encryptedData)
 
 	// Prepare path for storing the data
-	key := plugin.etcdKey(ipsec.TunnelKey(TunnelName))
+	key := plugin.etcdKey(ipsec.KeyPrefix)
 
 	// Prepare broker
 	broker := plugin.KvProto.NewBroker(keyval.Root)
@@ -119,13 +122,16 @@ func (plugin *ExamplePlugin) Init() error {
 	brokerWrapped := cryptodata.ProtoBrokerWrapper{
 		ProtoBroker: broker,
 		CryptoMap: map[reflect.Type][][]string{
-			reflect.TypeOf(&ipsec.TunnelInterfaces_Tunnel{}): {{"IpAddresses"}},
+			reflect.TypeOf(&ipsec.TunnelInterfaces{}): {
+				{"Tunnels", "LocalCryptoKey"},
+				{"Tunnels", "RemoteCryptoKey"},
+			},
 		},
 		DecryptFunc: plugin.CryptoData.DecryptData,
 	}
 
 	// Get proto data from ETCD and decrypt them with crypto layer
-	decryptedData := &ipsec.TunnelInterfaces_Tunnel{}
+	decryptedData := &ipsec.TunnelInterfaces{}
 	_, _, err = brokerWrapped.GetValue(key, decryptedData)
 	if err != nil {
 		return err
