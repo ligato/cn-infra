@@ -97,10 +97,20 @@ func (plugin *ExamplePlugin) Init() error {
 	encryptedData := &ipsec.TunnelInterfaces{
 		Tunnels: []*ipsec.TunnelInterfaces_Tunnel{
 			{
+				Name: "tunnel1",
 				LocalCryptoKey: key1,
+				IpAddresses: []string {
+					"192.168.0.1",
+					"192.168.0.2",
+				},
 			},
 			{
+				Name: "tunnel2",
 				RemoteCryptoKey: key2,
+				IpAddresses: []string {
+					"192.168.0.5",
+					"192.168.0.8",
+				},
 			},
 		},
 	}
