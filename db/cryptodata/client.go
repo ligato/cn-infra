@@ -24,8 +24,8 @@ import (
 	"crypto/sha256"
 )
 
-// Client handles encrypting/decrypting and wrapping data
-type Client interface {
+// ClientAPI handles encrypting/decrypting and wrapping data
+type ClientAPI interface {
 	// EncryptData encrypts input data using provided public key
 	EncryptData(inData []byte, pub *rsa.PublicKey) (data []byte, err error)
 	// DecryptData decrypts input data
@@ -44,14 +44,14 @@ type ClientConfig struct {
 	Hash hash.Hash
 }
 
-// ClientWithConfig implements client and client configuration
-type ClientWithConfig struct {
+// Client implements ClientAPI and ClientConfig
+type Client struct {
 	ClientConfig
 }
 
 // NewClient creates new client from provided config and reader
-func NewClient(clientConfig ClientConfig) *ClientWithConfig {
-	client := &ClientWithConfig{
+func NewClient(clientConfig ClientConfig) *Client {
+	client := &Client{
 		ClientConfig: clientConfig,
 	}
 
@@ -68,13 +68,13 @@ func NewClient(clientConfig ClientConfig) *ClientWithConfig {
 	return client
 }
 
-// EncryptData implements Client.EncryptData
-func (client *ClientWithConfig) EncryptData(inData []byte, pub *rsa.PublicKey) (data []byte, err error) {
+// EncryptData implements ClientAPI.EncryptData
+func (client *Client) EncryptData(inData []byte, pub *rsa.PublicKey) (data []byte, err error) {
 	return rsa.EncryptOAEP(client.Hash, client.Reader, pub, inData, nil)
 }
 
-// DecryptData implements Client.DecryptData
-func (client *ClientWithConfig) DecryptData(inData []byte) (data []byte, err error) {
+// DecryptData implements ClientAPI.DecryptData
+func (client *Client) DecryptData(inData []byte) (data []byte, err error) {
 	for _, key := range client.PrivateKeys {
 		data, err := rsa.DecryptOAEP(client.Hash, client.Reader, key, inData, nil)
 
@@ -86,7 +86,7 @@ func (client *ClientWithConfig) DecryptData(inData []byte) (data []byte, err err
 	return nil, errors.New("failed to decrypt data due to no private key matching")
 }
 
-// Wrap implements Client.Wrap
-func (client *ClientWithConfig) Wrap(cbw keyval.CoreBrokerWatcher, decrypter ArbitraryDecrypter) keyval.CoreBrokerWatcher {
+// Wrap implements ClientAPI.Wrap
+func (client *Client) Wrap(cbw keyval.CoreBrokerWatcher, decrypter ArbitraryDecrypter) keyval.CoreBrokerWatcher {
 	return NewCoreBrokerWatcherWrapper(cbw, decrypter, client.DecryptData)
 }

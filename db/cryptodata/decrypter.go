@@ -24,7 +24,7 @@ import (
 type DecryptFunc func(inData []byte) (data [] byte, err error)
 
 // CheckEncryptedFunc is used to check if JSON data is encrypted
-type CheckEncryptedFunc func(inData []byte) (isValid bool)
+type CheckEncryptedFunc func(inData []byte) (isEncrypted bool)
 
 // EncryptionCheck is used to check for data to contain encrypted marker
 type EncryptionCheck struct {

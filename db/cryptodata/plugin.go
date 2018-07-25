@@ -36,7 +36,7 @@ type Deps struct {
 type Plugin struct {
 	Deps
 	// Client provides crypto support
-	*ClientWithConfig
+	*Client
 	// Plugin is disabled if there is no config file available
 	disabled bool
 }
@@ -93,7 +93,7 @@ func (plugin *Plugin) Init() (err error) {
 		}
 	}
 
-	plugin.ClientWithConfig = NewClient(clientConfig)
+	plugin.Client = NewClient(clientConfig)
 	return
 }
 
