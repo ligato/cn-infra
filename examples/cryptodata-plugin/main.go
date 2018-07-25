@@ -128,7 +128,7 @@ func (plugin *ExamplePlugin) Init() error {
 		return err
 	}
 
-	plugin.Log.Info("Got value %v", string(decryptedJSON))
+	plugin.Log.Infof("Got value %v", string(decryptedJSON))
 	return nil
 }
 

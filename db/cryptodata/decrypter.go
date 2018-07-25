@@ -23,8 +23,8 @@ import (
 // DecryptFunc is function that decrypts arbitrary data
 type DecryptFunc func(inData []byte) (data [] byte, err error)
 
-// ValidateFunc is used to validate compatibility of JSON data when decrypting
-type ValidateFunc func(inData []byte) (isValid bool)
+// CheckEncryptedFunc is used to check if JSON data is encrypted
+type CheckEncryptedFunc func(inData []byte) (isValid bool)
 
 // EncryptionCheck is used to check for data to contain encrypted marker
 type EncryptionCheck struct {
@@ -42,16 +42,16 @@ type ArbitraryDecrypter interface {
 type DecrypterJSON struct {
 	// Prefix that is required for matching and decrypting values
 	Prefix string
-	// Validate validates data to be decrypted
-	Validate ValidateFunc
+	// CheckEncrypted checks if provided data are marked as encrypted
+	CheckEncrypted CheckEncryptedFunc
 }
 
-// NewDecrypterJSON creates new JSON decrypter with default values for Prefix and Validate being
+// NewDecrypterJSON creates new JSON decrypter with default values for Prefix and CheckEncrypted being
 // `$crypto$` and presence of `encrypted: true`
 func NewDecrypterJSON() *DecrypterJSON {
 	return &DecrypterJSON{
 		Prefix: "$crypto$",
-		Validate: func(inData []byte) (isValid bool) {
+		CheckEncrypted: func(inData []byte) (isValid bool) {
 			var jsonData EncryptionCheck
 			err := json.Unmarshal(inData, &jsonData)
 			return err == nil && jsonData.IsEncrypted
@@ -59,11 +59,11 @@ func NewDecrypterJSON() *DecrypterJSON {
 	}
 }
 
-// Decrypt tries to decrypt JSON data that are encrypted based on `Validate` function return true on data.
+// Decrypt tries to decrypt JSON data that are encrypted based on `CheckEncrypted` function return true on data.
 // Then it parses data as JSON as tries to lookup all values that begin with `Prefix`, then trim prefix, base64
 // decode the data and decrypt them using provided decrypt function.
 func (d DecrypterJSON) Decrypt(inData []byte, decryptFunc DecryptFunc) ([]byte, error) {
-	if !d.Validate(inData) {
+	if !d.CheckEncrypted(inData) {
 		return inData, nil
 	}
 
@@ -73,7 +73,7 @@ func (d DecrypterJSON) Decrypt(inData []byte, decryptFunc DecryptFunc) ([]byte, 
 		return nil, err
 	}
 
-	jsonData, err = d.decryptJSON(jsonData, decryptFunc)
+	err = d.decryptJSON(jsonData, decryptFunc)
 	if err != nil {
 		return nil, err
 	}
@@ -82,32 +82,30 @@ func (d DecrypterJSON) Decrypt(inData []byte, decryptFunc DecryptFunc) ([]byte, 
 }
 
 // decryptJSON recursively navigates JSON structure and tries to decrypt all string values with Prefix
-func (d DecrypterJSON) decryptJSON(data map[string]interface{}, decryptFunc DecryptFunc) (map[string]interface{}, error) {
+func (d DecrypterJSON) decryptJSON(data map[string]interface{}, decryptFunc DecryptFunc) (error) {
 	for k, v := range data {
 		switch t := v.(type) {
 		case string:
 			if s := strings.TrimPrefix(t, d.Prefix); s != t {
 				s, err := base64.URLEncoding.DecodeString(s)
 				if err != nil {
-					return nil, err
+					return err
 				}
 
-				arbitraryData, err := decryptFunc(s)
+				decryptedData, err := decryptFunc(s)
 				if err != nil {
-					return nil, err
+					return err
 				}
 
-				data[k] = string(arbitraryData)
+				data[k] = string(decryptedData)
 			}
 		case map[string]interface{}:
-			v, err := d.decryptJSON(t, decryptFunc)
+			err := d.decryptJSON(t, decryptFunc)
 			if err != nil {
-				return nil, err
+				return err
 			}
-
-			data[k] = v
 		}
 	}
 
-	return data, nil
+	return nil
 }
