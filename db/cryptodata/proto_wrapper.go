@@ -15,54 +15,64 @@
 package cryptodata
 
 import (
-	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/golang/protobuf/proto"
 	"strings"
 	"reflect"
 	"fmt"
+	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/pkg/errors"
+	"encoding/base64"
 )
 
-type ProtoWrapperWrapper struct {
-	kvproto.ProtoWrapper
+type ProtoBrokerWrapper struct {
+	keyval.ProtoBroker
 	DecryptFunc DecryptFunc
-	CryptoMap map[string][]string
+	CryptoMap map[reflect.Type][]string
 }
 
-func (db *ProtoWrapperWrapper) GetValue(key string, reqObj proto.Message) (found bool, revision int64, err error) {
-	found, revision, err = db.ProtoWrapper.GetValue(key, reqObj)
+func (db *ProtoBrokerWrapper) GetValue(key string, reqObj proto.Message) (bool, int64, error) {
+	found, revision, err := db.ProtoBroker.GetValue(key, reqObj)
+	if !found || err != nil {
+		return found, revision, err
+	}
 
-	values, ok := db.CryptoMap[reqObj.String()]
+	values, ok := db.CryptoMap[reflect.TypeOf(reqObj)]
 	if !ok {
-		return
+		return found, revision, err
 	}
 
 	for _, v := range values {
 		reflected, err := getValueFromStruct(v, reqObj)
 		if err != nil {
-			return
+			return found, revision, err
 		}
 
 		if reflected.Kind() != reflect.String {
-			return
+			return found, revision, errors.New("reflected value is not string")
 		}
 
 		reflectedString := reflected.String()
-		decryptedBytes, err := db.DecryptFunc([]byte(reflectedString))
+		decodedReflectedString, err := base64.URLEncoding.DecodeString(reflectedString)
 		if err != nil {
-			return
+			return found, revision, err
+		}
+
+		decryptedBytes, err := db.DecryptFunc(decodedReflectedString)
+		if err != nil {
+			return found, revision, err
 		}
 
 		reflected.SetString(string(decryptedBytes))
 	}
 
-	return
+	return found, revision, err
 }
 
 func getValueFromStruct(keyWithDots string, object interface{}) (*reflect.Value, error) {
     keySlice := strings.Split(keyWithDots, ".")
     v := reflect.ValueOf(object)
 
-    for _, key := range keySlice[1:] {
+    for _, key := range keySlice {
         if v.Kind() == reflect.Ptr {
             v = v.Elem()
         }
