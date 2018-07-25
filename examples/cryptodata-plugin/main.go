@@ -50,9 +50,13 @@ func main() {
 			ServiceLabel: &servicelabel.DefaultPlugin,
 			CryptoData:   &cryptodata.DefaultPlugin,
 		},
+		exampleFinished: make(chan struct{}),
 	}
 
-	if err := agent.NewAgent(agent.AllPlugins(p)).Run(); err != nil {
+	if err := agent.NewAgent(
+		agent.AllPlugins(p),
+		agent.QuitOnClose(p.exampleFinished),
+	).Run(); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -67,7 +71,8 @@ type Deps struct {
 // ExamplePlugin demonstrates the usage of cryptodata API.
 type ExamplePlugin struct {
 	Deps
-	db *etcd.BytesConnectionEtcd
+	db              *etcd.BytesConnectionEtcd
+	exampleFinished chan struct{}
 }
 
 // String returns plugin name
@@ -115,6 +120,9 @@ func (plugin *ExamplePlugin) Init() error {
 		return err
 	}
 	plugin.Log.Infof("Got value %v", string(decryptedJSON))
+
+	// Close agent and example
+	close(plugin.exampleFinished)
 
 	return nil
 }
