@@ -61,7 +61,6 @@ func NewDecrypterJSON() *DecrypterJSON {
 	}
 }
 
-
 // Decrypt tries to find encrypted values in JSON data and decrypt them. It uses CheckEncrypted function on the
 // data to check if it contains any encrypted data.
 // Then it parses data as JSON as tries to lookup all values that begin with `Prefix`, then trim prefix, base64
