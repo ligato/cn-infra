@@ -25,8 +25,10 @@ import (
 )
 
 var (
+	// DefaultStartTimeout is default timeout for starting agent
 	DefaultStartTimeout = time.Second * 15
-	DefaultStopTimeout  = time.Second * 5
+	// DefaultStopTimeout is default timeout for stopping agent
+	DefaultStopTimeout = time.Second * 5
 )
 
 // Options specifies option list for the Agent
