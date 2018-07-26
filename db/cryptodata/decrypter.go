@@ -20,7 +20,7 @@ import (
 	"encoding/base64"
 	"reflect"
 	"fmt"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 )
 
 // DecryptFunc is function that decrypts input data

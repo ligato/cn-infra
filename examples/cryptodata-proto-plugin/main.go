@@ -123,8 +123,13 @@ func (plugin *ExamplePlugin) Init() error {
 		[]string{"Tunnels", "RemoteCryptoKey"},
 	)
 
-	// Prepare broker with crypto layer
-	broker := plugin.CryptoData.WrapProto(plugin.KvProto, decrypter).NewBroker(keyval.Root)
+	// Prepare broker and watcher with crypto layer
+	crypto := plugin.CryptoData.WrapProto(plugin.KvProto, decrypter)
+	broker := crypto.NewBroker(keyval.Root)
+	watcher := crypto.NewWatcher(keyval.Root)
+
+	// Start watching
+	watcher.Watch(plugin.watchChanges, nil, key)
 
 	// Put proto data to ETCD
 	err = broker.Put(key, encryptedData)
@@ -163,6 +168,15 @@ func (plugin *ExamplePlugin) Init() error {
 // Close closes ExamplePlugin
 func (plugin *ExamplePlugin) Close() error {
 	return nil
+}
+
+// watchChanges is watching for changes in DB
+func (plugin *ExamplePlugin) watchChanges(x keyval.ProtoWatchResp) {
+	message := &ipsec.TunnelInterfaces{}
+	err := x.GetValue(message)
+	if err == nil {
+		plugin.Log.Infof("Got watch message %v", message)
+	}
 }
 
 // The ETCD key prefix used for this example
