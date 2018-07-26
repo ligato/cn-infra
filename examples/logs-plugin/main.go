@@ -103,6 +103,8 @@ func (plugin *ExamplePlugin) AfterInit() (err error) {
 	late := plugin.Log.NewLogger("late")
 	late.Debugf("late debug message")
 
+	plugin.addHook()
+
 	// End the example
 	plugin.Log.Info("logs in plugin example finished, sending shutdown ...")
 	close(plugin.exampleFinished)
@@ -123,4 +125,7 @@ func (plugin *ExamplePlugin) showPanicLog() {
 		}
 	}()
 	plugin.Log.Panic("Panic log: calls panic() after log, will be recovered") //calls panic() after logging
+}
+
+func (plugin *ExamplePlugin) addHook() {
 }

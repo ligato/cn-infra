@@ -16,15 +16,21 @@ package logmanager
 
 import (
 	"fmt"
+	"log/syslog"
 	"net/http"
 	"os"
 	"strings"
 
+	lLogStash "github.com/bshuster-repo/logrus-logstash-hook"
+	lFluent "github.com/evalphobia/logrus_fluent"
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/rpc/rest"
+	"github.com/sirupsen/logrus"
+	lSyslog "github.com/sirupsen/logrus/hooks/syslog"
 	"github.com/unrolled/render"
+	"strconv"
 )
 
 // LoggerData encapsulates parameters of a logger represented as strings.
@@ -67,6 +73,9 @@ func NewConf() *Conf {
 type Conf struct {
 	DefaultLevel string       `json:"default-level"`
 	Loggers      []ConfLogger `json:"loggers"`
+
+	// logging hooks configuration
+	Hooks map[string]HookConfig
 }
 
 // ConfLogger is configuration of a particular logger.
@@ -120,6 +129,7 @@ func (lm *Plugin) Init() error {
 					logCfgEntry.Name, err)
 			}
 		}
+		lm.Log.Warn("hooks config ... ")
 
 	}
 
@@ -215,4 +225,52 @@ func stringToLogLevel(level string) logging.LogLevel {
 	}
 
 	return logging.InfoLevel
+}
+
+const (
+	HookSysLog   = "syslog"
+	HookLogStash = "logstash"
+	HookFluent   = "fluent"
+)
+
+type HookConfig struct {
+	Protocol string
+	Address  string
+	Port     int
+}
+
+func (lm *Plugin) AddHook(hookName string) {
+	var hook logrus.Hook
+	var err error
+
+	if hookConfig, exists := lm.Conf.Hooks[hookName]; exists {
+		switch hookName {
+		case HookSysLog:
+			hook, err = lSyslog.NewSyslogHook(
+				hookConfig.Protocol,
+				hookConfig.Address+":"+strconv.Itoa(hookConfig.Port),
+				syslog.LOG_INFO, "")
+		case HookLogStash:
+			hook, err = lLogStash.NewHook(
+				hookConfig.Protocol,
+				hookConfig.Address+":"+strconv.Itoa(hookConfig.Port),
+				"vpp-agent")
+		case HookFluent:
+			hook, err = lFluent.NewWithConfig(lFluent.Config{
+				Host: hookConfig.Address,
+				Port: hookConfig.Port,
+			})
+		default:
+			return
+		}
+	}
+	if err == nil {
+		lgs := lm.LogRegistry.ListLoggers()
+		for lg, _ := range lgs {
+			logger, found := lm.LogRegistry.Lookup(lg)
+			if found {
+				logger.AddHook(hook)
+			}
+		}
+	}
 }

@@ -14,7 +14,10 @@
 
 package logging
 
-import "fmt"
+import (
+	"fmt"
+	lg "github.com/sirupsen/logrus"
+)
 
 var (
 	// DefaultLogger is the default logger
@@ -98,6 +101,8 @@ type Logger interface {
 	WithField(key string, value interface{}) LogWithLevel
 	// WithFields creates multiple structured fields
 	WithFields(fields Fields) LogWithLevel
+	// Add hook to send log to external address
+	AddHook(hook lg.Hook)
 
 	LogWithLevel
 }
