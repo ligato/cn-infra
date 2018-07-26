@@ -21,14 +21,14 @@ import (
 	"os"
 	"strings"
 
-	lLogStash "github.com/bshuster-repo/logrus-logstash-hook"
-	lFluent "github.com/evalphobia/logrus_fluent"
+	"github.com/bshuster-repo/logrus-logstash-hook"
+	"github.com/evalphobia/logrus_fluent"
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/sirupsen/logrus"
-	lSyslog "github.com/sirupsen/logrus/hooks/syslog"
+	lgSyslog "github.com/sirupsen/logrus/hooks/syslog"
 	"github.com/unrolled/render"
 	"strconv"
 )
@@ -96,7 +96,6 @@ func (lm *Plugin) Init() error {
 		if err != nil {
 			return err
 		}
-		lm.Log.Debugf("logs config: %+v", lm.Conf)
 
 		// Handle default log level. Prefer value from environmental variable
 		defaultLogLvl := os.Getenv("INITIAL_LOGLVL")
@@ -129,8 +128,12 @@ func (lm *Plugin) Init() error {
 					logCfgEntry.Name, err)
 			}
 		}
-		lm.Log.Warn("hooks config ... ")
+		lm.Log.Warn("configuring log hooks ...")
 
+		createLevelMappings()
+		lm.AddHook(HookSysLog)
+		lm.AddHook(HookLogStash)
+		lm.AddHook(HookFluent)
 	}
 
 	return nil
@@ -233,10 +236,37 @@ const (
 	HookFluent   = "fluent"
 )
 
+type levelMapping struct {
+	syslogLevel map[logging.LogLevel]syslog.Priority
+	fluentLevel map[logging.LogLevel][]logrus.Level
+}
+
 type HookConfig struct {
 	Protocol string
 	Address  string
 	Port     int
+	Level    string
+}
+
+var llm = levelMapping{}
+
+func createLevelMappings() {
+	llm.syslogLevel = map[logging.LogLevel]syslog.Priority{
+		logging.PanicLevel: syslog.LOG_CRIT,
+		logging.FatalLevel: syslog.LOG_CRIT,
+		logging.ErrorLevel: syslog.LOG_ERR,
+		logging.WarnLevel:  syslog.LOG_WARNING,
+		logging.InfoLevel:  syslog.LOG_INFO,
+		logging.DebugLevel: syslog.LOG_DEBUG,
+	}
+	llm.fluentLevel = map[logging.LogLevel][]logrus.Level{
+		logging.PanicLevel: {logrus.PanicLevel},
+		logging.FatalLevel: {logrus.FatalLevel},
+		logging.ErrorLevel: {logrus.ErrorLevel},
+		logging.WarnLevel:  {logrus.WarnLevel},
+		logging.InfoLevel:  {logrus.InfoLevel},
+		logging.DebugLevel: {logrus.DebugLevel},
+	}
 }
 
 func (lm *Plugin) AddHook(hookName string) {
@@ -246,31 +276,41 @@ func (lm *Plugin) AddHook(hookName string) {
 	if hookConfig, exists := lm.Conf.Hooks[hookName]; exists {
 		switch hookName {
 		case HookSysLog:
-			hook, err = lSyslog.NewSyslogHook(
+			var address = hookConfig.Address
+			if hookConfig.Address != "" {
+				address = address + ":" + strconv.Itoa(hookConfig.Port)
+			}
+			hook, err = lgSyslog.NewSyslogHook(
 				hookConfig.Protocol,
-				hookConfig.Address+":"+strconv.Itoa(hookConfig.Port),
-				syslog.LOG_INFO, "")
+				address,
+				llm.syslogLevel[stringToLogLevel(hookConfig.Level)],
+				"")
 		case HookLogStash:
-			hook, err = lLogStash.NewHook(
+			hook, err = logrustash.NewHook(
 				hookConfig.Protocol,
 				hookConfig.Address+":"+strconv.Itoa(hookConfig.Port),
 				"vpp-agent")
 		case HookFluent:
-			hook, err = lFluent.NewWithConfig(lFluent.Config{
-				Host: hookConfig.Address,
-				Port: hookConfig.Port,
+			hook, err = logrus_fluent.NewWithConfig(logrus_fluent.Config{
+				Host:      hookConfig.Address,
+				Port:      hookConfig.Port,
+				LogLevels: llm.fluentLevel[stringToLogLevel(hookConfig.Level)],
 			})
 		default:
 			return
 		}
-	}
-	if err == nil {
-		lgs := lm.LogRegistry.ListLoggers()
-		for lg, _ := range lgs {
-			logger, found := lm.LogRegistry.Lookup(lg)
-			if found {
-				logger.AddHook(hook)
+		if err == nil {
+			lgs := lm.LogRegistry.ListLoggers()
+			for lg, _ := range lgs {
+				logger, found := lm.LogRegistry.Lookup(lg)
+				if found {
+					logger.AddHook(hook)
+				}
 			}
+			lm.Log.Warnf("add hook %v to registry", hookName)
+			lm.LogRegistry.AddHook(hook)
+		} else {
+			lm.Log.Warnf("couldn't create hook for %v : %v", hookName, err.Error())
 		}
 	}
 }

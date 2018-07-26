@@ -126,6 +126,8 @@ type Registry interface {
 	Lookup(loggerName string) (logger Logger, found bool)
 	// ClearRegistry removes all loggers except the default one from registry
 	ClearRegistry()
+	// HookConfigs stores hooks from log manager to be used for new loggers
+	AddHook(hook lg.Hook)
 }
 
 // PluginLogger is intended for:

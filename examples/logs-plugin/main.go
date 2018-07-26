@@ -5,6 +5,7 @@ import (
 
 	"github.com/ligato/cn-infra/agent"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logmanager"
 )
 
 // *************************************************************************
@@ -38,6 +39,7 @@ func main() {
 	p := &ExamplePlugin{
 		exampleFinished: make(chan struct{}),
 		Log:             logging.ForPlugin(PluginName),
+		LogManager:      &logmanager.DefaultPlugin,
 	}
 	a := agent.NewAgent(
 		agent.AllPlugins(p),
@@ -46,10 +48,13 @@ func main() {
 	if err := a.Run(); err != nil {
 		log.Fatal(err)
 	}
+
 }
 
 // ExamplePlugin presents the PluginLogger API.
 type ExamplePlugin struct {
+	LogManager *logmanager.Plugin
+
 	Log logging.PluginLogger
 
 	exampleFinished chan struct{}
@@ -103,8 +108,6 @@ func (plugin *ExamplePlugin) AfterInit() (err error) {
 	late := plugin.Log.NewLogger("late")
 	late.Debugf("late debug message")
 
-	plugin.addHook()
-
 	// End the example
 	plugin.Log.Info("logs in plugin example finished, sending shutdown ...")
 	close(plugin.exampleFinished)
@@ -125,7 +128,4 @@ func (plugin *ExamplePlugin) showPanicLog() {
 		}
 	}()
 	plugin.Log.Panic("Panic log: calls panic() after log, will be recovered") //calls panic() after logging
-}
-
-func (plugin *ExamplePlugin) addHook() {
 }

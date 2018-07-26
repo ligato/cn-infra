@@ -46,7 +46,7 @@ func (c Config) FluentConfig() fluent.Config {
 		RetryWait:          c.RetryWait,
 		MaxRetry:           c.MaxRetry,
 		TagPrefix:          c.TagPrefix,
-		Async:              c.AsyncConnect,
+		AsyncConnect:       c.AsyncConnect,
 		MarshalAsJSON:      c.MarshalAsJSON,
 		SubSecondPrecision: c.SubSecondPrecision,
 	}

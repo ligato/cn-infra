@@ -62,6 +62,8 @@ type logRegistry struct {
 	logLevels map[string]logrus.Level
 	// defaultLevel is used if logger level is not set
 	defaultLevel logrus.Level
+	// logging hooks
+	hooks []logrus.Hook
 }
 
 var validLoggerName = regexp.MustCompile(`^[a-zA-Z0-9.-]+$`).MatchString
@@ -228,4 +230,9 @@ func (lr *logRegistry) getLoggerFromMapping(logger string) *Logger {
 	}
 	panic("cannot cast log value to Logger obj")
 
+}
+
+// HookConfigs stores hook configs from log manager
+func (lr *logRegistry) AddHook(hook logrus.Hook) {
+	lr.hooks = append(lr.hooks, hook)
 }
