@@ -246,7 +246,8 @@ func (a *agent) stop() error {
 	defer close(a.stopCh)
 
 	// Close plugins
-	for _, p := range a.opts.Plugins {
+	for i := len(a.opts.Plugins) - 1; i >= 0; i-- {
+		p := a.opts.Plugins[i]
 		agentLogger.Debugf("=> Close(): %v", p)
 		if err := p.Close(); err != nil {
 			return err
