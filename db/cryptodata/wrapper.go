@@ -19,12 +19,10 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-// CoreBrokerWatcherWrapper wraps keyval.CoreBrokerWatcher with additional support of reading encrypted data
-type CoreBrokerWatcherWrapper struct {
-	// Wrapped CoreBrokerWatcher
-	keyval.CoreBrokerWatcher
-	// Wrapped BytesBroker
-	bytesWrap *BytesBrokerWrapper
+// KvBytesPluginWrapper wraps keyval.KvBytesPlugin with additional support of reading encrypted data
+type KvBytesPluginWrapper struct {
+	// Wrapped KvBytesPlugin
+	keyval.KvBytesPlugin
 	// Function used for decrypting arbitrary data later
 	decryptFunc DecryptFunc
 	// ArbitraryDecrypter is used to decrypt data
@@ -41,27 +39,21 @@ type BytesBrokerWrapper struct {
 	decrypter ArbitraryDecrypter
 }
 
-// NewCoreBrokerWatcherWrapper creates wrapper for provided CoreBrokerWatcher, adding support for decrypting encrypted
+// NewKvBytesPluginWrapper creates wrapper for provided CoreBrokerWatcher, adding support for decrypting encrypted
 // data
-func NewCoreBrokerWatcherWrapper(cbw keyval.CoreBrokerWatcher, decrypter ArbitraryDecrypter, decryptFunc DecryptFunc) *CoreBrokerWatcherWrapper {
-	return &CoreBrokerWatcherWrapper{
-		CoreBrokerWatcher: cbw,
-		decryptFunc:       decryptFunc,
-		decrypter:         decrypter,
-		bytesWrap:         NewBytesBrokerWrapper(cbw, decrypter, decryptFunc),
+func NewKvBytesPluginWrapper(cbw keyval.KvBytesPlugin, decrypter ArbitraryDecrypter, decryptFunc DecryptFunc) *KvBytesPluginWrapper {
+	return &KvBytesPluginWrapper{
+		KvBytesPlugin: cbw,
+		decryptFunc:   decryptFunc,
+		decrypter:     decrypter,
 	}
 }
 
 // NewBroker returns a BytesBroker instance with support for decrypting values that prepends given <keyPrefix> to all
 // keys in its calls.
 // To avoid using a prefix, pass keyval.Root constant as argument.
-func (cbw *CoreBrokerWatcherWrapper) NewBroker(prefix string) keyval.BytesBroker {
-	return NewBytesBrokerWrapper(cbw.CoreBrokerWatcher.NewBroker(prefix), cbw.decrypter, cbw.decryptFunc)
-}
-
-// GetValue retrieves and tries to decrypt one item under the provided key.
-func (cbw *CoreBrokerWatcherWrapper) GetValue(key string) (data []byte, found bool, revision int64, err error) {
-	return cbw.bytesWrap.GetValue(key)
+func (cbw *KvBytesPluginWrapper) NewBroker(prefix string) keyval.BytesBroker {
+	return NewBytesBrokerWrapper(cbw.KvBytesPlugin.NewBroker(prefix), cbw.decrypter, cbw.decryptFunc)
 }
 
 // NewBytesBrokerWrapper creates wrapper for provided BytesBroker, adding support for decrypting encrypted data

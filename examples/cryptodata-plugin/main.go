@@ -29,6 +29,7 @@ import (
 	"github.com/pkg/errors"
 	"encoding/base64"
 	"fmt"
+	"github.com/ligato/cn-infra/db/keyval"
 )
 
 // PluginName represents name of plugin.
@@ -113,9 +114,10 @@ func (plugin *ExamplePlugin) Init() error {
 
 	// WrapBytes ETCD connection with crypto layer
 	dbWrapped := plugin.CryptoData.WrapBytes(plugin.db, cryptodata.NewDecrypterJSON())
+	broker := dbWrapped.NewBroker(keyval.Root)
 
 	// Get JSON data from ETCD and decrypt them with crypto layer
-	decryptedJSON, _, _, err := dbWrapped.GetValue(key)
+	decryptedJSON, _, _, err := broker.GetValue(key)
 	if err != nil {
 		return err
 	}
