@@ -39,6 +39,26 @@ type BytesBrokerWrapper struct {
 	decrypter ArbitraryDecrypter
 }
 
+// BytesWatcherWrapper wraps keyval.BytesWatcher with additional support of reading encrypted data
+type BytesWatcherWrapper struct {
+	// Wrapped BytesWatcher
+	keyval.BytesWatcher
+	// Function used for decrypting arbitrary data later
+	decryptFunc DecryptFunc
+	// ArbitraryDecrypter is used to decrypt data
+	decrypter ArbitraryDecrypter
+}
+
+// BytesWatchRespWrapper wraps keyval.BytesWatchResp with additional support of reading encrypted data
+type BytesWatchRespWrapper struct {
+	// Wrapped BytesWatchResp
+	keyval.BytesWatchResp
+	// Function used for decrypting arbitrary data later
+	decryptFunc DecryptFunc
+	// ArbitraryDecrypter is used to decrypt data
+	decrypter ArbitraryDecrypter
+}
+
 // NewKvBytesPluginWrapper creates wrapper for provided CoreBrokerWatcher, adding support for decrypting encrypted
 // data
 func NewKvBytesPluginWrapper(cbw keyval.KvBytesPlugin, decrypter ArbitraryDecrypter, decryptFunc DecryptFunc) *KvBytesPluginWrapper {
@@ -49,13 +69,6 @@ func NewKvBytesPluginWrapper(cbw keyval.KvBytesPlugin, decrypter ArbitraryDecryp
 	}
 }
 
-// NewBroker returns a BytesBroker instance with support for decrypting values that prepends given <keyPrefix> to all
-// keys in its calls.
-// To avoid using a prefix, pass keyval.Root constant as argument.
-func (cbw *KvBytesPluginWrapper) NewBroker(prefix string) keyval.BytesBroker {
-	return NewBytesBrokerWrapper(cbw.KvBytesPlugin.NewBroker(prefix), cbw.decrypter, cbw.decryptFunc)
-}
-
 // NewBytesBrokerWrapper creates wrapper for provided BytesBroker, adding support for decrypting encrypted data
 func NewBytesBrokerWrapper(pb keyval.BytesBroker, decrypter ArbitraryDecrypter, decryptFunc DecryptFunc) *BytesBrokerWrapper {
 	return &BytesBrokerWrapper{
@@ -63,6 +76,30 @@ func NewBytesBrokerWrapper(pb keyval.BytesBroker, decrypter ArbitraryDecrypter, 
 		decryptFunc: decryptFunc,
 		decrypter:   decrypter,
 	}
+}
+
+// NewBytesWatcherWrapper creates wrapper for provided BytesWatcher, adding support for decrypting encrypted data
+func NewBytesWatcherWrapper(pb keyval.BytesWatcher, decrypter ArbitraryDecrypter, decryptFunc DecryptFunc) *BytesWatcherWrapper {
+	return &BytesWatcherWrapper{
+		BytesWatcher: pb,
+		decryptFunc:  decryptFunc,
+		decrypter:    decrypter,
+	}
+}
+
+// NewBroker returns a BytesBroker instance with support for decrypting values that prepends given <keyPrefix> to all
+// keys in its calls.
+// To avoid using a prefix, pass keyval.Root constant as argument.
+func (cbw *KvBytesPluginWrapper) NewBroker(prefix string) keyval.BytesBroker {
+	return NewBytesBrokerWrapper(cbw.KvBytesPlugin.NewBroker(prefix), cbw.decrypter, cbw.decryptFunc)
+}
+
+// NewWatcher returns a BytesWatcher instance with support for decrypting values that prepends given <keyPrefix> to all
+// keys during watch subscribe phase.
+// The prefix is removed from the key retrieved by GetKey() in BytesWatchResp.
+// To avoid using a prefix, pass keyval.Root constant as argument.
+func (cbw *KvBytesPluginWrapper) NewWatcher(prefix string) keyval.BytesWatcher {
+	return NewBytesWatcherWrapper(cbw.KvBytesPlugin.NewWatcher(prefix), cbw.decrypter, cbw.decryptFunc)
 }
 
 // GetValue retrieves and tries to decrypt one item under the provided key.
@@ -77,6 +114,37 @@ func (cbb *BytesBrokerWrapper) GetValue(key string) (data []byte, found bool, re
 		data = objData.([]byte)
 	}
 	return
+}
+
+// Watch starts subscription for changes associated with the selected keys.
+// Watch events will be delivered to callback (not channel) <respChan>.
+// Channel <closeChan> can be used to close watching on respective key
+func (b *BytesWatcherWrapper) Watch(respChan func(keyval.BytesWatchResp), closeChan chan string, keys ...string) error {
+	return b.BytesWatcher.Watch(func(resp keyval.BytesWatchResp) {
+		respChan(&BytesWatchRespWrapper{
+			BytesWatchResp: resp,
+			decrypter:      b.decrypter,
+			decryptFunc:    b.decryptFunc,
+		})
+	}, closeChan, keys...)
+}
+
+// GetValue returns the value of the pair.
+func (r *BytesWatchRespWrapper) GetValue() []byte {
+	data, err := r.decrypter.Decrypt(r.BytesWatchResp.GetValue(), r.decryptFunc)
+	if err != nil {
+		return nil
+	}
+	return data.([]byte)
+}
+
+// GetPrevValue returns the previous value of the pair.
+func (r *BytesWatchRespWrapper) GetPrevValue() []byte {
+	data, err := r.decrypter.Decrypt(r.BytesWatchResp.GetPrevValue(), r.decryptFunc)
+	if err != nil {
+		return nil
+	}
+	return data.([]byte)
 }
 
 // KvProtoPluginWrapper wraps keyval.KvProtoPlugin with additional support of reading encrypted data
@@ -107,13 +175,6 @@ func NewKvProtoPluginWrapper(kvp keyval.KvProtoPlugin, decrypter ArbitraryDecryp
 	}
 }
 
-// NewBroker returns a BytesBroker instance with support for decrypting values that prepends given <keyPrefix> to all
-// keys in its calls.
-// To avoid using a prefix, pass keyval.Root constant as argument.
-func (kvp *KvProtoPluginWrapper) NewBroker(prefix string) keyval.ProtoBroker {
-	return NewProtoBrokerWrapper(kvp.KvProtoPlugin.NewBroker(prefix), kvp.decrypter, kvp.decryptFunc)
-}
-
 // NewProtoBrokerWrapper creates wrapper for provided ProtoBroker, adding support for decrypting encrypted data
 func NewProtoBrokerWrapper(pb keyval.ProtoBroker, decrypter ArbitraryDecrypter, decryptFunc DecryptFunc) *ProtoBrokerWrapper {
 	return &ProtoBrokerWrapper{
@@ -121,6 +182,13 @@ func NewProtoBrokerWrapper(pb keyval.ProtoBroker, decrypter ArbitraryDecrypter, 
 		decryptFunc: decryptFunc,
 		decrypter:   decrypter,
 	}
+}
+
+// NewBroker returns a BytesBroker instance with support for decrypting values that prepends given <keyPrefix> to all
+// keys in its calls.
+// To avoid using a prefix, pass keyval.Root constant as argument.
+func (kvp *KvProtoPluginWrapper) NewBroker(prefix string) keyval.ProtoBroker {
+	return NewProtoBrokerWrapper(kvp.KvProtoPlugin.NewBroker(prefix), kvp.decrypter, kvp.decryptFunc)
 }
 
 // GetValue retrieves one item under the provided <key>. If the item exists,
