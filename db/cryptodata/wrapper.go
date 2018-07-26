@@ -19,44 +19,48 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-// KvBytesPluginWrapper wraps keyval.KvBytesPlugin with additional support of reading encrypted data
-type KvBytesPluginWrapper struct {
-	// Wrapped KvBytesPlugin
-	keyval.KvBytesPlugin
+// decryptData holds values required for decrypting
+type decryptData struct {
 	// Function used for decrypting arbitrary data later
 	decryptFunc DecryptFunc
 	// ArbitraryDecrypter is used to decrypt data
 	decrypter ArbitraryDecrypter
+}
+
+// KvBytesPluginWrapper wraps keyval.KvBytesPlugin with additional support of reading encrypted data
+type KvBytesPluginWrapper struct {
+	keyval.KvBytesPlugin
+	decryptData
 }
 
 // BytesBrokerWrapper wraps keyval.BytesBroker with additional support of reading encrypted data
 type BytesBrokerWrapper struct {
-	// Wrapped BytesBroker
 	keyval.BytesBroker
-	// Function used for decrypting arbitrary data later
-	decryptFunc DecryptFunc
-	// ArbitraryDecrypter is used to decrypt data
-	decrypter ArbitraryDecrypter
+	decryptData
 }
 
 // BytesWatcherWrapper wraps keyval.BytesWatcher with additional support of reading encrypted data
 type BytesWatcherWrapper struct {
-	// Wrapped BytesWatcher
 	keyval.BytesWatcher
-	// Function used for decrypting arbitrary data later
-	decryptFunc DecryptFunc
-	// ArbitraryDecrypter is used to decrypt data
-	decrypter ArbitraryDecrypter
+	decryptData
+}
+
+// BytesKeyValWrapper wraps keyval.BytesKeyVal with additional support of reading encrypted data
+type BytesKeyValWrapper struct {
+	keyval.BytesKeyVal
+	decryptData
 }
 
 // BytesWatchRespWrapper wraps keyval.BytesWatchResp with additional support of reading encrypted data
 type BytesWatchRespWrapper struct {
-	// Wrapped BytesWatchResp
 	keyval.BytesWatchResp
-	// Function used for decrypting arbitrary data later
-	decryptFunc DecryptFunc
-	// ArbitraryDecrypter is used to decrypt data
-	decrypter ArbitraryDecrypter
+	BytesKeyValWrapper
+}
+
+// BytesKeyValIterator wraps keyval.BytesKeyValIterator with additional support of reading encrypted data
+type BytesKeyValIteratorWrapper struct {
+	keyval.BytesKeyValIterator
+	decryptData
 }
 
 // NewKvBytesPluginWrapper creates wrapper for provided CoreBrokerWatcher, adding support for decrypting encrypted
@@ -64,8 +68,10 @@ type BytesWatchRespWrapper struct {
 func NewKvBytesPluginWrapper(cbw keyval.KvBytesPlugin, decrypter ArbitraryDecrypter, decryptFunc DecryptFunc) *KvBytesPluginWrapper {
 	return &KvBytesPluginWrapper{
 		KvBytesPlugin: cbw,
-		decryptFunc:   decryptFunc,
-		decrypter:     decrypter,
+		decryptData: decryptData{
+			decryptFunc: decryptFunc,
+			decrypter:   decrypter,
+		},
 	}
 }
 
@@ -73,8 +79,10 @@ func NewKvBytesPluginWrapper(cbw keyval.KvBytesPlugin, decrypter ArbitraryDecryp
 func NewBytesBrokerWrapper(pb keyval.BytesBroker, decrypter ArbitraryDecrypter, decryptFunc DecryptFunc) *BytesBrokerWrapper {
 	return &BytesBrokerWrapper{
 		BytesBroker: pb,
-		decryptFunc: decryptFunc,
-		decrypter:   decrypter,
+		decryptData: decryptData{
+			decryptFunc: decryptFunc,
+			decrypter:   decrypter,
+		},
 	}
 }
 
@@ -82,8 +90,10 @@ func NewBytesBrokerWrapper(pb keyval.BytesBroker, decrypter ArbitraryDecrypter, 
 func NewBytesWatcherWrapper(pb keyval.BytesWatcher, decrypter ArbitraryDecrypter, decryptFunc DecryptFunc) *BytesWatcherWrapper {
 	return &BytesWatcherWrapper{
 		BytesWatcher: pb,
-		decryptFunc:  decryptFunc,
-		decrypter:    decrypter,
+		decryptData: decryptData{
+			decryptFunc: decryptFunc,
+			decrypter:   decrypter,
+		},
 	}
 }
 
@@ -116,6 +126,19 @@ func (cbb *BytesBrokerWrapper) GetValue(key string) (data []byte, found bool, re
 	return
 }
 
+// ListValues returns an iterator that enables to traverse all items stored
+// under the provided <key>.
+func (cbb *BytesBrokerWrapper) ListValues(key string) (keyval.BytesKeyValIterator, error) {
+	kv, err := cbb.BytesBroker.ListValues(key)
+	if err != nil {
+		return kv, err
+	}
+	return &BytesKeyValIteratorWrapper{
+		BytesKeyValIterator: kv,
+		decryptData:         cbb.decryptData,
+	}, nil
+}
+
 // Watch starts subscription for changes associated with the selected keys.
 // Watch events will be delivered to callback (not channel) <respChan>.
 // Channel <closeChan> can be used to close watching on respective key
@@ -123,15 +146,27 @@ func (b *BytesWatcherWrapper) Watch(respChan func(keyval.BytesWatchResp), closeC
 	return b.BytesWatcher.Watch(func(resp keyval.BytesWatchResp) {
 		respChan(&BytesWatchRespWrapper{
 			BytesWatchResp: resp,
-			decrypter:      b.decrypter,
-			decryptFunc:    b.decryptFunc,
+			BytesKeyValWrapper: BytesKeyValWrapper{
+				BytesKeyVal: resp,
+				decryptData: b.decryptData,
+			},
 		})
 	}, closeChan, keys...)
 }
 
 // GetValue returns the value of the pair.
 func (r *BytesWatchRespWrapper) GetValue() []byte {
-	data, err := r.decrypter.Decrypt(r.BytesWatchResp.GetValue(), r.decryptFunc)
+	return r.BytesKeyValWrapper.GetValue()
+}
+
+// GetPrevValue returns the previous value of the pair.
+func (r *BytesWatchRespWrapper) GetPrevValue() []byte {
+	return r.BytesKeyValWrapper.GetPrevValue()
+}
+
+// GetValue returns the value of the pair.
+func (r *BytesKeyValWrapper) GetValue() []byte {
+	data, err := r.decrypter.Decrypt(r.BytesKeyVal.GetValue(), r.decryptFunc)
 	if err != nil {
 		return nil
 	}
@@ -139,39 +174,47 @@ func (r *BytesWatchRespWrapper) GetValue() []byte {
 }
 
 // GetPrevValue returns the previous value of the pair.
-func (r *BytesWatchRespWrapper) GetPrevValue() []byte {
-	data, err := r.decrypter.Decrypt(r.BytesWatchResp.GetPrevValue(), r.decryptFunc)
+func (r *BytesKeyValWrapper) GetPrevValue() []byte {
+	data, err := r.decrypter.Decrypt(r.BytesKeyVal.GetPrevValue(), r.decryptFunc)
 	if err != nil {
 		return nil
 	}
 	return data.([]byte)
 }
 
+// GetNext retrieves the following item from the context.
+// When there are no more items to get, <stop> is returned as *true*
+// and <kv> is simply *nil*.
+func (r *BytesKeyValIteratorWrapper) GetNext() (kv keyval.BytesKeyVal, stop bool) {
+	if stop {
+		return kv, stop
+	}
+	return &BytesKeyValWrapper{
+		BytesKeyVal: kv,
+		decryptData: r.decryptData,
+	}, stop
+}
+
 // KvProtoPluginWrapper wraps keyval.KvProtoPlugin with additional support of reading encrypted data
 type KvProtoPluginWrapper struct {
-	// Wrapped KvProtoPlugin
 	keyval.KvProtoPlugin
-	// Function used for decrypting arbitrary data later
-	decryptFunc DecryptFunc
-	// ArbitraryDecrypter is used to decrypt data
-	decrypter ArbitraryDecrypter
+	decryptData
 }
 
 // ProtoBrokerWrapper wraps keyval.ProtoBroker with additional support of reading encrypted data
 type ProtoBrokerWrapper struct {
 	keyval.ProtoBroker
-	// Function used for decrypting arbitrary data later
-	decryptFunc DecryptFunc
-	// ArbitraryDecrypter is used to decrypt data
-	decrypter ArbitraryDecrypter
+	decryptData
 }
 
 // NewKvProtoPluginWrapper creates wrapper for provided KvProtoPlugin, adding support for decrypting encrypted data
 func NewKvProtoPluginWrapper(kvp keyval.KvProtoPlugin, decrypter ArbitraryDecrypter, decryptFunc DecryptFunc) *KvProtoPluginWrapper {
 	return &KvProtoPluginWrapper{
 		KvProtoPlugin: kvp,
-		decryptFunc:   decryptFunc,
-		decrypter:     decrypter,
+		decryptData: decryptData{
+			decryptFunc: decryptFunc,
+			decrypter:   decrypter,
+		},
 	}
 }
 
@@ -179,8 +222,10 @@ func NewKvProtoPluginWrapper(kvp keyval.KvProtoPlugin, decrypter ArbitraryDecryp
 func NewProtoBrokerWrapper(pb keyval.ProtoBroker, decrypter ArbitraryDecrypter, decryptFunc DecryptFunc) *ProtoBrokerWrapper {
 	return &ProtoBrokerWrapper{
 		ProtoBroker: pb,
-		decryptFunc: decryptFunc,
-		decrypter:   decrypter,
+		decryptData: decryptData{
+			decryptFunc: decryptFunc,
+			decrypter:   decrypter,
+		},
 	}
 }
 
