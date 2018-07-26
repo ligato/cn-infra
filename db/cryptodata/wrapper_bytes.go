@@ -109,8 +109,11 @@ func (cbb *BytesBrokerWrapper) GetValue(key string) (data []byte, found bool, re
 		if err != nil {
 			return data, found, revision, err
 		}
-
-		data = objData.([]byte)
+		outData, ok := objData.([]byte)
+		if !ok {
+			return data, found, revision, err
+		}
+		return outData, found, revision, err
 	}
 	return
 }
@@ -155,20 +158,30 @@ func (r *BytesWatchRespWrapper) GetPrevValue() []byte {
 
 // GetValue returns the value of the pair.
 func (r *BytesKeyValWrapper) GetValue() []byte {
-	data, err := r.decrypter.Decrypt(r.BytesKeyVal.GetValue(), r.decryptFunc)
+	value := r.BytesKeyVal.GetValue()
+	data, err := r.decrypter.Decrypt(value, r.decryptFunc)
 	if err != nil {
 		return nil
 	}
-	return data.([]byte)
+	outData, ok := data.([]byte)
+	if !ok {
+		return value
+	}
+	return outData
 }
 
 // GetPrevValue returns the previous value of the pair.
 func (r *BytesKeyValWrapper) GetPrevValue() []byte {
-	data, err := r.decrypter.Decrypt(r.BytesKeyVal.GetPrevValue(), r.decryptFunc)
+	value := r.BytesKeyVal.GetPrevValue()
+	data, err := r.decrypter.Decrypt(value, r.decryptFunc)
 	if err != nil {
 		return nil
 	}
-	return data.([]byte)
+	outData, ok := data.([]byte)
+	if !ok {
+		return value
+	}
+	return outData
 }
 
 // GetNext retrieves the following item from the context.
