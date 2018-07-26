@@ -140,6 +140,20 @@ func (plugin *ExamplePlugin) Init() error {
 	}
 	plugin.Log.Infof("Got value %v", decryptedData)
 
+
+	// List all values from ETCD under key and decrypt them with crypto layer
+	iter, err := broker.ListValues(key)
+	if err != nil {
+		return err
+	}
+
+	kv, stop := iter.GetNext()
+	if !stop {
+		decryptedDataList := &ipsec.TunnelInterfaces{}
+		kv.GetValue(decryptedDataList)
+		plugin.Log.Infof("Listed value %v", decryptedDataList)
+	}
+
 	// Close agent and example
 	close(plugin.exampleFinished)
 

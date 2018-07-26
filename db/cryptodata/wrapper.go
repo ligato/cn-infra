@@ -57,7 +57,7 @@ type BytesWatchRespWrapper struct {
 	BytesKeyValWrapper
 }
 
-// BytesKeyValIterator wraps keyval.BytesKeyValIterator with additional support of reading encrypted data
+// BytesKeyValIteratorWrapper wraps keyval.BytesKeyValIterator with additional support of reading encrypted data
 type BytesKeyValIteratorWrapper struct {
 	keyval.BytesKeyValIterator
 	decryptData
@@ -186,7 +186,8 @@ func (r *BytesKeyValWrapper) GetPrevValue() []byte {
 // When there are no more items to get, <stop> is returned as *true*
 // and <kv> is simply *nil*.
 func (r *BytesKeyValIteratorWrapper) GetNext() (kv keyval.BytesKeyVal, stop bool) {
-	if stop {
+	kv, stop = r.BytesKeyValIterator.GetNext()
+	if stop || kv == nil {
 		return kv, stop
 	}
 	return &BytesKeyValWrapper{
@@ -204,6 +205,30 @@ type KvProtoPluginWrapper struct {
 // ProtoBrokerWrapper wraps keyval.ProtoBroker with additional support of reading encrypted data
 type ProtoBrokerWrapper struct {
 	keyval.ProtoBroker
+	decryptData
+}
+
+// ProtoWatcherWrapper wraps keyval.ProtoWatcher with additional support of reading encrypted data
+type ProtoWatcherWrapper struct {
+	keyval.ProtoWatcher
+	decryptData
+}
+
+// ProtoKeyValWrapper wraps keyval.ProtoKeyVal with additional support of reading encrypted data
+type ProtoKeyValWrapper struct {
+	keyval.ProtoKeyVal
+	decryptData
+}
+
+// ProtoWatchRespWrapper wraps keyval.ProtoWatchResp with additional support of reading encrypted data
+type ProtoWatchRespWrapper struct {
+	keyval.ProtoWatchResp
+	ProtoKeyValWrapper
+}
+
+// ProtoKeyValIteratorWrapper wraps keyval.ProtoKeyValIterator with additional support of reading encrypted data
+type ProtoKeyValIteratorWrapper struct {
+	keyval.ProtoKeyValIterator
 	decryptData
 }
 
@@ -229,11 +254,30 @@ func NewProtoBrokerWrapper(pb keyval.ProtoBroker, decrypter ArbitraryDecrypter, 
 	}
 }
 
-// NewBroker returns a BytesBroker instance with support for decrypting values that prepends given <keyPrefix> to all
+// NewProtoWatcherWrapper creates wrapper for provided ProtoWatcher, adding support for decrypting encrypted data
+func NewProtoWatcherWrapper(pb keyval.ProtoWatcher, decrypter ArbitraryDecrypter, decryptFunc DecryptFunc) *ProtoWatcherWrapper {
+	return &ProtoWatcherWrapper{
+		ProtoWatcher: pb,
+		decryptData: decryptData{
+			decryptFunc: decryptFunc,
+			decrypter:   decrypter,
+		},
+	}
+}
+
+// NewBroker returns a ProtoBroker instance with support for decrypting values that prepends given <keyPrefix> to all
 // keys in its calls.
 // To avoid using a prefix, pass keyval.Root constant as argument.
 func (kvp *KvProtoPluginWrapper) NewBroker(prefix string) keyval.ProtoBroker {
 	return NewProtoBrokerWrapper(kvp.KvProtoPlugin.NewBroker(prefix), kvp.decrypter, kvp.decryptFunc)
+}
+
+// NewWatcher returns a ProtoWatcher instance with support for decrypting values that prepends given <keyPrefix> to all
+// keys during watch subscribe phase.
+// The prefix is removed from the key retrieved by GetKey() in ProtoWatchResp.
+// To avoid using a prefix, pass keyval.Root constant as argument.
+func (kvp *KvProtoPluginWrapper) NewWatcher(prefix string) keyval.ProtoWatcher {
+	return NewProtoWatcherWrapper(kvp.KvProtoPlugin.NewWatcher(prefix), kvp.decrypter, kvp.decryptFunc)
 }
 
 // GetValue retrieves one item under the provided <key>. If the item exists,
@@ -246,4 +290,76 @@ func (db *ProtoBrokerWrapper) GetValue(key string, reqObj proto.Message) (bool, 
 
 	_, err = db.decrypter.Decrypt(reqObj, db.decryptFunc)
 	return found, revision, err
+}
+
+// ListValues returns an iterator that enables to traverse all items stored
+// under the provided <key>.
+func (db *ProtoBrokerWrapper) ListValues(key string) (keyval.ProtoKeyValIterator, error) {
+	kv, err := db.ProtoBroker.ListValues(key)
+	if err != nil {
+		return kv, err
+	}
+	return &ProtoKeyValIteratorWrapper{
+		ProtoKeyValIterator: kv,
+		decryptData:         db.decryptData,
+	}, nil
+}
+
+// Watch starts subscription for changes associated with the selected keys.
+// Watch events will be delivered to callback (not channel) <respChan>.
+// Channel <closeChan> can be used to close watching on respective key
+func (b *ProtoWatcherWrapper) Watch(respChan func(keyval.ProtoWatchResp), closeChan chan string, keys ...string) error {
+	return b.ProtoWatcher.Watch(func(resp keyval.ProtoWatchResp) {
+		respChan(&ProtoWatchRespWrapper{
+			ProtoWatchResp: resp,
+			ProtoKeyValWrapper: ProtoKeyValWrapper{
+				ProtoKeyVal: resp,
+				decryptData: b.decryptData,
+			},
+		})
+	}, closeChan, keys...)
+}
+
+// GetValue returns the value of the pair.
+func (r *ProtoWatchRespWrapper) GetValue(value proto.Message) error {
+	return r.ProtoKeyValWrapper.GetValue(value)
+}
+
+// GetPrevValue returns the previous value of the pair.
+func (r *ProtoWatchRespWrapper) GetPrevValue(prevValue proto.Message) (prevValueExist bool, err error) {
+	return r.ProtoKeyValWrapper.GetPrevValue(prevValue)
+}
+
+// GetValue returns the value of the pair.
+func (r *ProtoKeyValWrapper) GetValue(value proto.Message) error {
+	err := r.ProtoKeyVal.GetValue(value)
+	if err != nil {
+		return err
+	}
+	_, err = r.decrypter.Decrypt(value, r.decryptFunc)
+	return err
+}
+
+// GetPrevValue returns the previous value of the pair.
+func (r *ProtoKeyValWrapper) GetPrevValue(prevValue proto.Message) (prevValueExist bool, err error) {
+	exists, err := r.ProtoKeyVal.GetPrevValue(prevValue)
+	if !exists || err != nil {
+		return exists, err
+	}
+	_, err = r.decrypter.Decrypt(prevValue, r.decryptFunc)
+	return exists, err
+}
+
+// GetNext retrieves the following item from the context.
+// When there are no more items to get, <stop> is returned as *true*
+// and <kv> is simply *nil*.
+func (r *ProtoKeyValIteratorWrapper) GetNext() (kv keyval.ProtoKeyVal, stop bool) {
+	kv, stop = r.ProtoKeyValIterator.GetNext()
+	if stop || kv == nil {
+		return kv, stop
+	}
+	return &ProtoKeyValWrapper{
+		ProtoKeyVal: kv,
+		decryptData: r.decryptData,
+	}, stop
 }
