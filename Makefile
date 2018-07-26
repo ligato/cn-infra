@@ -125,7 +125,7 @@ format:
 # Get link check tool
 get-linkcheck:
 	sudo apt-get install npm
-	npm install -g markdown-link-check
+	npm install -g markdown-link-check@3.6.2
 
 # Validate links in markdown files
 check-links: get-linkcheck
