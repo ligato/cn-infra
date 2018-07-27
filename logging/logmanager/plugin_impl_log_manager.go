@@ -235,12 +235,14 @@ func stringToLogLevel(level string) logging.LogLevel {
 	return logging.InfoLevel
 }
 
+// list of supported hook services to send errors to remote syslog server
 const (
 	HookSysLog   = "syslog"
 	HookLogStash = "logstash"
 	HookFluent   = "fluent"
 )
 
+// HookConfig contains configuration of hook services
 type HookConfig struct {
 	Protocol string
 	Address  string
@@ -248,15 +250,18 @@ type HookConfig struct {
 	Levels   []string
 }
 
+// CommonHook implements that Hook with own level definition
 type CommonHook struct {
 	logrus.Hook
 	levels      []logrus.Level
 }
 
+// Levels overrides implementation from embedded interface
 func (cH *CommonHook) Levels() []logrus.Level {
 	return cH.levels
 }
 
+// AddHook adds hook for existing loggers and store it into registy for late use
 func (lm *Plugin) AddHook(hookName string, hookConfig HookConfig) error {
 	var cHook *CommonHook
 	var lgHook logrus.Hook
@@ -304,7 +309,7 @@ func (lm *Plugin) AddHook(hookName string, hookConfig HookConfig) error {
 	// add hook to existing loggers and store it into registry for late use
 	if err == nil {
 		lgs := lm.LogRegistry.ListLoggers()
-		for lg, _ := range lgs {
+		for lg := range lgs {
 			logger, found := lm.LogRegistry.Lookup(lg)
 			if found {
 				logger.AddHook(cHook)
