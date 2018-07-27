@@ -15,6 +15,7 @@
 package bolt
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/boltdb/bolt"
 	"github.com/ligato/cn-infra/datasync"
@@ -25,7 +26,15 @@ import (
 	"strings"
 )
 
+const bucketSeparator = "/"
+
 var boltLogger = logrus.NewLogger("bolt")
+
+// Client serves as a client for Bolt KV storage and implements keyval.CoreBrokerWatcher interface.
+type Client struct {
+	dbPath            *bolt.DB
+	splitKeyToBuckets bool
+}
 
 func init() {
 	if os.Getenv("DEBUG_BOLT_CLIENT") != "" {
@@ -33,20 +42,26 @@ func init() {
 	}
 }
 
-// Client serves as a client for Bolt KV storage and implements keyval.CoreBrokerWatcher interface.
-type Client struct {
-	dbPath          *bolt.DB
-	bucketSeparator string
+// NewClient creates new client for Bolt using given config.
+func NewClient(cfg *Config) (client *Client, err error) {
+	client = &Client{}
+	client.dbPath, err = bolt.Open(cfg.DbPath, cfg.FileMode, &bolt.Options{Timeout: cfg.LockTimeout})
+	return client, err
 }
 
-func transformKey(key string, separator string) ([][]byte, []byte) {
+func transformKey(key string, separator string, splitKeyToBuckets bool) ([][]byte, []byte) {
 	if !strings.HasPrefix(key, separator) {
-		return nil, nil
+		key = "/root/" + key
 	}
 
-	names := strings.Split(key, separator)
+	var names []string
+	if !splitKeyToBuckets {
+		return [][]byte{[]byte("/root")}, []byte(key)
+	} else {
+		names = strings.Split(key, separator)
+	}
 
-	var bucketNames [][]byte // := names[:len(names)-1]
+	var bucketNames [][]byte
 	for _, name := range names[1 : len(names)-1] {
 		bucketNames = append(bucketNames, ([]byte)(name))
 	}
@@ -59,19 +74,19 @@ func transformKey(key string, separator string) ([][]byte, []byte) {
 func (client *Client) NewTxn() keyval.BytesTxn {
 	tx, _ := client.dbPath.Begin(true)
 	return &txn{
-		readonly:  false,
-		separator: client.bucketSeparator,
-		kv:        tx,
+		readonly:          false,
+		separator:         bucketSeparator,
+		splitKeyToBuckets: client.splitKeyToBuckets,
+		kv:                tx,
 	}
 }
 
 // Create bucket base on given names in current transaction
 func createBucket(tx *bolt.Tx, bucketNames [][]byte) (*bolt.Bucket, error) {
 	var bucket *bolt.Bucket
-	var bucketName []byte
 	var errBucket string
 	var err error
-	for _, bucketName = range bucketNames {
+	for _, bucketName := range bucketNames {
 		errBucket = fmt.Sprintf("%s//%s", errBucket, bucketName)
 		if bucket == nil {
 			bucket, err = tx.CreateBucketIfNotExists(bucketName)
@@ -79,7 +94,7 @@ func createBucket(tx *bolt.Tx, bucketNames [][]byte) (*bolt.Bucket, error) {
 			bucket, err = bucket.CreateBucketIfNotExists(bucketName)
 		}
 		if err != nil {
-			return nil /*err*/, fmt.Errorf("can't create bucket %q", errBucket)
+			return nil, fmt.Errorf("can't create bucket %q, error: %v", errBucket, err)
 		}
 	}
 	return bucket, nil
@@ -108,7 +123,7 @@ func findBucket(tx *bolt.Tx, bucketNames [][]byte) (*bolt.Bucket, error) {
 func (client *Client) Put(key string, data []byte, opts ...datasync.PutOption) error {
 	boltLogger.Debugf("put: (%q,%q)\n", key, data)
 
-	bucketNames, keyInBucket := transformKey(key, client.bucketSeparator)
+	bucketNames, keyInBucket := transformKey(key, bucketSeparator, client.splitKeyToBuckets)
 	err := client.dbPath.Update(func(tx *bolt.Tx) error {
 		bucket, err := createBucket(tx, bucketNames)
 		if bucket == nil {
@@ -127,7 +142,7 @@ func (client *Client) Put(key string, data []byte, opts ...datasync.PutOption) e
 func (client *Client) GetValue(key string) (data []byte, found bool, revision int64, err error) {
 	boltLogger.Debugf("get value for key: %q\n", key)
 
-	bucketNames, keyInBucket := transformKey(key, client.bucketSeparator)
+	bucketNames, keyInBucket := transformKey(key, bucketSeparator, client.splitKeyToBuckets)
 	var value []byte
 	err = client.dbPath.View(func(tx *bolt.Tx) error {
 		found = false
@@ -148,7 +163,7 @@ func (client *Client) GetValue(key string) (data []byte, found bool, revision in
 // Delete deletes given key
 func (client *Client) Delete(key string, opts ...datasync.DelOption) (existed bool, err error) {
 	boltLogger.Debugf("delete key: %q\n", key)
-	bucketNames, keyInBucket := transformKey(key, client.bucketSeparator)
+	bucketNames, keyInBucket := transformKey(key, bucketSeparator, client.splitKeyToBuckets)
 	err = client.dbPath.Update(func(tx *bolt.Tx) error {
 		bucket, errBucket := findBucket(tx, bucketNames)
 		if bucket == nil {
@@ -189,7 +204,11 @@ func (client *Client) findSubtreeKeys(tx *bolt.Tx, bucket *bolt.Bucket, prefix s
 			}
 			prefix = parent
 		} else {
-			keys = append(keys, fmt.Sprintf("%s/%s", prefix, k))
+			if prefix != "" {
+				keys = append(keys, fmt.Sprintf("%s/%s", prefix, k))
+			} else {
+				keys = append(keys, (string)(k))
+			}
 		}
 	}
 	return keys
@@ -229,17 +248,31 @@ func (client *Client) findSubtreeKeyVals(tx *bolt.Tx, bucket *bolt.Bucket, prefi
 func (client *Client) ListKeys(keyPrefix string) (keyval.BytesKeyIterator, error) {
 	boltLogger.Debugf("list keys for prefix: %q\n", keyPrefix)
 
-	var prefix string
 	var keys []string
-	err := client.dbPath.View(func(tx *bolt.Tx) error {
-		bucketNames, _ := transformKey(keyPrefix, client.bucketSeparator)
-		bucket, err := findBucket(tx, bucketNames)
-		if bucket == nil {
-			return fmt.Errorf("bucket %q not found", err)
-		}
-		keys = client.findSubtreeKeys(tx, bucket, prefix, keys)
-		return nil
-	})
+	var err error
+	if client.splitKeyToBuckets {
+		var prefix string
+		err = client.dbPath.View(func(tx *bolt.Tx) error {
+			bucketNames, _ := transformKey(keyPrefix, bucketSeparator, client.splitKeyToBuckets)
+			bucket, err := findBucket(tx, bucketNames)
+			if bucket == nil {
+				return fmt.Errorf("bucket %q not found", err)
+			}
+			keys = client.findSubtreeKeys(tx, bucket, prefix, keys)
+			return nil
+		})
+	} else {
+		err = client.dbPath.View(func(tx *bolt.Tx) error {
+			// Assume bucket exists and has keys
+			c := tx.Bucket(([]byte)("/root")).Cursor()
+			prefix := []byte(keyPrefix)
+			for k, _ := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, _ = c.Next() {
+				fmt.Printf("key=%s\n", strings.TrimPrefix((string)(k), keyPrefix))
+				keys = append(keys, fmt.Sprintf("%s", strings.TrimPrefix((string)(k), keyPrefix)))
+			}
+			return nil
+		})
+	}
 	return &bytesKeyIterator{prefix: keyPrefix, len: len(keys), keys: keys}, err
 }
 
@@ -249,15 +282,30 @@ func (client *Client) ListValues(keyPrefix string) (keyval.BytesKeyValIterator, 
 
 	var prefix string
 	var keyVals []KVPair
-	err := client.dbPath.View(func(tx *bolt.Tx) error {
-		bucketNames, _ := transformKey(keyPrefix, client.bucketSeparator)
-		bucket, err := findBucket(tx, bucketNames)
-		if bucket == nil {
-			return fmt.Errorf("bucket %q not found", err)
-		}
-		keyVals = client.findSubtreeKeyVals(tx, bucket, prefix, keyVals)
-		return err
-	})
+	var err error
+	if client.splitKeyToBuckets {
+		err = client.dbPath.View(func(tx *bolt.Tx) error {
+			bucketNames, _ := transformKey(keyPrefix, bucketSeparator, client.splitKeyToBuckets)
+			bucket, err := findBucket(tx, bucketNames)
+			if bucket == nil {
+				return fmt.Errorf("bucket %q not found", err)
+			}
+			keyVals = client.findSubtreeKeyVals(tx, bucket, prefix, keyVals)
+			return err
+		})
+	} else {
+		err = client.dbPath.View(func(tx *bolt.Tx) error {
+			// Assume bucket exists and has keys
+			c := tx.Bucket(([]byte)("/root")).Cursor()
+			prefix := []byte(keyPrefix)
+			for k, v := c.Seek(([]byte)(prefix)); k != nil && bytes.HasPrefix(k, prefix); k, v = c.Next() {
+				fmt.Printf("key=%s\n", strings.TrimPrefix((string)(k), keyPrefix))
+				kv := KVPair{fmt.Sprintf("%s", strings.TrimPrefix((string)(k), keyPrefix)), v}
+				keyVals = append(keyVals, kv)
+			}
+			return nil
+		})
+	}
 	return &bytesKeyValIterator{prefix: keyPrefix, len: len(keyVals), pairs: keyVals}, err
 }
 

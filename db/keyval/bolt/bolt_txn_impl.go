@@ -24,9 +24,10 @@ import (
 // multiple operations in a more efficient way in contrast to executing
 // them one by one.
 type txn struct {
-	readonly  bool
-	separator string
-	kv        *bolt.Tx
+	readonly          bool
+	separator         string
+	splitKeyToBuckets bool
+	kv                *bolt.Tx
 }
 
 // Put adds a new 'put' operation to a previously created transaction.
@@ -35,7 +36,7 @@ type txn struct {
 // the existing value will be overwritten with the <value> from this
 // operation.
 func (tx *txn) Put(key string, value []byte) keyval.BytesTxn {
-	bucketNames, keyInBucket := transformKey(key, tx.separator)
+	bucketNames, keyInBucket := transformKey(key, tx.separator, tx.splitKeyToBuckets)
 	b, err := createBucket(tx.kv, bucketNames)
 	if err != nil {
 		log.Fatal(err)
@@ -50,7 +51,7 @@ func (tx *txn) Put(key string, value []byte) keyval.BytesTxn {
 // transaction. If <key> exists in the data store, the associated value
 // will be removed.
 func (tx *txn) Delete(key string) keyval.BytesTxn {
-	bucketNames, keyInBucket := transformKey(key, tx.separator)
+	bucketNames, keyInBucket := transformKey(key, tx.separator, tx.splitKeyToBuckets)
 	b, err := findBucket(tx.kv, bucketNames)
 	if err != nil {
 		log.Fatal(err)

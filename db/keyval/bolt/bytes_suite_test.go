@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Cisco and/or its affiliates.
+// Copyright (c) 2018 Cisco and/or its affiliates.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,7 +30,6 @@ func init() {
 }
 
 const DbPath = "/tmp/bolt.db"
-const BucketSeparator = "/"
 
 func setupTest(t *testing.T, newDB bool) *Client {
 	RegisterTestingT(t)
@@ -46,10 +45,10 @@ func setupTest(t *testing.T, newDB bool) *Client {
 	var err error
 	client := &Client{}
 	client.dbPath, err = bolt.Open(DbPath, 432, nil)
+	client.splitKeyToBuckets = false
 	if err != nil {
 		return nil
 	}
-	client.bucketSeparator = BucketSeparator
 
 	return client
 }
@@ -61,6 +60,27 @@ func (client *Client) teardownTest() {
 func (client *Client) checkIfExists(key string, expectedVal []byte) bool {
 	_, found, _, _ := client.GetValue(key)
 	return found
+}
+
+func TestPutRoot(t *testing.T) {
+	client := setupTest(t, true)
+	defer client.teardownTest()
+
+	var key = "keyWithoutSeparator"
+	err := client.Put(key, []byte("val"))
+	Expect(err).ToNot(HaveOccurred())
+	Expect(client.checkIfExists("/root/"+key, []byte("val"))).To(BeTrue())
+}
+
+func TestPutBucketLevelMax(t *testing.T) {
+	client := setupTest(t, true)
+	defer client.teardownTest()
+
+	client.splitKeyToBuckets = true
+	var key = "/bucket/level1/level2/level3/level4"
+	err := client.Put(key, []byte("val"))
+	Expect(err).ToNot(HaveOccurred())
+	Expect(client.checkIfExists(key, []byte("val"))).To(BeTrue())
 }
 
 func TestPut(t *testing.T) {
