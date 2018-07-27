@@ -64,7 +64,7 @@ func (cfg *Config) getGrpcOptions() (opts []grpc.ServerOption) {
 	return
 }
 
-func (cfg *Config) GetSocketType() string {
+func (cfg *Config) getSocketType() string {
 	// Default to tcp socket type of not specified for backward compatibility
 	if cfg.Network == "" {
 		return "tcp"

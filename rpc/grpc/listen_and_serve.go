@@ -25,9 +25,9 @@ import (
 	"google.golang.org/grpc"
 )
 
-// ListenAndServeGRPC starts configured listener and serving for clients
+// ListenAndServe starts configured listener and serving for clients
 func ListenAndServe(cfg *Config, srv *grpc.Server) (netListener net.Listener, err error) {
-	switch socketType := cfg.GetSocketType(); socketType {
+	switch socketType := cfg.getSocketType(); socketType {
 	case "unix", "unixpacket":
 		permissions, err := getUnixSocketFilePermissions(cfg.Permission)
 		if err != nil {
