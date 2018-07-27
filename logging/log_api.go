@@ -14,7 +14,10 @@
 
 package logging
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/sirupsen/logrus"
+)
 
 var (
 	// DefaultLogger is the default logger
@@ -98,6 +101,8 @@ type Logger interface {
 	WithField(key string, value interface{}) LogWithLevel
 	// WithFields creates multiple structured fields
 	WithFields(fields Fields) LogWithLevel
+	// Add hook to send log to external address
+	AddHook(hook logrus.Hook)
 
 	LogWithLevel
 }
@@ -121,6 +126,8 @@ type Registry interface {
 	Lookup(loggerName string) (logger Logger, found bool)
 	// ClearRegistry removes all loggers except the default one from registry
 	ClearRegistry()
+	// HookConfigs stores hooks from log manager to be used for new loggers
+	AddHook(hook logrus.Hook)
 }
 
 // PluginLogger is intended for:

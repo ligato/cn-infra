@@ -16,15 +16,20 @@ package logmanager
 
 import (
 	"fmt"
-	"net/http"
-	"os"
-	"strings"
-
+	"github.com/bshuster-repo/logrus-logstash-hook"
+	"github.com/evalphobia/logrus_fluent"
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/rpc/rest"
+	"github.com/sirupsen/logrus"
+	lgSyslog "github.com/sirupsen/logrus/hooks/syslog"
 	"github.com/unrolled/render"
+	"log/syslog"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
 )
 
 // LoggerData encapsulates parameters of a logger represented as strings.
@@ -67,6 +72,9 @@ func NewConf() *Conf {
 type Conf struct {
 	DefaultLevel string       `json:"default-level"`
 	Loggers      []ConfLogger `json:"loggers"`
+
+	// logging hooks configuration
+	Hooks map[string]HookConfig
 }
 
 // ConfLogger is configuration of a particular logger.
@@ -83,11 +91,11 @@ func (lm *Plugin) Init() error {
 			lm.Conf = NewConf()
 		}
 
+		lm.Log.Debugf("logs config: %+v", lm.Conf)
 		_, err := lm.PluginConfig.GetValue(lm.Conf)
 		if err != nil {
 			return err
 		}
-		lm.Log.Debugf("logs config: %+v", lm.Conf)
 
 		// Handle default log level. Prefer value from environmental variable
 		defaultLogLvl := os.Getenv("INITIAL_LOGLVL")
@@ -120,7 +128,14 @@ func (lm *Plugin) Init() error {
 					logCfgEntry.Name, err)
 			}
 		}
-
+		if len(lm.Conf.Hooks) > 0 {
+			lm.Log.Info("configuring log hooks")
+		}
+		for hookName, hookConfig := range lm.Conf.Hooks {
+			if err := lm.addHook(hookName, hookConfig); err != nil {
+				lm.Log.Warnf("configuring log hook %s failed: %v", hookName, err)
+			}
+		}
 	}
 
 	return nil
@@ -215,4 +230,86 @@ func stringToLogLevel(level string) logging.LogLevel {
 	}
 
 	return logging.InfoLevel
+}
+
+// list of supported hook services to send errors to remote syslog server
+const (
+	HookSysLog   = "syslog"
+	HookLogStash = "logstash"
+	HookFluent   = "fluent"
+)
+
+// HookConfig contains configuration of hook services
+type HookConfig struct {
+	Protocol string
+	Address  string
+	Port     int
+	Levels   []string
+}
+
+// commonHook implements that Hook with own level definition
+type commonHook struct {
+	logrus.Hook
+	levels      []logrus.Level
+}
+
+// Levels overrides implementation from embedded interface
+func (cH *commonHook) Levels() []logrus.Level {
+	return cH.levels
+}
+
+// store hook into registy for late use and applies to existing loggers
+func (lm *Plugin) addHook(hookName string, hookConfig HookConfig) error {
+	var lgHook logrus.Hook
+	var err error
+
+	switch hookName {
+	case HookSysLog:
+		var address = hookConfig.Address
+		if hookConfig.Address != "" {
+			address = address + ":" + strconv.Itoa(hookConfig.Port)
+		}
+		lgHook, err = lgSyslog.NewSyslogHook(
+			hookConfig.Protocol,
+			address,
+			syslog.LOG_INFO,
+			"")
+	case HookLogStash:
+		lgHook, err = logrustash.NewHook(
+			hookConfig.Protocol,
+			hookConfig.Address+":"+strconv.Itoa(hookConfig.Port),
+			"vpp-agent")
+	case HookFluent:
+		lgHook, err = logrus_fluent.NewWithConfig(logrus_fluent.Config{
+			Host: hookConfig.Address,
+			Port: hookConfig.Port,
+		})
+	default:
+		return fmt.Errorf("unsupported hook")
+	}
+	if err != nil {
+		return fmt.Errorf("creating hook for %v failed: %v", hookName, err)
+	}
+	// create hook
+	cHook := &commonHook{
+		lgHook,
+		[]logrus.Level{},
+	}
+	// fill up defined levels, or use default if not defined
+	var levels []string
+	if len(hookConfig.Levels) == 0 {
+		cHook.levels = []logrus.Level{logrus.PanicLevel, logrus.FatalLevel, logrus.ErrorLevel}
+	} else {
+		levels = hookConfig.Levels
+		for _, level := range levels {
+			if lgl, err := logrus.ParseLevel(level); err == nil {
+				cHook.levels = append(cHook.levels, lgl)
+			} else {
+				lm.Log.Warnf("couldn't parse level %v : %v", level, err.Error())
+			}
+		}
+	}
+	// add hook to existing loggers and store it into registry for late use
+	lm.LogRegistry.AddHook(cHook)
+	return nil
 }
