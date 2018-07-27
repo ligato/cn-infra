@@ -14,10 +14,6 @@
 
 package idxmap
 
-import (
-	"github.com/ligato/cn-infra/core"
-)
-
 // NamedMapping is the "user API" to the mapping. It provides read-only access.
 type NamedMapping interface {
 	// GetRegistryTitle returns the title assigned to the registry.
@@ -49,7 +45,7 @@ type NamedMapping interface {
 	//
 	//  map.Watch(plugin.PluginName, func(msgNamedMappingGenericEvent) {/*handle callback*/ return nil})
 	//
-	Watch(subscriber core.PluginName, callback func(NamedMappingGenericEvent)) error
+	Watch(subscriber string, callback func(NamedMappingGenericEvent)) error
 }
 
 // NamedMappingRW is the "owner API" to the mapping. Using this API the owner
