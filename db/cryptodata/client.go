@@ -30,8 +30,10 @@ type ClientAPI interface {
 	EncryptData(inData []byte, pub *rsa.PublicKey) (data []byte, err error)
 	// DecryptData decrypts input data
 	DecryptData(inData []byte) (data []byte, err error)
-	// Wrap wraps core broker watcher with support for decrypting encrypted data in values
-	Wrap(cbw keyval.CoreBrokerWatcher, decrypter ArbitraryDecrypter) keyval.CoreBrokerWatcher
+	// WrapBytes wraps kv bytes plugin with support for decrypting encrypted data in values
+	WrapBytes(cbw keyval.KvBytesPlugin, decrypter ArbitraryDecrypter) keyval.KvBytesPlugin
+	// WrapBytes wraps kv proto plugin with support for decrypting encrypted data in values
+	WrapProto(kvp keyval.KvProtoPlugin, decrypter ArbitraryDecrypter) keyval.KvProtoPlugin
 }
 
 // ClientConfig is result of converting Config.PrivateKeyFile to PrivateKey
@@ -86,7 +88,12 @@ func (client *Client) DecryptData(inData []byte) (data []byte, err error) {
 	return nil, errors.New("failed to decrypt data due to no private key matching")
 }
 
-// Wrap implements ClientAPI.Wrap
-func (client *Client) Wrap(cbw keyval.CoreBrokerWatcher, decrypter ArbitraryDecrypter) keyval.CoreBrokerWatcher {
-	return NewCoreBrokerWatcherWrapper(cbw, decrypter, client.DecryptData)
+// WrapBytes implements ClientAPI.WrapBytes
+func (client *Client) WrapBytes(cbw keyval.KvBytesPlugin, decrypter ArbitraryDecrypter) keyval.KvBytesPlugin {
+	return NewKvBytesPluginWrapper(cbw, decrypter, client.DecryptData)
+}
+
+// WrapProto implements ClientAPI.WrapProto
+func (client *Client) WrapProto(kvp keyval.KvProtoPlugin, decrypter ArbitraryDecrypter) keyval.KvProtoPlugin {
+	return NewKvProtoPluginWrapper(kvp, decrypter, client.DecryptData)
 }

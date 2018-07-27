@@ -21,34 +21,26 @@ import (
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
 	"github.com/ligato/cn-infra/db/cryptodata"
-	"github.com/ligato/cn-infra/config"
 	"io/ioutil"
 	"encoding/pem"
 	"crypto/x509"
 	"crypto/rsa"
 	"github.com/pkg/errors"
 	"encoding/base64"
-	"fmt"
 	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ligato/cn-infra/examples/cryptodata-proto-plugin/ipsec"
 )
 
 // PluginName represents name of plugin.
 const PluginName = "example"
 
-// JSONData are example data sent to db
-const JSONData = `{
-  "encrypted":true,
-  "value": {
-	 "payload": "$crypto$%v"
-  }
-}`
-
 func main() {
-	// Start Agent with ExamplePlugin using ETCDPlugin CryptoDataPlugin, logger and service label.
+	// Start Agent with ExamplePlugin using ETCDPlugin, CryptoDataPlugin, logger and service label.
 	p := &ExamplePlugin{
 		Deps: Deps{
 			Log:          logging.ForPlugin(PluginName),
 			ServiceLabel: &servicelabel.DefaultPlugin,
+			KvProto:      &etcd.DefaultPlugin,
 			CryptoData:   &cryptodata.DefaultPlugin,
 		},
 		exampleFinished: make(chan struct{}),
@@ -66,13 +58,13 @@ func main() {
 type Deps struct {
 	Log          logging.PluginLogger
 	ServiceLabel servicelabel.ReaderAPI
+	KvProto      keyval.KvProtoPlugin
 	CryptoData   cryptodata.ClientAPI
 }
 
 // ExamplePlugin demonstrates the usage of cryptodata API.
 type ExamplePlugin struct {
 	Deps
-	db              *etcd.BytesConnectionEtcd
 	exampleFinished chan struct{}
 }
 
@@ -89,39 +81,83 @@ func (plugin *ExamplePlugin) Init() error {
 		return err
 	}
 
-	// Create ETCD connection
-	plugin.db, err = plugin.newEtcdConnection("etcd.conf")
-	if err != nil {
-		return err
-	}
-
 	// Prepare data
-	data, err := plugin.encryptData("hello-world", publicKey)
+	key1, err := plugin.encryptData("cryptoKey1", publicKey)
 	if err != nil {
 		return err
 	}
-	encryptedJSON := fmt.Sprintf(JSONData, data)
-	plugin.Log.Infof("Putting value %v", encryptedJSON)
+	key2, err := plugin.encryptData("cryptoKey2", publicKey)
+	if err != nil {
+		return err
+	}
+	encryptedData := &ipsec.TunnelInterfaces{
+		Tunnels: []*ipsec.TunnelInterfaces_Tunnel{
+			{
+				Name:           "tunnel1",
+				LocalCryptoKey: key1,
+				IpAddresses: []string{
+					"192.168.0.1",
+					"192.168.0.2",
+				},
+			},
+			{
+				Name:            "tunnel2",
+				RemoteCryptoKey: key2,
+				IpAddresses: []string{
+					"192.168.0.5",
+					"192.168.0.8",
+				},
+			},
+		},
+	}
+	plugin.Log.Infof("Putting value %v", encryptedData)
 
 	// Prepare path for storing the data
-	key := plugin.etcdKey("value")
+	key := plugin.etcdKey(ipsec.KeyPrefix)
 
-	// Put JSON data to ETCD
-	err = plugin.db.Put(key, []byte(encryptedJSON))
+	// Prepare mapping
+	decrypter := cryptodata.NewDecrypterProto()
+	decrypter.RegisterMapping(
+		&ipsec.TunnelInterfaces{},
+		[]string{"Tunnels", "LocalCryptoKey"},
+		[]string{"Tunnels", "RemoteCryptoKey"},
+	)
+
+	// Prepare broker and watcher with crypto layer
+	crypto := plugin.CryptoData.WrapProto(plugin.KvProto, decrypter)
+	broker := crypto.NewBroker(keyval.Root)
+	watcher := crypto.NewWatcher(keyval.Root)
+
+	// Start watching
+	watcher.Watch(plugin.watchChanges, nil, key)
+
+	// Put proto data to ETCD
+	err = broker.Put(key, encryptedData)
 	if err != nil {
 		return err
 	}
 
-	// WrapBytes ETCD connection with crypto layer
-	dbWrapped := plugin.CryptoData.WrapBytes(plugin.db, cryptodata.NewDecrypterJSON())
-	broker := dbWrapped.NewBroker(keyval.Root)
-
-	// Get JSON data from ETCD and decrypt them with crypto layer
-	decryptedJSON, _, _, err := broker.GetValue(key)
+	// Get proto data from ETCD and decrypt them with crypto layer
+	decryptedData := &ipsec.TunnelInterfaces{}
+	_, _, err = broker.GetValue(key, decryptedData)
 	if err != nil {
 		return err
 	}
-	plugin.Log.Infof("Got value %v", string(decryptedJSON))
+	plugin.Log.Infof("Got value %v", decryptedData)
+
+
+	// List all values from ETCD under key and decrypt them with crypto layer
+	iter, err := broker.ListValues(key)
+	if err != nil {
+		return err
+	}
+
+	kv, stop := iter.GetNext()
+	if !stop {
+		decryptedDataList := &ipsec.TunnelInterfaces{}
+		kv.GetValue(decryptedDataList)
+		plugin.Log.Infof("Listed value %v", decryptedDataList)
+	}
 
 	// Close agent and example
 	close(plugin.exampleFinished)
@@ -131,10 +167,16 @@ func (plugin *ExamplePlugin) Init() error {
 
 // Close closes ExamplePlugin
 func (plugin *ExamplePlugin) Close() error {
-	if plugin.db != nil {
-		return plugin.db.Close()
-	}
 	return nil
+}
+
+// watchChanges is watching for changes in DB
+func (plugin *ExamplePlugin) watchChanges(x keyval.ProtoWatchResp) {
+	message := &ipsec.TunnelInterfaces{}
+	err := x.GetValue(message)
+	if err == nil {
+		plugin.Log.Infof("Got watch message %v", message)
+	}
 }
 
 // The ETCD key prefix used for this example
@@ -150,22 +192,6 @@ func (plugin *ExamplePlugin) encryptData(value string, publicKey *rsa.PublicKey)
 		return "", err
 	}
 	return base64.URLEncoding.EncodeToString(encryptedValue), nil
-}
-
-// newEtcdConnection creates new ETCD bytes connection from provided etcd config path
-func (plugin *ExamplePlugin) newEtcdConnection(configPath string) (*etcd.BytesConnectionEtcd, error) {
-	etcdFileConfig := &etcd.Config{}
-	err := config.ParseConfigFromYamlFile(configPath, etcdFileConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	etcdConfig, err := etcd.ConfigToClient(etcdFileConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return etcd.NewEtcdConnectionWithBytes(*etcdConfig, plugin.Log)
 }
 
 // readPublicKey reads rsa public key from PEM file on provided path

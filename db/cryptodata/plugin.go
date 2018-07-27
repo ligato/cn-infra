@@ -35,8 +35,7 @@ type Deps struct {
 // Plugin implements cryptodata as plugin.
 type Plugin struct {
 	Deps
-	// Client provides crypto support
-	*Client
+	ClientAPI
 	// Plugin is disabled if there is no config file available
 	disabled bool
 }
@@ -93,7 +92,7 @@ func (plugin *Plugin) Init() (err error) {
 		}
 	}
 
-	plugin.Client = NewClient(clientConfig)
+	plugin.ClientAPI = NewClient(clientConfig)
 	return
 }
 

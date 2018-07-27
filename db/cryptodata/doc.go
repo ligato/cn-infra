@@ -12,12 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package cryptodata provides support for wrapping key-value store with
+// crypto layer that will automatically decrypt all data passing through.
 package cryptodata
-
-// decryptData holds values required for decrypting
-type decryptData struct {
-	// Function used for decrypting arbitrary data later
-	decryptFunc DecryptFunc
-	// ArbitraryDecrypter is used to decrypt data
-	decrypter ArbitraryDecrypter
-}
