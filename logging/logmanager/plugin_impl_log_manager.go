@@ -128,7 +128,7 @@ func (lm *Plugin) Init() error {
 					logCfgEntry.Name, err)
 			}
 		}
-		lm.Log.Warn("configuring log hooks")
+		lm.Log.Info("configuring log hooks")
 		for hookName, hookConfig := range lm.Conf.Hooks {
 			if err := lm.addHook(hookName, hookConfig); err != nil {
 				lm.Log.Warnf("configuring log hook %s failed: %v", hookName, err)
@@ -309,7 +309,7 @@ func (lm *Plugin) addHook(hookName string, hookConfig HookConfig) error {
 		}
 	}
 	// add hook to existing loggers and store it into registry for late use
-	lm.Log.Warnf("add hook %v to registry", hookName)
+	lm.Log.Infof("add hook %v to registry", hookName)
 	lm.LogRegistry.AddHook(cHook)
 	return nil
 }
