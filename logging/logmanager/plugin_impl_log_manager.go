@@ -128,16 +128,11 @@ func (lm *Plugin) Init() error {
 					logCfgEntry.Name, err)
 			}
 		}
-		lm.Log.Warn("configuring log hooks ...")
-
-		if hookConfig, exists := lm.Conf.Hooks[HookSysLog]; exists {
-			lm.AddHook(HookSysLog, hookConfig)
-		}
-		if hookConfig, exists := lm.Conf.Hooks[HookLogStash]; exists {
-			lm.AddHook(HookLogStash, hookConfig)
-		}
-		if hookConfig, exists := lm.Conf.Hooks[HookFluent]; exists {
-			lm.AddHook(HookFluent, hookConfig)
+		lm.Log.Warn("configuring log hooks")
+		for hookName, hookConfig := range lm.Conf.Hooks {
+			if err := lm.addHook(hookName, hookConfig); err != nil {
+				lm.Log.Warnf("configuring log hook %s failed: %v", hookName, err)
+			}
 		}
 	}
 
@@ -250,20 +245,19 @@ type HookConfig struct {
 	Levels   []string
 }
 
-// CommonHook implements that Hook with own level definition
-type CommonHook struct {
+// commonHook implements that Hook with own level definition
+type commonHook struct {
 	logrus.Hook
 	levels      []logrus.Level
 }
 
 // Levels overrides implementation from embedded interface
-func (cH *CommonHook) Levels() []logrus.Level {
+func (cH *commonHook) Levels() []logrus.Level {
 	return cH.levels
 }
 
-// AddHook adds hook for existing loggers and store it into registy for late use
-func (lm *Plugin) AddHook(hookName string, hookConfig HookConfig) error {
-	var cHook *CommonHook
+// store hook into registy for late use and applies to existing loggers
+func (lm *Plugin) addHook(hookName string, hookConfig HookConfig) error {
 	var lgHook logrus.Hook
 	var err error
 
@@ -291,34 +285,31 @@ func (lm *Plugin) AddHook(hookName string, hookConfig HookConfig) error {
 	default:
 		return fmt.Errorf("unsupported hook")
 	}
+	if err != nil {
+		lm.Log.Warnf("couldn't create hook for %v : %v", hookName, err.Error())
+		return err
+	}
 	// create hook
-	cHook = &CommonHook{
+	cHook := &commonHook{
 		lgHook,
 		[]logrus.Level{},
 	}
 	// fill up defined levels, or use default if not defined
+	var levels []string
 	if len(hookConfig.Levels) == 0 {
-		lgl, _ := logrus.ParseLevel(lm.Conf.DefaultLevel)
-		cHook.levels = append(cHook.levels, lgl)
+		levels = []string{ "fatal", "panic", "error" }
 	} else {
-		for _, level := range hookConfig.Levels {
-			lgl, _ := logrus.ParseLevel(level)
+		levels = hookConfig.Levels
+	}
+	for _, level := range levels {
+		if lgl, err := logrus.ParseLevel(level); err == nil {
 			cHook.levels = append(cHook.levels, lgl)
+		} else {
+			lm.Log.Warnf("couldn't parse level %v : %v", level, err.Error())
 		}
 	}
 	// add hook to existing loggers and store it into registry for late use
-	if err == nil {
-		lgs := lm.LogRegistry.ListLoggers()
-		for lg := range lgs {
-			logger, found := lm.LogRegistry.Lookup(lg)
-			if found {
-				logger.AddHook(cHook)
-			}
-		}
-		lm.Log.Warnf("add hook %v to registry", hookName)
-		lm.LogRegistry.AddHook(cHook)
-	} else {
-		lm.Log.Warnf("couldn't create hook for %v : %v", hookName, err.Error())
-	}
-	return err
+	lm.Log.Warnf("add hook %v to registry", hookName)
+	lm.LogRegistry.AddHook(cHook)
+	return nil
 }
