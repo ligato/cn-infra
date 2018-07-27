@@ -241,6 +241,7 @@ func (lr *logRegistry) getLoggerFromMapping(logger string) *Logger {
 // HookConfigs stores hook configs provided by log manager
 // and applies hook to existing loggers
 func (lr *logRegistry) AddHook(hook logrus.Hook) {
+	defaultLogger.Infof("add hook %v to registry", hook)
 	lr.hooks = append(lr.hooks, hook)
 
 	lgs := lr.ListLoggers()
