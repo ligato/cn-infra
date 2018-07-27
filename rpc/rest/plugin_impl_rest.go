@@ -15,7 +15,6 @@
 package rest
 
 import (
-	"io"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -31,7 +30,7 @@ type Plugin struct {
 
 	*Config
 
-	server    io.Closer
+	server    *http.Server
 	mx        *mux.Router
 	formatter *render.Render
 }

@@ -17,7 +17,6 @@ package rest
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -27,7 +26,7 @@ import (
 )
 
 // ListenAndServe starts a http server.
-func ListenAndServe(config Config, handler http.Handler) (httpServer io.Closer, err error) {
+func ListenAndServe(config Config, handler http.Handler) (srv *http.Server, err error) {
 	server := &http.Server{
 		Addr:              config.Endpoint,
 		ReadTimeout:       config.ReadTimeout,
@@ -70,11 +69,8 @@ func ListenAndServe(config Config, handler http.Handler) (httpServer io.Closer, 
 		} else {
 			err = server.Serve(l)
 		}
-		if err == http.ErrServerClosed {
-			logging.DefaultLogger.Debugf("HTTP server Serve: %v", err)
-		} else if err != nil {
-			logging.DefaultLogger.Errorf("HTTP server Serve failed: %v", err)
-		}
+		// Serve always returns non-nil error
+		logging.DefaultLogger.Debugf("HTTP server Serve: %v", err)
 	}()
 
 	return server, nil
