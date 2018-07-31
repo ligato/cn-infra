@@ -69,13 +69,11 @@ func NewAgent(opts ...Option) Agent {
 	options := newOptions(opts...)
 
 	if !flag.Parsed() {
+		config.DefineDirFlag()
 		for _, p := range options.Plugins {
 			name := p.String()
 			agentLogger.Debugf("registering flags for: %q", name)
-			config.RegisterFlagsFor(name)
-		}
-		if flag.Lookup(config.DirFlag) == nil {
-			flag.String(config.DirFlag, config.DirDefault, config.DirUsage)
+			config.DefineFlagsFor(name)
 		}
 		flag.Parse()
 	}
@@ -245,8 +243,9 @@ func (a *agent) stop() error {
 
 	defer close(a.stopCh)
 
-	// Close plugins
-	for _, p := range a.opts.Plugins {
+	// Close plugins in reverse order
+	for i := len(a.opts.Plugins) - 1; i >= 0; i-- {
+		p := a.opts.Plugins[i]
 		agentLogger.Debugf("=> Close(): %v", p)
 		if err := p.Close(); err != nil {
 			return err
