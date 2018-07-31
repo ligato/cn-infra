@@ -51,6 +51,7 @@ const (
 	DirUsage = "Location of the config files; can also be set via 'CONFIG_DIR' env variable."
 )
 
+// DefineDirFlag defines flag for configuration directory.
 func DefineDirFlag() {
 	if flag.CommandLine.Lookup(DirFlag) == nil {
 		flag.CommandLine.String(DirFlag, DirDefault, DirUsage)
