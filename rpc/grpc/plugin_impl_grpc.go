@@ -109,7 +109,7 @@ func (plugin *Plugin) IsDisabled() bool {
 
 func (plugin *Plugin) getGrpcConfig() (*Config, error) {
 	var grpcCfg Config
-	found, err := plugin.PluginConfig.GetValue(&grpcCfg)
+	found, err := plugin.Cfg.LoadValue(&grpcCfg)
 	if err != nil {
 		return &grpcCfg, err
 	}
