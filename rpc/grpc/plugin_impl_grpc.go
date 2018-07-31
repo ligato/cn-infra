@@ -42,7 +42,7 @@ type Plugin struct {
 
 // Deps is a list of injected dependencies of the GRPC plugin.
 type Deps struct {
-	infra.Deps
+	infra.PluginDeps
 	HTTP rest.HTTPHandlers
 }
 

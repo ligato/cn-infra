@@ -18,7 +18,9 @@ const (
 
 	// EnvSuffix is added to plugin name while loading plugins configuration from ENV variable.
 	EnvSuffix = "_CONFIG"
+)
 
+const (
 	// DirFlag as flag name (see implementation in declareFlags())
 	// is used to define default directory where config files reside.
 	// This flag name is derived from the name of the plugin.

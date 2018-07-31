@@ -43,28 +43,28 @@ const (
 type Plugin struct {
 	Deps
 
-	*Conf
+	*Config
 }
 
 // Deps groups dependencies injected into the plugin so that they are
 // logically separated from other plugin fields.
 type Deps struct {
-	infra.Deps
+	infra.PluginDeps
 	LogRegistry logging.Registry  // inject
 	HTTP        rest.HTTPHandlers // inject
 }
 
 // NewConf creates default configuration with InfoLevel & empty loggers.
 // Suitable also for usage in flavor to programmatically specify default behavior.
-func NewConf() *Conf {
-	return &Conf{
+func NewConf() *Config {
+	return &Config{
 		DefaultLevel: "",
 		Loggers:      []ConfLogger{},
 	}
 }
 
-// Conf is a binding that supports to define default log levels for multiple loggers
-type Conf struct {
+// Config is a binding that supports to define default log levels for multiple loggers
+type Config struct {
 	DefaultLevel string       `json:"default-level"`
 	Loggers      []ConfLogger `json:"loggers"`
 }
@@ -78,21 +78,21 @@ type ConfLogger struct {
 
 // Init does nothing
 func (lm *Plugin) Init() error {
-	if lm.PluginConfig != nil {
-		if lm.Conf == nil {
-			lm.Conf = NewConf()
+	if lm.Cfg != nil {
+		if lm.Config == nil {
+			lm.Config = NewConf()
 		}
 
-		_, err := lm.PluginConfig.GetValue(lm.Conf)
+		_, err := lm.Cfg.GetValue(lm.Config)
 		if err != nil {
 			return err
 		}
-		lm.Log.Debugf("logs config: %+v", lm.Conf)
+		lm.Log.Debugf("logs config: %+v", lm.Config)
 
 		// Handle default log level. Prefer value from environmental variable
 		defaultLogLvl := os.Getenv("INITIAL_LOGLVL")
 		if defaultLogLvl == "" {
-			defaultLogLvl = lm.Conf.DefaultLevel
+			defaultLogLvl = lm.Config.DefaultLevel
 		}
 		if defaultLogLvl != "" {
 			if err := lm.LogRegistry.SetLevel("default", defaultLogLvl); err != nil {
@@ -112,7 +112,7 @@ func (lm *Plugin) Init() error {
 		}
 
 		// Handle config file log levels
-		for _, logCfgEntry := range lm.Conf.Loggers {
+		for _, logCfgEntry := range lm.Config.Loggers {
 			// Put log/level entries from configuration file to the registry.
 			if err := lm.LogRegistry.SetLevel(logCfgEntry.Name, logCfgEntry.Level); err != nil {
 				// Intentionally just log warn & not propagate the error (it is minor thing to interrupt startup)
@@ -213,6 +213,5 @@ func stringToLogLevel(level string) logging.LogLevel {
 	case "panic":
 		return logging.PanicLevel
 	}
-
 	return logging.InfoLevel
 }

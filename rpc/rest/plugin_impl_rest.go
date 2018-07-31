@@ -37,7 +37,7 @@ type Plugin struct {
 
 // Deps lists the dependencies of the Rest plugin.
 type Deps struct {
-	infra.Deps
+	infra.PluginDeps
 
 	// Authenticator can be injected in a flavor inject method.
 	// If there is no authenticator injected and config contains
@@ -52,7 +52,7 @@ func (plugin *Plugin) Init() (err error) {
 	if plugin.Config == nil {
 		plugin.Config = DefaultConfig()
 	}
-	if err := PluginConfig(plugin.Deps.PluginConfig, plugin.Config, plugin.Deps.PluginName); err != nil {
+	if err := PluginConfig(plugin.Cfg, plugin.Config, plugin.PluginName); err != nil {
 		return err
 	}
 

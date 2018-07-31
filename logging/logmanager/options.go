@@ -1,7 +1,6 @@
 package logmanager
 
 import (
-	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/rpc/rest"
 )
@@ -21,12 +20,7 @@ func NewPlugin(opts ...Option) *Plugin {
 		o(p)
 	}
 
-	if p.Deps.Log == nil {
-		p.Deps.Log = logging.ForPlugin(p.String())
-	}
-	if p.Deps.PluginConfig == nil {
-		p.Deps.PluginConfig = config.ForPlugin(p.String())
-	}
+	p.PluginDeps.Setup()
 
 	return p
 }
@@ -42,8 +36,8 @@ func UseDeps(cb func(*Deps)) Option {
 }
 
 // UseConf returns Option which injects a particular configuration.
-func UseConf(conf Conf) Option {
+func UseConf(conf Config) Option {
 	return func(p *Plugin) {
-		p.Conf = &conf
+		p.Config = &conf
 	}
 }

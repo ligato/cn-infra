@@ -15,9 +15,10 @@
 package cryptodata
 
 import (
-	"io/ioutil"
-	"encoding/pem"
 	"crypto/x509"
+	"encoding/pem"
+	"io/ioutil"
+
 	"github.com/ligato/cn-infra/infra"
 )
 
@@ -29,7 +30,7 @@ type Config struct {
 
 // Deps lists dependencies of the cryptodata plugin.
 type Deps struct {
-	infra.Deps
+	infra.PluginDeps
 }
 
 // Plugin implements cryptodata as plugin.
@@ -44,7 +45,7 @@ type Plugin struct {
 // Init initializes cryptodata plugin.
 func (plugin *Plugin) Init() (err error) {
 	var config Config
-	found, err := plugin.PluginConfig.GetValue(&config)
+	found, err := plugin.Cfg.GetValue(&config)
 	if err != nil {
 		return err
 	}
