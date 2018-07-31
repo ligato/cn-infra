@@ -16,6 +16,12 @@ package logmanager
 
 import (
 	"fmt"
+	"log/syslog"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+
 	"github.com/bshuster-repo/logrus-logstash-hook"
 	"github.com/evalphobia/logrus_fluent"
 	"github.com/gorilla/mux"
@@ -25,11 +31,6 @@ import (
 	"github.com/sirupsen/logrus"
 	lgSyslog "github.com/sirupsen/logrus/hooks/syslog"
 	"github.com/unrolled/render"
-	"log/syslog"
-	"net/http"
-	"os"
-	"strconv"
-	"strings"
 )
 
 // LoggerData encapsulates parameters of a logger represented as strings.
@@ -249,7 +250,7 @@ type HookConfig struct {
 // commonHook implements that Hook with own level definition
 type commonHook struct {
 	logrus.Hook
-	levels      []logrus.Level
+	levels []logrus.Level
 }
 
 // Levels overrides implementation from embedded interface
