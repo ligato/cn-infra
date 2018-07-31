@@ -245,7 +245,7 @@ func (a *agent) stop() error {
 
 	defer close(a.stopCh)
 
-	// Close plugins
+	// Close plugins in reverse order
 	for i := len(a.opts.Plugins) - 1; i >= 0; i-- {
 		p := a.opts.Plugins[i]
 		agentLogger.Debugf("=> Close(): %v", p)
