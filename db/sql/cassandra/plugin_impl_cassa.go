@@ -66,7 +66,7 @@ func (p *Plugin) Init() (err error) {
 
 	// Retrieve config
 	var cfg Config
-	found, err := p.Cfg.GetValue(&cfg)
+	found, err := p.Cfg.LoadValue(&cfg)
 	// need to be strict about config presence for ETCD
 	if !found {
 		p.Log.Info("cassandra client config not found ", p.Cfg.GetConfigName(),

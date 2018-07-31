@@ -62,7 +62,7 @@ func (lm *Plugin) Init() error {
 			lm.Config = NewConf()
 		}
 
-		_, err := lm.Cfg.GetValue(lm.Config)
+		_, err := lm.Cfg.LoadValue(lm.Config)
 		if err != nil {
 			return err
 		}

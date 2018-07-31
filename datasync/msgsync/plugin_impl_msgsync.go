@@ -54,7 +54,7 @@ func (plugin *Plugin) Init() error {
 func (plugin *Plugin) AfterInit() error {
 	if !plugin.Messaging.Disabled() {
 		cfg := plugin.Config
-		plugin.Cfg.GetValue(&cfg)
+		plugin.Cfg.LoadValue(&cfg)
 
 		if cfg.Topic != "" {
 			var err error

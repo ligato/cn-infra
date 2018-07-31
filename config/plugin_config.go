@@ -36,11 +36,11 @@ const (
 // PluginConfig is API for plugins to access configuration.
 //
 // Aim of this API is to let a particular plugin to bind it's configuration
-// without knowing a particular key name. The key name is injected in flavor (Plugin Name).
+// without knowing a particular key name. The key name is injected into Plugin.
 type PluginConfig interface {
-	// GetValue parses configuration for a plugin and stores the results in data.
+	// LoadValue parses configuration for a plugin and stores the results in data.
 	// The argument data is a pointer to an instance of a go structure.
-	GetValue(data interface{}) (found bool, err error)
+	LoadValue(data interface{}) (found bool, err error)
 
 	// GetConfigName returns config name derived from plugin name:
 	// flag = PluginName + FlagSuffix (evaluated most often as absolute path to a config file)
@@ -57,7 +57,7 @@ var pluginFlags = make(map[string]*FlagSet)
 func RegisterFlagsFor(name string) {
 	if plugSet, ok := pluginFlags[name]; ok {
 		plugSet.VisitAll(func(f *flag.Flag) {
-			flag.Var(f.Value, f.Name, f.Usage)
+			flag.CommandLine.Var(f.Value, f.Name, f.Usage)
 		})
 	}
 }
@@ -93,12 +93,6 @@ func ForPlugin(name string, moreFlags ...func(*FlagSet)) PluginConfig {
 	}
 }
 
-type pluginConfig struct {
-	configFlag string
-	access     sync.Mutex
-	cfg        string
-}
-
 // Dir evaluates the flag DirFlag. It interprets "." as current working directory.
 func Dir() (string, error) {
 	flg := flag.CommandLine.Lookup(DirFlag)
@@ -122,8 +116,14 @@ func Dir() (string, error) {
 	return "", nil
 }
 
-// GetValue binds the configuration to config method argument.
-func (p *pluginConfig) GetValue(config interface{}) (found bool, err error) {
+type pluginConfig struct {
+	configFlag string
+	access     sync.Mutex
+	cfg        string
+}
+
+// LoadValue binds the configuration to config method argument.
+func (p *pluginConfig) LoadValue(config interface{}) (found bool, err error) {
 	cfgName := p.GetConfigName()
 	if cfgName == "" {
 		return false, nil

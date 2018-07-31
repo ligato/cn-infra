@@ -256,7 +256,7 @@ func (plugin *Plugin) statusCheckProbe() (statuscheck.PluginState, error) {
 
 func (plugin *Plugin) getEtcdConfig() (*Config, error) {
 	var etcdCfg Config
-	found, err := plugin.Cfg.GetValue(&etcdCfg)
+	found, err := plugin.Cfg.LoadValue(&etcdCfg)
 	if err != nil {
 		return nil, err
 	}

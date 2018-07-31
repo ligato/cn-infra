@@ -67,7 +67,7 @@ func (plugin *Plugin) Init() (err error) {
 
 	// Get muxCfg data (contains kafka brokers ip addresses)
 	muxCfg := &mux.Config{}
-	found, err := plugin.Cfg.GetValue(muxCfg)
+	found, err := plugin.Cfg.LoadValue(muxCfg)
 	if !found {
 		plugin.Log.Info("kafka config not found ", plugin.Cfg.GetConfigName(), " - skip loading this plugin")
 		plugin.disabled = true

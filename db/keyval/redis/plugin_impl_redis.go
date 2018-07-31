@@ -113,7 +113,7 @@ func (plugin *Plugin) OnConnect(callback func() error) {
 }
 
 func (plugin *Plugin) getRedisConfig() (cfg interface{}, err error) {
-	found, _ := plugin.Cfg.GetValue(&struct{}{})
+	found, _ := plugin.Cfg.LoadValue(&struct{}{})
 	if !found {
 		plugin.Log.Info("Redis config not found, skip loading this plugin")
 		plugin.disabled = true

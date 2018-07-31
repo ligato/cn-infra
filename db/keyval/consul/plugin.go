@@ -124,7 +124,7 @@ func (plugin *Plugin) Disabled() bool {
 
 func (plugin *Plugin) getConfig() (*Config, error) {
 	var cfg Config
-	found, err := plugin.Cfg.GetValue(&cfg)
+	found, err := plugin.Cfg.LoadValue(&cfg)
 	if err != nil {
 		return nil, err
 	}

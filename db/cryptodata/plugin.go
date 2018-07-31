@@ -44,7 +44,7 @@ type Plugin struct {
 // Init initializes cryptodata plugin.
 func (plugin *Plugin) Init() (err error) {
 	var config Config
-	found, err := plugin.Cfg.GetValue(&config)
+	found, err := plugin.Cfg.LoadValue(&config)
 	if err != nil {
 		return err
 	}
