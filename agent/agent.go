@@ -69,13 +69,11 @@ func NewAgent(opts ...Option) Agent {
 	options := newOptions(opts...)
 
 	if !flag.Parsed() {
+		config.DefineDirFlag()
 		for _, p := range options.Plugins {
 			name := p.String()
 			agentLogger.Debugf("registering flags for: %q", name)
-			config.RegisterFlagsFor(name)
-		}
-		if flag.Lookup(config.DirFlag) == nil {
-			flag.String(config.DirFlag, config.DirDefault, config.DirUsage)
+			config.DefineFlagsFor(name)
 		}
 		flag.Parse()
 	}

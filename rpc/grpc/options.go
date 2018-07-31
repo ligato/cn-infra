@@ -15,6 +15,10 @@
 package grpc
 
 import (
+	"fmt"
+
+	"github.com/ligato/cn-infra/config"
+	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/rpc/rest"
 )
 
@@ -32,7 +36,16 @@ func NewPlugin(opts ...Option) *Plugin {
 		o(p)
 	}
 
-	p.PluginDeps.Setup()
+	if p.Deps.Log == nil {
+		p.Deps.Log = logging.ForPlugin(p.String())
+	}
+	if p.Deps.Cfg == nil {
+		p.Deps.Cfg = config.ForPlugin(p.String(),
+			config.WithExtraFlags(func(flags *config.FlagSet) {
+				flags.String(grpcPortFlag(p.PluginName), "", fmt.Sprintf(
+					"Configure %q server port", p.String()))
+			}))
+	}
 
 	return p
 }

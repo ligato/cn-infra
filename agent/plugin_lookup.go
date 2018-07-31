@@ -113,6 +113,8 @@ func findPlugins(val reflect.Value, uniqueness map[infra.Plugin]struct{}, x ...i
 				continue
 			}
 
+			// TODO: perhaps add regexp for validation of plugin name
+
 			uniqueness[plug] = struct{}{}
 			fieldPlug = plug
 

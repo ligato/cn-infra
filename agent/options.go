@@ -143,7 +143,7 @@ func AllPlugins(plugins ...infra.Plugin) Option {
 			}
 			o.Plugins = append(o.Plugins, foundPlugins...)
 
-			// TODO: perhaps set plugin name to typ.Strilng() if it's empty
+			// TODO: perhaps set plugin name to typ.String() if it's empty
 			/*p, ok := plugin.(core.PluginNamed)
 			if !ok {
 				p = core.NamePlugin(typ.String(), plugin)
