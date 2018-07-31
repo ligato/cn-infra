@@ -47,7 +47,7 @@ type Deps struct {
 }
 
 // Init is the plugin entry point called by Agent Core
-// - It prepares Gorilla MUX HTTP Routerl
+// - It prepares Gorilla MUX HTTP Router
 func (plugin *Plugin) Init() (err error) {
 	if plugin.Config == nil {
 		plugin.Config = DefaultConfig()
