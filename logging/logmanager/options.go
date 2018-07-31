@@ -3,6 +3,7 @@ package logmanager
 import (
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/rpc/rest"
+	"github.com/ligato/cn-infra/servicelabel"
 )
 
 // DefaultPlugin is a default instance of Plugin.
@@ -15,6 +16,7 @@ func NewPlugin(opts ...Option) *Plugin {
 	p.PluginName = "logs"
 	p.LogRegistry = logging.DefaultRegistry
 	p.HTTP = &rest.DefaultPlugin
+	p.ServiceLabel = &servicelabel.DefaultPlugin
 
 	for _, o := range opts {
 		o(p)
