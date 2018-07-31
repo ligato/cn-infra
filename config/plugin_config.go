@@ -95,11 +95,12 @@ type options struct {
 	flagSet *FlagSet
 }
 
-type option func(*options)
+// Option is an option used in ForPlugin
+type Option func(*options)
 
 // WithCustomizedFlag is an option to customize config flag for plugin in ForPlugin.
 // The parameters are used to replace defaults in this order: flag name, default, usage.
-func WithCustomizedFlag(s ...string) option {
+func WithCustomizedFlag(s ...string) Option {
 	return func(o *options) {
 		if len(s) > 0 {
 			o.FlagName = s[0]
@@ -114,7 +115,7 @@ func WithCustomizedFlag(s ...string) option {
 }
 
 // WithExtraFlags is an option to define additional flags for plugin in ForPlugin.
-func WithExtraFlags(f func(flags *FlagSet)) option {
+func WithExtraFlags(f func(flags *FlagSet)) Option {
 	return func(o *options) {
 		f(o.flagSet)
 	}
@@ -126,7 +127,7 @@ func WithExtraFlags(f func(flags *FlagSet)) option {
 // By default it tries to lookup `<plugin-name> + "-config"`in flags and declare
 // the flag if it's not defined yet. There are options that can be used
 // to customize the config flag for plugin and/or define additional flags for the plugin.
-func ForPlugin(name string, opts ...option) PluginConfig {
+func ForPlugin(name string, opts ...Option) PluginConfig {
 	opt := options{
 		FlagName:    FlagName(name),
 		FlagDefault: Filename(name),
