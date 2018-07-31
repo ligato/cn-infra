@@ -99,5 +99,5 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("> Decrypted json:\n%v\n", string(decryptedJSON))
+	fmt.Printf("> Decrypted json:\n%v\n", string(decryptedJSON.([]byte)))
 }
