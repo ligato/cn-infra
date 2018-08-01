@@ -28,6 +28,7 @@ import (
 )
 
 var (
+	// ErrNotReady is an error returned when KVDBSync plugin is being used before the KVPlugin is ready.
 	ErrNotReady = errors.New("transport adapter is not ready yet (probably called before AfterInit)")
 )
 
