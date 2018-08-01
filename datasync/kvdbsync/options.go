@@ -58,8 +58,8 @@ func UseDeps(cb func(*Deps)) Option {
 	}
 }
 
-// UseKVPlugin returns Option that sets KvPlugin dependency.
-func UseKVPlugin(kv keyval.KvProtoPlugin) Option {
+// UseKV returns Option that sets KvPlugin dependency.
+func UseKV(kv keyval.KvProtoPlugin) Option {
 	return func(p *Plugin) {
 		p.KvPlugin = kv
 	}
