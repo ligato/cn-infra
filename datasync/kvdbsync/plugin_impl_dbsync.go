@@ -154,3 +154,8 @@ func (p *Plugin) Delete(key string, opts ...datasync.DelOption) (existed bool, e
 
 	return false, ErrNotReady
 }
+
+// Close resources.
+func (plugin *Plugin) Close() error {
+	return nil
+}
