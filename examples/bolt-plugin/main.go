@@ -1,86 +1,82 @@
 package main
 
 import (
-	"github.com/ligato/cn-infra/core"
+	"log"
+
+	"github.com/ligato/cn-infra/agent"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/bolt"
-	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/logging"
 )
 
-// Main allows running Example Plugin as a statically linked binary with Agent Core Plugins. Close channel and plugins
-// required for the example are initialized. Agent is instantiated with generic plugin (Status check, and Log)
-// and example plugin which demonstrates use of Redis flavor.
 func main() {
-	// Init close channel used to stop the example
-	exampleFinished := make(chan struct{}, 1)
+	p := &ExamplePlugin{
+		Log:             logging.ForPlugin("example"),
+		DB:              &bolt.DefaultPlugin,
+		exampleFinished: make(chan struct{}),
+	}
 
-	// Start Agent with ExamplePlugin, BoltPlugin & FlavorLocal (reused cn-infra plugins).
-	agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
-		boltPlug := &bolt.Plugin{}
-		boltPlug.Deps.PluginInfraDeps = *flavor.InfraDeps("bolt", local.WithConf())
-
-		examplePlug := &ExamplePlugin{closeChannel: &exampleFinished}
-		examplePlug.Deps.PluginLogDeps = *flavor.LogDeps("bolt-example")
-		examplePlug.Deps.DB = boltPlug // Inject Bolt to example plugin.
-
-		return []*core.NamedPlugin{
-			{boltPlug.PluginName, boltPlug},
-			{examplePlug.PluginName, examplePlug}}
-	}))
-	core.EventLoopWithInterrupt(agent, exampleFinished)
+	a := agent.NewAgent(
+		agent.AllPlugins(p),
+		agent.QuitOnClose(p.exampleFinished),
+	)
+	if err := a.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
 
-// ExamplePlugin to depict the use of Redis flavor
+// ExamplePlugin demonstrates the usage of Bolt plugin.
 type ExamplePlugin struct {
-	Deps // plugin dependencies are injected
+	Log logging.PluginLogger
+	DB  keyval.KvProtoPlugin
 
-	closeChannel *chan struct{}
+	exampleFinished chan struct{}
 }
 
-// Deps is a helper struct which is grouping all dependencies injected to the plugin
-type Deps struct {
-	local.PluginLogDeps                      // injected
-	DB                  keyval.KvProtoPlugin // injected
-}
-
-// Init is meant for registering the watcher
-func (plugin *ExamplePlugin) Init() (err error) {
-	//TODO plugin.Watcher.Watch()
-
-	return nil
-}
-
-// AfterInit is meant to use DB if needed
-func (plugin *ExamplePlugin) AfterInit() (err error) {
-	db := plugin.DB.NewBroker(keyval.Root)
+// Init demonstrates using Bolt plugin.
+func (p *ExamplePlugin) Init() (err error) {
+	db := p.DB.NewBroker(keyval.Root)
 
 	// Store some data
 	txn := db.NewTxn()
-	txn.Put("/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop0", nil)
-	txn.Put("/vnf-agent/agent_vpp_1/vpp/config/v1/interface/bvi_loop1", nil)
-	txn.Put("/vnf-agent/agent_vpp_1/vpp/config/v1/bd/b1", nil)
-	txn.Put("/vnf-agent/agent_vpp_1/vpp/config/v1/bd/b2", nil)
-	txn.Put("/vnf-agent/agent_vpp_1/vpp/config/v2/bd/b1", nil)
+	txn.Put("/agent/config/interface/iface0", nil)
+	txn.Put("/agent/config/interface/iface1", nil)
 	txn.Commit()
 
 	// List keys
-	plugin.Log.Info("List Bolt DB keys /vnf-agent/agent_vpp_1/vpp/config/")
-	keys, err := db.ListKeys("/vnf-agent/agent_vpp_1/vpp/config/")
-	if keys != nil {
-		for {
-			k, _, all := keys.GetNext()
-			if all == true {
-				break
-			}
-			plugin.Log.Infof("Key : %v", k)
-		}
+	const listPrefix = "/agent/config/interface/"
+
+	p.Log.Infof("List BoltDB keys: %s", listPrefix)
+
+	keys, err := db.ListKeys(listPrefix)
+	if err != nil {
+		p.Log.Fatal(err)
 	}
+
+	for {
+		key, val, all := keys.GetNext()
+		if all == true {
+			break
+		}
+
+		p.Log.Infof("Key: %q Val: %v", key, val)
+	}
+
 	return nil
 }
 
-// Close is called by Agent Core when the Agent is shutting down. It is supposed to clean up resources that were
-// allocated by the plugin during its lifetime
-func (plugin *ExamplePlugin) Close() error {
-	*plugin.closeChannel <- struct{}{}
+// AfterInit closes the example.
+func (p *ExamplePlugin) AfterInit() (err error) {
+	close(p.exampleFinished)
 	return nil
+}
+
+// Close frees plugin resources.
+func (p *ExamplePlugin) Close() error {
+	return nil
+}
+
+// String returns name of plugin.
+func (p *ExamplePlugin) String() string {
+	return "example"
 }

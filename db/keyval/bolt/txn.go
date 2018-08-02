@@ -17,17 +17,14 @@ package bolt
 import (
 	"github.com/boltdb/bolt"
 	"github.com/ligato/cn-infra/db/keyval"
-	"log"
 )
 
 // Txn allows grouping operations into the transaction. Transaction executes
 // multiple operations in a more efficient way in contrast to executing
 // them one by one.
 type txn struct {
-	readonly          bool
-	separator         string
-	splitKeyToBuckets bool
-	kv                *bolt.Tx
+	readonly bool
+	kv       *bolt.Tx
 }
 
 // Put adds a new 'put' operation to a previously created transaction.
@@ -36,13 +33,10 @@ type txn struct {
 // the existing value will be overwritten with the <value> from this
 // operation.
 func (tx *txn) Put(key string, value []byte) keyval.BytesTxn {
-	bucketNames, keyInBucket := transformKey(key, tx.separator, tx.splitKeyToBuckets)
-	b, err := createBucket(tx.kv, bucketNames)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err = b.Put(keyInBucket, value); err != nil {
-		log.Fatal(err)
+	bucket := tx.kv.Bucket(rootBucket)
+	if err := bucket.Put([]byte(key), value); err != nil {
+		// TODO: this cant return nil, but we need to handle errors
+		return nil
 	}
 	return tx
 }
@@ -51,13 +45,10 @@ func (tx *txn) Put(key string, value []byte) keyval.BytesTxn {
 // transaction. If <key> exists in the data store, the associated value
 // will be removed.
 func (tx *txn) Delete(key string) keyval.BytesTxn {
-	bucketNames, keyInBucket := transformKey(key, tx.separator, tx.splitKeyToBuckets)
-	b, err := findBucket(tx.kv, bucketNames)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err = b.Delete(keyInBucket); err != nil {
-		log.Fatal(err)
+	bucket := tx.kv.Bucket(rootBucket)
+	if err := bucket.Delete([]byte(key)); err != nil {
+		// TODO: this cant return nil, but we need to handle errors
+		return nil
 	}
 	return tx
 }
@@ -66,9 +57,5 @@ func (tx *txn) Delete(key string) keyval.BytesTxn {
 // Commit is atomic - either all operations in the transaction are
 // committed to the data store, or none of them.
 func (tx *txn) Commit() error {
-	err := tx.kv.Commit()
-	if err != nil {
-		log.Fatal(err)
-	}
-	return err
+	return tx.kv.Commit()
 }

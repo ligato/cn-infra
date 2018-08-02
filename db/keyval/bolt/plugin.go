@@ -15,33 +15,31 @@
 package bolt
 
 import (
-	"github.com/boltdb/bolt"
-	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/db/keyval/kvproto"
-	"github.com/ligato/cn-infra/infra"
-	"log"
 	"os"
 	"time"
+
+	"github.com/ligato/cn-infra/db/keyval"
+	"github.com/ligato/cn-infra/db/keyval/kvproto"
+	"github.com/ligato/cn-infra/health/statuscheck"
+	"github.com/ligato/cn-infra/infra"
 )
 
 // Config represents configuration for Bolt plugin.
 type Config struct {
-	DbPath            string        `json:"db-path"`
-	FileMode          os.FileMode   `json:"file-mode"`
-	LockTimeout       time.Duration `json:"lock-timeout"`
-	SplitKeyToBuckets bool          `json:"split-key-to-buckets"`
+	DbPath      string        `json:"db-path"`
+	FileMode    os.FileMode   `json:"file-mode"`
+	LockTimeout time.Duration `json:"lock-timeout"`
 }
 
 // Plugin implements bolt plugin.
 type Plugin struct {
 	Deps
+	*Config
 
 	// Plugin is disabled if there is no config file available
 	disabled bool
-
 	// Bolt DB encapsulation
 	client *Client
-
 	// Read/Write proto modelled data
 	protoWrapper *kvproto.ProtoWrapper
 }
@@ -49,76 +47,72 @@ type Plugin struct {
 // Deps lists dependencies of the etcd plugin.
 // If injected, etcd plugin will use StatusCheck to signal the connection status.
 type Deps struct {
-	infra.Deps
+	infra.PluginDeps
+	StatusCheck statuscheck.PluginStatusWriter
 }
 
 // Disabled returns *true* if the plugin is not in use due to missing configuration.
-func (plugin *Plugin) Disabled() bool {
-	return plugin.disabled
+func (p *Plugin) Disabled() bool {
+	return p.disabled
 }
 
 // OnConnect executes callback from datasync
-func (plugin *Plugin) OnConnect(callback func() error) {
+func (p *Plugin) OnConnect(callback func() error) {
 	if err := callback(); err != nil {
-		plugin.Log.Error(err)
+		p.Log.Error(err)
 	}
 }
 
-func (plugin *Plugin) getConfig() (*Config, error) {
+func (p *Plugin) getConfig() (*Config, error) {
 	var cfg Config
-	found, err := plugin.PluginConfig.GetValue(&cfg)
+	found, err := p.Cfg.LoadValue(&cfg)
 	if err != nil {
 		return nil, err
 	}
 	if !found {
-		plugin.Log.Info("Bolt config not found, skip loading this plugin")
-		plugin.disabled = true
+		p.Log.Info("Bolt config not found, skip loading this plugin")
+		p.disabled = true
 		return nil, nil
 	}
 	return &cfg, nil
 }
 
 // Init initializes Bolt plugin.
-func (plugin *Plugin) Init() (err error) {
-	cfg, err := plugin.getConfig()
-	if err != nil || plugin.disabled {
-		return err
+func (p *Plugin) Init() (err error) {
+	if p.Config == nil {
+		p.Config, err = p.getConfig()
+		if err != nil || p.disabled {
+			return err
+		}
 	}
 
-	plugin.client = &Client{}
-	plugin.client.dbPath, err = bolt.Open(cfg.DbPath, cfg.FileMode, &bolt.Options{Timeout: cfg.LockTimeout})
-	plugin.client.splitKeyToBuckets = cfg.SplitKeyToBuckets
+	p.client, err = NewClient(p.Config)
 	if err != nil {
-		log.Fatal(err)
-		plugin.disabled = true
+		p.Log.Errorf("Err: %v", err)
 		return err
 	}
 
-	plugin.protoWrapper = kvproto.NewProtoWrapperWithSerializer(plugin.client, &keyval.SerializerJSON{})
+	p.protoWrapper = kvproto.NewProtoWrapper(p.client, &keyval.SerializerJSON{})
 
-	plugin.Log.Infof("Bolt DB started %v", cfg.DbPath)
+	p.Log.Infof("BoltDB started with: %v", p.Config.DbPath)
+
 	return nil
 }
 
-// GetPluginName returns name of the plugin
-func (plugin *Plugin) GetPluginName() infra.PluginName {
-	return plugin.PluginName
-}
-
 // Close closes Bolt plugin.
-func (plugin *Plugin) Close() error {
-	if !plugin.disabled {
-		plugin.client.dbPath.Close()
+func (p *Plugin) Close() error {
+	if p.client != nil {
+		p.client.Close()
 	}
 	return nil
 }
 
 // NewBroker creates new instance of prefixed broker that provides API with arguments of type proto.Message.
-func (plugin *Plugin) NewBroker(keyPrefix string) keyval.ProtoBroker {
-	return plugin.protoWrapper.NewBroker(keyPrefix)
+func (p *Plugin) NewBroker(keyPrefix string) keyval.ProtoBroker {
+	return p.protoWrapper.NewBroker(keyPrefix)
 }
 
 // NewWatcher creates new instance of prefixed broker that provides API with arguments of type proto.Message.
-func (plugin *Plugin) NewWatcher(keyPrefix string) keyval.ProtoWatcher {
-	return plugin.protoWrapper.NewWatcher(keyPrefix)
+func (p *Plugin) NewWatcher(keyPrefix string) keyval.ProtoWatcher {
+	return p.protoWrapper.NewWatcher(keyPrefix)
 }
