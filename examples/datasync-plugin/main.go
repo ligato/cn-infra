@@ -28,65 +28,28 @@ import (
 // ************************************************************************/
 
 // PluginName represents name of plugin.
-const PluginName = "example"
+const PluginName = "datasync-example"
 
 func main() {
-	// Start Agent with ExamplePlugin, ETCDPlugin & FlavorLocal (reused cn-infra plugins).
-	/*agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
-		etcdPlug := &etcd.Plugin{}
-		etcdDataSync := &kvdbsync.Plugin{}
-		resyncOrch := &resync.Plugin{}
-
-		etcdPlug.Deps.PluginInfraDeps = *flavor.InfraDeps("etcd", local.WithConf())
-		resyncOrch.Deps.PluginLogDeps = *flavor.LogDeps("etcd-resync")
-		connectors.InjectKVDBSync(etcdDataSync, etcdPlug, etcdPlug.PluginName, flavor, resyncOrch)
-
-		examplePlug := &ExamplePlugin{closeChannel: exampleFinished}
-		examplePlug.Deps.PluginInfraDeps = *flavor.InfraDeps("etcd-example")
-		examplePlug.Deps.Publisher = etcdDataSync // Inject datasync Watcher to example plugin.
-		examplePlug.Deps.Watcher = etcdDataSync   // Inject datasync Publisher to example plugin.
-
-		return []*core.NamedPlugin{
-			{etcdPlug.PluginName, etcdPlug},
-			{etcdDataSync.PluginName, etcdDataSync},
-			{resyncOrch.PluginName, resyncOrch},
-			{examplePlug.PluginName, examplePlug},
-		}
+	// Prepare ETCD data sync plugin as an plugin dependency
+	etcdDs := kvdbsync.NewPlugin(kvdbsync.UseDeps(func(deps *kvdbsync.Deps) {
+		deps.KvPlugin = &etcd.DefaultPlugin
+		deps.ResyncOrch = &resync.DefaultPlugin
 	}))
-	core.EventLoopWithInterrupt(agent, exampleFinished)*/
-
-	/*etcdPlug := etcd.NewPlugin(
-		etcd.UseConf(etcd.Config{
-			Endpoints:[]string{":1234"},
-		}),
-	)*/
-
-	//etcd.DefaultPlugin = etcd.NewPlugin(
-	//		etcd.UseConf(etcd.Config{
-	//			Endpoints:[]string{":1234"},
-	//		}),
-	//	)
-
-	etcdDataSync := kvdbsync.NewPlugin(
-		kvdbsync.UseDeps(func(deps *kvdbsync.Deps) {
-			deps.KvPlugin = &etcd.DefaultPlugin
-			deps.ResyncOrch = &resync.DefaultPlugin
-		}),
-	)
-
-	p := &ExamplePlugin{
+	// Init example plugin dependencies
+	ep := &ExamplePlugin{
 		Deps: Deps{
 			Log:          logging.ForPlugin(PluginName),
 			ServiceLabel: &servicelabel.DefaultPlugin,
-			Publisher:    etcdDataSync,
-			Watcher:      etcdDataSync,
+			Publisher:    etcdDs,
+			Watcher:      etcdDs,
 		},
 		exampleFinished: make(chan struct{}),
 	}
-
+	// Start Agent with example plugin including dependencies
 	a := agent.NewAgent(
-		agent.AllPlugins(p),
-		agent.QuitOnClose(p.exampleFinished),
+		agent.AllPlugins(ep),
+		agent.QuitOnClose(ep.exampleFinished),
 	)
 	if err := a.Run(); err != nil {
 		log.Fatal(err)
@@ -147,7 +110,7 @@ func (plugin *ExamplePlugin) Init() error {
 // Channels used to propagate data resync and data change events are closed
 // as well.
 func (plugin *ExamplePlugin) Close() error {
-	return safeclose.Close(plugin.Publisher, plugin.Watcher, plugin.resyncChannel, plugin.changeChannel)
+	return safeclose.Close(plugin.resyncChannel, plugin.changeChannel)
 }
 
 // AfterInit starts the publisher and prepares for the shutdown.
