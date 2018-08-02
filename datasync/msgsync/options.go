@@ -15,8 +15,7 @@
 package msgsync
 
 import (
-	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/messaging"
 )
 
 // NewPlugin creates a new Plugin with the provided Options.
@@ -29,12 +28,7 @@ func NewPlugin(opts ...Option) *Plugin {
 		o(p)
 	}
 
-	if p.Deps.Log == nil {
-		p.Deps.Log = logging.ForPlugin(p.String())
-	}
-	if p.Deps.PluginConfig == nil {
-		p.Deps.PluginConfig = config.ForPlugin(p.String())
-	}
+	p.PluginDeps.Setup()
 
 	return p
 }
@@ -50,8 +44,15 @@ func UseDeps(cb func(*Deps)) Option {
 }
 
 // UseConf returns Option which injects a particular configuration.
-func UseConf(conf Cfg) Option {
+func UseConf(conf Config) Option {
 	return func(p *Plugin) {
-		p.Cfg = conf
+		p.Config = conf
+	}
+}
+
+// UseMessaging returns Option that sets Messaging.
+func UseMessaging(m messaging.Mux) Option {
+	return func(p *Plugin) {
+		p.Deps.Messaging = m
 	}
 }

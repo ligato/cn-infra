@@ -16,6 +16,8 @@ package logging
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -55,14 +57,34 @@ func (level LogLevel) String() string {
 	case ErrorLevel:
 		return "error"
 	case WarnLevel:
-		return "warning"
+		return "warn"
 	case InfoLevel:
 		return "info"
 	case DebugLevel:
 		return "debug"
+	default:
+		return fmt.Sprintf("unknown(%d)", level)
 	}
+}
 
-	return fmt.Sprintf("unknown(%d)", level)
+// ParseLogLevel parses string representation of LogLevel.
+func ParseLogLevel(level string) LogLevel {
+	switch strings.ToLower(level) {
+	case "debug":
+		return DebugLevel
+	case "info":
+		return InfoLevel
+	case "warn", "warning":
+		return WarnLevel
+	case "error":
+		return ErrorLevel
+	case "fatal":
+		return FatalLevel
+	case "panic":
+		return PanicLevel
+	default:
+		return InfoLevel
+	}
 }
 
 // Fields is a type accepted by WithFields method. It can be used to instantiate map using shorter notation.

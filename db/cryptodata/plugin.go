@@ -15,9 +15,10 @@
 package cryptodata
 
 import (
-	"io/ioutil"
-	"encoding/pem"
 	"crypto/x509"
+	"encoding/pem"
+	"io/ioutil"
+
 	"github.com/ligato/cn-infra/infra"
 )
 
@@ -29,7 +30,7 @@ type Config struct {
 
 // Deps lists dependencies of the cryptodata plugin.
 type Deps struct {
-	infra.Deps
+	infra.PluginDeps
 }
 
 // Plugin implements cryptodata as plugin.
@@ -41,16 +42,16 @@ type Plugin struct {
 }
 
 // Init initializes cryptodata plugin.
-func (plugin *Plugin) Init() (err error) {
+func (p *Plugin) Init() (err error) {
 	var config Config
-	found, err := plugin.PluginConfig.GetValue(&config)
+	found, err := p.Cfg.LoadValue(&config)
 	if err != nil {
 		return err
 	}
 
 	if !found {
-		plugin.Log.Info("cryptodata config not found, skip loading this plugin")
-		plugin.disabled = true
+		p.Log.Info("cryptodata config not found, skip loading this plugin")
+		p.disabled = true
 		return nil
 	}
 
@@ -59,7 +60,7 @@ func (plugin *Plugin) Init() (err error) {
 	for _, file := range config.PrivateKeyFiles {
 		bytes, err := ioutil.ReadFile(file)
 		if err != nil {
-			plugin.Log.Infof("%v", err)
+			p.Log.Infof("%v", err)
 			return err
 		}
 
@@ -71,13 +72,13 @@ func (plugin *Plugin) Init() (err error) {
 
 			privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 			if err != nil {
-				plugin.Log.Infof("%v", err)
+				p.Log.Infof("%v", err)
 				return err
 			}
 
 			err = privateKey.Validate()
 			if err != nil {
-				plugin.Log.Infof("%v", err)
+				p.Log.Infof("%v", err)
 				return err
 			}
 
@@ -92,16 +93,16 @@ func (plugin *Plugin) Init() (err error) {
 		}
 	}
 
-	plugin.ClientAPI = NewClient(clientConfig)
+	p.ClientAPI = NewClient(clientConfig)
 	return
 }
 
 // Close closes cryptodata plugin.
-func (plugin *Plugin) Close() error {
+func (p *Plugin) Close() error {
 	return nil
 }
 
 // Disabled returns *true* if the plugin is not in use due to missing configuration.
-func (plugin *Plugin) Disabled() bool {
-	return plugin.disabled
+func (p *Plugin) Disabled() bool {
+	return p.disabled
 }

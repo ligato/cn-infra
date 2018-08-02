@@ -38,7 +38,7 @@ required = [
 
 [[constraint]]
   name = "github.com/Shopify/sarama"
-  version = "1.15.0"
+  version = "~1.15.0"
 
 [[constraint]]
   name = "github.com/Songmu/prompter"
@@ -121,16 +121,16 @@ required = [
   name = "golang.org/x/net"
 
 [[constraint]]
+  name = "github.com/evalphobia/logrus_fluent"
+  version = "~0.4.0"
+
+[[constraint]]
   branch = "master"
   name = "github.com/boltdb/bolt"
 
 [[override]]
   name = "github.com/ugorji/go"
   revision = "ded73eae5db7e7a0ef6f55aace87a2873c5d2b74"
-
-[[override]]
-  name = "github.com/evalphobia/logrus_fluent"
-  version = "0.4.0"
 
 [prune]
   go-tests = true
