@@ -99,7 +99,7 @@ func (p *Plugin) Init() (err error) {
 	return nil
 }
 
-// Close closes Bolt plugin.
+// Close closes the Bolt client.
 func (p *Plugin) Close() error {
 	if p.client != nil {
 		p.client.Close()

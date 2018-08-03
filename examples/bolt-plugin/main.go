@@ -9,32 +9,34 @@ import (
 	"github.com/ligato/cn-infra/logging"
 )
 
+const pluginName = "bolt-example"
+
 func main() {
-	p := &ExamplePlugin{
-		Log:             logging.ForPlugin("example"),
-		DB:              &bolt.DefaultPlugin,
-		exampleFinished: make(chan struct{}),
+	example := &BoltExample{
+		Log:      logging.ForPlugin(pluginName),
+		DB:       &bolt.DefaultPlugin,
+		finished: make(chan struct{}),
 	}
 
 	a := agent.NewAgent(
-		agent.AllPlugins(p),
-		agent.QuitOnClose(p.exampleFinished),
+		agent.AllPlugins(example),
+		agent.QuitOnClose(example.finished),
 	)
 	if err := a.Run(); err != nil {
 		log.Fatal(err)
 	}
 }
 
-// ExamplePlugin demonstrates the usage of Bolt plugin.
-type ExamplePlugin struct {
+// BoltExample demonstrates the usage of Bolt plugin.
+type BoltExample struct {
 	Log logging.PluginLogger
 	DB  keyval.KvProtoPlugin
 
-	exampleFinished chan struct{}
+	finished chan struct{}
 }
 
 // Init demonstrates using Bolt plugin.
-func (p *ExamplePlugin) Init() (err error) {
+func (p *BoltExample) Init() (err error) {
 	db := p.DB.NewBroker(keyval.Root)
 
 	// Store some data
@@ -66,17 +68,17 @@ func (p *ExamplePlugin) Init() (err error) {
 }
 
 // AfterInit closes the example.
-func (p *ExamplePlugin) AfterInit() (err error) {
-	close(p.exampleFinished)
+func (p *BoltExample) AfterInit() (err error) {
+	close(p.finished)
 	return nil
 }
 
 // Close frees plugin resources.
-func (p *ExamplePlugin) Close() error {
+func (p *BoltExample) Close() error {
 	return nil
 }
 
 // String returns name of plugin.
-func (p *ExamplePlugin) String() string {
-	return "example"
+func (p *BoltExample) String() string {
+	return pluginName
 }
