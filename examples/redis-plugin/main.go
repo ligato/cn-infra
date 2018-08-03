@@ -54,7 +54,6 @@ type ExamplePlugin struct {
 
 // Deps is a helper struct which is grouping all dependencies injected to the plugin
 type Deps struct {
-	//local.PluginLogDeps
 	Log     logging.PluginLogger
 	Watcher datasync.KeyValProtoWatcher
 	DB      keyval.KvProtoPlugin
