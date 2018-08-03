@@ -157,7 +157,7 @@ func (client *Client) ListValues(keyPrefix string) (keyval.BytesKeyValIterator, 
 	return &bytesKeyValIterator{len: len(pairs), pairs: pairs}, err
 }
 
-// Close returns nil.
+// Close closes Bolt database.
 func (client *Client) Close() error {
 	return client.db.Close()
 }
@@ -193,7 +193,7 @@ func (client *Client) NewWatcher(prefix string) keyval.BytesWatcher {
 
 // BrokerWatcher uses Client to access the datastore.
 // The connection can be shared among multiple BrokerWatcher.
-// In case of accessing a particular subtree in Consul only,
+// In case of accessing a particular subtree in Bolt only,
 // BrokerWatcher allows defining a keyPrefix that is prepended
 // to all keys in its methods in order to shorten keys used in arguments.
 type BrokerWatcher struct {
