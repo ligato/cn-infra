@@ -218,7 +218,7 @@ func (plugin *ExamplePlugin) closeExample() {
 
 			plugin.Log.Info("kafka example finished, sending shutdown ...")
 
-			plugin.exampleFinished <- struct{}{}
+			close(plugin.exampleFinished)
 			break
 		}
 	}

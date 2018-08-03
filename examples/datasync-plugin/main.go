@@ -8,8 +8,7 @@ import (
 	"github.com/ligato/cn-infra/agent"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/kvdbsync"
-	"github.com/ligato/cn-infra/datasync/resync"
-	"github.com/ligato/cn-infra/db/keyval/etcd"
+		"github.com/ligato/cn-infra/db/keyval/etcd"
 	"github.com/ligato/cn-infra/examples/model"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
@@ -32,17 +31,16 @@ const PluginName = "datasync-example"
 
 func main() {
 	// Prepare ETCD data sync plugin as an plugin dependency
-	etcdDs := kvdbsync.NewPlugin(kvdbsync.UseDeps(func(deps *kvdbsync.Deps) {
+	etcdDataSync := kvdbsync.NewPlugin(kvdbsync.UseDeps(func(deps *kvdbsync.Deps) {
 		deps.KvPlugin = &etcd.DefaultPlugin
-		deps.ResyncOrch = &resync.DefaultPlugin
 	}))
 	// Init example plugin dependencies
 	ep := &ExamplePlugin{
 		Deps: Deps{
 			Log:          logging.ForPlugin(PluginName),
 			ServiceLabel: &servicelabel.DefaultPlugin,
-			Publisher:    etcdDs,
-			Watcher:      etcdDs,
+			Publisher:    etcdDataSync,
+			Watcher:      etcdDataSync,
 		},
 		exampleFinished: make(chan struct{}),
 	}

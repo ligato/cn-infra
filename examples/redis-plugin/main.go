@@ -6,8 +6,7 @@ import (
 	"github.com/ligato/cn-infra/agent"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/kvdbsync"
-	"github.com/ligato/cn-infra/datasync/resync"
-	"github.com/ligato/cn-infra/db/keyval"
+		"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/etcd"
 	"github.com/ligato/cn-infra/db/keyval/redis"
 	"github.com/ligato/cn-infra/logging"
@@ -22,16 +21,15 @@ const PluginName = "redis-example"
 // and example plugin which demonstrates use of Redis flavor.
 func main() {
 	// Prepare Redis data sync plugin as an plugin dependency
-	redisDs := kvdbsync.NewPlugin(kvdbsync.UseDeps(func(deps *kvdbsync.Deps) {
+	redisDataSync := kvdbsync.NewPlugin(kvdbsync.UseDeps(func(deps *kvdbsync.Deps) {
 		deps.KvPlugin = &etcd.DefaultPlugin
-		deps.ResyncOrch = &resync.DefaultPlugin
 	}))
 
 	// Init example plugin dependencies
 	ep := &ExamplePlugin{
 		Deps: Deps{
 			Log:     logging.ForPlugin(PluginName),
-			Watcher: redisDs,
+			Watcher: redisDataSync,
 			DB:      &redis.DefaultPlugin,
 		},
 		exampleFinished: make(chan struct{}),
