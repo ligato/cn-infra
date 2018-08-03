@@ -63,12 +63,8 @@ func NewClient(cfg *Config) (client *Client, err error) {
 
 // NewTxn creates new transaction
 func (client *Client) NewTxn() keyval.BytesTxn {
-	tx, _ := client.db.Begin(true)
-	// TODO: figure out if opening transaction to Bolt here doesn't cause any issue
-
 	return &txn{
-		readonly: false,
-		kv:       tx,
+		db: client.db,
 	}
 }
 
@@ -172,7 +168,7 @@ func (client *Client) Watch(resp func(keyval.BytesWatchResp), closeChan chan str
 }
 
 // NewBroker creates a new instance of a proxy that provides
-// access to etcd. The proxy will reuse the connection from Client.
+// access to Bolt. The proxy will reuse the connection from Client.
 // <prefix> will be prepended to the key argument in all calls from the created
 // BrokerWatcher. To avoid using a prefix, pass keyval. Root constant as
 // an argument.
@@ -184,7 +180,7 @@ func (client *Client) NewBroker(prefix string) keyval.BytesBroker {
 }
 
 // NewWatcher creates a new instance of a proxy that provides
-// access to etcd. The proxy will reuse the connection from Client.
+// access to Bolt. The proxy will reuse the connection from Client.
 // <prefix> will be prepended to the key argument in all calls on created
 // BrokerWatcher. To avoid using a prefix, pass keyval. Root constant as
 // an argument.
@@ -209,7 +205,7 @@ func (pdb *BrokerWatcher) prefixKey(key string) string {
 	return pdb.prefix + key
 }
 
-// Put calls 'Put' function of the underlying BytesConnectionEtcd.
+// Put calls 'Put' function of the underlying Client.
 // KeyPrefix defined in constructor is prepended to the key argument.
 func (pdb *BrokerWatcher) Put(key string, data []byte, opts ...datasync.PutOption) error {
 	return pdb.Client.Put(pdb.prefixKey(key), data, opts...)
@@ -222,19 +218,19 @@ func (pdb *BrokerWatcher) NewTxn() keyval.BytesTxn {
 	return pdb.Client.NewTxn()
 }
 
-// GetValue calls 'GetValue' function of the underlying BytesConnectionEtcd.
+// GetValue calls 'GetValue' function of the underlying Client.
 // KeyPrefix defined in constructor is prepended to the key argument.
 func (pdb *BrokerWatcher) GetValue(key string) (data []byte, found bool, revision int64, err error) {
 	return pdb.Client.GetValue(pdb.prefixKey(key))
 }
 
-// Delete calls 'Delete' function of the underlying BytesConnectionEtcd.
+// Delete calls 'Delete' function of the underlying Client.
 // KeyPrefix defined in constructor is prepended to the key argument.
 func (pdb *BrokerWatcher) Delete(key string, opts ...datasync.DelOption) (existed bool, err error) {
 	return pdb.Client.Delete(pdb.prefixKey(key), opts...)
 }
 
-// ListKeys calls 'ListKeys' function of the underlying BytesConnectionEtcd.
+// ListKeys calls 'ListKeys' function of the underlying Client.
 // KeyPrefix defined in constructor is prepended to the argument.
 func (pdb *BrokerWatcher) ListKeys(keyPrefix string) (keyval.BytesKeyIterator, error) {
 	boltLogger.Debugf("ListKeys: %q [namespace=%s]", keyPrefix, pdb.prefix)
@@ -255,7 +251,7 @@ func (pdb *BrokerWatcher) ListKeys(keyPrefix string) (keyval.BytesKeyIterator, e
 	return &bytesKeyIterator{prefix: pdb.prefix, len: len(keys), keys: keys}, err
 }
 
-// ListValues calls 'ListValues' function of the underlying BytesConnectionEtcd.
+// ListValues calls 'ListValues' function of the underlying Client.
 // KeyPrefix defined in constructor is prepended to the key argument.
 // The prefix is removed from the keys of the returned values.
 func (pdb *BrokerWatcher) ListValues(keyPrefix string) (keyval.BytesKeyValIterator, error) {

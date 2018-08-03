@@ -20,7 +20,6 @@ import (
 
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
-	"github.com/ligato/cn-infra/health/statuscheck"
 	"github.com/ligato/cn-infra/infra"
 )
 
@@ -44,11 +43,10 @@ type Plugin struct {
 	protoWrapper *kvproto.ProtoWrapper
 }
 
-// Deps lists dependencies of the etcd plugin.
-// If injected, etcd plugin will use StatusCheck to signal the connection status.
+// Deps lists dependencies of the Bolt plugin.
+// If injected, Bolt plugin will use StatusCheck to signal the connection status.
 type Deps struct {
 	infra.PluginDeps
-	StatusCheck statuscheck.PluginStatusWriter
 }
 
 // Disabled returns *true* if the plugin is not in use due to missing configuration.

@@ -23,8 +23,9 @@ import (
 // multiple operations in a more efficient way in contrast to executing
 // them one by one.
 type txn struct {
-	readonly bool
-	kv       *bolt.Tx
+	db       *bolt.DB
+	putPairs []*kvPair
+	delKeys  []string
 }
 
 // Put adds a new 'put' operation to a previously created transaction.
@@ -32,30 +33,38 @@ type txn struct {
 // will be added to the data store. If <key> exists in the data store,
 // the existing value will be overwritten with the <value> from this
 // operation.
-func (tx *txn) Put(key string, value []byte) keyval.BytesTxn {
-	bucket := tx.kv.Bucket(rootBucket)
-	if err := bucket.Put([]byte(key), value); err != nil {
-		// TODO: this cant return nil, but we need to handle errors
-		return nil
-	}
-	return tx
+func (t *txn) Put(key string, value []byte) keyval.BytesTxn {
+	t.putPairs = append(t.putPairs, &kvPair{
+		Key:   key,
+		Value: value,
+	})
+	return t
 }
 
 // Delete adds a new 'delete' operation to a previously created
 // transaction. If <key> exists in the data store, the associated value
 // will be removed.
-func (tx *txn) Delete(key string) keyval.BytesTxn {
-	bucket := tx.kv.Bucket(rootBucket)
-	if err := bucket.Delete([]byte(key)); err != nil {
-		// TODO: this cant return nil, but we need to handle errors
-		return nil
-	}
-	return tx
+func (t *txn) Delete(key string) keyval.BytesTxn {
+	t.delKeys = append(t.delKeys, key)
+	return t
 }
 
 // Commit commits all operations in a transaction to the data store.
 // Commit is atomic - either all operations in the transaction are
 // committed to the data store, or none of them.
-func (tx *txn) Commit() error {
-	return tx.kv.Commit()
+func (t *txn) Commit() error {
+	return t.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(rootBucket)
+		for _, pair := range t.putPairs {
+			if err := b.Put([]byte(pair.Key), pair.Value); err != nil {
+				return err
+			}
+		}
+		for _, key := range t.delKeys {
+			if err := b.Delete([]byte(key)); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
