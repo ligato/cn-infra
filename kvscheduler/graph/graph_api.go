@@ -1,8 +1,8 @@
 package graph
 
 import (
-	. "github.com/ligato/cn-infra/kvscheduler/api"
 	"github.com/ligato/cn-infra/idxmap"
+	. "github.com/ligato/cn-infra/kvscheduler/api"
 	"time"
 )
 
@@ -30,7 +30,7 @@ type Graph interface {
 	// Read returns a graph handle for read-only access.
 	// The graph supports multiple concurrent readers.
 	// Release eventually using Release() method.
-	Read() GraphReadAccess // acquires R-lock
+	Read() ReadAccess // acquires R-lock
 
 	// Write returns a graph handle for read-write access.
 	// The graph supports at most one writer at a time - i.e. it is assumed
@@ -39,11 +39,11 @@ type Graph interface {
 	// If <record> is true, the changes will be recorded once the handle is
 	// released.
 	// Release eventually using Release() method.
-	Write(record bool) GraphRWAccess
+	Write(record bool) RWAccess
 }
 
-// GraphReadAccess lists operations provided by the read-only graph handle.
-type GraphReadAccess interface {
+// ReadAccess lists operations provided by the read-only graph handle.
+type ReadAccess interface {
 	// GetMetadataMap returns registered metadata map.
 	GetMetadataMap(mapName string) idxmap.NamedMapping
 
@@ -70,9 +70,9 @@ type GraphReadAccess interface {
 	Release() // for reader release R-lock
 }
 
-// GraphRWAccess lists operations provided by the read-write graph handle.
-type GraphRWAccess interface {
-	GraphReadAccess
+// RWAccess lists operations provided by the read-write graph handle.
+type RWAccess interface {
+	ReadAccess
 
 	// RegisterMetadataMap registers new metadata map for value-label->metadata
 	// associations of selected node.
@@ -174,12 +174,12 @@ type RelationTarget struct {
 	Relation string
 
 	// Label for the edge.
-	Label    string // mandatory, unique for a given (source, relation)
+	Label string // mandatory, unique for a given (source, relation)
 
 	// Either Key or Selector are defined:
 
 	// Key of the target node.
-	Key      string
+	Key string
 
 	// Selector selecting a set of target nodes.
 	Selector KeySelector
@@ -196,14 +196,13 @@ type RecordedNode struct {
 	ValueLabel     string
 	ValueType      ValueType
 	ValueString    string
-	Flags          map[string]string            // flag name -> flag value
-	MetadataFields map[string][]string          // field name -> values
-	Targets        map[string]RecordedTargets   // relation -> target
+	Flags          map[string]string          // flag name -> flag value
+	MetadataFields map[string][]string        // field name -> values
+	Targets        map[string]RecordedTargets // relation -> target
 }
 
 // KeySet is a set of keys.
 type KeySet map[string]struct{}
-
 
 // Copy returns a copy of the key set.
 func (ks KeySet) Copy() KeySet {
@@ -222,5 +221,3 @@ type FlagStats struct {
 	TotalCount    uint            // number of revisions with the given flag assigned
 	PerValueCount map[string]uint // number of revisions with the given flag having the given value
 }
-
-

@@ -23,18 +23,18 @@ import (
 type Dependency struct {
 	// Label should be a short human-readable string labeling the dependency.
 	// Must be unique in the list of dependencies for a value.
-	Label          string
+	Label string
 
 	// Key of another kv pair that the associated value depends on.
 	// If empty, AnyOf must be defined instead.
-	Key            string
+	Key string
 
 	// AnyOf, if not nil, must return true for at least one of the already added
 	// keys for the dependency to be considered satisfied.
 	// Either Key or AnyOf should be defined, but not both at the same time.
 	// Note: AnyOf comes with more overhead than a static key dependency,
 	// so prefer to use the latter whenever possible.
-	AnyOf          KeySelector
+	AnyOf KeySelector
 }
 
 // MetadataMapFactory can be used by descriptor to define a custom map associating
@@ -77,7 +77,6 @@ func (vo ValueOrigin) String() string {
 		return "unknown"
 	}
 }
-
 
 // KVDescriptor teaches KVScheduler how to build/add/delete/modify/update & dump
 // values under keys matched by KeySelector().
@@ -192,4 +191,3 @@ type KVDescriptor interface {
 	// GetMetadataMap().
 	DumpDependencies() []string /* descriptor name */
 }
-

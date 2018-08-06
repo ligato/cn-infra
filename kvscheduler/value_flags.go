@@ -1,8 +1,8 @@
 package kvscheduler
 
 import (
-	. "github.com/ligato/cn-infra/kvscheduler/api"
 	"fmt"
+	. "github.com/ligato/cn-infra/kvscheduler/api"
 )
 
 const (
@@ -15,21 +15,21 @@ const (
 	LastUpdateFlagName = "last-update"
 
 	// ErrorFlagName is the name of the Error flag.
-	ErrorFlagName      = "error"
+	ErrorFlagName = "error"
 
 	////// updated by transactions + refresh:
 
 	// PendingFlagName is the name of the Pending flag.
-	PendingFlagName    = "pending"
+	PendingFlagName = "pending"
 
 	// OriginFlagName is the name of the Origin flag.
-	OriginFlagName     = "origin"
+	OriginFlagName = "origin"
 
 	// DescriptorFlagName is the name of the Descriptor flag.
 	DescriptorFlagName = "descriptor"
 
 	// DerivedFlagName is the name of the Derived flag.
-	DerivedFlagName    = "derived"
+	DerivedFlagName = "derived"
 )
 
 // LastChangeFlag is set to all base values to remember the last change from
@@ -104,7 +104,7 @@ func (flag *OriginFlag) GetValue() string {
 
 // ErrorFlag is used to mark values that are in a failed state.
 type ErrorFlag struct {
-	err       error
+	err error
 }
 
 // GetName return name of the Origin flag.

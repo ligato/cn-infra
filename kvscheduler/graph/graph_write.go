@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// graphRW implements GraphRWAccess.
+// graphRW implements RWAccess.
 type graphRW struct {
 	*graphR
 	record  bool

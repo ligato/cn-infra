@@ -2,14 +2,15 @@ package kvscheduler
 
 import (
 	. "github.com/ligato/cn-infra/kvscheduler/api"
-	"time"
 	"github.com/ligato/cn-infra/logging"
+	"time"
 )
 
 // txnType differentiates between NB transaction, retry of failed operations and
 // SB notification. Once queued, all three different operations are classified
 // as transactions, only with different parameters.
 type txnType int
+
 const (
 	sbNotification txnType = iota
 	nbTransaction
@@ -59,9 +60,9 @@ type retryOps struct {
 type queuedTxn struct {
 	txnType txnType
 
-	sb      *sbNotif
-	nb      *nbTxn
-	retry   *retryOps
+	sb    *sbNotif
+	nb    *nbTxn
+	retry *retryOps
 }
 
 // enqueueTxn adds transaction into the FIFO queue (channel) for execution.
@@ -70,14 +71,14 @@ func (scheduler *Scheduler) enqueueTxn(txn *queuedTxn) error {
 		select {
 		case <-scheduler.ctx.Done():
 			return ErrClosedScheduler
-		case scheduler.txnQueue <-txn:
+		case scheduler.txnQueue <- txn:
 			return nil
 		}
 	}
 	select {
 	case <-scheduler.ctx.Done():
 		return ErrClosedScheduler
-	case scheduler.txnQueue <-txn:
+	case scheduler.txnQueue <- txn:
 		return nil
 	default:
 		return ErrTxnQueueFull

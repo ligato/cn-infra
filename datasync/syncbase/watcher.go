@@ -102,8 +102,8 @@ func (adapter *Registry) Watch(resyncName string, changeChan chan datasync.Chang
 func (adapter *Registry) PropagateChanges(txData map[string]datasync.ChangeValue) error {
 	var events []func(done chan error)
 
-	scheduler := kvscheduler.GetKVScheduler()
-	if scheduler != nil {
+	scheduler, withScheduler := kvscheduler.GetKVScheduler()
+	if withScheduler {
 		keyPrefixes := scheduler.GetRegisteredNBKeyPrefixes()
 		// TODO: add options retry+revert to localclient
 		txn := scheduler.StartNBTransaction()

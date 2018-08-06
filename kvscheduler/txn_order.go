@@ -1,8 +1,8 @@
 package kvscheduler
 
 import (
-	"sort"
 	"github.com/ligato/cn-infra/kvscheduler/graph"
+	"sort"
 )
 
 // Order by operations (in average should yield the shortest sequence of operations):
@@ -13,7 +13,7 @@ import (
 //
 // Furthermore, adds and deletes are ordered by dependencies to limit temporary
 // pending states.
-func (scheduler *Scheduler) orderValuesByOp(graphR graph.GraphReadAccess, values []kvForTxn) []kvForTxn {
+func (scheduler *Scheduler) orderValuesByOp(graphR graph.ReadAccess, values []kvForTxn) []kvForTxn {
 	var recreateVals, addVals, modifyVals, deleteVals []kvForTxn
 	deps := make(map[string]keySet)
 
@@ -60,8 +60,7 @@ func (scheduler *Scheduler) orderValuesByDeps(values []kvForTxn, deps map[string
 	sort.Slice(values, func(i, j int) bool {
 		if depFirst {
 			return dependsOn(values[j].key, values[i].key, deps, len(values), 0)
-		} else {
-			return dependsOn(values[i].key, values[j].key, deps, len(values), 0)
 		}
+		return dependsOn(values[i].key, values[j].key, deps, len(values), 0)
 	})
 }

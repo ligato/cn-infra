@@ -32,14 +32,25 @@ import (
 	"time"
 )
 
+// ArrayFlag implements repeated flag.
 type ArrayFlag struct {
 	values []string
 }
 
+// String return human-readable string representation of the array of flags.
 func (af *ArrayFlag) String() string {
-	return "array flag"
+	str := "["
+	for idx, value := range af.values {
+		str += value
+		if idx < len(af.values)-1 {
+			str += ", "
+		}
+	}
+	str += "]"
+	return str
 }
 
+// Set add value into the array.
 func (af *ArrayFlag) Set(value string) error {
 	af.values = append(af.values, value)
 	return nil
@@ -71,6 +82,7 @@ type TemplateData struct {
 	FromDatasync   bool
 }
 
+// PathExists return true if the given path already exist in the file system.
 func PathExists(path string) bool {
 	_, err := os.Stat(path)
 	return !os.IsNotExist(err)

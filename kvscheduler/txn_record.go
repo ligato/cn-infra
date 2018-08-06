@@ -2,8 +2,8 @@ package kvscheduler
 
 import (
 	"fmt"
-	"time"
 	"strings"
+	"time"
 
 	. "github.com/ligato/cn-infra/kvscheduler/api"
 	"github.com/ligato/cn-infra/kvscheduler/graph"
@@ -12,6 +12,7 @@ import (
 // txnOperationType differentiates between add, modify (incl. re-create), delete
 // and update operations.
 type txnOperationType int
+
 const (
 	add txnOperationType = iota
 	modify
@@ -39,14 +40,14 @@ type recordedTxn struct {
 	preRecord bool // not yet fully recorded, only args + plan + pre-processing errors
 
 	// timestamps (zero if len(executed) == 0)
-	start     time.Time
-	stop      time.Time
+	start time.Time
+	stop  time.Time
 
 	// arguments
-	seqNum    uint
-	txnType   txnType
-	isResync  bool
-	values    []recordedKVPair
+	seqNum   uint
+	txnType  txnType
+	isResync bool
+	values   []recordedKVPair
 
 	// result
 	preErrors []KeyWithError // pre-processing errors
@@ -57,8 +58,8 @@ type recordedTxn struct {
 // recorderTxnOp is used to record executed/planned transaction operation.
 type recordedTxnOp struct {
 	// identification
-	operation  txnOperationType
-	key        string
+	operation txnOperationType
+	key       string
 
 	// changes
 	prevValue  *recordedValue
@@ -71,15 +72,15 @@ type recordedTxnOp struct {
 	newErr     error
 
 	// flags
-	isRevert   bool
-	isRetry    bool
+	isRevert bool
+	isRetry  bool
 }
 
 // recordedValue is used to record value.
 type recordedValue struct {
-	valueType  ValueType
-	label      string
-	string     string
+	valueType ValueType
+	label     string
+	string    string
 }
 
 // recordedKVPair is used to record key-value pair.
@@ -109,7 +110,7 @@ func (value *recordedValue) StringWithOpts(verbose bool) string {
 
 // String returns a *multi-line* human-readable string representation of recorded transaction.
 func (txn *recordedTxn) String() string {
-	return txn.StringWithOpts(false,0, false)
+	return txn.StringWithOpts(false, 0, false)
 }
 
 // StringWithOpts allows to format string representation of recorded transaction.
@@ -128,9 +129,9 @@ func (txn *recordedTxn) StringWithOpts(resultOnly bool, indent int, verbose bool
 			str += indent2 + fmt.Sprintf("- is-resync: %t\n", txn.isResync)
 		}
 		if len(txn.values) == 0 {
-			str += indent2 + fmt.Sprintf("- values: NONE\n",)
+			str += indent2 + fmt.Sprintf("- values: NONE\n")
 		} else {
-			str += indent2 + fmt.Sprintf("- values:\n", )
+			str += indent2 + fmt.Sprintf("- values:\n")
 		}
 		for _, kv := range txn.values {
 			str += indent3 + fmt.Sprintf("- key: %s\n", kv.key)
@@ -147,7 +148,7 @@ func (txn *recordedTxn) StringWithOpts(resultOnly bool, indent int, verbose bool
 		// planned operations
 		if txn.txnType != sbNotification {
 			str += indent1 + "* planned operations:\n"
-			str += txn.planned.StringWithOpts(indent + 4, verbose)
+			str += txn.planned.StringWithOpts(indent+4, verbose)
 		}
 	}
 
@@ -158,7 +159,7 @@ func (txn *recordedTxn) StringWithOpts(resultOnly bool, indent int, verbose bool
 			str += indent1 + fmt.Sprintf("* executed operations (%s - %s):\n",
 				txn.start.String(), txn.stop.String())
 		}
-		str += txn.executed.StringWithOpts(indent + 4, verbose)
+		str += txn.executed.StringWithOpts(indent+4, verbose)
 	}
 
 	return str
@@ -167,7 +168,7 @@ func (txn *recordedTxn) StringWithOpts(resultOnly bool, indent int, verbose bool
 // String returns a *multi-line* human-readable string representation of a recorded
 // transaction operation.
 func (op *recordedTxnOp) String() string {
-	return op.StringWithOpts(0,0, false)
+	return op.StringWithOpts(0, 0, false)
 }
 
 // StringWithOpts allows to format string representation of a transaction operation.
@@ -200,7 +201,7 @@ func (op *recordedTxnOp) StringWithOpts(index int, indent int, verbose bool) str
 // String returns a *multi-line* human-readable string representation of transaction
 // operations.
 func (ops recordedTxnOps) String() string {
-	return ops.StringWithOpts( 0, false)
+	return ops.StringWithOpts(0, false)
 }
 
 // StringWithOpts allows to format string representation of transaction operations.
@@ -304,4 +305,3 @@ func (scheduler *Scheduler) getTransactionHistory(until time.Time) (history []*r
 	}
 	return scheduler.txnHistory[:firstAfter]
 }
-

@@ -3,11 +3,11 @@ package graph
 import (
 	"time"
 
-	. "github.com/ligato/cn-infra/kvscheduler/api"
 	"github.com/ligato/cn-infra/idxmap"
+	. "github.com/ligato/cn-infra/kvscheduler/api"
 )
 
-// graphR implements GraphReadAccess.
+// graphR implements ReadAccess.
 type graphR struct {
 	parent   *kvgraph
 	nodes    map[string]*node
@@ -115,8 +115,8 @@ func (graph *graphR) GetSnapshot(time time.Time) (nodes []*RecordedNode) {
 		for _, record := range timeline {
 			if record.Since.Before(time) &&
 				(record.Until.IsZero() || record.Until.After(time)) {
-					nodes = append(nodes, record)
-					break
+				nodes = append(nodes, record)
+				break
 			}
 		}
 	}
@@ -135,7 +135,7 @@ func (graph *graphR) copyNodesOnly() *graphR {
 	graphCopy := &graphR{
 		nodes: make(map[string]*node),
 	}
-	for key, node := range graph.nodes{
+	for key, node := range graph.nodes {
 		nodeCopy := node.copy()
 		nodeCopy.graph = graphCopy
 		graphCopy.nodes[key] = newNode(nodeCopy)
@@ -146,13 +146,13 @@ func (graph *graphR) copyNodesOnly() *graphR {
 // recordNode builds a record for the node to be added into the timeline.
 func (graph *graphR) recordNode(node *node) *RecordedNode {
 	record := &RecordedNode{
-		Since:          time.Now(),
-		Key:            node.key,
-		ValueLabel:     node.value.Label(),
-		ValueType:      node.value.Type(),
-		ValueString:    node.value.String(),
-		Flags:          make(map[string]string),
-		Targets:        node.targets, // no need to copy, never changed in graphR
+		Since:       time.Now(),
+		Key:         node.key,
+		ValueLabel:  node.value.Label(),
+		ValueType:   node.value.Type(),
+		ValueString: node.value.String(),
+		Flags:       make(map[string]string),
+		Targets:     node.targets, // no need to copy, never changed in graphR
 	}
 	for _, flag := range node.flags {
 		record.Flags[flag.GetName()] = flag.GetValue()

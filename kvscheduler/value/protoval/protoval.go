@@ -33,13 +33,13 @@ func NewProtoValue(protoMsg proto.Message) ProtoValue {
 }
 
 // GetProtoMessage returns the underlying proto message.
-func (pv * protoValue) GetProtoMessage() proto.Message {
+func (pv *protoValue) GetProtoMessage() proto.Message {
 	return pv.protoMessage
 }
 
 // Label tries to read and return "Name" attribute. Without the name attribute,
 // the function will return empty string.
-func (pv * protoValue) Label() string {
+func (pv *protoValue) Label() string {
 	protoWithName, hasName := pv.protoMessage.(ProtoMessageWithName)
 	if hasName {
 		return protoWithName.GetName()
@@ -48,7 +48,7 @@ func (pv * protoValue) Label() string {
 }
 
 // Equivalent uses proto.Equal for comparison.
-func (pv * protoValue) Equivalent(v2 Value) bool {
+func (pv *protoValue) Equivalent(v2 Value) bool {
 	v2Proto, ok := v2.(*protoValue)
 	if !ok {
 		return false
@@ -57,11 +57,11 @@ func (pv * protoValue) Equivalent(v2 Value) bool {
 }
 
 // String uses the String method from proto.Message.
-func (pv * protoValue) String() string {
+func (pv *protoValue) String() string {
 	return pv.protoMessage.String()
 }
 
 // Type returns Object.
-func (pv * protoValue) Type() ValueType {
+func (pv *protoValue) Type() ValueType {
 	return Object
 }

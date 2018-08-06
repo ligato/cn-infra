@@ -6,7 +6,7 @@ import (
 
 // nodeR implements Node.
 type nodeR struct {
-	graph         *graphR
+	graph *graphR
 
 	key           string
 	value         Value
@@ -15,8 +15,8 @@ type nodeR struct {
 	metadataAdded bool
 	metadataMap   string
 	targetsDef    []RelationTarget
-	targets       map[string]RecordedTargets  // relation -> (label -> keys))
-	sources       map[string]KeySet           // relation -> nodes
+	targets       map[string]RecordedTargets // relation -> (label -> keys))
+	sources       map[string]KeySet          // relation -> nodes
 }
 
 // newNodeR creates a new instance of nodeR.

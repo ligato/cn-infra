@@ -29,7 +29,7 @@ func nodesToKeysWithError(nodes []graph.Node) (kvPairs []KeyWithError) {
 		kvPairs = append(kvPairs, KeyWithError{
 			Key:   node.GetKey(),
 			Error: getNodeError(node),
-			})
+		})
 	}
 	return kvPairs
 }

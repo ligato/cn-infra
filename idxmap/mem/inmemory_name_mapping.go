@@ -19,8 +19,8 @@ import (
 	"sync"
 
 	"github.com/ligato/cn-infra/idxmap"
-	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/infra"
 )
 
 // IndexFunction should return map field->values for a given item.
@@ -47,7 +47,7 @@ type memNamedMapping struct {
 	// indexes is a register of secondary indexes
 	indexes map[string] /* index name */ map[string] /* index value */ *nameSet
 	// subscribers to whom notifications are delivered
-	subscribers sync.Map //map[string]func(idxmap.NamedMappingGenericEvent)
+	subscribers sync.Map //map[infra.PluginName]func(idxmap.NamedMappingGenericEvent)
 	title       string
 }
 
@@ -176,7 +176,7 @@ func (mem *memNamedMapping) ListNames(field string, value string) []string {
 
 // Watch allows to subscribe for tracking changes in the mapping.
 // When an item is added or removed, the given <callback> is triggered.
-func (mem *memNamedMapping) Watch(subscriber string, callback func(idxmap.NamedMappingGenericEvent)) error {
+func (mem *memNamedMapping) Watch(subscriber infra.PluginName, callback func(idxmap.NamedMappingGenericEvent)) error {
 	mem.Debug("Watch ", subscriber)
 
 	_, found := mem.subscribers.LoadOrStore(subscriber, callback)
@@ -262,7 +262,7 @@ func (mem *memNamedMapping) putNameToIdxSync(name string, metadata interface{}) 
 
 func (mem *memNamedMapping) publishAddToChannel(name string, value interface{}) {
 	mem.subscribers.Range(func(key, val interface{}) bool {
-		subscriber := key.(string)
+		subscriber := key.(infra.PluginName)
 		clb := val.(func(idxmap.NamedMappingGenericEvent))
 
 		if clb != nil {
@@ -285,7 +285,7 @@ func (mem *memNamedMapping) publishAddToChannel(name string, value interface{}) 
 
 func (mem *memNamedMapping) publishUpdateToChannel(name string, value interface{}) {
 	mem.subscribers.Range(func(key, val interface{}) bool {
-		subscriber := key.(string)
+		subscriber := key.(infra.PluginName)
 		clb := val.(func(idxmap.NamedMappingGenericEvent))
 
 		if clb != nil {
@@ -308,7 +308,7 @@ func (mem *memNamedMapping) publishUpdateToChannel(name string, value interface{
 
 func (mem *memNamedMapping) publishDelToChannel(name string, value interface{}) {
 	mem.subscribers.Range(func(key, val interface{}) bool {
-		subscriber := key.(string)
+		subscriber := key.(infra.PluginName)
 		clb := val.(func(idxmap.NamedMappingGenericEvent))
 
 		if clb != nil {

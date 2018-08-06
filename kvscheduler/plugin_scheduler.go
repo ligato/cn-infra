@@ -7,24 +7,29 @@ import (
 
 	. "github.com/ligato/cn-infra/kvscheduler/api"
 
-	"github.com/ligato/cn-infra/kvscheduler/registry"
-	"github.com/ligato/cn-infra/kvscheduler/graph"
 	"github.com/ligato/cn-infra/idxmap"
 	"github.com/ligato/cn-infra/idxmap/mem"
+	"github.com/ligato/cn-infra/kvscheduler/graph"
+	"github.com/ligato/cn-infra/kvscheduler/registry"
 	"github.com/ligato/cn-infra/logging"
 )
 
 const (
+	// DependencyRelation identifies dependency relation for the graph.
 	DependencyRelation = "depends-on"
-	DerivesRelation    = "derives"
+
+	// DerivesRelation identifies relation of value derivation for the graph.
+	DerivesRelation = "derives"
 )
 
 var schedulerSingleton *Scheduler
 
-// GetKVScheduler returns reference to key-value scheduler (singleton) or nil if
-// the KVScheduler plugin is not initialized.
-func GetKVScheduler() KVScheduler {
-	return schedulerSingleton
+// GetKVScheduler returns reference to key-value scheduler (singleton).
+func GetKVScheduler() (scheduler KVScheduler, isInitialized bool) {
+	if schedulerSingleton == nil {
+		return nil, false
+	}
+	return schedulerSingleton, true
 }
 
 // Scheduler is a CN-infra plugin implementing KVScheduler.
@@ -33,30 +38,30 @@ type Scheduler struct {
 	Deps
 
 	// management of go routines
-	ctx         context.Context
-	cancel      context.CancelFunc
-	wg          sync.WaitGroup
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 
 	// in-memory representation of all added+pending kv-pair and their dependencies
-	graph       graph.Graph
+	graph graph.Graph
 
 	// registry for descriptors
-	registry    registry.Registry
+	registry registry.Registry
 
 	// a list of key prefixed covered by registered descriptors
-	keyPrefixes  []string
+	keyPrefixes []string
 
 	// TXN processing
 	txnQueue     chan *queuedTxn
 	errorSubs    []errorSubscription
 	txnSeqNumber uint
 	resyncCount  uint
-	txnHistory   []*recordedTxn  // ordered from the oldest to the latest
+	txnHistory   []*recordedTxn // ordered from the oldest to the latest
 }
 
 // Deps lists dependencies of the scheduler.
 type Deps struct {
-	Log  logging.PluginLogger
+	Log logging.PluginLogger
 	// REST, etc.
 }
 
@@ -133,8 +138,8 @@ func (scheduler *Scheduler) GetRegisteredNBKeyPrefixes() []string {
 func (scheduler *Scheduler) StartNBTransaction(opts ...TxnOption) Txn {
 	txn := &SchedulerTxn{
 		scheduler: scheduler,
-		data:      &queuedTxn{
-			txnType:     nbTransaction,
+		data: &queuedTxn{
+			txnType: nbTransaction,
 			nb: &nbTxn{
 				isBlocking: true,
 				valueData:  make(map[string]interface{}),
@@ -163,17 +168,17 @@ func (scheduler *Scheduler) StartNBTransaction(opts ...TxnOption) Txn {
 
 // PushSBNotification notifies about a spontaneous value change in the SB
 // plane (i.e. not triggered by NB transaction).
-func (scheduler *Scheduler) PushSBNotification(key string, value Value, metadata Metadata) error  {
+func (scheduler *Scheduler) PushSBNotification(key string, value Value, metadata Metadata) error {
 	txn := &queuedTxn{
 		txnType: sbNotification,
 		sb: &sbNotif{
-			value:          KeyValuePair{Key: key, Value: value},
+			value: KeyValuePair{Key: key, Value: value},
 		},
 	}
 	return scheduler.enqueueTxn(txn)
 }
 
-// Get value currently set for the given key.
+// GetValue currently set for the given key.
 // The function can be used from within a transaction. However, if update
 // of A uses the value of B, then A should be marked as dependent on B
 // so that the scheduler can ensure that B is updated before A is.
@@ -188,7 +193,7 @@ func (scheduler *Scheduler) GetValue(key string) Value {
 	return nil
 }
 
-// Get a set of values matched by the given selector.
+// GetValues returns a set of values matched by the given selector.
 func (scheduler *Scheduler) GetValues(selector KeySelector) []KeyValuePair {
 	graphR := scheduler.graph.Read()
 	defer graphR.Release()
@@ -268,23 +273,23 @@ func (txn *SchedulerTxn) Resync(values []KeyValueDataPair) Txn {
 // Commit orders scheduler to execute enqueued operations.
 // Operations with unmet dependencies will get postponed and possibly
 // executed later.
-func (txn *SchedulerTxn) Commit(ctx context.Context) (txnError error, kvErrors []KeyWithError) {
+func (txn *SchedulerTxn) Commit(ctx context.Context) (kvErrors []KeyWithError, txnError error) {
 	if txn.err != nil {
-		return txn.err, nil
+		return nil, txn.err
 	}
 	err := txn.scheduler.enqueueTxn(txn.data)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 	if txn.data.nb.isBlocking {
 		select {
 		case <-txn.scheduler.ctx.Done():
-			return ErrClosedScheduler, nil
+			return nil, ErrClosedScheduler
 		case <-ctx.Done():
-			return ErrTxnWaitCanceled, nil
+			return nil, ErrTxnWaitCanceled
 		case kvErrors = <-txn.data.nb.resultChan:
 			close(txn.data.nb.resultChan)
-			return nil, kvErrors
+			return kvErrors, nil
 		}
 	}
 	return nil, nil

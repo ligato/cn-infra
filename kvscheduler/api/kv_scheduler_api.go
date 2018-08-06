@@ -141,7 +141,7 @@ type KeyWithError struct {
 	Error error
 }
 
-// KVWithMetada encapsulates key-value pair with metadata and the origin mark.
+// KVWithMetadata encapsulates key-value pair with metadata and the origin mark.
 type KVWithMetadata struct {
 	Key      string
 	Value    Value
@@ -251,20 +251,20 @@ type KVScheduler interface {
 	// Values pushed from SB do not trigger Add/Modify/Delete operations
 	// on the descriptors - the change has already happened in SB - only
 	// dependencies and derived values are updated.
-    //
+	//
 	// Values pushed from SB are overwritten by those created via NB transactions,
 	// however. For example, notifications for values already created by NB
 	// are ignored. But otherwise, SB values (not managed by NB) are untouched
 	// by resync or any other operation of the scheduler/descriptor.
 	PushSBNotification(key string, value Value, metadata Metadata) error
 
-	// Get value currently set for the given key.
+	// GetValue currently set for the given key.
 	// The function can be used from within a transaction. However, if update
 	// of A uses the value of B, then A should be marked as dependent on B
 	// so that the scheduler can ensure that B is updated before A is.
 	GetValue(key string) Value
 
-	// Get a set of values matched by the given selector.
+	// GetValues returns a set of values matched by the given selector.
 	GetValues(selector KeySelector) []KeyValuePair
 
 	// GetMetadataMap returns (read-only) map associating value label with value
@@ -315,5 +315,5 @@ type Txn interface {
 	// Subscribe with KVScheduler.SubscribeForErrors() to get notified about all
 	// errors, including those returned by action triggered later or asynchronously
 	// by a SB notification.
-	Commit(ctx context.Context) (txnError error, kvErrors []KeyWithError)
+	Commit(ctx context.Context) (kvErrors []KeyWithError, txnError error)
 }

@@ -76,7 +76,7 @@ func (node *node) DelFlags(names ...string) {
 // SetMetadataMap chooses metadata map to be used to store the association
 // between this node's value label and metadata.
 func (node *node) SetMetadataMap(mapName string) {
-	if node.metadataMap == "" {  // cannot be changed
+	if node.metadataMap == "" { // cannot be changed
 		node.metadataMap = mapName
 		node.updated = true
 		node.metaInSync = false

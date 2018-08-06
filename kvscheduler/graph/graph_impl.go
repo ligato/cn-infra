@@ -11,7 +11,7 @@ type kvgraph struct {
 }
 
 // NewGraph creates and new instance of key-value graph.
-func NewGraph() *kvgraph {
+func NewGraph() Graph {
 	kvgraph := &kvgraph{}
 	kvgraph.graph = newGraphR()
 	kvgraph.graph.parent = kvgraph
@@ -21,7 +21,7 @@ func NewGraph() *kvgraph {
 // Read returns a graph handle for read-only access.
 // The graph supports multiple concurrent readers.
 // Release eventually using Release() method.
-func (kvgraph *kvgraph) Read() GraphReadAccess {
+func (kvgraph *kvgraph) Read() ReadAccess {
 	kvgraph.rwLock.RLock()
 	return kvgraph.graph
 }
@@ -31,6 +31,6 @@ func (kvgraph *kvgraph) Read() GraphReadAccess {
 // there is no write-concurrency.
 // The changes are propagated to the graph using Save().
 // Release eventually using Release() method.
-func (kvgraph *kvgraph) Write(record bool) GraphRWAccess {
+func (kvgraph *kvgraph) Write(record bool) RWAccess {
 	return newGraphRW(kvgraph.graph, record)
 }

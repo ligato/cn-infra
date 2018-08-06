@@ -8,23 +8,23 @@ import (
 
 // applyValueArgs collects all arguments to applyValue method.
 type applyValueArgs struct {
-	graphW    graph.GraphRWAccess
+	graphW    graph.RWAccess
 	txnSeqNum uint
 	txnType   txnType
 	kv        kvForTxn
 
-	dryRun    bool
-	isRetry   bool
+	dryRun  bool
+	isRetry bool
 
 	// set inside of the recursive chain of applyValue-s
 	isUpdate  bool
 	isDerived bool
 
 	// failed base values for potential retry
-	failed    keySet
+	failed keySet
 
 	// dependency cycle detection
-	branch    keySet
+	branch keySet
 }
 
 // executeTransaction executes pre-processed transaction.
@@ -41,7 +41,7 @@ func (scheduler *Scheduler) executeTransaction(txn *preProcessedTxn, dryRun bool
 
 	var (
 		prevValues []KeyValuePair
-		revert bool
+		revert     bool
 	)
 	// execute transaction either in best-effort mode or with revert on the first failure
 	for _, kv := range orderedVals {
@@ -57,7 +57,7 @@ func (scheduler *Scheduler) executeTransaction(txn *preProcessedTxn, dryRun bool
 				branch:    branch,
 			})
 		executed = append(executed, ops...)
-		if err != nil  {
+		if err != nil {
 			if txn.args.txnType == nbTransaction && txn.args.nb.revertOnFailure {
 				// potential retry should work with the previous value of the failed one
 				node := graphW.SetNode(kv.key)
@@ -84,15 +84,15 @@ func (scheduler *Scheduler) executeTransaction(txn *preProcessedTxn, dryRun bool
 					graphW:    graphW,
 					txnSeqNum: txn.seqNum,
 					txnType:   txn.args.txnType,
-					kv:        kvForTxn{
+					kv: kvForTxn{
 						key:      kvPair.Key,
 						value:    kvPair.Value,
 						origin:   FromNB,
 						isRevert: true,
 					},
-					dryRun:    dryRun,
-					failed:    failed,
-					branch:    branch,
+					dryRun: dryRun,
+					failed: failed,
+					branch: branch,
 				})
 			executed = append(executed, ops...)
 		}
@@ -275,12 +275,14 @@ func (scheduler *Scheduler) applyAdd(node graph.NodeRW, txnOp *recordedTxnOp, ar
 			err      error
 			metadata interface{}
 		)
+
 		if args.txnType != sbNotification {
 			metadata, err = descriptor.Add(node.GetKey(), node.GetValue())
 		} else {
 			// already added in SB
 			metadata = args.kv.metadata
 		}
+
 		if err != nil {
 			// add failed => keep value pending
 			node.SetFlags(&PendingFlag{})
@@ -291,11 +293,12 @@ func (scheduler *Scheduler) applyAdd(node graph.NodeRW, txnOp *recordedTxnOp, ar
 			txnOp.isPending = true
 			txnOp.newErr = err
 			return recordedTxnOps{txnOp}, err
-		} else {
-			if withMeta, _ := descriptor.WithMetadata(); canNodeHaveMetadata(node) && withMeta {
-				node.SetMetadataMap(descriptor.GetName())
-				node.SetMetadata(metadata)
-			}
+		}
+
+		// add metadata to the map
+		if withMeta, _ := descriptor.WithMetadata(); canNodeHaveMetadata(node) && withMeta {
+			node.SetMetadataMap(descriptor.GetName())
+			node.SetMetadata(metadata)
 		}
 	}
 
@@ -414,15 +417,17 @@ func (scheduler *Scheduler) applyModify(node graph.NodeRW, txnOp *recordedTxnOp,
 	needsModify := args.txnType == sbNotification || !node.GetValue().Equivalent(prevValue)
 	if !args.dryRun && needsModify {
 		var (
-			err      error
+			err         error
 			newMetadata interface{}
 		)
+
 		if args.txnType != sbNotification {
 			newMetadata, err = descriptor.Modify(node.GetKey(), prevValue, node.GetValue(), node.GetMetadata())
 		} else {
 			// already modified in SB
 			newMetadata = args.kv.metadata
 		}
+
 		if err != nil {
 			node.SetFlags(&ErrorFlag{err})
 			if !isNodeDerived(node) {
@@ -431,10 +436,11 @@ func (scheduler *Scheduler) applyModify(node graph.NodeRW, txnOp *recordedTxnOp,
 			txnOp.newErr = err
 			executed = append(executed, txnOp)
 			return executed, err
-		} else {
-			if withMeta, _ := descriptor.WithMetadata(); canNodeHaveMetadata(node) && withMeta {
-				node.SetMetadata(newMetadata)
-			}
+		}
+
+		// update metadata
+		if withMeta, _ := descriptor.WithMetadata(); canNodeHaveMetadata(node) && withMeta {
+			node.SetMetadata(newMetadata)
 		}
 	}
 
@@ -542,7 +548,7 @@ func (scheduler *Scheduler) applyDerived(derivedVals []kvForTxn, args *applyValu
 				kv:        derived,
 				dryRun:    args.dryRun,
 				isRetry:   args.isRetry,
-				isDerived: true,  // <- is derived
+				isDerived: true, // <- is derived
 				failed:    args.failed,
 				branch:    args.branch,
 			})
@@ -573,7 +579,7 @@ func (scheduler *Scheduler) runUpdates(node graph.Node, args *applyValueArgs) (e
 					isRevert: args.kv.isRevert,
 				},
 				dryRun:   args.dryRun,
-				isUpdate: true,        // <- update
+				isUpdate: true, // <- update
 				isRetry:  args.isRetry,
 				failed:   args.failed,
 				branch:   args.branch,
@@ -584,7 +590,7 @@ func (scheduler *Scheduler) runUpdates(node graph.Node, args *applyValueArgs) (e
 }
 
 // validDerivedKV check validity of a derived KV pair.
-func (scheduler *Scheduler) validDerivedKV(graphR graph.GraphReadAccess, kv kvForTxn, txnSeqNum uint) bool {
+func (scheduler *Scheduler) validDerivedKV(graphR graph.ReadAccess, kv kvForTxn, txnSeqNum uint) bool {
 	node := graphR.GetNode(kv.key)
 	descriptor := scheduler.registry.GetDescriptorForKey(kv.key)
 	if kv.value == nil {
@@ -596,9 +602,9 @@ func (scheduler *Scheduler) validDerivedKV(graphR graph.GraphReadAccess, kv kvFo
 	}
 	if descriptor == nil && kv.value.Type() != Property {
 		scheduler.Log.WithFields(logging.Fields{
-			"txnSeqNum":  txnSeqNum,
-			"key":        kv.key,
-			"value":      kv.value,
+			"txnSeqNum": txnSeqNum,
+			"key":       kv.key,
+			"value":     kv.value,
 		}).Warn("Skipping unimplemented derived value from transaction")
 		return false
 	}

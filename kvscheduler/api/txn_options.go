@@ -18,7 +18,6 @@ import "time"
 
 // TODO: move to the localclient
 
-
 // TxnOption configures NB transaction.
 // The available options can be found below.
 type TxnOption interface {
@@ -36,7 +35,7 @@ func WithoutBlocking() TxnOption {
 	return &NonBlockingTxn{}
 }
 
-// retryFailedOps implements the *retry* transaction option.
+// RetryFailedOps implements the *retry* transaction option.
 type RetryFailedOps struct {
 	Period     time.Duration
 	ExpBackoff bool
@@ -62,5 +61,3 @@ type RevertOnFailure struct {
 func WithRevert() TxnOption {
 	return &RevertOnFailure{}
 }
-
-

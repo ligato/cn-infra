@@ -14,7 +14,7 @@ type resyncData struct {
 
 // refreshGraph updates all/some values in the graph to their *real* state
 // using the Dump methods from descriptors.
-func (scheduler *Scheduler) refreshGraph(graphW graph.GraphRWAccess, keys keySet, resyncData *resyncData) {
+func (scheduler *Scheduler) refreshGraph(graphW graph.RWAccess, keys keySet, resyncData *resyncData) {
 	refreshedKeys := make(keySet)
 
 	// iterate over all descriptors, in order given by dump dependencies
@@ -144,7 +144,7 @@ func (scheduler *Scheduler) refreshGraph(graphW graph.GraphRWAccess, keys keySet
 
 // skipRefresh is used to mark nodes as refreshed without actual refreshing
 // if they should not (or cannot) be refreshed.
-func(scheduler *Scheduler) skipRefresh(graphR graph.GraphReadAccess, descriptor string, except keySet, refreshed keySet) {
+func (scheduler *Scheduler) skipRefresh(graphR graph.ReadAccess, descriptor string, except keySet, refreshed keySet) {
 	skipped := graphR.GetNodes(nil,
 		graph.WithFlags(&DescriptorFlag{descriptor}),
 		graph.WithoutFlags(&DerivedFlag{}))
@@ -168,7 +168,7 @@ func(scheduler *Scheduler) skipRefresh(graphR graph.GraphReadAccess, descriptor 
 }
 
 // unwindDumpedRelations builds a tree of derived values based on a dumped <root> kv-pair.
-func(scheduler *Scheduler) unwindDumpedRelations(graphW graph.GraphRWAccess, root graph.NodeRW,
+func (scheduler *Scheduler) unwindDumpedRelations(graphW graph.RWAccess, root graph.NodeRW,
 	origin ValueOrigin, refreshed keySet) {
 
 	// BFS over derived values
@@ -271,8 +271,8 @@ func (scheduler *Scheduler) validDumpedDerivedKV(node graph.Node, descriptor KVD
 	}
 	if descriptor == nil && node.GetValue().Type() != Property {
 		scheduler.Log.WithFields(logging.Fields{
-			"key":        node.GetKey(),
-			"value":      node.GetValue(),
+			"key":   node.GetKey(),
+			"value": node.GetValue(),
 		}).Warn("Skipping unimplemented derived value from dump")
 		return false
 	}

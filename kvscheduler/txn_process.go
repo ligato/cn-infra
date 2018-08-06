@@ -149,7 +149,7 @@ func (scheduler *Scheduler) preProcessTransaction(qTxn *queuedTxn) (txn *preProc
 			// revert not supported with resync
 			qTxn.nb.revertOnFailure = false
 
-			scheduler.refreshGraph(graphW,nil,
+			scheduler.refreshGraph(graphW, nil,
 				&resyncData{first: scheduler.resyncCount == 1, values: preTxn.values})
 
 			// collect deletes for obsolete values
@@ -276,7 +276,7 @@ func (scheduler *Scheduler) postProcessTransaction(txn *preProcessedTxn, execute
 }
 
 // validTxnValue checks validity of a kv-pair to be applied in a transaction.
-func (scheduler *Scheduler) validTxnValue(graphR graph.GraphReadAccess, key string, value Value, origin ValueOrigin, txnSeqNum uint) bool {
+func (scheduler *Scheduler) validTxnValue(graphR graph.ReadAccess, key string, value Value, origin ValueOrigin, txnSeqNum uint) bool {
 	if key == "" {
 		scheduler.Log.WithFields(logging.Fields{
 			"txnSeqNum": txnSeqNum,

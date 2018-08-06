@@ -12,7 +12,7 @@ type emptyValue struct {
 
 // NewEmptyValue creates a new instance of empty value.
 func NewEmptyValue(valueType ValueType) Value {
-	return &emptyValue{valueType:valueType}
+	return &emptyValue{valueType: valueType}
 }
 
 // Label returns empty string.
@@ -30,11 +30,11 @@ func (ev *emptyValue) Equivalent(v2 Value) bool {
 }
 
 // String returns empty string.
-func (ev * emptyValue) String() string {
+func (ev *emptyValue) String() string {
 	return ""
 }
 
 // Type returns the type selected in NewEmptyValue constructor.
-func (ev * emptyValue) Type() ValueType {
+func (ev *emptyValue) Type() ValueType {
 	return ev.valueType
 }

@@ -15,9 +15,9 @@ const (
 
 // registry is an implementation of Registry for descriptors.
 type registry struct {
-	descriptors       map[string]KVDescriptor    // descriptor name -> descriptor
-	keyToCacheEntry   map[string]*list.Element   // key -> cache entry
-	keyCache          *list.List                 // doubly linked list of cached entries key->descriptor
+	descriptors     map[string]KVDescriptor  // descriptor name -> descriptor
+	keyToCacheEntry map[string]*list.Element // key -> cache entry
+	keyCache        *list.List               // doubly linked list of cached entries key->descriptor
 }
 
 // cacheEntry encapsulates data for one entry in registry.keyCache
@@ -27,7 +27,7 @@ type cacheEntry struct {
 }
 
 // NewRegistry creates a new instance of registry.
-func NewRegistry() *registry {
+func NewRegistry() Registry {
 	return &registry{
 		descriptors:     make(map[string]KVDescriptor),
 		keyToCacheEntry: make(map[string]*list.Element),
