@@ -21,6 +21,7 @@ examples:
 	cd examples/kafka-lib && make build
 	cd examples/logs-lib && make build
 	cd examples/redis-lib && make build
+	cd examples/cryptodata-lib && go build
 
 # Build plugin examples
 examples-plugin:
@@ -36,6 +37,8 @@ examples-plugin:
 	cd examples/simple-agent && go build -i -v ${LDFLAGS}
 	cd examples/statuscheck-plugin && go build -i -v ${LDFLAGS}
 	cd examples/prometheus-plugin && go build -i -v ${LDFLAGS}
+	cd examples/cryptodata-plugin && go build -i -v ${LDFLAGS}
+	cd examples/bolt-plugin && go build -i -v ${LDFLAGS}
 
 # Clean examples
 clean-examples:
@@ -60,6 +63,7 @@ clean-examples-plugin:
 	rm -f examples/simple-agent/simple-agent
 	rm -f examples/statuscheck-plugin/statuscheck-plugin
 	rm -f examples/prometheus-plugin/prometheus-plugin
+	rm -f examples/bolt-plugin/bolt-plugin
 
 # Get test tools
 get-testtools:
@@ -104,11 +108,15 @@ dep-install: get-dep
 dep-update: get-dep
 	dep ensure -update
 
+LINTER := $(shell command -v gometalinter 2> /dev/null)
+
 # Get linter tools
 get-linters:
+ifndef LINTER
 	@echo "=> installing linters"
 	go get -v github.com/alecthomas/gometalinter
 	gometalinter --install
+endif
 
 # Run linters
 lint: get-linters
@@ -120,10 +128,15 @@ format:
 	@echo "=> formatting the code"
 	./scripts/gofmt.sh
 
+MDLINKCHECK := $(shell command -v markdown-link-check 2> /dev/null)
+
 # Get link check tool
 get-linkcheck:
+ifndef MDLINKCHECK
+	@echo "=> installing markdown link checker"
 	sudo apt-get install npm
-	npm install -g markdown-link-check
+	npm install -g markdown-link-check@3.6.2
+endif
 
 # Validate links in markdown files
 check-links: get-linkcheck

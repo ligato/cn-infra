@@ -19,6 +19,7 @@ import (
 	"sync"
 
 	"github.com/ligato/cn-infra/idxmap"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 )
 

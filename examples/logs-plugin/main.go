@@ -1,9 +1,11 @@
 package main
 
 import (
-	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/flavors/local"
+	"log"
+
+	"github.com/ligato/cn-infra/agent"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/logging/logmanager"
 )
 
 // *************************************************************************
@@ -20,25 +22,36 @@ import (
 // or remotely using REST (but different flavor must be used: rpc.RpcFlavor).
 // ************************************************************************/
 
-func main() {
-	// Init close channel to stop the example after everything was logged
-	exampleFinished := make(chan struct{}, 1)
+// PluginName represents name of plugin.
+const PluginName = "logs-example"
 
-	// Start Agent with ExamplePlugin & LocalFlavor (reused cn-infra plugins).
-	agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
-		examplePlug := &ExamplePlugin{
-			exampleFinished: exampleFinished,
-			PluginLogDeps:   *flavor.LogDeps("logs-example"),
-		}
-		return []*core.NamedPlugin{{examplePlug.PluginName, examplePlug}}
-	}))
-	core.EventLoopWithInterrupt(agent, exampleFinished)
+func main() {
+	// Prepare example plugin and start the agent
+	p := &ExamplePlugin{
+		exampleFinished: make(chan struct{}),
+		Log:             logging.ForPlugin(PluginName),
+		LogManager:      &logmanager.DefaultPlugin,
+	}
+	a := agent.NewAgent(
+		agent.AllPlugins(p),
+		agent.QuitOnClose(p.exampleFinished),
+	)
+	if err := a.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // ExamplePlugin presents the PluginLogger API.
 type ExamplePlugin struct {
-	local.PluginLogDeps
+	LogManager *logmanager.Plugin
+
+	Log logging.PluginLogger
+
 	exampleFinished chan struct{}
+}
+
+func (plugin *ExamplePlugin) String() string {
+	return PluginName
 }
 
 // Init demonstrates the usage of PluginLogger API.
@@ -77,10 +90,23 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	childLogger2 := plugin.Log.NewLogger("childLogger2")
 	childLogger2.Debug("Debug log using childLogger2!")
 
+	return nil
+}
+
+// AfterInit demonstrates the usage of PluginLogger API.
+func (plugin *ExamplePlugin) AfterInit() (err error) {
+	late := plugin.Log.NewLogger("late")
+	late.Debugf("late debug message")
+
 	// End the example
 	plugin.Log.Info("logs in plugin example finished, sending shutdown ...")
-	plugin.exampleFinished <- struct{}{}
+	close(plugin.exampleFinished)
 
+	return nil
+}
+
+// Close implements Plugin interface..
+func (plugin *ExamplePlugin) Close() (err error) {
 	return nil
 }
 

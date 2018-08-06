@@ -41,9 +41,9 @@ type NamedMapping interface {
 	//
 	// Example usage:
 	//
-	//  map.Watch(plugin.PluginName, ToChan(myChannel))
+	//  map.Watch(subscriber, ToChan(myChannel))
 	//
-	//  map.Watch(plugin.PluginName, func(msgNamedMappingGenericEvent) {/*handle callback*/ return nil})
+	//  map.Watch(subscriber, func(msgNamedMappingGenericEvent) {/*handle callback*/ return nil})
 	//
 	Watch(subscriber string, callback func(NamedMappingGenericEvent)) error
 }

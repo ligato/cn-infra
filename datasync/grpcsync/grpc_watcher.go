@@ -25,20 +25,22 @@ import (
 	"google.golang.org/grpc"
 )
 
-// NewAdapter creates a new instance of Adapter.
-func NewAdapter(grpcServer *grpc.Server) *Adapter {
-	//TODO grpcServer.RegisterCodec(json.NewCodec(), "application/json")
-	adapter := &Adapter{syncbase.NewRegistry(), grpcServer}
-	msg.RegisterDataMsgServiceServer(grpcServer, &DataMsgServiceServer{adapter})
-	//registerHTTPHandler(grpcServer)
-
-	return adapter
-}
-
 // Adapter is a gRPC transport adapter in front of Agent Plugins.
 type Adapter struct {
 	base   *syncbase.Registry
 	server *grpc.Server
+}
+
+// NewAdapter creates a new instance of Adapter.
+func NewAdapter(grpcServer *grpc.Server) *Adapter {
+	//TODO grpcServer.RegisterCodec(json.NewCodec(), "application/json")
+	adapter := &Adapter{
+		base:   syncbase.NewRegistry(),
+		server: grpcServer,
+	}
+	msg.RegisterDataMsgServiceServer(grpcServer, &DataMsgServiceServer{adapter})
+
+	return adapter
 }
 
 // Watch registers HTTP handlers - basically bridges them with local dbadapter.

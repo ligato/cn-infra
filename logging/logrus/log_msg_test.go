@@ -22,6 +22,8 @@ import (
 	lg "github.com/sirupsen/logrus"
 
 	"github.com/onsi/gomega"
+	"log/syslog"
+	syslog2 "github.com/sirupsen/logrus/hooks/syslog"
 )
 
 func TestEntryPanicln(t *testing.T) {
@@ -68,4 +70,21 @@ func TestEntryPanicf(t *testing.T) {
 	logger.std.Out = &bytes.Buffer{}
 	entry := NewEntry(logger)
 	entry.WithField("err", errBoom).Panicf("kaboom %v", true)
+}
+
+func TestAddHook(t *testing.T) {
+	gomega.RegisterTestingT(t)
+
+	logRegistry := NewLogRegistry()
+	lgA := logRegistry.NewLogger("logger")
+	gomega.Expect(lgA).NotTo(gomega.BeNil())
+
+	hook, _ := syslog2.NewSyslogHook(
+		"",
+		"",
+		syslog.LOG_INFO, "")
+
+	lgA.AddHook(hook)
+	lgA.Info("Test Hook")
+
 }

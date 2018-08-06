@@ -15,26 +15,25 @@
 package main
 
 import (
-	"os"
-
-	"github.com/ligato/cn-infra/core"
-	"github.com/ligato/cn-infra/flavors/connectors"
-	"github.com/ligato/cn-infra/flavors/local"
-	"github.com/ligato/cn-infra/flavors/rpc"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logrus"
+	"github.com/ligato/cn-infra/agent"
+	"github.com/ligato/cn-infra/db/keyval/etcd"
+	"log"
+	"github.com/ligato/cn-infra/db/keyval/redis"
+	"github.com/ligato/cn-infra/db/sql/cassandra"
+	"github.com/ligato/cn-infra/datasync/resync"
 )
 
 func main() {
 	logrus.DefaultLogger().SetLevel(logging.DebugLevel)
 
-	loc := &local.FlavorLocal{}
-	connectors := connectors.AllConnectorsFlavor{FlavorLocal: loc}
-	rpcs := rpc.FlavorRPC{FlavorLocal: loc}
-	agent := core.NewAgent(core.Inject(&connectors, &rpcs))
-
-	err := core.EventLoopWithInterrupt(agent, nil)
-	if err != nil {
-		os.Exit(1)
+	// Start simple agent with connector plugins
+	a := agent.NewAgent(
+		agent.AllPlugins(&etcd.DefaultPlugin, &redis.DefaultPlugin, &cassandra.DefaultPlugin,
+			&resync.DefaultPlugin),
+	)
+	if err := a.Run(); err != nil {
+		log.Fatal(err)
 	}
 }

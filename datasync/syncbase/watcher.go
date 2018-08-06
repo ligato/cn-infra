@@ -192,7 +192,11 @@ func (adapter *Registry) PropagateResync(txData map[string]datasync.ChangeValue)
 			for key, val := range txData {
 				if strings.HasPrefix(key, prefix) {
 					adapter.lastRev.PutWithRevision(key, val)
-					kvs = append(kvs, &KeyVal{key, val, val.GetRevision()})
+					kvs = append(kvs, &KeyVal{
+						key:       key,
+						LazyValue: val,
+						rev:       val.GetRevision(),
+					})
 				}
 			}
 
@@ -234,7 +238,7 @@ func (reg *WatchDataReg) Register(resyncName, keyPrefix string) error {
 			// Verify that prefix does not exist yet
 			for _, regPrefix := range sub.KeyPrefixes {
 				if regPrefix == keyPrefix {
-					return fmt.Errorf("prefix %s already exists", keyPrefix)
+					return fmt.Errorf("prefix %q already exists", keyPrefix)
 				}
 			}
 			sub.KeyPrefixes = append(sub.KeyPrefixes, keyPrefix)

@@ -6,13 +6,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ligato/cn-infra/core"
 	"github.com/ligato/cn-infra/examples/model"
-	"github.com/ligato/cn-infra/flavors/local"
+	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/messaging"
-	"github.com/ligato/cn-infra/messaging/kafka"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
+	"github.com/ligato/cn-infra/messaging/kafka"
+	"github.com/ligato/cn-infra/agent"
+	"log"
 )
 
 //********************************************************************
@@ -26,25 +27,26 @@ var (
 	messageCount = flag.String("messageCount", os.Getenv("MSG_COUNT"), "Number of messages which will be send. Set to '0' to just watch")
 )
 
+// PluginName represents name of plugin.
+const PluginName = "kafka-hash-example"
+
 func main() {
-	// Init close channel used to stop the example.
-	exampleFinished := make(chan struct{}, 1)
-
-	// Start Agent with ExamplePlugin, KafkaPlugin & FlavorLocal (reused cn-infra plugins).
-	agent := local.NewAgent(local.WithPlugins(func(flavor *local.FlavorLocal) []*core.NamedPlugin {
-		kafkaPlug := &kafka.Plugin{}
-		kafkaPlug.Deps.PluginInfraDeps = *flavor.InfraDeps("kafka", local.WithConf())
-
-		examplePlug := &ExamplePlugin{closeChannel: exampleFinished}
-		examplePlug.Deps.PluginLogDeps = *flavor.LogDeps("kafka-example")
-		examplePlug.Deps.Kafka = kafkaPlug // Inject kafka to example plugin.
-
-		return []*core.NamedPlugin{
-			{kafkaPlug.PluginName, kafkaPlug},
-			{examplePlug.PluginName, examplePlug}}
-	}))
-
-	core.EventLoopWithInterrupt(agent, exampleFinished)
+	// Init example plugin and its dependencies
+	ep := &ExamplePlugin{
+		Deps: Deps{
+			Log:          logging.ForPlugin(PluginName),
+			Kafka:         &kafka.DefaultPlugin,
+		},
+		exampleFinished: make(chan struct{}),
+	}
+	// Start Agent with example plugin including dependencies
+	a := agent.NewAgent(
+		agent.AllPlugins(ep),
+		agent.QuitOnClose(ep.exampleFinished),
+	)
+	if err := a.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // ExamplePlugin demonstrates the use of Kafka plugin API from another plugin.
@@ -68,13 +70,14 @@ type ExamplePlugin struct {
 	syncRecv     bool
 	asyncRecv    bool
 	asyncSuccess bool
-	closeChannel chan struct{}
+	exampleFinished chan struct{}
 }
 
 // Deps lists dependencies of ExamplePlugin.
 type Deps struct {
-	Kafka               messaging.Mux // injected
-	local.PluginLogDeps               // injected
+	Kafka messaging.Mux // injected
+	//local.PluginLogDeps               // injected
+	Log logging.PluginLogger
 }
 
 // Consts
@@ -90,6 +93,11 @@ var (
 	// How many messages will be sent
 	messageCountNum = 10
 )
+
+// String returns plugin name
+func (plugin *ExamplePlugin) String() string {
+	return PluginName
+}
 
 // Init initializes and starts producers and consumers.
 func (plugin *ExamplePlugin) Init() (err error) {
@@ -185,7 +193,7 @@ func (plugin *ExamplePlugin) closeExample() {
 
 			plugin.Log.Info("kafka example finished, sending shutdown ...")
 
-			plugin.closeChannel <- struct{}{}
+			close(plugin.exampleFinished)
 			break
 		}
 	}
