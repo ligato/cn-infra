@@ -63,7 +63,7 @@ func TestSingleNode(t *testing.T) {
 
 	// set attributes:
 	nodeW.SetValue(value1)
-	nodeW.SetMetadata(&OnlyInteger{1})
+	nodeW.SetMetadata(&OnlyInteger{Integer:1})
 	nodeW.SetMetadataMap(metadataMapA)
 	nodeW.SetFlags(ColorFlag(Red), AbstractFlag())
 
@@ -676,7 +676,7 @@ func TestNodeTimeline(t *testing.T) {
 	node = graphW.SetNode(keyA1)
 	node.SetFlags(TemporaryFlag())
 	node.DelFlags(AbstractFlagName)
-	node.SetMetadata(&OnlyInteger{2})
+	node.SetMetadata(&OnlyInteger{Integer:2})
 	graphW.Save()
 	graphW.Release()
 
@@ -803,7 +803,7 @@ func TestNodeMetadata(t *testing.T) {
 	buildGraph(graph, true, false, selectNodesToBuild(4))
 	graphW := graph.Write(true)
 	graphW.DeleteNode(keyA1)
-	graphW.SetNode(keyA2).SetMetadata(&OnlyInteger{4})
+	graphW.SetNode(keyA2).SetMetadata(&OnlyInteger{Integer:4})
 	graphW.Save()
 	graphW.Release()
 

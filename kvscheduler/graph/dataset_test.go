@@ -87,7 +87,7 @@ func buildGraph(graph Graph, record, regMaps bool, nodes map[int]struct{}) Graph
 	if _, addNode1 := nodes[1]; addNode1 {
 		node1 := graphW.SetNode(keyA1)
 		node1.SetValue(value1)
-		node1.SetMetadata(&OnlyInteger{1})
+		node1.SetMetadata(&OnlyInteger{Integer:1})
 		node1.SetMetadataMap(metadataMapA)
 		node1.SetFlags(ColorFlag(Red), AbstractFlag())
 		node1.SetTargets([]RelationTarget{
@@ -99,7 +99,7 @@ func buildGraph(graph Graph, record, regMaps bool, nodes map[int]struct{}) Graph
 	if _, addNode2 := nodes[2]; addNode2 {
 		node2 := graphW.SetNode(keyA2)
 		node2.SetValue(value2)
-		node2.SetMetadata(&OnlyInteger{2})
+		node2.SetMetadata(&OnlyInteger{Integer:2})
 		node2.SetMetadataMap(metadataMapA)
 		node2.SetFlags(ColorFlag(Blue))
 		node2.SetTargets([]RelationTarget{
@@ -110,7 +110,7 @@ func buildGraph(graph Graph, record, regMaps bool, nodes map[int]struct{}) Graph
 	if _, addNode3 := nodes[3]; addNode3 {
 		node3 := graphW.SetNode(keyA3)
 		node3.SetValue(value3)
-		node3.SetMetadata(&OnlyInteger{3})
+		node3.SetMetadata(&OnlyInteger{Integer:3})
 		node3.SetMetadataMap(metadataMapA)
 		node3.SetFlags(ColorFlag(Green), AbstractFlag(), TemporaryFlag())
 		node3.SetTargets([]RelationTarget{
@@ -122,7 +122,7 @@ func buildGraph(graph Graph, record, regMaps bool, nodes map[int]struct{}) Graph
 	if _, addNode4 := nodes[4]; addNode4 {
 		node4 := graphW.SetNode(keyB1)
 		node4.SetValue(value4)
-		node4.SetMetadata(&OnlyInteger{1})
+		node4.SetMetadata(&OnlyInteger{Integer:1})
 		node4.SetMetadataMap(metadataMapB)
 		node4.SetFlags(TemporaryFlag())
 		node4.SetTargets([]RelationTarget{

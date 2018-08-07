@@ -34,8 +34,11 @@ func (flag *TestingFlag) GetValue() string {
 // Color is a property to be assigned to nodes for testing purposes.
 type Color int
 const (
+	// Red color.
 	Red Color = iota
+	// Blue color.
 	Blue
+	// Green color.
 	Green
 )
 

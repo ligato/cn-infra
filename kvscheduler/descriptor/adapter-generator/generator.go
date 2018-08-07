@@ -29,7 +29,6 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
-	"time"
 )
 
 // ArrayFlag implements repeated flag.
