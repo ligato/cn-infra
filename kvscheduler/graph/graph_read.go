@@ -1,3 +1,17 @@
+// Copyright (c) 2018 Cisco and/or its affiliates.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package graph
 
 import (
@@ -87,15 +101,18 @@ func (graph *graphR) GetNodeTimeline(key string) []*RecordedNode {
 	return timeline
 }
 
-// FlagStats returns stats for a given flag.
-func (graph *graphR) FlagStats(flagName string, selector KeySelector) FlagStats {
+// GetFlagStats returns stats for a given flag.
+func (graph *graphR) GetFlagStats(flagName string, selector KeySelector) FlagStats {
 	stats := FlagStats{PerValueCount: make(map[string]uint)}
 
 	for key, timeline := range graph.timeline {
-		if !selector(key) {
+		if selector != nil && !selector(key) {
 			continue
 		}
 		for _, record := range timeline {
+			if record.TargetUpdateOnly {
+				continue
+			}
 			if flagValue, hasFlag := record.Flags[flagName]; hasFlag {
 				stats.TotalCount++
 				if _, hasValue := stats.PerValueCount[flagValue]; !hasValue {
@@ -133,7 +150,8 @@ func (graph *graphR) Release() {
 // and the map with mappings.
 func (graph *graphR) copyNodesOnly() *graphR {
 	graphCopy := &graphR{
-		nodes: make(map[string]*node),
+		parent: graph.parent,
+		nodes:  make(map[string]*node),
 	}
 	for key, node := range graph.nodes {
 		nodeCopy := node.copy()
@@ -144,20 +162,21 @@ func (graph *graphR) copyNodesOnly() *graphR {
 }
 
 // recordNode builds a record for the node to be added into the timeline.
-func (graph *graphR) recordNode(node *node) *RecordedNode {
+func (graph *graphR) recordNode(node *node, targetUpdateOnly bool) *RecordedNode {
 	record := &RecordedNode{
-		Since:       time.Now(),
-		Key:         node.key,
-		ValueLabel:  node.value.Label(),
-		ValueType:   node.value.Type(),
-		ValueString: node.value.String(),
-		Flags:       make(map[string]string),
-		Targets:     node.targets, // no need to copy, never changed in graphR
+		Since:            time.Now(),
+		Key:              node.key,
+		ValueLabel:       node.value.Label(),
+		ValueType:        node.value.Type(),
+		ValueString:      node.value.String(),
+		Flags:            make(map[string]string),
+		Targets:          node.targets, // no need to copy, never changed in graphR
+		TargetUpdateOnly: targetUpdateOnly,
 	}
 	for _, flag := range node.flags {
 		record.Flags[flag.GetName()] = flag.GetValue()
 	}
-	if node.metaAdded {
+	if node.metadataAdded {
 		mapping := graph.mappings[node.metadataMap]
 		record.MetadataFields = mapping.ListFields(node.value.Label())
 	}

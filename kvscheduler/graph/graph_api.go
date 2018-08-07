@@ -1,3 +1,17 @@
+// Copyright (c) 2018 Cisco and/or its affiliates.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package graph
 
 import (
@@ -58,8 +72,8 @@ type ReadAccess interface {
 	// the oldest to the newest.
 	GetNodeTimeline(key string) []*RecordedNode
 
-	// FlagStats returns stats for a given flag.
-	FlagStats(flagName string, filter KeySelector) FlagStats
+	// GetFlagStats returns stats for a given flag.
+	GetFlagStats(flagName string, filter KeySelector) FlagStats
 
 	// GetSnapshot returns the snapshot of the graph at a given time.
 	//
@@ -190,15 +204,16 @@ type RuntimeRelationTargets map[string][]Node
 
 // RecordedNode saves all attributes of a single node revision.
 type RecordedNode struct {
-	Since          time.Time
-	Until          time.Time
-	Key            string
-	ValueLabel     string
-	ValueType      ValueType
-	ValueString    string
-	Flags          map[string]string          // flag name -> flag value
-	MetadataFields map[string][]string        // field name -> values
-	Targets        map[string]RecordedTargets // relation -> target
+	Since            time.Time
+	Until            time.Time
+	Key              string
+	ValueLabel       string
+	ValueType        ValueType
+	ValueString      string
+	Flags            map[string]string          // flag name -> flag value
+	MetadataFields   map[string][]string        // field name -> values
+	Targets          map[string]RecordedTargets // relation -> target
+	TargetUpdateOnly bool // true if only runtime Targets have changed since the last rev
 }
 
 // KeySet is a set of keys.

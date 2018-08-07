@@ -1,3 +1,17 @@
+// Copyright (c) 2018 Cisco and/or its affiliates.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package graph
 
 import (
@@ -10,7 +24,7 @@ type graphRW struct {
 	*graphR
 	record  bool
 	deleted []string
-	newRevs KeySet
+	newRevs map[string]bool // key -> data-updated?
 }
 
 // newGraphRW creates a new instance of grapRW, which extends an existing
@@ -20,7 +34,7 @@ func newGraphRW(graph *graphR, recordChanges bool) *graphRW {
 	return &graphRW{
 		graphR:  graphRCopy,
 		record:  recordChanges,
-		newRevs: make(KeySet),
+		newRevs: make(map[string]bool),
 	}
 }
 
@@ -43,6 +57,7 @@ func (graph *graphRW) SetNode(key string) NodeRW {
 		return node
 	}
 	node = newNode(nil)
+	node.graph = graph.graphR
 	node.key = key
 	for _, otherNode := range graph.nodes {
 		otherNode.checkPotentialTarget(node)
@@ -91,28 +106,46 @@ func (graph *graphRW) Save() {
 	// apply deleted nodes
 	for _, key := range graph.deleted {
 		if node, has := destGraph.nodes[key]; has {
-			node.metadata = nil
-			node.updateMetadataMap()
+			// remove metadata
+			if node.metadataAdded {
+				if mapping, hasMapping := destGraph.mappings[node.metadataMap]; hasMapping {
+					mapping.Delete(node.value.Label())
+				}
+			}
+			// remove node from graph
 			delete(destGraph.nodes, key)
 		}
-		graph.newRevs[key] = struct{}{}
+		graph.newRevs[key] = true
 	}
 	graph.deleted = []string{}
 
 	// apply new/changes nodes
 	for key, node := range graph.nodes {
-		if !node.updated {
+		if !node.dataUpdated && !node.targetsUpdated {
 			continue
 		}
 		node.graph = destGraph // move from working space to the actual graph
 		destGraph.nodes[key] = node
-		node.updateMetadataMap()
-		graph.newRevs[key] = struct{}{}
+
+		// update metadata
+		if !node.metaInSync {
+			// update metadata map
+			if mapping, hasMapping := destGraph.mappings[node.metadataMap]; hasMapping {
+				if node.metadataAdded {
+					mapping.Update(node.value.Label(), node.metadata)
+				} else {
+					mapping.Put(node.value.Label(), node.metadata)
+				}
+				node.metadataAdded = true
+			}
+		}
+
+		graph.newRevs[key] = node.dataUpdated
 	}
 
 	// copy moved nodes
 	for key, node := range graph.nodes {
-		if !node.updated {
+		if !node.dataUpdated && !node.targetsUpdated {
 			continue
 		}
 		nodeCopy := node.copy()
@@ -125,7 +158,7 @@ func (graph *graphRW) Save() {
 func (graph *graphRW) Release() {
 	if graph.record {
 		destGraph := graph.parent.graph
-		for key := range graph.newRevs {
+		for key, dataUpdated := range graph.newRevs {
 			node, exists := destGraph.nodes[key]
 			if _, hasTimeline := destGraph.timeline[key]; !hasTimeline {
 				if !exists {
@@ -136,10 +169,14 @@ func (graph *graphRW) Release() {
 			}
 			records := destGraph.timeline[key]
 			if len(records) > 0 {
-				records[len(records)-1].Until = time.Now()
+				lastRecord := records[len(records)-1]
+				if lastRecord.Until.IsZero() {
+					lastRecord.Until = time.Now()
+				}
 			}
 			if exists {
-				destGraph.timeline[key] = append(records, destGraph.recordNode(node))
+				destGraph.timeline[key] = append(records,
+					destGraph.recordNode(node, !dataUpdated))
 			}
 		}
 	}

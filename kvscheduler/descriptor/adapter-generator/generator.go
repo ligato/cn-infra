@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Cisco and/or its affiliates.
+// Copyright (c) 2018 Cisco and/or its affiliates.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -70,7 +70,6 @@ var (
 
 // TemplateData encapsulates input arguments for the template.
 type TemplateData struct {
-	Timestamp      time.Time
 	Package        string
 	Imports        []string
 	DescriptorName string
@@ -94,7 +93,6 @@ func main() {
 
 	// prepare input data for the template
 	inputData := TemplateData{
-		Timestamp:      time.Now().UTC(),
 		DescriptorName: *descriptorNameFlag,
 		ValueT:         *valueTypeFlag,
 		ValueDataT:     *valueDataTypeFlag,
