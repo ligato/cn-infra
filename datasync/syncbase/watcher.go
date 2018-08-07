@@ -102,31 +102,32 @@ func (adapter *Registry) Watch(resyncName string, changeChan chan datasync.Chang
 func (adapter *Registry) PropagateChanges(txData map[string]datasync.ChangeValue) error {
 	var events []func(done chan error)
 
-	scheduler, withScheduler := kvscheduler.GetKVScheduler()
-	if withScheduler {
-		keyPrefixes := scheduler.GetRegisteredNBKeyPrefixes()
-		// TODO: add options retry+revert to localclient
-		txn := scheduler.StartNBTransaction()
+	// propagate transaction to KV scheduler
+	// TODO: scheduler should subscribe to registry and receive TXN as a whole
+	scheduler := &kvscheduler.DefaultPlugin // temporary hack
+	keyPrefixes := scheduler.GetRegisteredNBKeyPrefixes()
 
-		for key, val := range txData {
-			registered := false
-			for _, prefix := range keyPrefixes {
-				if strings.HasPrefix(key, prefix) {
-					registered = true
-					break
-				}
-			}
-			if !registered {
-				continue
-			}
-			if val.GetChangeType() == datasync.Delete {
-				txn.SetValueData(key, nil)
-			} else {
-				txn.SetValueData(key, val)
+	// TODO: add options to localclient
+	txn := scheduler.StartNBTransaction()
+	for key, val := range txData {
+		registered := false
+		for _, prefix := range keyPrefixes {
+			if strings.HasPrefix(key, prefix) {
+				registered = true
+				break
 			}
 		}
-		txn.Commit(context.Background())
+		if !registered {
+			continue
+		}
+		if val.GetChangeType() == datasync.Delete {
+			txn.SetValueData(key, nil)
+		} else {
+			txn.SetValueData(key, val)
+		}
 	}
+	// TODO: return error(s)
+	txn.Commit(context.Background())
 
 	for _, sub := range adapter.subscriptions {
 		for _, prefix := range sub.KeyPrefixes {

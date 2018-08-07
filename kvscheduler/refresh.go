@@ -101,12 +101,22 @@ func (scheduler *Scheduler) refreshGraph(graphW graph.RWAccess, keys keySet, res
 				continue
 			}
 
+			// 1st attempt to determine value origin
+			if dumpedKV.Origin == UnknownOrigin {
+				// determine value origin based on the values for correlation
+				for _, kv := range correlate {
+					if kv.Key == dumpedKV.Key {
+						dumpedKV.Origin = kv.Origin
+						break
+					}
+				}
+			}
+
+			// 2nd attempt to determine value origin
 			if dumpedKV.Origin == UnknownOrigin {
 				// determine value origin based on the last revision
 				timeline := graphW.GetNodeTimeline(dumpedKV.Key)
-				if len(timeline) == 0 {
-					dumpedKV.Origin = FromSB
-				} else {
+				if len(timeline) > 0 {
 					lastRev := timeline[len(timeline)-1]
 					originFlag := lastRev.Flags[OriginFlagName]
 					if originFlag == FromNB.String() {
@@ -115,6 +125,11 @@ func (scheduler *Scheduler) refreshGraph(graphW graph.RWAccess, keys keySet, res
 						dumpedKV.Origin = FromSB
 					}
 				}
+			}
+
+			if dumpedKV.Origin == UnknownOrigin {
+				// will assume this is from SB
+				dumpedKV.Origin = FromSB
 			}
 
 			// refresh node that represents this kv-pair

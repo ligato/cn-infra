@@ -16,7 +16,6 @@ package kvscheduler
 
 import (
 	"context"
-	"errors"
 	"sync"
 
 	. "github.com/ligato/cn-infra/kvscheduler/api"
@@ -25,6 +24,7 @@ import (
 	"github.com/ligato/cn-infra/idxmap/mem"
 	"github.com/ligato/cn-infra/kvscheduler/graph"
 	"github.com/ligato/cn-infra/kvscheduler/registry"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/logging"
 )
 
@@ -35,16 +35,6 @@ const (
 	// DerivesRelation identifies relation of value derivation for the graph.
 	DerivesRelation = "derives"
 )
-
-var schedulerSingleton *Scheduler
-
-// GetKVScheduler returns reference to key-value scheduler (singleton).
-func GetKVScheduler() (scheduler KVScheduler, isInitialized bool) {
-	if schedulerSingleton == nil {
-		return nil, false
-	}
-	return schedulerSingleton, true
-}
 
 // Scheduler is a CN-infra plugin implementing KVScheduler.
 // Detailed documentation can be found in the "api" and "docs" sub-folders.
@@ -75,6 +65,7 @@ type Scheduler struct {
 
 // Deps lists dependencies of the scheduler.
 type Deps struct {
+	infra.PluginName
 	Log logging.PluginLogger
 	// REST, etc.
 }
@@ -95,9 +86,6 @@ type errorSubscription struct {
 // Init initializes the scheduler. Single go routine is started that will process
 // all the transactions synchronously.
 func (scheduler *Scheduler) Init() error {
-	if schedulerSingleton != nil {
-		return errors.New("at most once instance of KVScheduler is allowed")
-	}
 	// prepare context for all go routines
 	scheduler.ctx, scheduler.cancel = context.WithCancel(context.Background())
 	// initialize graph for in-memory storage of added+pending kv pairs

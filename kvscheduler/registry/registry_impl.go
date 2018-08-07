@@ -86,7 +86,7 @@ func (reg *registry) GetDescriptorForKey(key string) KVDescriptor {
 	if reg.keyCache.Len() == maxKeyCacheSize {
 		// the cache is full => remove the last used key
 		toRemove := reg.keyCache.Back()
-		toRemoveKey := toRemove.Value.(cacheEntry).key
+		toRemoveKey := toRemove.Value.(*cacheEntry).key
 		delete(reg.keyToCacheEntry, toRemoveKey)
 		reg.keyCache.Remove(toRemove)
 	}
