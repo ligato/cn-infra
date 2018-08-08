@@ -22,6 +22,7 @@ import (
 
 	"github.com/ligato/cn-infra/kvscheduler/test"
 	. "github.com/ligato/cn-infra/kvscheduler/api"
+	"time"
 )
 
 const (
@@ -62,8 +63,13 @@ func TestEmptyResync(t *testing.T) {
 	_, withMetadataMap := metadataMap.(test.NameToInteger)
 	Expect(withMetadataMap).To(BeTrue())
 
+	// transaction history should be initially empty
+	Expect(scheduler.getTransactionHistory(time.Now())).To(BeEmpty())
+
 	// run transaction with empty resync
+	startTime := time.Now()
 	kvErrors, txnError := scheduler.StartNBTransaction().Resync([]KeyValueDataPair{}).Commit(context.Background())
+	stopTime := time.Now()
 	Expect(txnError).ShouldNot(HaveOccurred())
 	Expect(kvErrors).To(BeEmpty())
 
@@ -76,6 +82,22 @@ func TestEmptyResync(t *testing.T) {
 	Expect(opHistory).To(HaveLen(1))
 	Expect(opHistory[0].OpType).To(Equal(test.Dump))
 	Expect(opHistory[0].CorrelateDump).To(BeEmpty())
+
+	// transaction consisted of zero operations
+	txnHistory := scheduler.getTransactionHistory(time.Now())
+	Expect(txnHistory).To(HaveLen(1))
+	txnOp := txnHistory[0]
+	Expect(txnOp.preRecord).To(BeFalse())
+	Expect(txnOp.start.After(startTime)).To(BeTrue())
+	Expect(txnOp.start.Before(txnOp.stop)).To(BeTrue())
+	Expect(txnOp.stop.Before(stopTime)).To(BeTrue())
+	Expect(txnOp.seqNum).To(BeEquivalentTo(0))
+	Expect(txnOp.txnType).To(BeEquivalentTo(nbTransaction))
+	Expect(txnOp.isResync).To(BeTrue())
+	Expect(txnOp.values).To(BeEmpty())
+	Expect(txnOp.preErrors).To(BeEmpty())
+	Expect(txnOp.planned).To(BeEmpty())
+	Expect(txnOp.executed).To(BeEmpty())
 
 	// close scheduler
 	err = scheduler.Close()

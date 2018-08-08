@@ -153,10 +153,12 @@ func (txn *recordedTxn) StringWithOpts(resultOnly bool, indent int, verbose bool
 		}
 
 		// pre-processing errors
-		str += indent1 + "* pre-processing errors:\n"
-		for _, preError := range txn.preErrors {
-			str += indent2 + fmt.Sprintf("- key: %s\n", preError.Key)
-			str += indent2 + fmt.Sprintf("  error: %s\n", preError.Error.Error())
+		if len(txn.preErrors) > 0 {
+			str += indent1 + "* pre-processing errors:\n"
+			for _, preError := range txn.preErrors {
+				str += indent2 + fmt.Sprintf("- key: %s\n", preError.Key)
+				str += indent2 + fmt.Sprintf("  error: %s\n", preError.Error.Error())
+			}
 		}
 
 		// planned operations
@@ -286,7 +288,8 @@ func (scheduler *Scheduler) preRecordTransaction(txn *preProcessedTxn, planned r
 
 	// send to the log
 	logMsg := "Processing new transaction:\n" + record.StringWithOpts(false, 2, true)
-	scheduler.Log.Info(logMsg)
+	//scheduler.Log.Info(logMsg)
+	fmt.Println(logMsg)
 
 	return record
 }
@@ -301,7 +304,8 @@ func (scheduler *Scheduler) recordTransaction(txnRecord *recordedTxn, executed r
 	// log txn result
 	logMsg := fmt.Sprintf("Finalized transaction (seq-num=%d):\n%s",
 		txnRecord.seqNum, txnRecord.StringWithOpts(true, 2, true))
-	scheduler.Log.Info(logMsg)
+	//scheduler.Log.Info(logMsg)
+	fmt.Println(logMsg)
 
 	// add transaction record into the history
 	scheduler.txnHistory = append(scheduler.txnHistory, txnRecord)

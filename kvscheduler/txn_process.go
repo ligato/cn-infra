@@ -85,11 +85,11 @@ func (scheduler *Scheduler) processTransaction(qTxn *queuedTxn) {
 	preTxnRecord := scheduler.preRecordTransaction(txn, simulatedOps, preErrors)
 
 	// 4. Execution:
+	execStart = time.Now()
 	if len(txn.values) > 0 {
-		execStart = time.Now()
 		executedOps, failed = scheduler.executeTransaction(txn, false)
-		execStop = time.Now()
 	}
+	execStop = time.Now()
 
 	// 5. Post-processing:
 	scheduler.postProcessTransaction(txn, executedOps, failed, preErrors)
@@ -102,7 +102,7 @@ func (scheduler *Scheduler) processTransaction(qTxn *queuedTxn) {
 // operations and refreshes the graph for resync.
 func (scheduler *Scheduler) preProcessTransaction(qTxn *queuedTxn) (txn *preProcessedTxn, errors []KeyWithError) {
 	// allocate new transaction sequence number
-	preTxn := &preProcessedTxn{seqNum: scheduler.txnSeqNumber}
+	preTxn := &preProcessedTxn{seqNum: scheduler.txnSeqNumber, args: qTxn}
 	scheduler.txnSeqNumber++
 
 	switch qTxn.txnType {

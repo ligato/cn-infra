@@ -41,6 +41,9 @@ const (
 type Scheduler struct {
 	Deps
 
+	// temporary until datasync and scheduler are properly integrated
+	isInitialized bool
+
 	// management of go routines
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -96,7 +99,15 @@ func (scheduler *Scheduler) Init() error {
 	scheduler.txnQueue = make(chan *queuedTxn, 100)
 	// go routine processing serialized transactions
 	go scheduler.consumeTransactions()
+	// temporary until datasync and scheduler are properly integrated
+	scheduler.isInitialized = true
 	return nil
+}
+
+// IsInitialized is a method temporarily used by PropagateChanges until datasync
+// and scheduler are properly integrated.
+func (scheduler *Scheduler) IsInitialized() bool {
+	return scheduler.isInitialized
 }
 
 // Close stops all the go routines.
