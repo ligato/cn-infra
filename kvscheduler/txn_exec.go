@@ -522,9 +522,8 @@ func (scheduler *Scheduler) applyUpdate(node graph.NodeRW, txnOp *recordedTxnOp,
 		addOp := scheduler.preRecordTxnOp(args, node)
 		addOp.operation = add
 		executed, err = scheduler.applyAdd(node, addOp, args)
-	}
-
-	if !isNodePending(node) {
+	} else {
+		// node is not pending
 		if !isNodeReady(node) {
 			// delete value and flag node as pending if some dependency is no longer satisfied
 			delOp := scheduler.preRecordTxnOp(args, node)

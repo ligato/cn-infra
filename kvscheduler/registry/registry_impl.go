@@ -107,7 +107,9 @@ func (reg *registry) GetDescriptorForKey(key string) KVDescriptor {
 
 func orderDescriptorsByDeps(descriptors []KVDescriptor, deps map[string][]string) {
 	sort.Slice(descriptors, func(i, j int) bool {
-		return dependsOn(descriptors[j].GetName(), descriptors[i].GetName(), deps, len(descriptors), 0)
+		iDepOnJ := dependsOn(descriptors[j].GetName(), descriptors[i].GetName(), deps, len(descriptors), 0)
+		jDepOnI := dependsOn(descriptors[j].GetName(), descriptors[i].GetName(), deps, len(descriptors), 0)
+		return jDepOnI || (!iDepOnJ && descriptors[i].GetName() < descriptors[j].GetName())
 	})
 }
 

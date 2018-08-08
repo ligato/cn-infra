@@ -63,6 +63,8 @@ type Scheduler struct {
 	errorSubs    []errorSubscription
 	txnSeqNumber uint
 	resyncCount  uint
+
+	historyLock  sync.Mutex
 	txnHistory   []*recordedTxn // ordered from the oldest to the latest
 }
 

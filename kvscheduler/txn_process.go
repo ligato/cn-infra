@@ -61,9 +61,9 @@ func (scheduler *Scheduler) consumeTransactions() {
 //  3. Pre-recording: logging transaction arguments + plan before execution to
 //     persist some information in case there is a crash during execution
 //  4. Execution: executing the transaction, collecting errors
-//  5. Post-processing: scheduling retry for failed operations, propagating errors
+//  5. Recording: recording the finalized transaction (log + in-memory)
+//  6. Post-processing: scheduling retry for failed operations, propagating errors
 //     to the subscribers and to the caller of blocking commit
-//  6. Recording: recording the finalized transaction (log + in-memory)
 func (scheduler *Scheduler) processTransaction(qTxn *queuedTxn) {
 	var (
 		simulatedOps recordedTxnOps
@@ -91,11 +91,11 @@ func (scheduler *Scheduler) processTransaction(qTxn *queuedTxn) {
 	}
 	execStop = time.Now()
 
-	// 5. Post-processing:
-	scheduler.postProcessTransaction(txn, executedOps, failed, preErrors)
-
-	// 6. Recording:
+	// 5. Recording:
 	scheduler.recordTransaction(preTxnRecord, executedOps, execStart, execStop)
+
+	// 6. Post-processing:
+	scheduler.postProcessTransaction(txn, executedOps, failed, preErrors)
 }
 
 // preProcessTransaction initializes transaction parameters, filters obsolete retry

@@ -15,7 +15,6 @@
 package base
 
 import (
-	"errors"
 	"fmt"
 	. "github.com/ligato/cn-infra/kvscheduler/api"
 )
@@ -115,28 +114,4 @@ func (bkvd *DescriptorBase) Dump(correlate []KVWithMetadata) ([]KVWithMetadata, 
 // DumpDependencies returns no dependencies.
 func (bkvd *DescriptorBase) DumpDependencies() []string /* descriptor name */ {
 	return nil
-}
-
-// ErrInvalidValueDataType is returned by auto-generated descriptor adapter
-// when value data do not match expected type.
-func ErrInvalidValueDataType(key string) error {
-	return fmt.Errorf("value data have invalid type for key: %s", key)
-}
-
-// ErrInvalidValueType is returned by auto-generated descriptor adapter
-// when value does not match expected type.
-func ErrInvalidValueType(key string, value Value) error {
-	if key == "" {
-		return fmt.Errorf("value (%s) has invalid type", value.Label())
-	}
-	return fmt.Errorf("value (%s) has invalid type for key: %s", value.Label(), key)
-}
-
-// ErrInvalidMetadataType is returned by auto-generated descriptor adapter
-// when value metadata does not match expected type.
-func ErrInvalidMetadataType(key string) error {
-	if key == "" {
-		return errors.New("metadata has invalid type")
-	}
-	return fmt.Errorf("metadata has invalid type for key: %s", key)
 }

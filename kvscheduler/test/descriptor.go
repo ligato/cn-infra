@@ -16,7 +16,6 @@ package test
 
 import (
 	. "github.com/ligato/cn-infra/kvscheduler/api"
-	"github.com/ligato/cn-infra/kvscheduler/descriptor/base"
 	"github.com/ligato/cn-infra/idxmap"
 )
 
@@ -102,7 +101,7 @@ func (md *mockDescriptor) Build(key string, valueData interface{}) (value Value,
 	var ok bool
 	value, ok = valueData.(Value)
 	if !ok {
-		return nil, base.ErrInvalidValueDataType(key)
+		return nil, ErrInvalidValueDataType(key)
 	}
 	return
 }

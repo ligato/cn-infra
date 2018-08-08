@@ -51,6 +51,7 @@ func (scheduler *Scheduler) orderValuesByOp(graphR graph.ReadAccess, values []kv
 		node := graphR.GetNode(kv.key)
 		if node == nil || node.GetFlag(PendingFlagName) != nil {
 			addVals = append(addVals, kv)
+			continue
 		}
 		if descriptor.ModifyHasToRecreate(kv.key, node.GetValue(), kv.value, node.GetMetadata()) {
 			recreateVals = append(recreateVals, kv)
@@ -72,9 +73,12 @@ func (scheduler *Scheduler) orderValuesByOp(graphR graph.ReadAccess, values []kv
 
 func (scheduler *Scheduler) orderValuesByDeps(values []kvForTxn, deps map[string]keySet, depFirst bool) {
 	sort.Slice(values, func(i, j int) bool {
+		iDepOnJ := dependsOn(values[i].key, values[j].key, deps, len(values), 0)
+		jDepOnI := dependsOn(values[j].key, values[i].key, deps, len(values), 0)
 		if depFirst {
-			return dependsOn(values[j].key, values[i].key, deps, len(values), 0)
+			return jDepOnI || (!iDepOnJ && values[i].key < values[j].key)
+
 		}
-		return dependsOn(values[i].key, values[j].key, deps, len(values), 0)
+		return iDepOnJ || (!jDepOnI && values[i].key < values[j].key)
 	})
 }

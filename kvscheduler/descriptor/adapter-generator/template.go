@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"github.com/ligato/cn-infra/datasync"
 	. "github.com/ligato/cn-infra/kvscheduler/api"
-	. "github.com/ligato/cn-infra/kvscheduler/descriptor/base"
 	. "github.com/ligato/cn-infra/kvscheduler/value/protoval"
 
     {{- range $i, $path := .Imports }}

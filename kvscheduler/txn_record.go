@@ -206,8 +206,8 @@ func (op *recordedTxnOp) StringWithOpts(index int, indent int, verbose bool) str
 	str += indent2 + fmt.Sprintf("- new-origin: %s\n", op.newOrigin.String())
 	str += indent2 + fmt.Sprintf("- was-pending: %t\n", op.wasPending)
 	str += indent2 + fmt.Sprintf("- is-pending: %t\n", op.isPending)
-	str += indent2 + fmt.Sprintf("- prev-error: %s\n", op.prevErr.Error())
-	str += indent2 + fmt.Sprintf("- new-error: %s\n", op.newErr.Error())
+	str += indent2 + fmt.Sprintf("- prev-error: %s\n", errorToString(op.prevErr))
+	str += indent2 + fmt.Sprintf("- new-error: %s\n", errorToString(op.newErr))
 	str += indent2 + fmt.Sprintf("- is-revert: %t\n", op.isRevert)
 	str += indent2 + fmt.Sprintf("- is-retry: %t\n", op.isRetry)
 
@@ -308,10 +308,15 @@ func (scheduler *Scheduler) recordTransaction(txnRecord *recordedTxn, executed r
 	fmt.Println(logMsg)
 
 	// add transaction record into the history
+	scheduler.historyLock.Lock()
 	scheduler.txnHistory = append(scheduler.txnHistory, txnRecord)
+	scheduler.historyLock.Unlock()
 }
 
 func (scheduler *Scheduler) getTransactionHistory(until time.Time) (history []*recordedTxn) {
+	scheduler.historyLock.Lock()
+	defer scheduler.historyLock.Unlock()
+
 	if until.IsZero() {
 		return scheduler.txnHistory
 	}
@@ -322,4 +327,11 @@ func (scheduler *Scheduler) getTransactionHistory(until time.Time) (history []*r
 		}
 	}
 	return scheduler.txnHistory[:firstAfter]
+}
+
+func errorToString(err error) string {
+	if err == nil {
+		return "<NIL>"
+	}
+	return err.Error()
 }
