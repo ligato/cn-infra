@@ -19,7 +19,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/ligato/cn-infra/kvscheduler/api"
 	"github.com/ligato/cn-infra/kvscheduler/test"
-	"fmt"
 )
 
 const (
@@ -102,7 +101,6 @@ func checkValuesForCorrelation(received, expected []KVWithMetadata) {
 			if kv2.Key == kv.Key {
 				found = true
 				Expect(kv2.Origin).To(BeEquivalentTo(kv.Origin))
-				fmt.Printf("%s - %s\n", kv2.Value.String(), kv.Value.String())
 				Expect(kv2.Value.Equivalent(kv.Value)).To(BeTrue())
 				if kv.Metadata == nil {
 					Expect(kv2.Metadata).To(BeNil())

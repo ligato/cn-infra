@@ -839,3 +839,37 @@ func TestNodeMetadata(t *testing.T) {
 	Expect(label).To(Equal(value4.Label()))
 	graphR.Release()
 }
+
+func TestReuseNodeAfterSave(t *testing.T) {
+	RegisterTestingT(t)
+
+	graph := NewGraph()
+	graphW := graph.Write(true)
+
+	// add new node
+	nodeW := graphW.SetNode(keyA1)
+	nodeW.SetValue(value1)
+	nodeW.SetFlags(ColorFlag(Red))
+
+	// save new node
+	graphW.Save()
+
+	// keep using the same node handle
+	nodeW.SetFlags(AbstractFlag())
+
+	// save changes
+	graphW.Save()
+
+	// get new handle
+	nodeW = graphW.SetNode(keyA1)
+	nodeW.SetFlags(TemporaryFlag())
+
+	// save changes
+	graphW.Save()
+	graphW.Release()
+
+	// check that both flags are applied
+	graphR := graph.Read()
+	checkNodes(graphR.GetNodes(nil, WithFlags(ColorFlag(Red), AbstractFlag(), TemporaryFlag())), keyA1)
+	graphR.Release()
+}

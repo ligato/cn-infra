@@ -126,7 +126,12 @@ func (md *mockDescriptor) Delete(key string, value Value, metadata Metadata) (er
 	if md.sb != nil {
 		kv := md.sb.GetValue(key)
 		md.validateKey(key, kv != nil)
-		md.validateKey(key, kv.Value == value)
+		if md.sb.isKeyDerived(key) {
+			// re-generated on refresh
+			md.validateKey(key, kv.Value.Equivalent(value))
+		} else {
+			md.validateKey(key, kv.Value == value)
+		}
 		md.validateKey(key, kv.Metadata == metadata)
 		err = md.sb.executeChange(md.GetName(), Delete, key, nil, metadata)
 	}
@@ -140,7 +145,12 @@ func (md *mockDescriptor) Modify(key string, oldValue, newValue Value, oldMetada
 	if md.sb != nil {
 		kv := md.sb.GetValue(key)
 		md.validateKey(key, kv != nil)
-		md.validateKey(key, kv.Value == oldValue)
+		if md.sb.isKeyDerived(key) {
+			// re-generated on refresh
+			md.validateKey(key, kv.Value.Equivalent(oldValue))
+		} else {
+			md.validateKey(key, kv.Value == oldValue)
+		}
 		md.validateKey(key, kv.Metadata == oldMetadata)
 		err = md.sb.executeChange(md.GetName(), Modify, key, newValue, newMetadata)
 	}

@@ -124,8 +124,6 @@ func (graph *graphRW) Save() {
 		if !node.dataUpdated && !node.targetsUpdated {
 			continue
 		}
-		node.graph = destGraph // move from working space to the actual graph
-		destGraph.nodes[key] = node
 
 		// update metadata
 		if !node.metaInSync {
@@ -140,17 +138,16 @@ func (graph *graphRW) Save() {
 			}
 		}
 
-		graph.newRevs[key] = node.dataUpdated
-	}
-
-	// copy moved nodes
-	for key, node := range graph.nodes {
-		if !node.dataUpdated && !node.targetsUpdated {
-			continue
-		}
+		// copy changed node to the actual graph
 		nodeCopy := node.copy()
-		nodeCopy.graph = graph.graphR
-		graph.nodes[key] = newNode(nodeCopy)
+		nodeCopy.graph = destGraph
+		destGraph.nodes[key] = newNode(nodeCopy)
+		graph.newRevs[key] = node.dataUpdated
+
+		// working copy is now in-sync
+		node.dataUpdated = false
+		node.targetsUpdated = false
+		node.metaInSync = true
 	}
 }
 

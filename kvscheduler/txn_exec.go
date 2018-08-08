@@ -15,6 +15,8 @@
 package kvscheduler
 
 import (
+	"sort"
+
 	. "github.com/ligato/cn-infra/kvscheduler/api"
 	"github.com/ligato/cn-infra/kvscheduler/graph"
 	"github.com/ligato/cn-infra/logging"
@@ -528,6 +530,7 @@ func (scheduler *Scheduler) applyUpdate(node graph.NodeRW, txnOp *recordedTxnOp,
 			// delete value and flag node as pending if some dependency is no longer satisfied
 			delOp := scheduler.preRecordTxnOp(args, node)
 			delOp.operation = del
+			delOp.newValue = nil
 			executed, err = scheduler.applyDelete(node, delOp, args, true)
 		} else if !args.dryRun {
 			// execute Update operation
@@ -549,6 +552,10 @@ func (scheduler *Scheduler) applyUpdate(node graph.NodeRW, txnOp *recordedTxnOp,
 // applyDerived (re-)applies the given list of derived values.
 func (scheduler *Scheduler) applyDerived(derivedVals []kvForTxn, args *applyValueArgs, check bool) (executed recordedTxnOps, err error) {
 	var wasErr error
+
+	// order derivedVals by key (just for deterministic behaviour which simplifies testing)
+	sort.Slice(derivedVals, func(i, j int) bool { return derivedVals[i].key < derivedVals[j].key })
+
 	for _, derived := range derivedVals {
 		if check && !scheduler.validDerivedKV(args.graphW, derived, args.txnSeqNum) {
 			continue
@@ -576,6 +583,10 @@ func (scheduler *Scheduler) applyDerived(derivedVals []kvForTxn, args *applyValu
 // runUpdates triggers updates on all nodes that depend on the given node.
 func (scheduler *Scheduler) runUpdates(node graph.Node, args *applyValueArgs) (executed recordedTxnOps) {
 	depNodes := node.GetSources(DependencyRelation)
+
+	// order depNodes by key (just for deterministic behaviour which simplifies testing)
+	sort.Slice(depNodes, func(i, j int) bool { return depNodes[i].GetKey() < depNodes[j].GetKey() })
+
 	for _, depNode := range depNodes {
 		if getNodeOrigin(depNode) != FromNB {
 			continue
