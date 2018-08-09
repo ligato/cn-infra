@@ -19,6 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/ligato/cn-infra/kvscheduler/api"
 	"github.com/ligato/cn-infra/kvscheduler/test"
+	"fmt"
 )
 
 const (
@@ -28,6 +29,7 @@ const (
 
 	baseValue1 = "base-value1"
 	baseValue2 = "base-value2"
+	baseValue3 = "base-value3"
 )
 
 func prefixSelector(prefix string) func(key string) bool {
@@ -89,6 +91,7 @@ func checkTxnOperation(recorded, expected *recordedTxnOp) {
 func checkTxnOperations(recorded, expected recordedTxnOps) {
 	Expect(recorded).To(HaveLen(len(expected)))
 	for idx, recordedOp := range recorded {
+		fmt.Println(idx)
 		checkTxnOperation(recordedOp, expected[idx])
 	}
 }

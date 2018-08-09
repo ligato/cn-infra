@@ -53,10 +53,11 @@ type mockDescriptor struct {
 }
 
 // NewMockDescriptor creates a new instance of Mock Descriptor.
-func NewMockDescriptor(args *MockDescriptorArgs, sb *MockSouthbound) KVDescriptor {
+func NewMockDescriptor(args *MockDescriptorArgs, sb *MockSouthbound, firstFreeIndex int) KVDescriptor {
 	return &mockDescriptor{
-		args: args,
-		sb:   sb,
+		nextIndex: firstFreeIndex,
+		args:      args,
+		sb:        sb,
 		}
 }
 
@@ -172,7 +173,7 @@ func (md *mockDescriptor) Update(key string, value Value, metadata Metadata) (er
 	if md.sb != nil {
 		kv := md.sb.GetValue(key)
 		md.validateKey(key, kv != nil)
-		md.validateKey(key, kv.Value == value)
+		md.validateKey(key, kv.Value.Equivalent(value))
 		md.validateKey(key, kv.Metadata == metadata)
 		err = md.sb.executeChange(md.GetName(), Update, key, value, metadata)
 	}

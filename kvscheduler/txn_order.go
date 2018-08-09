@@ -25,8 +25,8 @@ import (
 //  3. modify
 //  4. delete
 //
-// Furthermore, adds and deletes are ordered by dependencies to limit temporary
-// pending states.
+// Furthermore, operations of the same type are ordered by dependencies to limit
+// temporary pending states.
 func (scheduler *Scheduler) orderValuesByOp(graphR graph.ReadAccess, values []kvForTxn) []kvForTxn {
 	var recreateVals, addVals, modifyVals, deleteVals []kvForTxn
 	deps := make(map[string]keySet)
@@ -60,7 +60,9 @@ func (scheduler *Scheduler) orderValuesByOp(graphR graph.ReadAccess, values []kv
 		}
 	}
 
+	scheduler.orderValuesByDeps(recreateVals, deps, true)
 	scheduler.orderValuesByDeps(addVals, deps, true)
+	scheduler.orderValuesByDeps(modifyVals, deps, true)
 	scheduler.orderValuesByDeps(deleteVals, deps, false)
 
 	var ordered []kvForTxn

@@ -355,6 +355,7 @@ func (scheduler *Scheduler) applyModify(node graph.NodeRW, txnOp *recordedTxnOp,
 	}
 	prevValue := node.GetValue()
 	node.SetValue(args.kv.value)
+	equivalent := node.GetValue().Equivalent(prevValue)
 
 	if node.GetValue().Type() == Property {
 		executed = append(executed, txnOp)
@@ -369,7 +370,8 @@ func (scheduler *Scheduler) applyModify(node graph.NodeRW, txnOp *recordedTxnOp,
 	if args.txnType != sbNotification {
 		recreate = descriptor.ModifyHasToRecreate(args.kv.key, node.GetValue(), args.kv.value, node.GetMetadata())
 	}
-	if recreate {
+	if !equivalent && recreate {
+		node.SetValue(prevValue) // get back the original value
 		delOp := scheduler.preRecordTxnOp(args, node)
 		delOp.operation = del
 		delOp.newValue = nil
@@ -383,9 +385,7 @@ func (scheduler *Scheduler) applyModify(node graph.NodeRW, txnOp *recordedTxnOp,
 		}
 		addExec, err := scheduler.applyAdd(node, addOp, args)
 		executed = append(executed, addExec...)
-		if err != nil {
-			return executed, err
-		}
+		return executed, err
 	}
 
 	// get the set of derived keys before modification
@@ -430,7 +430,7 @@ func (scheduler *Scheduler) applyModify(node graph.NodeRW, txnOp *recordedTxnOp,
 	}
 
 	// execute modify operation
-	needsModify := args.txnType == sbNotification || !node.GetValue().Equivalent(prevValue)
+	needsModify := args.txnType == sbNotification || !equivalent
 	if !args.dryRun && needsModify {
 		var (
 			err         error
@@ -462,6 +462,7 @@ func (scheduler *Scheduler) applyModify(node graph.NodeRW, txnOp *recordedTxnOp,
 
 	// if new value is equivalent, but the value is in failed state from previous txn => run update
 	if !needsModify && wasErr == nil && getNodeError(node) != nil {
+		txnOp.operation = update
 		err := descriptor.Update(node.GetKey(), node.GetValue(), node.GetMetadata())
 		if err != nil {
 			node.SetFlags(&ErrorFlag{err})
@@ -478,7 +479,11 @@ func (scheduler *Scheduler) applyModify(node graph.NodeRW, txnOp *recordedTxnOp,
 	if wasErr == nil {
 		node.DelFlags(ErrorFlagName)
 	}
-	executed = append(executed, txnOp)
+	if needsModify || txnOp.operation == update || txnOp.newErr != nil {
+		// if the value was modified, or update was executed (to clear error)
+		// or removal of obsolete derived value has failed => record operation
+		executed = append(executed, txnOp)
+	}
 	if !args.dryRun {
 		args.graphW.Save()
 	}
@@ -532,10 +537,12 @@ func (scheduler *Scheduler) applyUpdate(node graph.NodeRW, txnOp *recordedTxnOp,
 			delOp.operation = del
 			delOp.newValue = nil
 			executed, err = scheduler.applyDelete(node, delOp, args, true)
-		} else if !args.dryRun {
+		} else {
 			// execute Update operation
-			err = descriptor.Update(node.GetKey(), node.GetValue(), node.GetMetadata())
-			txnOp.newErr = err
+			if !args.dryRun {
+				err = descriptor.Update(node.GetKey(), node.GetValue(), node.GetMetadata())
+				txnOp.newErr = err
+			}
 			executed = append(executed, txnOp)
 			if err != nil {
 				node.SetFlags(&ErrorFlag{err})

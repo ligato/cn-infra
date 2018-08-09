@@ -142,7 +142,12 @@ func (graph *graphRW) Save() {
 		nodeCopy := node.copy()
 		nodeCopy.graph = destGraph
 		destGraph.nodes[key] = newNode(nodeCopy)
-		graph.newRevs[key] = node.dataUpdated
+
+		// mark node for recording during RW-handle release
+		if _, newRev := graph.newRevs[key]; !newRev {
+			graph.newRevs[key] = false
+		}
+		graph.newRevs[key] = graph.newRevs[key] || node.dataUpdated
 
 		// working copy is now in-sync
 		node.dataUpdated = false
