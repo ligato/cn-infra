@@ -275,8 +275,8 @@ func TestResyncWithEmptySB(t *testing.T) {
 	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
 	Expect(txn.isResync).To(BeTrue())
 	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixA + baseValue1, value: &recordedValue{valueType: Object, label: baseValue1, string: "[item1,item2]"}},
-		{key: prefixA + baseValue2, value: &recordedValue{valueType: Object, label: baseValue2, string: "[item1]"}},
+		{key: prefixA + baseValue1, value: &recordedValue{valueType: Object, label: baseValue1, string: "[item1,item2]"}, origin: FromNB},
+		{key: prefixA + baseValue2, value: &recordedValue{valueType: Object, label: baseValue2, string: "[item1]"}, origin: FromNB},
 	})
 	Expect(txn.preErrors).To(BeEmpty())
 
@@ -353,13 +353,13 @@ func TestResyncWithEmptySB(t *testing.T) {
 		{
 			Key: prefixA + baseValue1,
 			Value: test.NewArrayValue(Object, baseValue1, "item1", "item2"),
-			Metadata: &test.OnlyInteger{0},
+			Metadata: &test.OnlyInteger{Integer: 0},
 			Origin: FromNB,
 		},
 		{
 			Key: prefixA + baseValue2,
 			Value: test.NewArrayValue(Object, baseValue2, "item1"),
-			Metadata: &test.OnlyInteger{1},
+			Metadata: &test.OnlyInteger{Integer: 1},
 			Origin: FromNB,
 		},
 	})
@@ -401,8 +401,8 @@ func TestResyncWithEmptySB(t *testing.T) {
 	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
 	Expect(txn.isResync).To(BeTrue())
 	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixA + baseValue1, value: nil},
-		{key: prefixA + baseValue2, value: nil},
+		{key: prefixA + baseValue1, value: nil, origin: FromNB},
+		{key: prefixA + baseValue2, value: nil, origin: FromNB},
 	})
 	Expect(txn.preErrors).To(BeEmpty())
 
@@ -503,15 +503,15 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 	mockSB := test.NewMockSouthbound()
 	// -> initial content:
 	mockSB.SetValue(prefixA + baseValue1, test.NewArrayValue(Object, baseValue1, "item1"),
-		&test.OnlyInteger{0}, FromNB, false)
+		&test.OnlyInteger{Integer: 0}, FromNB, false)
 	mockSB.SetValue(prefixA + baseValue1 + "/item1", test.NewStringValue(Object, "item1", "item1"),
 		nil, FromNB, true)
 	mockSB.SetValue(prefixA + baseValue2, test.NewArrayValue(Object, baseValue2, "item1"),
-		&test.OnlyInteger{1}, FromNB, false)
+		&test.OnlyInteger{Integer:1}, FromNB, false)
 	mockSB.SetValue(prefixA + baseValue2 + "/item1", test.NewStringValue(Object, "item1", "item1"),
 		nil, FromNB, true)
 	mockSB.SetValue(prefixA + baseValue3, test.NewArrayValue(Object, baseValue3, "item1"),
-		&test.OnlyInteger{2}, FromNB, false)
+		&test.OnlyInteger{Integer:2}, FromNB, false)
 	mockSB.SetValue(prefixA + baseValue3 + "/item1", test.NewStringValue(Object, "item1", "item1"),
 		nil, FromNB, true)
 	// -> descriptor1:
@@ -727,9 +727,9 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
 	Expect(txn.isResync).To(BeTrue())
 	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixA + baseValue1, value: &recordedValue{valueType: Object, label: baseValue1, string: "[item2]"}},
-		{key: prefixA + baseValue2, value: &recordedValue{valueType: Object, label: baseValue2, string: "[item1,item2]"}},
-		{key: prefixA + baseValue3, value: &recordedValue{valueType: Object, label: baseValue3, string: "[item1,item2]"}},
+		{key: prefixA + baseValue1, value: &recordedValue{valueType: Object, label: baseValue1, string: "[item2]"}, origin: FromNB},
+		{key: prefixA + baseValue2, value: &recordedValue{valueType: Object, label: baseValue2, string: "[item1,item2]"}, origin: FromNB},
+		{key: prefixA + baseValue3, value: &recordedValue{valueType: Object, label: baseValue3, string: "[item1,item2]"}, origin: FromNB},
 	})
 	Expect(txn.preErrors).To(BeEmpty())
 
@@ -847,4 +847,180 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 	Expect(err).To(BeNil())
 }
 
+func TestResyncNotRemovingSBValues(t *testing.T) {
+	RegisterTestingT(t)
+
+	// prepare KV Scheduler
+	scheduler := NewPlugin()
+	err := scheduler.Init()
+	Expect(err).To(BeNil())
+
+	// prepare mocks
+	mockSB := test.NewMockSouthbound()
+	// -> initial content:
+	mockSB.SetValue(prefixA + baseValue1, test.NewStringValue(Action, baseValue1, baseValue1),
+		nil, FromSB, false)
+	// -> descriptor1:
+	descriptor1 := test.NewMockDescriptor(&test.MockDescriptorArgs{
+		Name:            descriptor1Name,
+		KeySelector:     prefixSelector(prefixA),
+		NBKeyPrefixes:   []string{prefixA},
+		ValueBuilder:    func(key string, valueData interface{}) (value Value, err error) {
+			label := strings.TrimPrefix(key, prefixA)
+			items, ok := valueData.([]string)
+			if !ok {
+				return nil, ErrInvalidValueDataType(key)
+			}
+			return test.NewArrayValue(Object, label, items...), nil
+		},
+		DependencyBuilder: func(key string, value Value) []Dependency {
+			if key == prefixA + baseValue2  {
+				depKey := prefixA + baseValue1
+				return []Dependency{
+					{Label: depKey, Key: depKey},
+				}
+			}
+			return nil
+		},
+		DerValuesBuilder: test.ArrayValueDerBuilder,
+		WithMetadata:    true,
+		DumpIsSupported: true,
+	}, mockSB, 0)
+
+	// register descriptor with the scheduler
+	scheduler.RegisterKVDescriptor(descriptor1)
+
+	// get metadata map created for the descriptor
+	metadataMap := scheduler.GetMetadataMap(descriptor1.GetName())
+	nameToInteger, withMetadataMap := metadataMap.(test.NameToInteger)
+	Expect(withMetadataMap).To(BeTrue())
+
+	// run resync transaction that should keep values not managed by NB untouched
+	startTime := time.Now()
+	values := []KeyValueDataPair{
+		{Key: prefixA + baseValue2, ValueData: []string{"item1"}},
+	}
+	kvErrors, txnError := scheduler.StartNBTransaction().Resync(values).Commit(context.Background())
+	stopTime := time.Now()
+	Expect(txnError).ShouldNot(HaveOccurred())
+	Expect(kvErrors).To(BeEmpty())
+
+	// check the state of SB
+	Expect(mockSB.GetKeysWithInvalidData()).To(BeEmpty())
+	// -> base value 1
+	value := mockSB.GetValue(prefixA + baseValue1)
+	Expect(value).ToNot(BeNil())
+	Expect(value.Value.Equivalent(test.NewStringValue(Action, baseValue1, baseValue1))).To(BeTrue())
+	Expect(value.Metadata).To(BeNil())
+	Expect(value.Origin).To(BeEquivalentTo(FromSB))
+	// -> base value 2
+	value = mockSB.GetValue(prefixA + baseValue2)
+	Expect(value).ToNot(BeNil())
+	Expect(value.Value.Equivalent(test.NewArrayValue(Object, baseValue2, "item1"))).To(BeTrue())
+	Expect(value.Metadata).ToNot(BeNil())
+	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(0))
+	Expect(value.Origin).To(BeEquivalentTo(FromNB))
+	// -> item1 derived from base value 2
+	value = mockSB.GetValue(prefixA + baseValue2 + "/item1")
+	Expect(value).ToNot(BeNil())
+	Expect(value.Value.Equivalent(test.NewStringValue(Object, "item1", "item1"))).To(BeTrue())
+	Expect(value.Metadata).To(BeNil())
+	Expect(value.Origin).To(BeEquivalentTo(FromNB))
+	Expect(mockSB.GetValues(nil)).To(HaveLen(3))
+
+	// check metadata
+	metadata, exists := nameToInteger.LookupByName(baseValue1)
+	Expect(exists).To(BeFalse())
+	metadata, exists = nameToInteger.LookupByName(baseValue2)
+	Expect(exists).To(BeTrue())
+	Expect(metadata.GetInteger()).To(BeEquivalentTo(0))
+
+	// check operations executed in SB
+	opHistory := mockSB.PopHistoryOfOps()
+	Expect(opHistory).To(HaveLen(3))
+	operation := opHistory[0]
+	Expect(operation.OpType).To(Equal(test.Dump))
+	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
+		{
+			Key: prefixA + baseValue2,
+			Value: test.NewArrayValue(Object, baseValue2, "item1"),
+			Metadata: nil,
+			Origin: FromNB,
+		},
+	})
+	operation = opHistory[1]
+	Expect(operation.OpType).To(Equal(test.Add))
+	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
+	Expect(operation.Key).To(BeEquivalentTo(prefixA + baseValue2))
+	Expect(operation.Err).To(BeNil())
+	operation = opHistory[2]
+	Expect(operation.OpType).To(Equal(test.Add))
+	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
+	Expect(operation.Key).To(BeEquivalentTo(prefixA + baseValue2 + "/item1"))
+	Expect(operation.Err).To(BeNil())
+
+	// check transaction operations
+	txnHistory := scheduler.getTransactionHistory(time.Now())
+	Expect(txnHistory).To(HaveLen(1))
+	txn := txnHistory[0]
+	Expect(txn.preRecord).To(BeFalse())
+	Expect(txn.start.After(startTime)).To(BeTrue())
+	Expect(txn.start.Before(txn.stop)).To(BeTrue())
+	Expect(txn.stop.Before(stopTime)).To(BeTrue())
+	Expect(txn.seqNum).To(BeEquivalentTo(0))
+	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
+	Expect(txn.isResync).To(BeTrue())
+	checkRecordedValues(txn.values, []recordedKVPair{
+		{key: prefixA + baseValue1, value: &recordedValue{valueType: Action, label: baseValue1, string: baseValue1}, origin: FromSB},
+		{key: prefixA + baseValue2, value: &recordedValue{valueType: Object, label: baseValue2, string: "[item1]"}, origin: FromNB},
+	})
+	Expect(txn.preErrors).To(BeEmpty())
+
+	txnOps := recordedTxnOps{
+		{
+			operation:  add,
+			key:        prefixA + baseValue2,
+			newValue:   &recordedValue{valueType: Object, label: baseValue2, string: "[item1]"},
+			prevOrigin: FromNB,
+			newOrigin:  FromNB,
+		},
+		{
+			operation:  add,
+			key:        prefixA + baseValue2 + "/item1",
+			newValue:   &recordedValue{valueType: Object, label: "item1", string: "item1"},
+			prevOrigin: FromNB,
+			newOrigin:  FromNB,
+		},
+	}
+	checkTxnOperations(txn.planned, txnOps)
+	checkTxnOperations(txn.executed, txnOps)
+
+	// check flag stats
+	graphR := scheduler.graph.Read()
+	errorStats := graphR.GetFlagStats(ErrorFlagName, nil)
+	Expect(errorStats.TotalCount).To(BeEquivalentTo(0))
+	pendingStats := graphR.GetFlagStats(PendingFlagName, nil)
+	Expect(pendingStats.TotalCount).To(BeEquivalentTo(0))
+	derivedStats := graphR.GetFlagStats(DerivedFlagName, nil)
+	Expect(derivedStats.TotalCount).To(BeEquivalentTo(1))
+	lastUpdateStats := graphR.GetFlagStats(LastUpdateFlagName, nil)
+	Expect(lastUpdateStats.TotalCount).To(BeEquivalentTo(3))
+	lastChangeStats := graphR.GetFlagStats(LastChangeFlagName, nil)
+	Expect(lastChangeStats.TotalCount).To(BeEquivalentTo(2))
+	descriptorStats := graphR.GetFlagStats(DescriptorFlagName, nil)
+	Expect(descriptorStats.TotalCount).To(BeEquivalentTo(3))
+	Expect(descriptorStats.PerValueCount).To(HaveKey(descriptor1Name))
+	Expect(descriptorStats.PerValueCount[descriptor1Name]).To(BeEquivalentTo(3))
+	originStats := graphR.GetFlagStats(OriginFlagName, nil)
+	Expect(originStats.TotalCount).To(BeEquivalentTo(3))
+	Expect(originStats.PerValueCount).To(HaveKey(FromNB.String()))
+	Expect(originStats.PerValueCount[FromNB.String()]).To(BeEquivalentTo(2))
+	Expect(originStats.PerValueCount).To(HaveKey(FromSB.String()))
+	Expect(originStats.PerValueCount[FromSB.String()]).To(BeEquivalentTo(1))
+	graphR.Release()
+
+	// close scheduler
+	err = scheduler.Close()
+	Expect(err).To(BeNil())
+}
 

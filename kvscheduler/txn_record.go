@@ -99,8 +99,9 @@ type recordedValue struct {
 
 // recordedKVPair is used to record key-value pair.
 type recordedKVPair struct {
-	key   string
-	value *recordedValue
+	key    string
+	value  *recordedValue
+	origin ValueOrigin
 }
 
 // recordedTxnOps is a list of recorded executed/planned transaction operations.
@@ -150,6 +151,9 @@ func (txn *recordedTxn) StringWithOpts(resultOnly bool, indent int, verbose bool
 		for _, kv := range txn.values {
 			str += indent3 + fmt.Sprintf("- key: %s\n", kv.key)
 			str += indent3 + fmt.Sprintf("  value: %s\n", kv.value.StringWithOpts(verbose))
+			if txn.isResync {
+				str += indent3 + fmt.Sprintf("  origin: %s\n", kv.origin.String())
+			}
 		}
 
 		// pre-processing errors
@@ -281,8 +285,9 @@ func (scheduler *Scheduler) preRecordTransaction(txn *preProcessedTxn, planned r
 	// record values
 	for _, kv := range txn.values {
 		record.values = append(record.values, recordedKVPair{
-			key:   kv.key,
-			value: scheduler.recordValue(kv.value),
+			key:    kv.key,
+			value:  scheduler.recordValue(kv.value),
+			origin: kv.origin,
 		})
 	}
 

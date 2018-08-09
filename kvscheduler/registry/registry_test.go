@@ -62,28 +62,28 @@ func TestRegistry(t *testing.T) {
 		&MockDescriptorArgs{
 			Name: descriptor1Name,
 			KeySelector: prefixSelector(prefixA),
-			}, nil)
+			}, nil, 0)
 
 	descriptor2 := NewMockDescriptor(
 		&MockDescriptorArgs{
 			Name: descriptor2Name,
 			KeySelector: prefixSelector(prefixB),
 			DumpDependencies: []string{descriptor1Name},
-		}, nil)
+		}, nil, 0)
 
 	descriptor3 := NewMockDescriptor(
 		&MockDescriptorArgs{
 			Name: descriptor3Name,
 			KeySelector: prefixSelector(prefixC),
 			DumpDependencies: []string{descriptor2Name},
-		}, nil)
+		}, nil, 0)
 
 	descriptor4 := NewMockDescriptor(
 		&MockDescriptorArgs{
 			Name: descriptor4Name,
 			KeySelector: keySelector(randomKey),
 			DumpDependencies: []string{descriptor3Name},
-		}, nil)
+		}, nil, 0)
 
 	registry := NewRegistry()
 

@@ -160,6 +160,12 @@ func (scheduler *Scheduler) preProcessTransaction(qTxn *queuedTxn) (txn *preProc
 			defer graphW.Save()
 			scheduler.resyncCount++
 
+			// get the set of keys currently in NB
+			nbKeys := make(keySet)
+			for _, kv := range preTxn.values {
+				nbKeys[kv.key] = struct{}{}
+			}
+
 			// revert not supported with resync
 			qTxn.nb.revertOnFailure = false
 
@@ -170,21 +176,34 @@ func (scheduler *Scheduler) preProcessTransaction(qTxn *queuedTxn) (txn *preProc
 			currentNodes := graphW.GetNodes(nil,
 				graph.WithFlags(&OriginFlag{FromNB}),
 				graph.WithoutFlags(&DerivedFlag{}))
-			currentKeys := make(keySet)
 			for _, node := range currentNodes {
-				currentKeys[node.GetKey()] = struct{}{}
-			}
-			for _, kv := range preTxn.values {
-				delete(currentKeys, kv.key)
-			}
-			for key := range currentKeys {
+				if _, nbKey := nbKeys[node.GetKey()]; nbKey {
+					continue
+				}
 				preTxn.values = append(preTxn.values,
 					kvForTxn{
-						key:    key,
+						key:    node.GetKey(),
 						value:  nil, // remove
 						origin: FromNB,
 					})
 			}
+
+			// update (record) SB values
+			sbNodes := graphW.GetNodes(nil,
+				graph.WithFlags(&OriginFlag{FromSB}),
+				graph.WithoutFlags(&DerivedFlag{}))
+			for _, node := range sbNodes {
+				if _, nbKey := nbKeys[node.GetKey()]; nbKey {
+					continue
+				}
+				preTxn.values = append(preTxn.values,
+					kvForTxn{
+						key:    node.GetKey(),
+						value:  node.GetValue(),
+						origin: FromSB,
+					})
+			}
+
 		}
 
 	case retryFailedOps:

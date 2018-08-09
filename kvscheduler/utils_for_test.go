@@ -19,7 +19,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/ligato/cn-infra/kvscheduler/api"
 	"github.com/ligato/cn-infra/kvscheduler/test"
-	"fmt"
 )
 
 const (
@@ -57,6 +56,7 @@ func checkRecordedValues(recorded, expected []recordedKVPair) {
 			if kv2.key == kv.key {
 				found = true
 				checkRecordedValue(kv2.value, kv.value)
+				Expect(kv2.origin).To(Equal(kv.origin))
 			}
 		}
 		Expect(found).To(BeTrue())
@@ -91,7 +91,6 @@ func checkTxnOperation(recorded, expected *recordedTxnOp) {
 func checkTxnOperations(recorded, expected recordedTxnOps) {
 	Expect(recorded).To(HaveLen(len(expected)))
 	for idx, recordedOp := range recorded {
-		fmt.Println(idx)
 		checkTxnOperation(recordedOp, expected[idx])
 	}
 }
