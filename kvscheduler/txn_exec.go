@@ -353,11 +353,10 @@ func (scheduler *Scheduler) applyModify(node graph.NodeRW, txnOp *recordedTxnOp,
 	if !args.dryRun {
 		defer args.graphW.Save()
 	}
-	prevValue := node.GetValue()
-	node.SetValue(args.kv.value)
-	equivalent := node.GetValue().Equivalent(prevValue)
 
 	if node.GetValue().Type() == Property {
+		// just save the new property
+		node.SetValue(args.kv.value)
 		executed = append(executed, txnOp)
 		// update values that depend on this property
 		executed = append(executed, scheduler.runUpdates(node, args)...)
@@ -370,8 +369,8 @@ func (scheduler *Scheduler) applyModify(node graph.NodeRW, txnOp *recordedTxnOp,
 	if args.txnType != sbNotification {
 		recreate = descriptor.ModifyHasToRecreate(args.kv.key, node.GetValue(), args.kv.value, node.GetMetadata())
 	}
+	equivalent := node.GetValue().Equivalent(args.kv.value)
 	if !equivalent && recreate {
-		node.SetValue(prevValue) // get back the original value
 		delOp := scheduler.preRecordTxnOp(args, node)
 		delOp.operation = del
 		delOp.newValue = nil
@@ -387,6 +386,10 @@ func (scheduler *Scheduler) applyModify(node graph.NodeRW, txnOp *recordedTxnOp,
 		executed = append(executed, addExec...)
 		return executed, err
 	}
+
+	// save the new value
+	prevValue := node.GetValue()
+	node.SetValue(args.kv.value)
 
 	// get the set of derived keys before modification
 	prevDerived := getDerivedKeys(node)

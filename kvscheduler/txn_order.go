@@ -15,6 +15,7 @@
 package kvscheduler
 
 import (
+	. "github.com/ligato/cn-infra/kvscheduler/api"
 	"github.com/ligato/cn-infra/kvscheduler/graph"
 	"sort"
 )
@@ -33,8 +34,15 @@ func (scheduler *Scheduler) orderValuesByOp(graphR graph.ReadAccess, values []kv
 
 	for _, kv := range values {
 		descriptor := scheduler.registry.GetDescriptorForKey(kv.key)
+		node := graphR.GetNode(kv.key)
+
 		// collect dependencies among changed values
-		valDeps := descriptor.Dependencies(kv.key, kv.value)
+		var valDeps []Dependency
+		if kv.value != nil {
+			valDeps = descriptor.Dependencies(kv.key, kv.value)
+		} else if node != nil {
+			valDeps = descriptor.Dependencies(kv.key, node.GetValue())
+		}
 		deps[kv.key] = make(keySet)
 		for _, kv2 := range values {
 			for _, dep := range valDeps {
@@ -48,7 +56,6 @@ func (scheduler *Scheduler) orderValuesByOp(graphR graph.ReadAccess, values []kv
 			deleteVals = append(deleteVals, kv)
 			continue
 		}
-		node := graphR.GetNode(kv.key)
 		if node == nil || node.GetFlag(PendingFlagName) != nil {
 			addVals = append(addVals, kv)
 			continue
