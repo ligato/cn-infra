@@ -16,6 +16,7 @@ package test
 
 import (
 	. "github.com/ligato/cn-infra/kvscheduler/api"
+	"strings"
 )
 
 // ArrayValue is used in the UTs.
@@ -98,4 +99,16 @@ func ArrayValueDerBuilder(key string, value Value) (derivedVals []KeyValuePair) 
 		}
 	}
 	return derivedVals
+}
+
+// ArrayValueBuilder return ValueBuilder for ArrayValues.
+func ArrayValueBuilder(prefix string) func(string, interface{}) (Value, error) {
+	return func(key string, valueData interface{}) (value Value, err error) {
+		label := strings.TrimPrefix(key, prefix)
+		items, ok := valueData.([]string)
+		if !ok {
+			return nil, ErrInvalidValueDataType(key)
+		}
+		return NewArrayValue(Object, label, items...), nil
+	}
 }

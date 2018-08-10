@@ -209,7 +209,7 @@ func (md *mockDescriptor) Dump(correlate []KVWithMetadata) ([]KVWithMetadata, er
 	if !md.args.DumpIsSupported || md.sb == nil {
 		return nil, ErrDumpNotSupported
 	}
-	return md.sb.dump(correlate, md.args.KeySelector)
+	return md.sb.dump(md.GetName(), correlate, md.args.KeySelector)
 }
 
 // DumpDependencies returns dump dependencies from the input arguments.

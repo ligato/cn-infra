@@ -167,7 +167,7 @@ func (ms *MockSouthbound) registerKeyWithInvalidData(key string) {
 
 // dump returns non-derived values under the given selector.
 // Used by MockDescriptor.
-func (ms *MockSouthbound) dump(correlate []KVWithMetadata, selector KeySelector) ([]KVWithMetadata, error) {
+func (ms *MockSouthbound) dump(descriptor string, correlate []KVWithMetadata, selector KeySelector) ([]KVWithMetadata, error) {
 	ms.Lock()
 	defer ms.Unlock()
 
@@ -185,7 +185,8 @@ func (ms *MockSouthbound) dump(correlate []KVWithMetadata, selector KeySelector)
 	}
 
 	ms.opHistory = append(ms.opHistory, MockOperation{
-		OpType: Dump,
+		OpType:        Dump,
+		Descriptor:    descriptor,
 		CorrelateDump: correlate,
 		})
 	return dump, nil
@@ -201,6 +202,9 @@ func (ms *MockSouthbound) executeChange(descriptor string, opType MockOpType, ke
 	if hasErrors {
 		// simulate error situation
 		ms.plannedErrors[key] = plannedErrors[1:]
+		if len(ms.plannedErrors[key]) == 0 {
+			delete(ms.plannedErrors, key)
+		}
 		err := plannedErrors[0].err
 		clb := plannedErrors[0].afterErrClb
 		operation.Err = err
