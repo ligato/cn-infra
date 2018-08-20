@@ -145,7 +145,7 @@ func TestResyncWithEmptySB(t *testing.T) {
 			}
 			return nil
 		},
-		DerValuesBuilder: test.ArrayValueDerBuilder,
+		DerValuesBuilder: test.ArrayValueDerBuilder(Object),
 		WithMetadata:    true,
 		DumpIsSupported: true,
 	}, mockSB, 0)
@@ -532,7 +532,7 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 			}
 			return nil
 		},
-		DerValuesBuilder: test.ArrayValueDerBuilder,
+		DerValuesBuilder: test.ArrayValueDerBuilder(Object),
 		RecreateChecker: func(key string, oldValue, newValue Value, metadata Metadata) bool {
 			if key == prefixA + baseValue3 {
 				return true
@@ -746,6 +746,7 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 			newValue:   &recordedValue{valueType: Object, label: baseValue3, string: "[item1,item2]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
+			wasPending: true,
 		},
 		{
 			operation:  add,
@@ -866,7 +867,7 @@ func TestResyncNotRemovingSBValues(t *testing.T) {
 			}
 			return nil
 		},
-		DerValuesBuilder: test.ArrayValueDerBuilder,
+		DerValuesBuilder: test.ArrayValueDerBuilder(Object),
 		WithMetadata:    true,
 		DumpIsSupported: true,
 	}, mockSB, 0)
@@ -1038,7 +1039,7 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 		KeySelector:      prefixSelector(prefixA),
 		NBKeyPrefixes:    []string{prefixA},
 		ValueBuilder:     test.ArrayValueBuilder(prefixA),
-		DerValuesBuilder: test.ArrayValueDerBuilder,
+		DerValuesBuilder: test.ArrayValueDerBuilder(Object),
 		WithMetadata:     true,
 		DumpIsSupported:  true,
 	}, mockSB, 1)
@@ -1063,7 +1064,7 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 			}
 			return nil
 		},
-		DerValuesBuilder: test.ArrayValueDerBuilder,
+		DerValuesBuilder: test.ArrayValueDerBuilder(Object),
 		WithMetadata:     true,
 		DumpIsSupported:  true,
 		DumpDependencies: []string{descriptor1Name},
@@ -1081,7 +1082,7 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 			}
 			return test.NewArrayValue(Object, label, items...), nil
 		},
-		DerValuesBuilder: test.ArrayValueDerBuilder,
+		DerValuesBuilder: test.ArrayValueDerBuilder(Object),
 		RecreateChecker: func(key string, oldValue, newValue Value, metadata Metadata) bool {
 			if key == prefixC + baseValue3 {
 				return true
@@ -1314,6 +1315,7 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 			newValue:   &recordedValue{valueType: Object, label: baseValue3, string: "[item1,item2]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
+			wasPending: true,
 		},
 		{
 			operation:  add,
@@ -1429,7 +1431,7 @@ func TestResyncWithRetry(t *testing.T) {
 		KeySelector:      prefixSelector(prefixA),
 		NBKeyPrefixes:    []string{prefixA},
 		ValueBuilder:     test.ArrayValueBuilder(prefixA),
-		DerValuesBuilder: test.ArrayValueDerBuilder,
+		DerValuesBuilder: test.ArrayValueDerBuilder(Object),
 		WithMetadata:     true,
 		DumpIsSupported:  true,
 	}, mockSB, 1)

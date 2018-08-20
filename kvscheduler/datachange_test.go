@@ -42,7 +42,7 @@ func TestDataChangeTransactions(t *testing.T) {
 		KeySelector:      prefixSelector(prefixA),
 		NBKeyPrefixes:    []string{prefixA},
 		ValueBuilder:     test.ArrayValueBuilder(prefixA),
-		DerValuesBuilder: test.ArrayValueDerBuilder,
+		DerValuesBuilder: test.ArrayValueDerBuilder(Object),
 		WithMetadata:     true,
 		DumpIsSupported:  true,
 	}, mockSB, 0)
@@ -67,7 +67,7 @@ func TestDataChangeTransactions(t *testing.T) {
 			}
 			return nil
 		},
-		DerValuesBuilder: test.ArrayValueDerBuilder,
+		DerValuesBuilder: test.ArrayValueDerBuilder(Object),
 		WithMetadata:     true,
 		DumpIsSupported:  true,
 		DumpDependencies: []string{descriptor1Name},
@@ -85,7 +85,7 @@ func TestDataChangeTransactions(t *testing.T) {
 			}
 			return test.NewArrayValue(Object, label, items...), nil
 		},
-		DerValuesBuilder: test.ArrayValueDerBuilder,
+		DerValuesBuilder: test.ArrayValueDerBuilder(Object),
 		RecreateChecker: func(key string, oldValue, newValue Value, metadata Metadata) bool {
 			if key == prefixC + baseValue3 {
 				return true
@@ -510,6 +510,7 @@ func TestDataChangeTransactions(t *testing.T) {
 			newValue:   &recordedValue{valueType: Object, label: baseValue3, string: "[item1]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
+			wasPending: true,
 		},
 		{
 			operation:  add,
@@ -608,7 +609,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		KeySelector:      prefixSelector(prefixA),
 		NBKeyPrefixes:    []string{prefixA},
 		ValueBuilder:     test.ArrayValueBuilder(prefixA),
-		DerValuesBuilder: test.ArrayValueDerBuilder,
+		DerValuesBuilder: test.ArrayValueDerBuilder(Object),
 		WithMetadata:     true,
 		DumpIsSupported:  true,
 	}, mockSB, 0)
@@ -633,7 +634,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 			}
 			return nil
 		},
-		DerValuesBuilder: test.ArrayValueDerBuilder,
+		DerValuesBuilder: test.ArrayValueDerBuilder(Object),
 		WithMetadata:     true,
 		DumpIsSupported:  true,
 		DumpDependencies: []string{descriptor1Name},
@@ -651,7 +652,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 			}
 			return test.NewArrayValue(Object, label, items...), nil
 		},
-		DerValuesBuilder: test.ArrayValueDerBuilder,
+		DerValuesBuilder: test.ArrayValueDerBuilder(Object),
 		RecreateChecker: func(key string, oldValue, newValue Value, metadata Metadata) bool {
 			if key == prefixC + baseValue3 {
 				return true
@@ -906,6 +907,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 			newValue:   &recordedValue{valueType: Object, label: baseValue3, string: "[item1]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
+			wasPending: true,
 		},
 		{
 			operation:  add,
@@ -986,6 +988,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 			newValue:   &recordedValue{valueType: Object, label: baseValue3, string: "[item1]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
+			wasPending: true,
 		},
 		{
 			operation:  add,
@@ -1035,6 +1038,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isRevert:   true,
+			wasPending: true,
 		},
 		{
 			operation:  add,

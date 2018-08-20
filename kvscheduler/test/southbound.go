@@ -120,6 +120,7 @@ func (ms *MockSouthbound) GetValues(selector KeySelector) []*KVWithMetadata {
 		}
 		values = append(values, kv)
 	}
+
 	return values
 }
 

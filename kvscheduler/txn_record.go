@@ -166,10 +166,8 @@ func (txn *recordedTxn) StringWithOpts(resultOnly bool, indent int, verbose bool
 		}
 
 		// planned operations
-		if txn.txnType != sbNotification {
-			str += indent1 + "* planned operations:\n"
-			str += txn.planned.StringWithOpts(indent+4, verbose)
-		}
+		str += indent1 + "* planned operations:\n"
+		str += txn.planned.StringWithOpts(indent+4, verbose)
 	}
 
 	if !txn.preRecord {

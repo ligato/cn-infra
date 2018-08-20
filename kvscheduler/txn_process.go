@@ -77,7 +77,7 @@ func (scheduler *Scheduler) processTransaction(qTxn *queuedTxn) {
 	txn, preErrors := scheduler.preProcessTransaction(qTxn)
 
 	// 2. Simulation:
-	if txn.args.txnType != sbNotification && len(txn.values) > 0 {
+	if len(txn.values) > 0 {
 		simulatedOps, _ = scheduler.executeTransaction(txn, true)
 	}
 

@@ -86,19 +86,22 @@ func (av *ArrayValue) GetItems() []string {
 	return av.items
 }
 
-// ArrayValueDerBuilder can be used as DerValuesBuilder in MockDescriptorArgs
-// to derive one StringValue for every item in the array.
-func ArrayValueDerBuilder(key string, value Value) (derivedVals []KeyValuePair) {
-	arrayVal, isArrayVal := value.(*ArrayValue)
-	if isArrayVal {
-		for _, item := range arrayVal.GetItems() {
-			derivedVals = append(derivedVals, KeyValuePair{
-				Key:   key + "/" + item,
-				Value: NewStringValue(Object, item, item),
-			})
+// ArrayValueDerBuilder can be used to generate DerValuesBuilder for MockDescriptorArgs
+// that will derive one StringValue for every item in the array.
+func ArrayValueDerBuilder(derValueType ValueType) func(string, Value) ([]KeyValuePair) {
+	return func(key string, value Value) []KeyValuePair{
+		var derivedVals []KeyValuePair
+		arrayVal, isArrayVal := value.(*ArrayValue)
+		if isArrayVal {
+			for _, item := range arrayVal.GetItems() {
+				derivedVals = append(derivedVals, KeyValuePair{
+					Key:   key + "/" + item,
+					Value: NewStringValue(derValueType, item, item),
+				})
+			}
 		}
+		return derivedVals
 	}
-	return derivedVals
 }
 
 // ArrayValueBuilder return ValueBuilder for ArrayValues.

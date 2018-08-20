@@ -64,6 +64,7 @@ type Scheduler struct {
 	txnSeqNumber uint
 	resyncCount  uint
 
+	// TXN history
 	historyLock  sync.Mutex
 	txnHistory   []*recordedTxn // ordered from the oldest to the latest
 }
@@ -187,7 +188,8 @@ func (scheduler *Scheduler) PushSBNotification(key string, value Value, metadata
 	txn := &queuedTxn{
 		txnType: sbNotification,
 		sb: &sbNotif{
-			value: KeyValuePair{Key: key, Value: value},
+			value:    KeyValuePair{Key: key, Value: value},
+			metadata: metadata,
 		},
 	}
 	return scheduler.enqueueTxn(txn)

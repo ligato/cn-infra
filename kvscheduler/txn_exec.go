@@ -222,7 +222,7 @@ func (scheduler *Scheduler) applyDelete(node graph.NodeRW, txnOp *recordedTxnOp,
 	if !args.dryRun && node.GetValue().Type() != Property {
 		var err error
 		descriptor := scheduler.registry.GetDescriptorForKey(node.GetKey())
-		if args.txnType != sbNotification {
+		if args.kv.origin != FromSB {
 			err = descriptor.Delete(node.GetKey(), node.GetValue(), node.GetMetadata())
 		}
 		if err != nil {
@@ -292,7 +292,7 @@ func (scheduler *Scheduler) applyAdd(node graph.NodeRW, txnOp *recordedTxnOp, ar
 			metadata interface{}
 		)
 
-		if args.txnType != sbNotification {
+		if args.kv.origin != FromSB {
 			metadata, err = descriptor.Add(node.GetKey(), node.GetValue())
 		} else {
 			// already added in SB
@@ -354,22 +354,25 @@ func (scheduler *Scheduler) applyModify(node graph.NodeRW, txnOp *recordedTxnOp,
 		defer args.graphW.Save()
 	}
 
+	equivalent := node.GetValue().Equivalent(args.kv.value)
+
 	if node.GetValue().Type() == Property {
-		// just save the new property
-		node.SetValue(args.kv.value)
-		executed = append(executed, txnOp)
-		// update values that depend on this property
-		executed = append(executed, scheduler.runUpdates(node, args)...)
+		if !equivalent {
+			// just save the new property
+			node.SetValue(args.kv.value)
+			executed = append(executed, txnOp)
+			// update values that depend on this property
+			executed = append(executed, scheduler.runUpdates(node, args)...)
+		}
 		return executed, nil
 	}
 
 	// re-create the value if required by the descriptor
 	var recreate bool
 	descriptor := scheduler.registry.GetDescriptorForKey(args.kv.key)
-	if args.txnType != sbNotification {
+	if args.kv.origin != FromSB {
 		recreate = descriptor.ModifyHasToRecreate(args.kv.key, node.GetValue(), args.kv.value, node.GetMetadata())
 	}
-	equivalent := node.GetValue().Equivalent(args.kv.value)
 	if !equivalent && recreate {
 		delOp := scheduler.preRecordTxnOp(args, node)
 		delOp.operation = del
@@ -377,6 +380,7 @@ func (scheduler *Scheduler) applyModify(node graph.NodeRW, txnOp *recordedTxnOp,
 		addOp := scheduler.preRecordTxnOp(args, node)
 		addOp.operation = add
 		addOp.prevValue = nil
+		addOp.wasPending = true
 		delExec, err := scheduler.applyDelete(node, delOp, args, true)
 		executed = append(executed, delExec...)
 		if err != nil {
@@ -433,14 +437,14 @@ func (scheduler *Scheduler) applyModify(node graph.NodeRW, txnOp *recordedTxnOp,
 	}
 
 	// execute modify operation
-	needsModify := args.txnType == sbNotification || !equivalent
+	needsModify := !equivalent || (args.kv.origin == FromSB && !isNodeDerived(node)) // not equivalent or needs to update metadata
 	if !args.dryRun && needsModify {
 		var (
 			err         error
 			newMetadata interface{}
 		)
 
-		if args.txnType != sbNotification {
+		if args.kv.origin != FromSB {
 			newMetadata, err = descriptor.Modify(node.GetKey(), prevValue, node.GetValue(), node.GetMetadata())
 		} else {
 			// already modified in SB
