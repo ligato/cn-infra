@@ -25,8 +25,7 @@
 #   unused-packages = true
 
 required = [
-    "github.com/grpc-ecosystem/grpc-gateway/runtime",
-    "github.com/coreos/bbolt"
+    "github.com/grpc-ecosystem/grpc-gateway/runtime"
 ]
 
 [[constraint]]
@@ -132,10 +131,6 @@ required = [
 [[constraint]]
   branch = "master"
   name = "github.com/boltdb/bolt"
-
-[[override]]
-  name = "github.com/ugorji/go"
-  revision = "v1.1.1"
 
 [prune]
   go-tests = true
