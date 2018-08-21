@@ -108,6 +108,11 @@ dep-install: get-dep
 dep-update: get-dep
 	dep ensure -update
 
+# Check state of dependencies
+dep-check: get-dep
+	@echo "=> checking dependencies"
+	dep check
+
 LINTER := $(shell command -v gometalinter 2> /dev/null)
 
 # Get linter tools
