@@ -24,12 +24,12 @@ import (
 
 // applyValueArgs collects all arguments to applyValue method.
 type applyValueArgs struct {
-	graphW    graph.RWAccess
-	txn       *preProcessedTxn
-	kv        kvForTxn
+	graphW graph.RWAccess
+	txn    *preProcessedTxn
+	kv     kvForTxn
 
-	isRetry   bool
-	dryRun    bool
+	isRetry bool
+	dryRun  bool
 
 	// set inside of the recursive chain of applyValue-s
 	isUpdate  bool
@@ -62,13 +62,13 @@ func (scheduler *Scheduler) executeTransaction(txn *preProcessedTxn, dryRun bool
 	for _, kv := range orderedVals {
 		ops, prevValue, err := scheduler.applyValue(
 			&applyValueArgs{
-				graphW:    graphW,
-				txn:       txn,
-				kv:        kv,
-				dryRun:    dryRun,
-				isRetry:   txn.args.txnType == retryFailedOps,
-				failed:    failed,
-				branch:    branch,
+				graphW:  graphW,
+				txn:     txn,
+				kv:      kv,
+				dryRun:  dryRun,
+				isRetry: txn.args.txnType == retryFailedOps,
+				failed:  failed,
+				branch:  branch,
 			})
 		executed = append(executed, ops...)
 		if err != nil {
