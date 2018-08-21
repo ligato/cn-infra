@@ -98,7 +98,8 @@ test-cover-xml: test-cover
 
 # Get dependency manager tool
 get-dep:
-	go get -v github.com/golang/dep/cmd/dep
+	curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+	dep version
 
 # Install the project's dependencies
 dep-install: get-dep
