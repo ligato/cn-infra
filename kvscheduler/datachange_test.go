@@ -644,14 +644,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		Name:            descriptor3Name,
 		KeySelector:     prefixSelector(prefixC),
 		NBKeyPrefixes:   []string{prefixC},
-		ValueBuilder:    func(key string, valueData interface{}) (value Value, err error) {
-			label := strings.TrimPrefix(key, prefixC)
-			items, ok := valueData.([]string)
-			if !ok {
-				return nil, ErrInvalidValueDataType(key)
-			}
-			return test.NewArrayValue(Object, label, items...), nil
-		},
+		ValueBuilder:    test.ArrayValueBuilder(prefixC),
 		DerValuesBuilder: test.ArrayValueDerBuilder(Object),
 		RecreateChecker: func(key string, oldValue, newValue Value, metadata Metadata) bool {
 			if key == prefixC + baseValue3 {

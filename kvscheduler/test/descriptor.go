@@ -110,13 +110,16 @@ func (md *mockDescriptor) Build(key string, valueData interface{}) (value Value,
 // Add executes add operation in the mock SB.
 func (md *mockDescriptor) Add(key string, value Value) (metadata Metadata, err error) {
 	md.validateKey(key, md.args.KeySelector(key))
-	if md.sb != nil && md.args.WithMetadata && !md.sb.isKeyDerived(key) && value.Type() == Object {
+	withMeta := md.sb != nil && md.args.WithMetadata && !md.sb.isKeyDerived(key) && value.Type() == Object
+	if withMeta {
 		metadata = &OnlyInteger{md.nextIndex}
-		md.nextIndex++
 	}
 	if md.sb != nil {
 		md.validateKey(key, md.sb.GetValue(key) == nil)
 		err = md.sb.executeChange(md.GetName(), Add, key, value, metadata)
+	}
+	if err == nil && withMeta {
+		md.nextIndex++
 	}
 	return metadata, err
 }

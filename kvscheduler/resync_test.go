@@ -17,7 +17,6 @@ package kvscheduler
 import (
 	"context"
 	"errors"
-	"strings"
 	"testing"
 	"time"
 	. "github.com/onsi/gomega"
@@ -1071,19 +1070,12 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 	}, mockSB, 1)
 	// -> descriptor3:
 	descriptor3 := test.NewMockDescriptor(&test.MockDescriptorArgs{
-		Name:            descriptor3Name,
-		KeySelector:     prefixSelector(prefixC),
-		NBKeyPrefixes:   []string{prefixC},
-		ValueBuilder:    func(key string, valueData interface{}) (value Value, err error) {
-			label := strings.TrimPrefix(key, prefixC)
-			items, ok := valueData.([]string)
-			if !ok {
-				return nil, ErrInvalidValueDataType(key)
-			}
-			return test.NewArrayValue(Object, label, items...), nil
-		},
+		Name:             descriptor3Name,
+		KeySelector:      prefixSelector(prefixC),
+		NBKeyPrefixes:    []string{prefixC},
+		ValueBuilder:     test.ArrayValueBuilder(prefixC),
 		DerValuesBuilder: test.ArrayValueDerBuilder(Object),
-		RecreateChecker: func(key string, oldValue, newValue Value, metadata Metadata) bool {
+		RecreateChecker:  func(key string, oldValue, newValue Value, metadata Metadata) bool {
 			if key == prefixC + baseValue3 {
 				return true
 			}
