@@ -45,6 +45,9 @@ func TestEmptyResync(t *testing.T) {
 
 	// register descriptor with the scheduler
 	scheduler.RegisterKVDescriptor(descriptor1)
+	nbPrefixes := scheduler.GetRegisteredNBKeyPrefixes()
+	Expect(nbPrefixes).To(HaveLen(1))
+	Expect(nbPrefixes).To(ContainElement(prefixA))
 
 	// get metadata map created for the descriptor
 	metadataMap := scheduler.GetMetadataMap(descriptor1.GetName())
@@ -203,6 +206,20 @@ func TestResyncWithEmptySB(t *testing.T) {
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	Expect(mockSB.GetValues(nil)).To(HaveLen(5))
+
+	// check scheduler API
+	prefixAValues := scheduler.GetValues(prefixSelector(prefixA))
+	checkValues(prefixAValues, []KeyValuePair{
+		{Key: prefixA + baseValue1, Value: test.NewArrayValue(Object, baseValue1, "item1", "item2")},
+		{Key: prefixA + baseValue1 + "/item1", Value: test.NewStringValue(Object, "item1", "item1")},
+		{Key: prefixA + baseValue1 + "/item2", Value: test.NewStringValue(Object, "item2", "item2")},
+		{Key: prefixA + baseValue2, Value: test.NewArrayValue(Object, baseValue2, "item1")},
+		{Key: prefixA + baseValue2 + "/item1", Value: test.NewStringValue(Object, "item1", "item1")},
+	})
+	Expect(scheduler.GetValue(prefixA + baseValue1).Equivalent(test.NewArrayValue(Object, baseValue1, "item1", "item2"))).To(BeTrue())
+	Expect(scheduler.GetValue(prefixA + baseValue1 + "/item1").Equivalent(test.NewStringValue(Object, "item1", "item1"))).To(BeTrue())
+	Expect(scheduler.GetFailedValues(nil)).To(BeEmpty())
+	Expect(scheduler.GetPendingValues(nil)).To(BeEmpty())
 
 	// check metadata
 	metadata, exists := nameToInteger.LookupByName(baseValue1)
@@ -1090,6 +1107,11 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 	scheduler.RegisterKVDescriptor(descriptor1)
 	scheduler.RegisterKVDescriptor(descriptor2)
 	scheduler.RegisterKVDescriptor(descriptor3)
+	nbPrefixes := scheduler.GetRegisteredNBKeyPrefixes()
+	Expect(nbPrefixes).To(HaveLen(3))
+	Expect(nbPrefixes).To(ContainElement(prefixA))
+	Expect(nbPrefixes).To(ContainElement(prefixB))
+	Expect(nbPrefixes).To(ContainElement(prefixC))
 
 	// get metadata map created for each descriptor
 	metadataMap := scheduler.GetMetadataMap(descriptor1.GetName())

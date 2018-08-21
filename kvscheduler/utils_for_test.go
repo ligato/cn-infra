@@ -41,6 +41,20 @@ func prefixSelector(prefix string) func(key string) bool {
 	}
 }
 
+func checkValues(received, expected []KeyValuePair) {
+	Expect(len(received)).To(Equal(len(expected)))
+	for _, kv := range expected {
+		found := false
+		for _, kv2 := range received {
+			if kv2.Key == kv.Key {
+				Expect(kv2.Value.Equivalent(kv.Value)).To(BeTrue())
+				found = true
+			}
+		}
+		Expect(found).To(BeTrue())
+	}
+}
+
 func checkRecordedValue(recorded, expected *recordedValue) {
 	if expected == nil {
 		Expect(recorded).To(BeNil())

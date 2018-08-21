@@ -179,6 +179,12 @@ func TestDataChangeTransactions(t *testing.T) {
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	Expect(mockSB.GetValues(nil)).To(HaveLen(7))
 
+	// check pending values
+	pendingValues := scheduler.GetPendingValues(nil)
+	checkValues(pendingValues, []KeyValuePair{
+		{Key: prefixB + baseValue2 + "/item2", Value: test.NewStringValue(Object, "item2", "item2")},
+	})
+
 	// check metadata
 	metadata, exists := nameToInteger1.LookupByName(baseValue1)
 	Expect(exists).To(BeTrue())
@@ -398,6 +404,9 @@ func TestDataChangeTransactions(t *testing.T) {
 	// -> item2 derived from base value 3 was deleted
 	value = mockSB.GetValue(prefixC + baseValue3 + "/item2")
 	Expect(value).To(BeNil())
+
+	// check pending values
+	Expect(scheduler.GetPendingValues(nil)).To(BeEmpty())
 
 	// check metadata
 	metadata, exists = nameToInteger1.LookupByName(baseValue1)
