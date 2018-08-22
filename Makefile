@@ -156,7 +156,7 @@ get-yamllint:
 # Lint the yaml files
 yamllint: get-yamllint
 	@echo "=> linting the yaml files"
-	yamllint -c .yamllint.yml $(git ls-files '*.yaml' '*.yml' | grep -v 'vendor/')
+	yamllint -c .yamllint.yml $(shell git ls-files '*.yaml' '*.yml' | grep -v 'vendor/')
 
 .PHONY: build clean \
 	examples examples-plugin clean-examples clean-examples-plugin test test-examples \
