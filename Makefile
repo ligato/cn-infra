@@ -154,7 +154,7 @@ get-yamllint:
 	pip install --user yamllint
 
 # Lint the yaml files
-yaml-lint: get-yamllint
+yamllint: get-yamllint
 	@echo "=> linting the yaml files"
 	yamllint -c .yamllint.yml $(git ls-files '*.yaml' '*.yml' | grep -v 'vendor/')
 
@@ -164,4 +164,4 @@ yaml-lint: get-yamllint
 	get-dep dep-install dep-update \
 	get-linters lint format \
 	get-linkcheck check-links \
-	get-yamllint yaml-lint
+	get-yamllint yamllint
