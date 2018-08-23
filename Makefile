@@ -149,9 +149,19 @@ check-links: get-linkcheck
 	@echo "=> checking links"
 	./scripts/check_links.sh
 
+# Install yamllint
+get-yamllint:
+	pip install --user yamllint
+
+# Lint the yaml files
+yamllint: get-yamllint
+	@echo "=> linting the yaml files"
+	yamllint -c .yamllint.yml $(shell git ls-files '*.yaml' '*.yml' | grep -v 'vendor/')
+
 .PHONY: build clean \
 	examples examples-plugin clean-examples clean-examples-plugin test test-examples \
 	test-cover test-cover-html test-cover-xml \
 	get-dep dep-install dep-update \
 	get-linters lint format \
-	get-linkcheck check-links
+	get-linkcheck check-links \
+	get-yamllint yamllint
