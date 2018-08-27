@@ -18,9 +18,29 @@ There are no dependencies on external binaries, so you can easily integrate it i
 
 ## Changelog
 
+### 2.4.4
+
+Fixed nil Lua return value (#43)
+
+### 2.4.3
+
+Fixed using Lua with authenticated redis.
+
+### 2.4.2
+
+Changed redigo import path.
+
+### 2.4
+
+Minor cleanups. Miniredis now requires Go >= 1.9 (only for the tests. If you don't run the tests you can use an older Go version).
+
+### 2.3.1
+
+Lua changes: added `cjson` library, and `redis.sha1hex()`.
+
 ### 2.3
 
-Added the `EVAL`, `EVALLUA`, and `SCRIPT` commands. Uses a pure Go Lua interpreter. Please open an issue if there are problems with any Lua code.
+Added the `EVAL`, `EVALSHA`, and `SCRIPT` commands. Uses a pure Go Lua interpreter. Please open an issue if there are problems with any Lua code.
 
 ### 2.2
 
@@ -210,7 +230,7 @@ func TestSomething(t *testing.T) {
 	s.HSet("some", "other", "key")
 
 	// Run your code and see if it behaves.
-	// An example using the redigo library from "github.com/garyburd/redigo/redis":
+	// An example using the redigo library from "github.com/gomodule/redigo/redis":
 	c, err := redis.Dial("tcp", s.Addr())
 	_, err = c.Do("SET", "foo", "bar")
 
@@ -287,8 +307,8 @@ Commands which will probably not be implemented:
 
 ## &c.
 
-See https://github.com/alicebob/miniredis_vs_redis for tests comparing
-miniredis against the real thing. Tests are run against Redis 4.0.6 (Debian).
+Tests are run against Redis 4.0.6 (Debian). The [./integration](./integration/)
+subdir compares miniredis against a real redis instance.
 
 
 [![Build Status](https://travis-ci.org/alicebob/miniredis.svg?branch=master)](https://travis-ci.org/alicebob/miniredis) 

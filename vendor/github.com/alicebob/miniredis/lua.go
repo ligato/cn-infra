@@ -1,8 +1,8 @@
 package miniredis
 
 import (
-	redigo "github.com/garyburd/redigo/redis"
-	lua "github.com/yuin/gopher-lua"
+	redigo "github.com/gomodule/redigo/redis"
+	"github.com/yuin/gopher-lua"
 
 	"github.com/alicebob/miniredis/server"
 )
@@ -48,7 +48,7 @@ func mkLuaFuncs(conn redigo.Conn) map[string]lua.LGFunction {
 			}
 
 			if res == nil {
-				l.Push(lua.LNil)
+				l.Push(lua.LFalse)
 			} else {
 				switch r := res.(type) {
 				case int64:
@@ -84,6 +84,16 @@ func mkLuaFuncs(conn redigo.Conn) map[string]lua.LGFunction {
 			l.Push(res)
 			return 1
 		},
+		"sha1hex": func(l *lua.LState) int {
+			top := l.GetTop()
+			if top != 1 {
+				l.Error(lua.LString("wrong number of arguments"), 1)
+				return 0
+			}
+			msg := lua.LVAsString(l.Get(1))
+			l.Push(lua.LString(sha1Hex(msg)))
+			return 1
+		},
 	}
 }
 
@@ -100,12 +110,17 @@ func luaToRedis(l *lua.LState, c *server.Peer, value lua.LValue) {
 		if lua.LVAsBool(value) {
 			c.WriteInt(1)
 		} else {
-			c.WriteInt(0)
+			c.WriteNull()
 		}
 	case lua.LNumber:
 		c.WriteInt(int(lua.LVAsNumber(value)))
 	case lua.LString:
-		c.WriteBulk(lua.LVAsString(value))
+		s := lua.LVAsString(value)
+		if s == "OK" {
+			c.WriteInline(s)
+		} else {
+			c.WriteBulk(s)
+		}
 	case *lua.LTable:
 		// special case for tables with an 'err' or 'ok' field
 		// note: according to the docs this only counts when 'err' or 'ok' is
@@ -148,7 +163,7 @@ func redisToLua(l *lua.LState, res []interface{}) *lua.LTable {
 	for _, e := range res {
 		var v lua.LValue
 		if e == nil {
-			v = lua.LValue(nil)
+			v = lua.LFalse
 		} else {
 			switch et := e.(type) {
 			case int64:
