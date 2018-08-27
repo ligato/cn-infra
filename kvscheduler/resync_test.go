@@ -29,7 +29,9 @@ func TestEmptyResync(t *testing.T) {
 	RegisterTestingT(t)
 
 	// prepare KV Scheduler
-	scheduler := NewPlugin()
+	scheduler := NewPlugin(UseDeps(func(deps *Deps) {
+		deps.HTTPHandlers = nil
+	}))
 	err := scheduler.Init()
 	Expect(err).To(BeNil())
 
@@ -55,7 +57,7 @@ func TestEmptyResync(t *testing.T) {
 	Expect(withMetadataMap).To(BeTrue())
 
 	// transaction history should be initially empty
-	Expect(scheduler.getTransactionHistory(time.Now())).To(BeEmpty())
+	Expect(scheduler.getTransactionHistory(time.Time{}, time.Time{})).To(BeEmpty())
 
 	// run transaction with empty resync
 	startTime := time.Now()
@@ -79,7 +81,7 @@ func TestEmptyResync(t *testing.T) {
 	Expect(opHistory[0].Descriptor).To(BeEquivalentTo(descriptor1Name))
 
 	// single transaction consisted of zero operations
-	txnHistory := scheduler.getTransactionHistory(time.Now())
+	txnHistory := scheduler.getTransactionHistory(time.Time{}, time.Time{})
 	Expect(txnHistory).To(HaveLen(1))
 	txn := txnHistory[0]
 	Expect(txn.preRecord).To(BeFalse())
@@ -121,7 +123,9 @@ func TestResyncWithEmptySB(t *testing.T) {
 	RegisterTestingT(t)
 
 	// prepare KV Scheduler
-	scheduler := NewPlugin()
+	scheduler := NewPlugin(UseDeps(func(deps *Deps) {
+		deps.HTTPHandlers = nil
+	}))
 	err := scheduler.Init()
 	Expect(err).To(BeNil())
 
@@ -276,7 +280,7 @@ func TestResyncWithEmptySB(t *testing.T) {
 	Expect(operation.Err).To(BeNil())
 
 	// single transaction consisted of 6 operations
-	txnHistory := scheduler.getTransactionHistory(time.Now())
+	txnHistory := scheduler.getTransactionHistory(time.Time{}, time.Now())
 	Expect(txnHistory).To(HaveLen(1))
 	txn := txnHistory[0]
 	Expect(txn.preRecord).To(BeFalse())
@@ -403,7 +407,7 @@ func TestResyncWithEmptySB(t *testing.T) {
 	Expect(operation.Err).To(BeNil())
 
 	// this second transaction consisted of 7 operations
-	txnHistory = scheduler.getTransactionHistory(time.Now())
+	txnHistory = scheduler.getTransactionHistory(time.Time{}, time.Now())
 	Expect(txnHistory).To(HaveLen(2))
 	txn = txnHistory[1]
 	Expect(txn.preRecord).To(BeFalse())
@@ -508,7 +512,9 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 	RegisterTestingT(t)
 
 	// prepare KV Scheduler
-	scheduler := NewPlugin()
+	scheduler := NewPlugin(UseDeps(func(deps *Deps) {
+		deps.HTTPHandlers = nil
+	}))
 	err := scheduler.Init()
 	Expect(err).To(BeNil())
 
@@ -723,7 +729,7 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 	Expect(operation.Err).To(BeNil())
 
 	// check transaction operations
-	txnHistory := scheduler.getTransactionHistory(time.Now())
+	txnHistory := scheduler.getTransactionHistory(time.Time{}, time.Time{})
 	Expect(txnHistory).To(HaveLen(1))
 	txn := txnHistory[0]
 	Expect(txn.preRecord).To(BeFalse())
@@ -859,7 +865,9 @@ func TestResyncNotRemovingSBValues(t *testing.T) {
 	RegisterTestingT(t)
 
 	// prepare KV Scheduler
-	scheduler := NewPlugin()
+	scheduler := NewPlugin(UseDeps(func(deps *Deps) {
+		deps.HTTPHandlers = nil
+	}))
 	err := scheduler.Init()
 	Expect(err).To(BeNil())
 
@@ -962,7 +970,7 @@ func TestResyncNotRemovingSBValues(t *testing.T) {
 	Expect(operation.Err).To(BeNil())
 
 	// check transaction operations
-	txnHistory := scheduler.getTransactionHistory(time.Now())
+	txnHistory := scheduler.getTransactionHistory(startTime, time.Now())
 	Expect(txnHistory).To(HaveLen(1))
 	txn := txnHistory[0]
 	Expect(txn.preRecord).To(BeFalse())
@@ -1030,7 +1038,9 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 	RegisterTestingT(t)
 
 	// prepare KV Scheduler
-	scheduler := NewPlugin()
+	scheduler := NewPlugin(UseDeps(func(deps *Deps) {
+		deps.HTTPHandlers = nil
+	}))
 	err := scheduler.Init()
 	Expect(err).To(BeNil())
 
@@ -1290,7 +1300,7 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 	Expect(operation.Err).To(BeNil())
 
 	// check transaction operations
-	txnHistory := scheduler.getTransactionHistory(time.Now())
+	txnHistory := scheduler.getTransactionHistory(time.Time{}, time.Time{})
 	Expect(txnHistory).To(HaveLen(1))
 	txn := txnHistory[0]
 	Expect(txn.preRecord).To(BeFalse())
@@ -1430,7 +1440,9 @@ func TestResyncWithRetry(t *testing.T) {
 	RegisterTestingT(t)
 
 	// prepare KV Scheduler
-	scheduler := NewPlugin()
+	scheduler := NewPlugin(UseDeps(func(deps *Deps) {
+		deps.HTTPHandlers = nil
+	}))
 	err := scheduler.Init()
 	Expect(err).To(BeNil())
 
@@ -1549,7 +1561,7 @@ func TestResyncWithRetry(t *testing.T) {
 	})
 
 	// check transaction operations
-	txnHistory := scheduler.getTransactionHistory(time.Now())
+	txnHistory := scheduler.getTransactionHistory(time.Time{}, time.Time{})
 	Expect(txnHistory).To(HaveLen(1))
 	txn := txnHistory[0]
 	Expect(txn.preRecord).To(BeFalse())
@@ -1671,7 +1683,7 @@ func TestResyncWithRetry(t *testing.T) {
 	Expect(operation.Err).To(BeNil())
 
 	// check retry transaction operations
-	txnHistory = scheduler.getTransactionHistory(time.Now())
+	txnHistory = scheduler.getTransactionHistory(time.Time{}, time.Now())
 	Expect(txnHistory).To(HaveLen(2))
 	txn = txnHistory[1]
 	Expect(txn.preRecord).To(BeFalse())

@@ -30,7 +30,9 @@ func TestNotifications(t *testing.T) {
 	RegisterTestingT(t)
 
 	// prepare KV Scheduler
-	scheduler := NewPlugin()
+	scheduler := NewPlugin(UseDeps(func(deps *Deps) {
+		deps.HTTPHandlers = nil
+	}))
 	err := scheduler.Init()
 	Expect(err).To(BeNil())
 
@@ -126,7 +128,7 @@ func TestNotifications(t *testing.T) {
 	})
 
 	// check transaction operations
-	txnHistory := scheduler.getTransactionHistory(time.Now())
+	txnHistory := scheduler.getTransactionHistory(time.Time{}, time.Now())
 	Expect(txnHistory).To(HaveLen(1))
 	txn := txnHistory[0]
 	Expect(txn.preRecord).To(BeFalse())
@@ -239,9 +241,9 @@ func TestNotifications(t *testing.T) {
 	Expect(operation.Err).To(BeNil())
 
 	// check transaction operations
-	txnHistory = scheduler.getTransactionHistory(time.Now())
-	Expect(txnHistory).To(HaveLen(2))
-	txn = txnHistory[1]
+	txnHistory = scheduler.getTransactionHistory(startTime, time.Now())
+	Expect(txnHistory).To(HaveLen(1))
+	txn = txnHistory[0]
 	Expect(txn.preRecord).To(BeFalse())
 	Expect(txn.start.After(startTime)).To(BeTrue())
 	Expect(txn.start.Before(txn.stop)).To(BeTrue())
@@ -388,9 +390,9 @@ func TestNotifications(t *testing.T) {
 	Expect(operation.Err).To(BeNil())
 
 	// check transaction operations
-	txnHistory = scheduler.getTransactionHistory(time.Now())
-	Expect(txnHistory).To(HaveLen(3))
-	txn = txnHistory[2]
+	txnHistory = scheduler.getTransactionHistory(startTime, time.Now())
+	Expect(txnHistory).To(HaveLen(1))
+	txn = txnHistory[0]
 	Expect(txn.preRecord).To(BeFalse())
 	Expect(txn.start.After(startTime)).To(BeTrue())
 	Expect(txn.start.Before(txn.stop)).To(BeTrue())
@@ -506,9 +508,9 @@ func TestNotifications(t *testing.T) {
 	Expect(operation.Err).To(BeNil())
 
 	// check transaction operations
-	txnHistory = scheduler.getTransactionHistory(time.Now())
-	Expect(txnHistory).To(HaveLen(4))
-	txn = txnHistory[3]
+	txnHistory = scheduler.getTransactionHistory(startTime, time.Now())
+	Expect(txnHistory).To(HaveLen(1))
+	txn = txnHistory[0]
 	Expect(txn.preRecord).To(BeFalse())
 	Expect(txn.start.After(startTime)).To(BeTrue())
 	Expect(txn.start.Before(txn.stop)).To(BeTrue())
@@ -587,7 +589,9 @@ func TestNotificationsWithRetry(t *testing.T) {
 	RegisterTestingT(t)
 
 	// prepare KV Scheduler
-	scheduler := NewPlugin()
+	scheduler := NewPlugin(UseDeps(func(deps *Deps) {
+		deps.HTTPHandlers = nil
+	}))
 	err := scheduler.Init()
 	Expect(err).To(BeNil())
 
@@ -826,7 +830,7 @@ func TestNotificationsWithRetry(t *testing.T) {
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{})
 
 	// check last transaction
-	txnHistory := scheduler.getTransactionHistory(time.Now())
+	txnHistory := scheduler.getTransactionHistory(time.Time{}, time.Now())
 	Expect(txnHistory).To(HaveLen(3))
 	txn := txnHistory[2]
 	Expect(txn.preRecord).To(BeFalse())
@@ -1086,9 +1090,9 @@ func TestNotificationsWithRetry(t *testing.T) {
 	Expect(operation.Err).To(BeNil())
 
 	// check last transaction
-	txnHistory = scheduler.getTransactionHistory(time.Now())
-	Expect(txnHistory).To(HaveLen(4))
-	txn = txnHistory[3]
+	txnHistory = scheduler.getTransactionHistory(startTime, time.Now())
+	Expect(txnHistory).To(HaveLen(1))
+	txn = txnHistory[0]
 	Expect(txn.preRecord).To(BeFalse())
 	Expect(txn.start.After(startTime)).To(BeTrue())
 	Expect(txn.start.Before(txn.stop)).To(BeTrue())
@@ -1157,9 +1161,9 @@ func TestNotificationsWithRetry(t *testing.T) {
 	Expect(operation.Err).To(BeNil())
 
 	// check last transaction
-	txnHistory = scheduler.getTransactionHistory(time.Now())
-	Expect(txnHistory).To(HaveLen(5))
-	txn = txnHistory[4]
+	txnHistory = scheduler.getTransactionHistory(startTime, time.Time{})
+	Expect(txnHistory).To(HaveLen(1))
+	txn = txnHistory[0]
 	Expect(txn.preRecord).To(BeFalse())
 	Expect(txn.start.After(startTime)).To(BeTrue())
 	Expect(txn.start.Before(txn.stop)).To(BeTrue())
