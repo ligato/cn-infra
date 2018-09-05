@@ -63,11 +63,11 @@ func (pv *protoValue) Label() string {
 
 // Equivalent uses proto.Equal for comparison.
 func (pv *protoValue) Equivalent(v2 Value) bool {
-	v2Proto, ok := v2.(*protoValue)
+	v2Proto, ok := v2.(ProtoValue)
 	if !ok {
 		return false
 	}
-	return proto.Equal(pv.protoMessage, v2Proto.protoMessage)
+	return proto.Equal(pv.protoMessage, v2Proto.GetProtoMessage())
 }
 
 // String uses the String method from proto.Message.
