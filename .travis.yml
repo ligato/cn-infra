@@ -1,3 +1,4 @@
+---
 dist: trusty
 sudo: required
 language: go
@@ -17,6 +18,7 @@ before_install:
   - go get -v github.com/mattn/goveralls
 
 script:
+  - make yamllint
   - make check-links || true
   - make lint
   - make dep-check
