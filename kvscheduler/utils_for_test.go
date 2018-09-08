@@ -61,7 +61,6 @@ func checkRecordedValue(recorded, expected *recordedValue) {
 		return
 	}
 	Expect(recorded).ToNot(BeNil())
-	Expect(recorded.valueType).To(BeEquivalentTo(expected.valueType))
 	Expect(recorded.string).To(BeEquivalentTo(expected.string))
 	Expect(recorded.label).To(BeEquivalentTo(expected.label))
 }

@@ -44,7 +44,7 @@ func TestDataChangeTransactions(t *testing.T) {
 		KeySelector:      prefixSelector(prefixA),
 		NBKeyPrefixes:    []string{prefixA},
 		ValueBuilder:     test.ArrayValueBuilder(prefixA),
-		DerValuesBuilder: test.ArrayValueDerBuilder(Object),
+		DerValuesBuilder: test.ArrayValueDerBuilder(),
 		WithMetadata:     true,
 		DumpIsSupported:  true,
 	}, mockSB, 0)
@@ -69,7 +69,7 @@ func TestDataChangeTransactions(t *testing.T) {
 			}
 			return nil
 		},
-		DerValuesBuilder: test.ArrayValueDerBuilder(Object),
+		DerValuesBuilder: test.ArrayValueDerBuilder(),
 		WithMetadata:     true,
 		DumpIsSupported:  true,
 		DumpDependencies: []string{descriptor1Name},
@@ -85,9 +85,9 @@ func TestDataChangeTransactions(t *testing.T) {
 			if !ok {
 				return nil, ErrInvalidValueDataType(key)
 			}
-			return test.NewArrayValue(Object, label, items...), nil
+			return test.NewArrayValue(label, items...), nil
 		},
-		DerValuesBuilder: test.ArrayValueDerBuilder(Object),
+		DerValuesBuilder: test.ArrayValueDerBuilder(),
 		RecreateChecker: func(key string, oldValue, newValue Value, metadata Metadata) bool {
 			if key == prefixC + baseValue3 {
 				return true
@@ -131,7 +131,7 @@ func TestDataChangeTransactions(t *testing.T) {
 	// -> base value 1
 	value := mockSB.GetValue(prefixA + baseValue1)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(Object, baseValue1, "item2"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue1, "item2"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(0))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
@@ -141,20 +141,20 @@ func TestDataChangeTransactions(t *testing.T) {
 	// -> item2 derived from base value 1
 	value = mockSB.GetValue(prefixA + baseValue1 + "/item2")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue(Object, "item2", "item2"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewStringValue("item2", "item2"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> base value 2
 	value = mockSB.GetValue(prefixB + baseValue2)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(Object, baseValue2, "item1", "item2"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue2, "item1", "item2"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(0))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item1 derived from base value 2
 	value = mockSB.GetValue(prefixB + baseValue2 + "/item1")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue(Object, "item1", "item1"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewStringValue("item1", "item1"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item2 derived from base value 2 is pending
@@ -163,20 +163,20 @@ func TestDataChangeTransactions(t *testing.T) {
 	// -> base value 3
 	value = mockSB.GetValue(prefixC + baseValue3)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(Object, baseValue3, "item1", "item2"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue3, "item1", "item2"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(0))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item1 derived from base value 3
 	value = mockSB.GetValue(prefixC + baseValue3 + "/item1")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue(Object, "item1", "item1"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewStringValue("item1", "item1"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item2 derived from base value 3
 	value = mockSB.GetValue(prefixC + baseValue3 + "/item2")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue(Object, "item2", "item2"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewStringValue("item2", "item2"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	Expect(mockSB.GetValues(nil)).To(HaveLen(7))
@@ -184,7 +184,7 @@ func TestDataChangeTransactions(t *testing.T) {
 	// check pending values
 	pendingValues := scheduler.GetPendingValues(nil)
 	checkValues(pendingValues, []KeyValuePair{
-		{Key: prefixB + baseValue2 + "/item2", Value: test.NewStringValue(Object, "item2", "item2")},
+		{Key: prefixB + baseValue2 + "/item2", Value: test.NewStringValue("item2", "item2")},
 	})
 
 	// check metadata
@@ -249,9 +249,9 @@ func TestDataChangeTransactions(t *testing.T) {
 	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
 	Expect(txn.isResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixA + baseValue1, value: &recordedValue{valueType: Object, label: baseValue1, string: "[item2]"}, origin: FromNB},
-		{key: prefixB + baseValue2, value: &recordedValue{valueType: Object, label: baseValue2, string: "[item1,item2]"}, origin: FromNB},
-		{key: prefixC + baseValue3, value: &recordedValue{valueType: Object, label: baseValue3, string: "[item1,item2]"}, origin: FromNB},
+		{key: prefixA + baseValue1, value: &recordedValue{label: baseValue1, string: "[item2]"}, origin: FromNB},
+		{key: prefixB + baseValue2, value: &recordedValue{label: baseValue2, string: "[item1,item2]"}, origin: FromNB},
+		{key: prefixC + baseValue3, value: &recordedValue{label: baseValue3, string: "[item1,item2]"}, origin: FromNB},
 	})
 	Expect(txn.preErrors).To(BeEmpty())
 
@@ -259,35 +259,35 @@ func TestDataChangeTransactions(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixA + baseValue1,
-			newValue:   &recordedValue{valueType: Object, label: baseValue1, string: "[item2]"},
+			newValue:   &recordedValue{label: baseValue1, string: "[item2]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixA + baseValue1 + "/item2",
-			newValue:   &recordedValue{valueType: Object, label: "item2", string: "item2"},
+			newValue:   &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixB + baseValue2,
-			newValue:   &recordedValue{valueType: Object, label: baseValue2, string: "[item1,item2]"},
+			newValue:   &recordedValue{label: baseValue2, string: "[item1,item2]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixB + baseValue2 + "/item1",
-			newValue:   &recordedValue{valueType: Object, label: "item1", string: "item1"},
+			newValue:   &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixB + baseValue2 + "/item2",
-			newValue:   &recordedValue{valueType: Object, label: "item2", string: "item2"},
+			newValue:   &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isPending:  true,
@@ -295,21 +295,21 @@ func TestDataChangeTransactions(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixC + baseValue3,
-			newValue:   &recordedValue{valueType: Object, label: baseValue3, string: "[item1,item2]"},
+			newValue:   &recordedValue{label: baseValue3, string: "[item1,item2]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixC + baseValue3 + "/item1",
-			newValue:   &recordedValue{valueType: Object, label: "item1", string: "item1"},
+			newValue:   &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixC + baseValue3 + "/item2",
-			newValue:   &recordedValue{valueType: Object, label: "item2", string: "item2"},
+			newValue:   &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
@@ -358,14 +358,14 @@ func TestDataChangeTransactions(t *testing.T) {
 	// -> base value 1
 	value = mockSB.GetValue(prefixA + baseValue1)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(Object, baseValue1, "item1"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue1, "item1"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(0))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item1 derived from base value was added
 	value = mockSB.GetValue(prefixA + baseValue1 + "/item1")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue(Object, "item1", "item1"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewStringValue("item1", "item1"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item2 derived from base value 1 was deleted
@@ -374,33 +374,33 @@ func TestDataChangeTransactions(t *testing.T) {
 	// -> base value 2
 	value = mockSB.GetValue(prefixB + baseValue2)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(Object, baseValue2, "item1", "item2"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue2, "item1", "item2"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(0))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item1 derived from base value 2
 	value = mockSB.GetValue(prefixB + baseValue2 + "/item1")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue(Object, "item1", "item1"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewStringValue("item1", "item1"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item2 derived from base value 2 is no longer pending
 	value = mockSB.GetValue(prefixB + baseValue2 + "/item2")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue(Object, "item2", "item2"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewStringValue("item2", "item2"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> base value 3
 	value = mockSB.GetValue(prefixC + baseValue3)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(Object, baseValue3, "item1"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue3, "item1"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(1))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item1 derived from base value 3
 	value = mockSB.GetValue(prefixC + baseValue3 + "/item1")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue(Object, "item1", "item1"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewStringValue("item1", "item1"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item2 derived from base value 3 was deleted
@@ -487,8 +487,8 @@ func TestDataChangeTransactions(t *testing.T) {
 	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
 	Expect(txn.isResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixA + baseValue1, value: &recordedValue{valueType: Object, label: baseValue1, string: "[item1]"}, origin: FromNB},
-		{key: prefixC + baseValue3, value: &recordedValue{valueType: Object, label: baseValue3, string: "[item1]"}, origin: FromNB},
+		{key: prefixA + baseValue1, value: &recordedValue{label: baseValue1, string: "[item1]"}, origin: FromNB},
+		{key: prefixC + baseValue3, value: &recordedValue{label: baseValue3, string: "[item1]"}, origin: FromNB},
 	})
 	Expect(txn.preErrors).To(BeEmpty())
 
@@ -496,21 +496,21 @@ func TestDataChangeTransactions(t *testing.T) {
 		{
 			operation:  del,
 			key:        prefixC + baseValue3 + "/item1",
-			prevValue:  &recordedValue{valueType: Object, label: "item1", string: "item1"},
+			prevValue:  &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  del,
 			key:        prefixC + baseValue3 + "/item2",
-			prevValue:  &recordedValue{valueType: Object, label: "item2", string: "item2"},
+			prevValue:  &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  del,
 			key:        prefixC + baseValue3,
-			prevValue:	&recordedValue{valueType: Object, label: baseValue3, string: "[item1,item2]"},
+			prevValue:	&recordedValue{label: baseValue3, string: "[item1,item2]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isPending:  true,
@@ -518,7 +518,7 @@ func TestDataChangeTransactions(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixC + baseValue3,
-			newValue:   &recordedValue{valueType: Object, label: baseValue3, string: "[item1]"},
+			newValue:   &recordedValue{label: baseValue3, string: "[item1]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,
@@ -526,45 +526,45 @@ func TestDataChangeTransactions(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixC + baseValue3 + "/item1",
-			newValue:   &recordedValue{valueType: Object, label: "item1", string: "item1"},
+			newValue:   &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  del,
 			key:        prefixA + baseValue1 + "/item2",
-			prevValue:  &recordedValue{valueType: Object, label: "item2", string: "item2"},
+			prevValue:  &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  modify,
 			key:        prefixA + baseValue1,
-			prevValue:  &recordedValue{valueType: Object, label: baseValue1, string: "[item2]"},
-			newValue:   &recordedValue{valueType: Object, label: baseValue1, string: "[item1]"},
+			prevValue:  &recordedValue{label: baseValue1, string: "[item2]"},
+			newValue:   &recordedValue{label: baseValue1, string: "[item1]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  update,
 			key:        prefixB + baseValue2 + "/item1",
-			prevValue:  &recordedValue{valueType: Object, label: "item1", string: "item1"},
-			newValue:   &recordedValue{valueType: Object, label: "item1", string: "item1"},
+			prevValue:  &recordedValue{label: "item1", string: "item1"},
+			newValue:   &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixA + baseValue1 + "/item1",
-			newValue:   &recordedValue{valueType: Object, label: "item1", string: "item1"},
+			newValue:   &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixB + baseValue2 + "/item2",
-			prevValue:  &recordedValue{valueType: Object, label: "item2", string: "item2"},
-			newValue:   &recordedValue{valueType: Object, label: "item2", string: "item2"},
+			prevValue:  &recordedValue{label: "item2", string: "item2"},
+			newValue:   &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,
@@ -622,7 +622,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		KeySelector:      prefixSelector(prefixA),
 		NBKeyPrefixes:    []string{prefixA},
 		ValueBuilder:     test.ArrayValueBuilder(prefixA),
-		DerValuesBuilder: test.ArrayValueDerBuilder(Object),
+		DerValuesBuilder: test.ArrayValueDerBuilder(),
 		WithMetadata:     true,
 		DumpIsSupported:  true,
 	}, mockSB, 0)
@@ -647,7 +647,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 			}
 			return nil
 		},
-		DerValuesBuilder: test.ArrayValueDerBuilder(Object),
+		DerValuesBuilder: test.ArrayValueDerBuilder(),
 		WithMetadata:     true,
 		DumpIsSupported:  true,
 		DumpDependencies: []string{descriptor1Name},
@@ -658,7 +658,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		KeySelector:     prefixSelector(prefixC),
 		NBKeyPrefixes:   []string{prefixC},
 		ValueBuilder:    test.ArrayValueBuilder(prefixC),
-		DerValuesBuilder: test.ArrayValueDerBuilder(Object),
+		DerValuesBuilder: test.ArrayValueDerBuilder(),
 		RecreateChecker: func(key string, oldValue, newValue Value, metadata Metadata) bool {
 			if key == prefixC + baseValue3 {
 				return true
@@ -698,7 +698,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 
 	// plan error before 2nd txn
 	failedModifyClb := func() {
-		mockSB.SetValue(prefixA + baseValue1, test.NewArrayValue(Object, baseValue1),
+		mockSB.SetValue(prefixA + baseValue1, test.NewArrayValue(baseValue1),
 			&test.OnlyInteger{Integer:0}, FromNB, false)
 	}
 	mockSB.PlanError(prefixA + baseValue1, errors.New("failed to modify value"), failedModifyClb)
@@ -732,7 +732,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 	// -> base value 1
 	value := mockSB.GetValue(prefixA + baseValue1)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(Object, baseValue1))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue1))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(0))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
@@ -745,14 +745,14 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 	// -> base value 2
 	value = mockSB.GetValue(prefixB + baseValue2)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(Object, baseValue2, "item1", "item2"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue2, "item1", "item2"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(0))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item1 derived from base value 2
 	value = mockSB.GetValue(prefixB + baseValue2 + "/item1")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue(Object, "item1", "item1"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewStringValue("item1", "item1"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item2 derived from base value 2 is still pending
@@ -761,20 +761,20 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 	// -> base value 3 was re-verted back to state after 1st txn
 	value = mockSB.GetValue(prefixC + baseValue3)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(Object, baseValue3, "item1", "item2"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue3, "item1", "item2"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(2))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item1 derived from base value 3
 	value = mockSB.GetValue(prefixC + baseValue3 + "/item1")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue(Object, "item1", "item1"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewStringValue("item1", "item1"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item2 derived from base value 3
 	value = mockSB.GetValue(prefixC + baseValue3 + "/item2")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue(Object, "item2", "item2"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewStringValue("item2", "item2"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 
@@ -860,7 +860,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
 			Key: prefixA + baseValue1,
-			Value: test.NewArrayValue(Object, baseValue1, "item1"),
+			Value: test.NewArrayValue(baseValue1, "item1"),
 			Metadata: &test.OnlyInteger{Integer:0},
 			Origin: FromNB,
 		},
@@ -878,8 +878,8 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
 	Expect(txn.isResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixA + baseValue1, value: &recordedValue{valueType: Object, label: baseValue1, string: "[item1]"}, origin: FromNB},
-		{key: prefixC + baseValue3, value: &recordedValue{valueType: Object, label: baseValue3, string: "[item1]"}, origin: FromNB},
+		{key: prefixA + baseValue1, value: &recordedValue{label: baseValue1, string: "[item1]"}, origin: FromNB},
+		{key: prefixC + baseValue3, value: &recordedValue{label: baseValue3, string: "[item1]"}, origin: FromNB},
 	})
 	Expect(txn.preErrors).To(BeEmpty())
 
@@ -888,21 +888,21 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		{
 			operation:  del,
 			key:        prefixC + baseValue3 + "/item1",
-			prevValue:  &recordedValue{valueType: Object, label: "item1", string: "item1"},
+			prevValue:  &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  del,
 			key:        prefixC + baseValue3 + "/item2",
-			prevValue:  &recordedValue{valueType: Object, label: "item2", string: "item2"},
+			prevValue:  &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  del,
 			key:        prefixC + baseValue3,
-			prevValue:	&recordedValue{valueType: Object, label: baseValue3, string: "[item1,item2]"},
+			prevValue:	&recordedValue{label: baseValue3, string: "[item1,item2]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isPending:  true,
@@ -910,7 +910,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixC + baseValue3,
-			newValue:   &recordedValue{valueType: Object, label: baseValue3, string: "[item1]"},
+			newValue:   &recordedValue{label: baseValue3, string: "[item1]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,
@@ -918,45 +918,45 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixC + baseValue3 + "/item1",
-			newValue:   &recordedValue{valueType: Object, label: "item1", string: "item1"},
+			newValue:   &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  del,
 			key:        prefixA + baseValue1 + "/item2",
-			prevValue:  &recordedValue{valueType: Object, label: "item2", string: "item2"},
+			prevValue:  &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  modify,
 			key:        prefixA + baseValue1,
-			prevValue:  &recordedValue{valueType: Object, label: baseValue1, string: "[item2]"},
-			newValue:   &recordedValue{valueType: Object, label: baseValue1, string: "[item1]"},
+			prevValue:  &recordedValue{label: baseValue1, string: "[item2]"},
+			newValue:   &recordedValue{label: baseValue1, string: "[item1]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  update,
 			key:        prefixB + baseValue2 + "/item1",
-			prevValue:  &recordedValue{valueType: Object, label: "item1", string: "item1"},
-			newValue:   &recordedValue{valueType: Object, label: "item1", string: "item1"},
+			prevValue:  &recordedValue{label: "item1", string: "item1"},
+			newValue:   &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixA + baseValue1 + "/item1",
-			newValue:   &recordedValue{valueType: Object, label: "item1", string: "item1"},
+			newValue:   &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixB + baseValue2 + "/item2",
-			prevValue:  &recordedValue{valueType: Object, label: "item2", string: "item2"},
-			newValue:   &recordedValue{valueType: Object, label: "item2", string: "item2"},
+			prevValue:  &recordedValue{label: "item2", string: "item2"},
+			newValue:   &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,
@@ -969,21 +969,21 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		{
 			operation:  del,
 			key:        prefixC + baseValue3 + "/item1",
-			prevValue:  &recordedValue{valueType: Object, label: "item1", string: "item1"},
+			prevValue:  &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  del,
 			key:        prefixC + baseValue3 + "/item2",
-			prevValue:  &recordedValue{valueType: Object, label: "item2", string: "item2"},
+			prevValue:  &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  del,
 			key:        prefixC + baseValue3,
-			prevValue:	&recordedValue{valueType: Object, label: baseValue3, string: "[item1,item2]"},
+			prevValue:	&recordedValue{label: baseValue3, string: "[item1,item2]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isPending:  true,
@@ -991,7 +991,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixC + baseValue3,
-			newValue:   &recordedValue{valueType: Object, label: baseValue3, string: "[item1]"},
+			newValue:   &recordedValue{label: baseValue3, string: "[item1]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,
@@ -999,22 +999,22 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixC + baseValue3 + "/item1",
-			newValue:   &recordedValue{valueType: Object, label: "item1", string: "item1"},
+			newValue:   &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  del,
 			key:        prefixA + baseValue1 + "/item2",
-			prevValue:  &recordedValue{valueType: Object, label: "item2", string: "item2"},
+			prevValue:  &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  modify,
 			key:        prefixA + baseValue1,
-			prevValue:  &recordedValue{valueType: Object, label: baseValue1, string: "[item2]"},
-			newValue:   &recordedValue{valueType: Object, label: baseValue1, string: "[item1]"},
+			prevValue:  &recordedValue{label: baseValue1, string: "[item2]"},
+			newValue:   &recordedValue{label: baseValue1, string: "[item1]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			newErr:     errors.New("failed to modify value"),
@@ -1023,7 +1023,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		{
 			operation:  del,
 			key:        prefixC + baseValue3 + "/item1",
-			prevValue:  &recordedValue{valueType: Object, label: "item1", string: "item1"},
+			prevValue:  &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isRevert:   true,
@@ -1031,7 +1031,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		{
 			operation:  del,
 			key:        prefixC + baseValue3,
-			prevValue:	&recordedValue{valueType: Object, label: baseValue3, string: "[item1]"},
+			prevValue:	&recordedValue{label: baseValue3, string: "[item1]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isPending:  true,
@@ -1040,7 +1040,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixC + baseValue3,
-			newValue:   &recordedValue{valueType: Object, label: baseValue3, string: "[item1,item2]"},
+			newValue:   &recordedValue{label: baseValue3, string: "[item1,item2]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isRevert:   true,
@@ -1049,7 +1049,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixC + baseValue3 + "/item1",
-			newValue:   &recordedValue{valueType: Object, label: "item1", string: "item1"},
+			newValue:   &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isRevert:   true,
@@ -1057,7 +1057,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixC + baseValue3 + "/item2",
-			newValue:   &recordedValue{valueType: Object, label: "item2", string: "item2"},
+			newValue:   &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isRevert:   true,
@@ -1112,7 +1112,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
 			Key: prefixA + baseValue1,
-			Value: test.NewArrayValue(Object, baseValue1, "item2"),
+			Value: test.NewArrayValue(baseValue1, "item2"),
 			Metadata: &test.OnlyInteger{Integer:0},
 			Origin: FromNB,
 		},
@@ -1130,7 +1130,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 	Expect(txn.txnType).To(BeEquivalentTo(retryFailedOps))
 	Expect(txn.isResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixA + baseValue1, value: &recordedValue{valueType: Object, label: baseValue1, string: "[item2]"}, origin: FromNB},
+		{key: prefixA + baseValue1, value: &recordedValue{label: baseValue1, string: "[item2]"}, origin: FromNB},
 	})
 	Expect(txn.preErrors).To(BeEmpty())
 
@@ -1139,8 +1139,8 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		{
 			operation:  modify,
 			key:        prefixA + baseValue1,
-			prevValue:  &recordedValue{valueType: Object, label: baseValue1, string: "[]"},
-			newValue:   &recordedValue{valueType: Object, label: baseValue1, string: "[item2]"},
+			prevValue:  &recordedValue{label: baseValue1, string: "[]"},
+			newValue:   &recordedValue{label: baseValue1, string: "[item2]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			prevErr:    errors.New("failed to modify value"),
@@ -1150,8 +1150,8 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		{
 			operation:  update,
 			key:        prefixB + baseValue2 + "/item1",
-			prevValue:  &recordedValue{valueType: Object, label: "item1", string: "item1"},
-			newValue:   &recordedValue{valueType: Object, label: "item1", string: "item1"},
+			prevValue:  &recordedValue{label: "item1", string: "item1"},
+			newValue:   &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isRevert:   true,
@@ -1160,7 +1160,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixA + baseValue1 + "/item2",
-			newValue:   &recordedValue{valueType: Object, label: "item2", string: "item2"},
+			newValue:   &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isRevert:   true,
@@ -1174,8 +1174,8 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		{
 			operation:  modify,
 			key:        prefixA + baseValue1,
-			prevValue:  &recordedValue{valueType: Object, label: baseValue1, string: "[]"},
-			newValue:   &recordedValue{valueType: Object, label: baseValue1, string: "[item2]"},
+			prevValue:  &recordedValue{label: baseValue1, string: "[]"},
+			newValue:   &recordedValue{label: baseValue1, string: "[item2]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			prevErr:    errors.New("failed to modify value"),
@@ -1222,15 +1222,15 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 	Expect(txn.txnType).To(BeEquivalentTo(retryFailedOps))
 	Expect(txn.isResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixA + baseValue1, value: &recordedValue{valueType: Object, label: baseValue1, string: "[item2]"}, origin: FromNB},
+		{key: prefixA + baseValue1, value: &recordedValue{label: baseValue1, string: "[item2]"}, origin: FromNB},
 	})
 	Expect(txn.preErrors).To(BeEmpty())
 	txnOps = recordedTxnOps{
 		{
 			operation:  modify,
 			key:        prefixA + baseValue1,
-			prevValue:  &recordedValue{valueType: Object, label: baseValue1, string: "[]"},
-			newValue:   &recordedValue{valueType: Object, label: baseValue1, string: "[item2]"},
+			prevValue:  &recordedValue{label: baseValue1, string: "[]"},
+			newValue:   &recordedValue{label: baseValue1, string: "[item2]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			prevErr:    errors.New("failed to modify value, again"),
@@ -1240,8 +1240,8 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		{
 			operation:  update,
 			key:        prefixB + baseValue2 + "/item1",
-			prevValue:  &recordedValue{valueType: Object, label: "item1", string: "item1"},
-			newValue:   &recordedValue{valueType: Object, label: "item1", string: "item1"},
+			prevValue:  &recordedValue{label: "item1", string: "item1"},
+			newValue:   &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isRevert:   true,
@@ -1250,7 +1250,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixA + baseValue1 + "/item2",
-			newValue:   &recordedValue{valueType: Object, label: "item2", string: "item2"},
+			newValue:   &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isRevert:   true,

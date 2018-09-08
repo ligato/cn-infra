@@ -35,7 +35,7 @@ var (
 	// ErrTxnQueueFull is returned when the queue of pending transactions is full.
 	ErrTxnQueueFull = errors.New("transaction queue is full")
 
-	// ErrUnimplementedKey is returned for Object or Action values without provided descriptor.
+	// ErrUnimplementedKey is returned for non-derived values without provided descriptor.
 	ErrUnimplementedKey = errors.New("unimplemented key")
 )
 

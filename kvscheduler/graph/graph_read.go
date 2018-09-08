@@ -160,7 +160,6 @@ func (graph *graphR) Dump() string {
 		record := graph.recordNode(node, false)
 		str += fmt.Sprintf("- key: %s\n", key)
 		str += fmt.Sprintf("  value-label: %s\n", record.ValueLabel)
-		str += fmt.Sprintf("  value-type: %s\n", record.ValueType.String())
 		str += fmt.Sprintf("  value-string: %s\n", record.ValueString)
 		str += fmt.Sprintf("  flags: %v\n", record.Flags)
 		str += fmt.Sprintf("  targets: %v\n", record.Targets)
@@ -197,7 +196,6 @@ func (graph *graphR) recordNode(node *node, targetUpdateOnly bool) *RecordedNode
 		Since:            time.Now(),
 		Key:              node.key,
 		ValueLabel:       node.value.Label(),
-		ValueType:        node.value.Type(),
 		ValueString:      node.value.String(),
 		Flags:            make(map[string]string),
 		Targets:          node.targets, // no need to copy, never changed in graphR

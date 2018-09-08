@@ -18,7 +18,6 @@ import (
 	. "github.com/onsi/gomega"
 	"strings"
 
-	. "github.com/ligato/cn-infra/kvscheduler/api"
 	. "github.com/ligato/cn-infra/kvscheduler/test"
 	"github.com/ligato/cn-infra/idxmap"
 )
@@ -40,10 +39,10 @@ const (
 )
 
 var (
-	value1 = NewStringValue(Object, "value1", "this is value1")
-	value2 = NewStringValue(Object, "value2", "this is value2")
-	value3 = NewStringValue(Action, "value3", "this is value3")
-	value4 = NewStringValue(Property, "value4", "this is value4")
+	value1 = NewStringValue("value1", "this is value1")
+	value2 = NewStringValue("value2", "this is value2")
+	value3 = NewStringValue("value3", "this is value3")
+	value4 = NewStringValue("value4", "this is value4")
 )
 
 func prefixASelector(key string) bool {

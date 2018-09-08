@@ -21,15 +21,13 @@ import (
 
 // StringValue is used in the UTs.
 type StringValue struct {
-	valueType ValueType
 	label     string
 	str       string
 }
 
 // NewStringValue creates a new instance of StringValue.
-func NewStringValue(valueType ValueType, label, str string) Value {
+func NewStringValue(label, str string) Value {
 	return &StringValue{
-		valueType: valueType,
 		label:     label,
 		str:       str,
 		}
@@ -46,17 +44,12 @@ func (sv *StringValue) Equivalent(v2 Value) bool {
 	if !isStrVal {
 		return false
 	}
-	return sv.valueType == sv2.valueType && sv.label == sv2.label && sv.str == sv2.str
+	return sv.label == sv2.label && sv.str == sv2.str
 }
 
 // Label returns string representation as passed to the NewStringValue constructor.
 func (sv *StringValue) String() string {
 	return sv.str
-}
-
-// Type returns value type as chosen in the NewStringValue constructor.
-func (sv *StringValue) Type() ValueType {
-	return sv.valueType
 }
 
 // StringValueBuilder return ValueBuilder for StringValues.
@@ -67,6 +60,6 @@ func StringValueBuilder(prefix string) func(string, interface{}) (Value, error) 
 		if !ok {
 			return nil, ErrInvalidValueDataType(key)
 		}
-		return NewStringValue(Object, label, str), nil
+		return NewStringValue(label, str), nil
 	}
 }

@@ -212,7 +212,6 @@ type RecordedNode struct {
 	Until            time.Time
 	Key              string
 	ValueLabel       string
-	ValueType        ValueType
 	ValueString      string
 	Flags            map[string]string          // flag name -> flag value
 	MetadataFields   map[string][]string        // field name -> values

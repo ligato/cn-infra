@@ -52,7 +52,7 @@ func TestNotifications(t *testing.T) {
 		},
 		NBKeyPrefixes:    []string{prefixA},
 		ValueBuilder:     test.ArrayValueBuilder(prefixA),
-		DerValuesBuilder: test.ArrayValueDerBuilder(Property),
+		DerValuesBuilder: test.ArrayValueDerBuilder(),
 		WithMetadata:     true,
 		DumpIsSupported:  false,
 	}, mockSB, 0)
@@ -77,7 +77,7 @@ func TestNotifications(t *testing.T) {
 			}
 			return nil
 		},
-		DerValuesBuilder: test.ArrayValueDerBuilder(Object),
+		DerValuesBuilder: test.ArrayValueDerBuilder(),
 		WithMetadata:     true,
 		DumpIsSupported:  true,
 		DumpDependencies: []string{descriptor1Name},
@@ -121,7 +121,7 @@ func TestNotifications(t *testing.T) {
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
 			Key: prefixB + baseValue2,
-			Value: test.NewArrayValue(Object, baseValue2, "item1", "item2"),
+			Value: test.NewArrayValue(baseValue2, "item1", "item2"),
 			Metadata: nil,
 			Origin: FromNB,
 		},
@@ -139,7 +139,7 @@ func TestNotifications(t *testing.T) {
 	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
 	Expect(txn.isResync).To(BeTrue())
 	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixB + baseValue2, value: &recordedValue{valueType: Object, label: baseValue2, string: "[item1,item2]"}, origin: FromNB},
+		{key: prefixB + baseValue2, value: &recordedValue{label: baseValue2, string: "[item1,item2]"}, origin: FromNB},
 	})
 	Expect(txn.preErrors).To(BeEmpty())
 
@@ -147,7 +147,7 @@ func TestNotifications(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixB + baseValue2,
-			newValue:   &recordedValue{valueType: Object, label: baseValue2, string: "[item1,item2]"},
+			newValue:   &recordedValue{label: baseValue2, string: "[item1,item2]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isPending:  true,
@@ -181,8 +181,8 @@ func TestNotifications(t *testing.T) {
 
 	// send notification
 	startTime = time.Now()
-	mockSB.SetValue(prefixA + baseValue1, test.NewArrayValue(Object, baseValue1, "item1"), &test.OnlyInteger{Integer:10}, FromSB, false)
-	notifError := scheduler.PushSBNotification(prefixA + baseValue1, test.NewArrayValue(Object, baseValue1, "item1"),
+	mockSB.SetValue(prefixA + baseValue1, test.NewArrayValue(baseValue1, "item1"), &test.OnlyInteger{Integer:10}, FromSB, false)
+	notifError := scheduler.PushSBNotification(prefixA + baseValue1, test.NewArrayValue(baseValue1, "item1"),
 		&test.OnlyInteger{Integer:10})
 	Expect(notifError).ShouldNot(HaveOccurred())
 
@@ -197,21 +197,21 @@ func TestNotifications(t *testing.T) {
 	// -> base value 1
 	value := mockSB.GetValue(prefixA + baseValue1)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(Object, baseValue1, "item1"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue1, "item1"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(10))
 	Expect(value.Origin).To(BeEquivalentTo(FromSB))
 	// -> base value 2
 	value = mockSB.GetValue(prefixB + baseValue2)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(Object, baseValue2, "item1", "item2"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue2, "item1", "item2"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(0))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item1 derived from base value 2
 	value = mockSB.GetValue(prefixB + baseValue2 + "/item1")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue(Object, "item1", "item1"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewStringValue("item1", "item1"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item2 derived from base value 2 is pending
@@ -252,7 +252,7 @@ func TestNotifications(t *testing.T) {
 	Expect(txn.txnType).To(BeEquivalentTo(sbNotification))
 	Expect(txn.isResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixA + baseValue1, value: &recordedValue{valueType: Object, label: baseValue1, string: "[item1]"}, origin: FromSB},
+		{key: prefixA + baseValue1, value: &recordedValue{label: baseValue1, string: "[item1]"}, origin: FromSB},
 	})
 	Expect(txn.preErrors).To(BeEmpty())
 
@@ -260,15 +260,15 @@ func TestNotifications(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixA + baseValue1,
-			newValue:   &recordedValue{valueType: Object, label: baseValue1, string: "[item1]"},
+			newValue:   &recordedValue{label: baseValue1, string: "[item1]"},
 			prevOrigin: FromSB,
 			newOrigin:  FromSB,
 		},
 		{
 			operation:  add,
 			key:        prefixB + baseValue2,
-			prevValue:  &recordedValue{valueType: Object, label: baseValue2, string: "[item1,item2]"},
-			newValue:   &recordedValue{valueType: Object, label: baseValue2, string: "[item1,item2]"},
+			prevValue:  &recordedValue{label: baseValue2, string: "[item1,item2]"},
+			newValue:   &recordedValue{label: baseValue2, string: "[item1,item2]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,
@@ -276,14 +276,14 @@ func TestNotifications(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixB + baseValue2 + "/item1",
-			newValue:   &recordedValue{valueType: Object, label: "item1", string: "item1"},
+			newValue:   &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixB + baseValue2 + "/item2",
-			newValue:   &recordedValue{valueType: Object, label: "item2", string: "item2"},
+			newValue:   &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isPending:  true,
@@ -291,7 +291,7 @@ func TestNotifications(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixA + baseValue1 + "/item1",
-			newValue:   &recordedValue{valueType: Property, label: "item1", string: "item1"},
+			newValue:   &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromSB,
 			newOrigin:  FromSB,
 		},
@@ -327,8 +327,8 @@ func TestNotifications(t *testing.T) {
 
 	// send 2nd notification
 	startTime = time.Now()
-	mockSB.SetValue(prefixA + baseValue1, test.NewArrayValue(Object, baseValue1, "item1", "item2"), &test.OnlyInteger{Integer:11}, FromSB, false)
-	notifError = scheduler.PushSBNotification(prefixA + baseValue1, test.NewArrayValue(Object, baseValue1, "item1", "item2"),
+	mockSB.SetValue(prefixA + baseValue1, test.NewArrayValue(baseValue1, "item1", "item2"), &test.OnlyInteger{Integer:11}, FromSB, false)
+	notifError = scheduler.PushSBNotification(prefixA + baseValue1, test.NewArrayValue(baseValue1, "item1", "item2"),
 		&test.OnlyInteger{Integer:11})
 	Expect(notifError).ShouldNot(HaveOccurred())
 
@@ -343,27 +343,27 @@ func TestNotifications(t *testing.T) {
 	// -> base value 1
 	value = mockSB.GetValue(prefixA + baseValue1)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(Object, baseValue1, "item1", "item2"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue1, "item1", "item2"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(11))
 	Expect(value.Origin).To(BeEquivalentTo(FromSB))
 	// -> base value 2
 	value = mockSB.GetValue(prefixB + baseValue2)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(Object, baseValue2, "item1", "item2"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue2, "item1", "item2"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(0))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item1 derived from base value 2
 	value = mockSB.GetValue(prefixB + baseValue2 + "/item1")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue(Object, "item1", "item1"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewStringValue("item1", "item1"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item2 derived from base value 2
 	value = mockSB.GetValue(prefixB + baseValue2 + "/item2")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue(Object, "item2", "item2"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewStringValue("item2", "item2"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 
@@ -401,7 +401,7 @@ func TestNotifications(t *testing.T) {
 	Expect(txn.txnType).To(BeEquivalentTo(sbNotification))
 	Expect(txn.isResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixA + baseValue1, value: &recordedValue{valueType: Object, label: baseValue1, string: "[item1,item2]"}, origin: FromSB},
+		{key: prefixA + baseValue1, value: &recordedValue{label: baseValue1, string: "[item1,item2]"}, origin: FromSB},
 	})
 	Expect(txn.preErrors).To(BeEmpty())
 
@@ -409,31 +409,31 @@ func TestNotifications(t *testing.T) {
 		{
 			operation:  modify,
 			key:        prefixA + baseValue1,
-			prevValue:  &recordedValue{valueType: Object, label: baseValue1, string: "[item1]"},
-			newValue:   &recordedValue{valueType: Object, label: baseValue1, string: "[item1,item2]"},
+			prevValue:  &recordedValue{label: baseValue1, string: "[item1]"},
+			newValue:   &recordedValue{label: baseValue1, string: "[item1,item2]"},
 			prevOrigin: FromSB,
 			newOrigin:  FromSB,
 		},
 		{
 			operation:  update,
 			key:        prefixB + baseValue2,
-			prevValue:  &recordedValue{valueType: Object, label: baseValue2, string: "[item1,item2]"},
-			newValue:   &recordedValue{valueType: Object, label: baseValue2, string: "[item1,item2]"},
+			prevValue:  &recordedValue{label: baseValue2, string: "[item1,item2]"},
+			newValue:   &recordedValue{label: baseValue2, string: "[item1,item2]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixA + baseValue1 + "/item2",
-			newValue:   &recordedValue{valueType: Property, label: "item2", string: "item2"},
+			newValue:   &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromSB,
 			newOrigin:  FromSB,
 		},
 		{
 			operation:  add,
 			key:        prefixB + baseValue2 + "/item2",
-			prevValue:  &recordedValue{valueType: Object, label: "item2", string: "item2"},
-			newValue:   &recordedValue{valueType: Object, label: "item2", string: "item2"},
+			prevValue:  &recordedValue{label: "item2", string: "item2"},
+			newValue:   &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,
@@ -527,14 +527,14 @@ func TestNotifications(t *testing.T) {
 		{
 			operation:  del,
 			key:        prefixA + baseValue1 + "/item1",
-			prevValue:  &recordedValue{valueType: Property, label: "item1", string: "item1"},
+			prevValue:  &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromSB,
 			newOrigin:  FromSB,
 		},
 		{
 			operation:  del,
 			key:        prefixB + baseValue2 + "/item2",
-			prevValue:  &recordedValue{valueType: Object, label: "item2", string: "item2"},
+			prevValue:  &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isPending:  true,
@@ -542,21 +542,21 @@ func TestNotifications(t *testing.T) {
 		{
 			operation:  del,
 			key:        prefixA + baseValue1 + "/item2",
-			prevValue:  &recordedValue{valueType: Property, label: "item2", string: "item2"},
+			prevValue:  &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromSB,
 			newOrigin:  FromSB,
 		},
 		{
 			operation:  del,
 			key:        prefixB + baseValue2 + "/item1",
-			prevValue:  &recordedValue{valueType: Object, label: "item1", string: "item1"},
+			prevValue:  &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  del,
 			key:        prefixB + baseValue2 + "/item2",
-			prevValue:  &recordedValue{valueType: Object, label: "item2", string: "item2"},
+			prevValue:  &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,
@@ -564,7 +564,7 @@ func TestNotifications(t *testing.T) {
 		{
 			operation:  del,
 			key:        prefixB + baseValue2,
-			prevValue:  &recordedValue{valueType: Object, label: baseValue2, string: "[item1,item2]"},
+			prevValue:  &recordedValue{label: baseValue2, string: "[item1,item2]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isPending:  true,
@@ -572,7 +572,7 @@ func TestNotifications(t *testing.T) {
 		{
 			operation:  del,
 			key:        prefixA + baseValue1,
-			prevValue:  &recordedValue{valueType: Object, label: baseValue1, string: "[item1,item2]"},
+			prevValue:  &recordedValue{label: baseValue1, string: "[item1,item2]"},
 			prevOrigin: FromSB,
 			newOrigin:  FromSB,
 		},
@@ -603,7 +603,7 @@ func TestNotificationsWithRetry(t *testing.T) {
 		KeySelector:      prefixSelector(prefixA),
 		NBKeyPrefixes:    []string{prefixA},
 		ValueBuilder:     test.ArrayValueBuilder(prefixA),
-		DerValuesBuilder: test.ArrayValueDerBuilder(Action),
+		DerValuesBuilder: test.ArrayValueDerBuilder(),
 		WithMetadata:     true,
 		DumpIsSupported:  false,
 	}, mockSB, 0)
@@ -628,7 +628,7 @@ func TestNotificationsWithRetry(t *testing.T) {
 			}
 			return nil
 		},
-		DerValuesBuilder: test.ArrayValueDerBuilder(Action),
+		DerValuesBuilder: test.ArrayValueDerBuilder(),
 		WithMetadata:     true,
 		DumpIsSupported:  true,
 	}, mockSB, 0)
@@ -654,7 +654,7 @@ func TestNotificationsWithRetry(t *testing.T) {
 	// -> planned errors
 	mockSB.PlanError(prefixB + baseValue2 + "/item2", errors.New("failed to add derived value"),
 		func() {
-			mockSB.SetValue(prefixB + baseValue2, test.NewArrayValue(Object, baseValue2, "item1"),
+			mockSB.SetValue(prefixB + baseValue2, test.NewArrayValue(baseValue2, "item1"),
 				&test.OnlyInteger{Integer:0}, FromNB, false)
 		})
 	for i := 0; i < 3; i++ {
@@ -708,7 +708,7 @@ func TestNotificationsWithRetry(t *testing.T) {
 
 	// send notification
 	startTime := time.Now()
-	notifError := scheduler.PushSBNotification(prefixA + baseValue1, test.NewArrayValue(Object, baseValue1, "item1", "item2"),
+	notifError := scheduler.PushSBNotification(prefixA + baseValue1, test.NewArrayValue(baseValue1, "item1", "item2"),
 		&test.OnlyInteger{Integer:10})
 	Expect(notifError).ShouldNot(HaveOccurred())
 
@@ -742,14 +742,14 @@ func TestNotificationsWithRetry(t *testing.T) {
 	// -> base value 2
 	value := mockSB.GetValue(prefixB + baseValue2)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(Object, baseValue2, "item1"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue2, "item1"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(0))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item1 derived from base value 2
 	value = mockSB.GetValue(prefixB + baseValue2 + "/item1")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue(Action, "item1", "item1"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewStringValue("item1", "item1"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item2 derived from base value 2 failed to get created
@@ -819,7 +819,7 @@ func TestNotificationsWithRetry(t *testing.T) {
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
 			Key: prefixB + baseValue2,
-			Value: test.NewArrayValue(Object, baseValue2, "item1", "item2"),
+			Value: test.NewArrayValue(baseValue2, "item1", "item2"),
 			Metadata: &test.OnlyInteger{Integer:0},
 			Origin: FromNB,
 		},
@@ -841,7 +841,7 @@ func TestNotificationsWithRetry(t *testing.T) {
 	Expect(txn.txnType).To(BeEquivalentTo(sbNotification))
 	Expect(txn.isResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixA + baseValue1, value: &recordedValue{valueType: Object, label: baseValue1, string: "[item1,item2]"}, origin: FromSB},
+		{key: prefixA + baseValue1, value: &recordedValue{label: baseValue1, string: "[item1,item2]"}, origin: FromSB},
 	})
 	Expect(txn.preErrors).To(BeEmpty())
 
@@ -850,15 +850,15 @@ func TestNotificationsWithRetry(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixA + baseValue1,
-			newValue:   &recordedValue{valueType: Object, label: baseValue1, string: "[item1,item2]"},
+			newValue:   &recordedValue{label: baseValue1, string: "[item1,item2]"},
 			prevOrigin: FromSB,
 			newOrigin:  FromSB,
 		},
 		{
 			operation:  add,
 			key:        prefixB + baseValue2,
-			prevValue:  &recordedValue{valueType: Object, label: baseValue2, string: "[item1,item2]"},
-			newValue:   &recordedValue{valueType: Object, label: baseValue2, string: "[item1,item2]"},
+			prevValue:  &recordedValue{label: baseValue2, string: "[item1,item2]"},
+			newValue:   &recordedValue{label: baseValue2, string: "[item1,item2]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,
@@ -866,14 +866,14 @@ func TestNotificationsWithRetry(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixB + baseValue2 + "/item1",
-			newValue:   &recordedValue{valueType: Action, label: "item1", string: "item1"},
+			newValue:   &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixB + baseValue2 + "/item2",
-			newValue:   &recordedValue{valueType: Action, label: "item2", string: "item2"},
+			newValue:   &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isPending:  true,
@@ -881,8 +881,8 @@ func TestNotificationsWithRetry(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixC + baseValue3,
-			prevValue:  &recordedValue{valueType: Object, label: baseValue3, string: "base-value3-data"},
-			newValue:   &recordedValue{valueType: Object, label: baseValue3, string: "base-value3-data"},
+			prevValue:  &recordedValue{label: baseValue3, string: "base-value3-data"},
+			newValue:   &recordedValue{label: baseValue3, string: "base-value3-data"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,
@@ -890,30 +890,30 @@ func TestNotificationsWithRetry(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixA + baseValue1 + "/item1",
-			newValue:   &recordedValue{valueType: Action, label: "item1", string: "item1"},
+			newValue:   &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromSB,
 			newOrigin:  FromSB,
 		},
 		{
 			operation:  update,
 			key:        prefixC + baseValue3,
-			prevValue:  &recordedValue{valueType: Object, label: baseValue3, string: "base-value3-data"},
-			newValue:   &recordedValue{valueType: Object, label: baseValue3, string: "base-value3-data"},
+			prevValue:  &recordedValue{label: baseValue3, string: "base-value3-data"},
+			newValue:   &recordedValue{label: baseValue3, string: "base-value3-data"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixA + baseValue1 + "/item2",
-			newValue:   &recordedValue{valueType: Action, label: "item2", string: "item2"},
+			newValue:   &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromSB,
 			newOrigin:  FromSB,
 		},
 		{
 			operation:  add,
 			key:        prefixB + baseValue2 + "/item2",
-			prevValue:  &recordedValue{valueType: Action, label: "item2", string: "item2"},
-			newValue:   &recordedValue{valueType: Action, label: "item2", string: "item2"},
+			prevValue:  &recordedValue{label: "item2", string: "item2"},
+			newValue:   &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,
@@ -921,8 +921,8 @@ func TestNotificationsWithRetry(t *testing.T) {
 		{
 			operation:  update,
 			key:        prefixC + baseValue3,
-			prevValue:  &recordedValue{valueType: Object, label: baseValue3, string: "base-value3-data"},
-			newValue:   &recordedValue{valueType: Object, label: baseValue3, string: "base-value3-data"},
+			prevValue:  &recordedValue{label: baseValue3, string: "base-value3-data"},
+			newValue:   &recordedValue{label: baseValue3, string: "base-value3-data"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
@@ -934,15 +934,15 @@ func TestNotificationsWithRetry(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixA + baseValue1,
-			newValue:   &recordedValue{valueType: Object, label: baseValue1, string: "[item1,item2]"},
+			newValue:   &recordedValue{label: baseValue1, string: "[item1,item2]"},
 			prevOrigin: FromSB,
 			newOrigin:  FromSB,
 		},
 		{
 			operation:  add,
 			key:        prefixB + baseValue2,
-			prevValue:  &recordedValue{valueType: Object, label: baseValue2, string: "[item1,item2]"},
-			newValue:   &recordedValue{valueType: Object, label: baseValue2, string: "[item1,item2]"},
+			prevValue:  &recordedValue{label: baseValue2, string: "[item1,item2]"},
+			newValue:   &recordedValue{label: baseValue2, string: "[item1,item2]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,
@@ -950,14 +950,14 @@ func TestNotificationsWithRetry(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixB + baseValue2 + "/item1",
-			newValue:   &recordedValue{valueType: Action, label: "item1", string: "item1"},
+			newValue:   &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixB + baseValue2 + "/item2",
-			newValue:   &recordedValue{valueType: Action, label: "item2", string: "item2"},
+			newValue:   &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isPending:  true,
@@ -965,8 +965,8 @@ func TestNotificationsWithRetry(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixC + baseValue3,
-			prevValue:  &recordedValue{valueType: Object, label: baseValue3, string: "base-value3-data"},
-			newValue:   &recordedValue{valueType: Object, label: baseValue3, string: "base-value3-data"},
+			prevValue:  &recordedValue{label: baseValue3, string: "base-value3-data"},
+			newValue:   &recordedValue{label: baseValue3, string: "base-value3-data"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,
@@ -976,15 +976,15 @@ func TestNotificationsWithRetry(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixA + baseValue1 + "/item1",
-			newValue:   &recordedValue{valueType: Action, label: "item1", string: "item1"},
+			newValue:   &recordedValue{label: "item1", string: "item1"},
 			prevOrigin: FromSB,
 			newOrigin:  FromSB,
 		},
 		{
 			operation:  add,
 			key:        prefixC + baseValue3,
-			prevValue:  &recordedValue{valueType: Object, label: baseValue3, string: "base-value3-data"},
-			newValue:   &recordedValue{valueType: Object, label: baseValue3, string: "base-value3-data"},
+			prevValue:  &recordedValue{label: baseValue3, string: "base-value3-data"},
+			newValue:   &recordedValue{label: baseValue3, string: "base-value3-data"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,
@@ -995,15 +995,15 @@ func TestNotificationsWithRetry(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixA + baseValue1 + "/item2",
-			newValue:   &recordedValue{valueType: Action, label: "item2", string: "item2"},
+			newValue:   &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromSB,
 			newOrigin:  FromSB,
 		},
 		{
 			operation:  add,
 			key:        prefixB + baseValue2 + "/item2",
-			prevValue:  &recordedValue{valueType: Action, label: "item2", string: "item2"},
-			newValue:   &recordedValue{valueType: Action, label: "item2", string: "item2"},
+			prevValue:  &recordedValue{label: "item2", string: "item2"},
+			newValue:   &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,
@@ -1013,8 +1013,8 @@ func TestNotificationsWithRetry(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixC + baseValue3,
-			prevValue:  &recordedValue{valueType: Object, label: baseValue3, string: "base-value3-data"},
-			newValue:   &recordedValue{valueType: Object, label: baseValue3, string: "base-value3-data"},
+			prevValue:  &recordedValue{label: baseValue3, string: "base-value3-data"},
+			newValue:   &recordedValue{label: baseValue3, string: "base-value3-data"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,
@@ -1065,7 +1065,7 @@ func TestNotificationsWithRetry(t *testing.T) {
 	// -> item2 derived from base value 2 is now created
 	value = mockSB.GetValue(prefixB + baseValue2 + "/item2")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue(Action, "item2", "item2"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewStringValue("item2", "item2"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	Expect(mockSB.GetValues(nil)).To(HaveLen(3))
@@ -1101,15 +1101,15 @@ func TestNotificationsWithRetry(t *testing.T) {
 	Expect(txn.txnType).To(BeEquivalentTo(retryFailedOps))
 	Expect(txn.isResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixB + baseValue2, value: &recordedValue{valueType: Object, label: baseValue2, string: "[item1,item2]"}, origin: FromNB},
+		{key: prefixB + baseValue2, value: &recordedValue{label: baseValue2, string: "[item1,item2]"}, origin: FromNB},
 	})
 	Expect(txn.preErrors).To(BeEmpty())
 	txnOps = recordedTxnOps{
 		{
 			operation:  modify,
 			key:        prefixB + baseValue2,
-			prevValue:  &recordedValue{valueType: Object, label: baseValue2, string: "[item1]"},
-			newValue:   &recordedValue{valueType: Object, label: baseValue2, string: "[item1,item2]"},
+			prevValue:  &recordedValue{label: baseValue2, string: "[item1]"},
+			newValue:   &recordedValue{label: baseValue2, string: "[item1,item2]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isRetry:    true,
@@ -1117,8 +1117,8 @@ func TestNotificationsWithRetry(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixB + baseValue2 + "/item2",
-			prevValue:  &recordedValue{valueType: Action, label: "item2", string: "item2"},
-			newValue:   &recordedValue{valueType: Action, label: "item2", string: "item2"},
+			prevValue:  &recordedValue{label: "item2", string: "item2"},
+			newValue:   &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,
@@ -1141,7 +1141,7 @@ func TestNotificationsWithRetry(t *testing.T) {
 	// -> base value 3 is now created
 	value = mockSB.GetValue(prefixC + baseValue3)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue(Object, baseValue3, "base-value3-data"))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewStringValue(baseValue3, "base-value3-data"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(0))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
@@ -1172,15 +1172,15 @@ func TestNotificationsWithRetry(t *testing.T) {
 	Expect(txn.txnType).To(BeEquivalentTo(retryFailedOps))
 	Expect(txn.isResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixC + baseValue3, value: &recordedValue{valueType: Object, label: baseValue3, string: "base-value3-data"}, origin: FromNB},
+		{key: prefixC + baseValue3, value: &recordedValue{label: baseValue3, string: "base-value3-data"}, origin: FromNB},
 	})
 	Expect(txn.preErrors).To(BeEmpty())
 	txnOps = recordedTxnOps{
 		{
 			operation:  add,
 			key:        prefixC + baseValue3,
-			prevValue:  &recordedValue{valueType: Object, label: baseValue3, string: "base-value3-data"},
-			newValue:   &recordedValue{valueType: Object, label: baseValue3, string: "base-value3-data"},
+			prevValue:  &recordedValue{label: baseValue3, string: "base-value3-data"},
+			newValue:   &recordedValue{label: baseValue3, string: "base-value3-data"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,

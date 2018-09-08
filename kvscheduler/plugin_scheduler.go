@@ -126,7 +126,7 @@ func (scheduler *Scheduler) Close() error {
 // RegisterKVDescriptor registers descriptor for a set of selected
 // keys. It should be called in the Init phase of agent plugins.
 // Every key-value pair must have at most one descriptor associated with it
-// (none for values of type Property).
+// (none for derived values expressing properties).
 func (scheduler *Scheduler) RegisterKVDescriptor(descriptor KVDescriptor) {
 	scheduler.registry.RegisterDescriptor(descriptor)
 	scheduler.keyPrefixes = append(scheduler.keyPrefixes, descriptor.NBKeyPrefixes()...)

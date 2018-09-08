@@ -21,17 +21,15 @@ import (
 
 // ArrayValue is used in the UTs.
 type ArrayValue struct {
-	valueType ValueType
 	label     string
 	items     []string
 }
 
 // NewArrayValue creates a new instance of ArrayValue.
-func NewArrayValue(valueType ValueType, label string, items ...string) Value {
+func NewArrayValue(label string, items ...string) Value {
 	return &ArrayValue{
-		valueType: valueType,
-		label:     label,
-		items:     items,
+		label: label,
+		items: items,
 	}
 }
 
@@ -44,9 +42,6 @@ func (av *ArrayValue) Label() string {
 func (av *ArrayValue) Equivalent(v2 Value) bool {
 	av2, isArrayVal := v2.(*ArrayValue)
 	if !isArrayVal {
-		return false
-	}
-	if av.valueType != av2.valueType {
 		return false
 	}
 	if av.label != av2.label {
@@ -76,11 +71,6 @@ func (av *ArrayValue) String() string {
 	return str
 }
 
-// Type returns value type as chosen in the NewArrayValue constructor.
-func (av *ArrayValue) Type() ValueType {
-	return av.valueType
-}
-
 // GetItems returns the array of items the value represents.
 func (av *ArrayValue) GetItems() []string {
 	return av.items
@@ -88,7 +78,7 @@ func (av *ArrayValue) GetItems() []string {
 
 // ArrayValueDerBuilder can be used to generate DerValuesBuilder for MockDescriptorArgs
 // that will derive one StringValue for every item in the array.
-func ArrayValueDerBuilder(derValueType ValueType) func(string, Value) ([]KeyValuePair) {
+func ArrayValueDerBuilder() func(string, Value) ([]KeyValuePair) {
 	return func(key string, value Value) []KeyValuePair{
 		var derivedVals []KeyValuePair
 		arrayVal, isArrayVal := value.(*ArrayValue)
@@ -96,7 +86,7 @@ func ArrayValueDerBuilder(derValueType ValueType) func(string, Value) ([]KeyValu
 			for _, item := range arrayVal.GetItems() {
 				derivedVals = append(derivedVals, KeyValuePair{
 					Key:   key + "/" + item,
-					Value: NewStringValue(derValueType, item, item),
+					Value: NewStringValue(item, item),
 				})
 			}
 		}
@@ -112,6 +102,6 @@ func ArrayValueBuilder(prefix string) func(string, interface{}) (Value, error) {
 		if !ok {
 			return nil, ErrInvalidValueDataType(key)
 		}
-		return NewArrayValue(Object, label, items...), nil
+		return NewArrayValue(label, items...), nil
 	}
 }

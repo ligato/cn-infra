@@ -22,56 +22,6 @@ import (
 // KeySelector is used to filter keys.
 type KeySelector func(key string) bool
 
-// ValueType is one of: Object, Action or Property.
-type ValueType int
-
-const (
-	// Object is something that exists.
-	//
-	// Objects are typically base (non-derived) values, but it is allowed
-	// to derive (sub)object from another object. It is actually allowed
-	// to derive/ any value type from an object.
-	// Without associated descriptor, object cannot be created (build + add)
-	// via NB transaction (considered unimplemented) - it can only be pushed
-	// from SB.
-	// Descriptor is allowed to associate metadata with created non-derived
-	// object values and let the scheduler to maintain and expose the mapping
-	// between value labels and metadata (possibly extended with secondary
-	// indices).
-	Object ValueType = iota
-
-	// Action is something to be executed when dependencies are met and reverted
-	// when it is no longer the case. Actions are often derived from objects.
-	//
-	// Like objects, actions can be base or derived values, but it is not allowed
-	// to further derive more values from actions. Also, actions are not expected
-	// to have metadata associated with them.
-	// Without associated descriptor, there are obviously no actions to execute,
-	// thus un-described action values are never create - they can only be pushed
-	// (as already executed) from SB.
-	Action
-
-	// Property is something an object has and other kv pairs may depend on.
-	//
-	// Property is always derived from object - it cannot be created/pushed as
-	// a base value. Property cannot have descriptor associated with it
-	// (i.e. no methods to execute, no dependencies or further derived values,
-	// no associated metadata).
-	Property
-)
-
-// String converts ValueType to string.
-func (vt ValueType) String() string {
-	switch vt {
-	case Object:
-		return "object"
-	case Action:
-		return "action"
-	default:
-		return "property"
-	}
-}
-
 // Value may represent some object, action or property.
 //
 // Value can be built+added either via northbound transaction (NB-value,
@@ -102,12 +52,9 @@ type Value interface {
 	// which will result in scheduler calling Modify every time the value was
 	// updated/re-synced.
 	Equivalent(v2 Value) bool
-
-	// Type should classify the value.
-	Type() ValueType
 }
 
-// Metadata are extra information carried alongside non-derived Object value
+// Metadata are extra information carried alongside non-derived (base) value
 // that descriptor may use for runtime attributes, secondary lookups, etc. This
 // data are opaque for the scheduler and fully owned by the descriptor.
 // Descriptor is supposed to create/edit (and use) metadata inside the Add,
@@ -149,15 +96,14 @@ type KVWithMetadata struct {
 	Origin   ValueOrigin
 }
 
-// KVScheduler synchronizes data-oriented requests flowing from the northbound
-// (NB) to the southbound (SB), by representing objects, actions over objects
-// and object properties from the SB plane as key-value pairs with dependencies
-// defined between them.
-// The values can be built + added/modified/deleted via transactions issued from
-// the NB interface or spontaneously pushed through notifications from the SB plane.
-// The scheduling is then defined as follows: on any change the scheduler
-// attempts to update every value which has satisfied dependencies but is
-// out-of-sync with NB.
+// KVScheduler synchronizes the *desired* system state described by northbound
+// (NB) components via transactions with the *actual* state of the southbound (SB).
+// The  system state is represented as a set of inter-dependent key-value pairs
+// that can be built, added, modified, deleted from within NB transactions
+// or be notified about via notifications from the SB plane.
+// The scheduling basically implements "state reconciliation" - periodically and
+// on any change the scheduler attempts to update every value which has satisfied
+// dependencies but is out-of-sync with the desired state given by NB.
 //
 // For the scheduler, the key-value pairs are just abstract items that need
 // to be managed in a synchronized fashion according to the described relations.
@@ -191,10 +137,12 @@ type KVWithMetadata struct {
 //            when additional dependencies are met.
 //
 // Every key-value pair must have at most one descriptor associated with it.
-// NB values of type Object or Action without descriptor are considered
-// unimplemented and will never be added or even built (can only be pushed from
-// SB as already created/executed). On the other hand, for values of type Property
-// it is actually required to have no descriptor associated with them.
+// Base NB value without descriptor is considered unimplemented and will never
+// be added or even built (can only be pushed from SB as already created/executed).
+// On the other hand, derived value is allowed to have no descriptor associated
+// with it. Typically, properties of base values are implemented as derived
+// (often empty) values without attached SB operations, used as targets for
+// dependencies.
 //
 // For descriptors the values are mutable objects - Add, Modify, Delete and
 // Update method should reflect the value content without changing it.
@@ -217,9 +165,9 @@ type KVWithMetadata struct {
 // Apart from scheduling and execution, KVScheduler also offers the following
 // features:
 //   - collecting and counting present and past errors individually for every
-//     value
+//     key
 //   - retry for previously failed actions
-//   - transaction revert
+//   - transaction reverting
 //   - exposing history of actions, errors and pending values over the REST
 //     interface
 //   - clearly describing the sequence of actions to be executed and postponed
@@ -232,7 +180,7 @@ type KVScheduler interface {
 	// RegisterKVDescriptor registers descriptor for a set of selected
 	// keys. It should be called in the Init phase of agent plugins.
 	// Every key-value pair must have at most one descriptor associated with it
-	// (none for values of type Property).
+	// (none for derived values expressing properties).
 	RegisterKVDescriptor(descriptor KVDescriptor)
 
 	// GetRegisteredNBKeyPrefixes returns a list of key prefixes from NB with values

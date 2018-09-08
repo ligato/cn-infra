@@ -345,13 +345,6 @@ func (scheduler *Scheduler) validTxnValue(graphR graph.ReadAccess, key string, v
 			}).Warn("Transaction attempting to change a derived value")
 			return false
 		}
-		if value != nil && node.GetValue().Type() != value.Type() {
-			scheduler.Log.WithFields(logging.Fields{
-				"txnSeqNum": txnSeqNum,
-				"key":       key,
-			}).Warn("Transaction attempting to change value type")
-			return false
-		}
 		if origin == FromSB && getNodeOrigin(node) == FromNB {
 			scheduler.Log.WithFields(logging.Fields{
 				"txnSeqNum": txnSeqNum,

@@ -89,10 +89,12 @@ func (vo ValueOrigin) String() string {
 // methods do, it only needs to call the right callbacks at the right time.
 //
 // Every key-value pair must have at most one descriptor associated with it.
-// NB values of type Object or Action without descriptor are considered
-// unimplemented and will never be added or even built (can only be pushed from
-// SB as already created/executed). On the other hand, for values of type Property
-// it is actually required to have no descriptor associated with them.
+// NB base value without descriptor is considered unimplemented and will never
+// be added or even built (can only be pushed from SB as already created/executed).
+// On the other hand, derived value is allowed to have no descriptor associated
+// with it. Typically, properties of base values are implemented as derived
+// (often empty) values without attached SB operations, used as targets for
+// dependencies.
 type KVDescriptor interface {
 	// GetName returns name of the descriptor unique across all registered
 	// descriptors.
@@ -181,7 +183,7 @@ type KVDescriptor interface {
 	// as viewed from the northbound/scheduler point of view:
 	//   -> startup resync: <correlate> = values received from NB to be applied
 	//   -> run-time resync: <correlate> = values applied according to the
-	//      in-memory kv-store
+	//      in-memory kv-store (scheduler's view of SB)
 	// Return ErrDumpNotSupported if dumping is not supported by this descriptor.
 	Dump(correlate []KVWithMetadata) ([]KVWithMetadata, error)
 

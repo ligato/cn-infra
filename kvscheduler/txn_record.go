@@ -92,7 +92,6 @@ type recordedTxnOp struct {
 
 // recordedValue is used to record value.
 type recordedValue struct {
-	valueType ValueType
 	label     string
 	string    string
 }
@@ -121,9 +120,9 @@ func (value *recordedValue) StringWithOpts(verbose bool) string {
 		return "NIL"
 	}
 	if verbose {
-		return fmt.Sprintf("%s [label=%s, type=%s]", value.string, value.label, value.valueType)
+		return fmt.Sprintf("%s [label=%s]", value.string, value.label)
 	}
-	return fmt.Sprintf("%s [type=%s]", value.label, value.valueType)
+	return fmt.Sprintf("%s", value.label)
 }
 
 // String returns a *multi-line* human-readable string representation of recorded transaction.
@@ -287,7 +286,6 @@ func (scheduler *Scheduler) recordValue(value Value) *recordedValue {
 		return nil
 	}
 	return &recordedValue{
-		valueType: value.Type(),
 		label:     value.Label(),
 		string:    value.String(),
 	}

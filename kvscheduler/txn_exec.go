@@ -231,9 +231,9 @@ func (scheduler *Scheduler) applyDelete(node graph.NodeRW, txnOp *recordedTxnOp,
 	executed = append(executed, scheduler.runUpdates(node, args)...)
 
 	// execute delete operation
-	if !args.dryRun && node.GetValue().Type() != Property {
+	descriptor := scheduler.registry.GetDescriptorForKey(node.GetKey())
+	if !args.dryRun && descriptor != nil {
 		var err error
-		descriptor := scheduler.registry.GetDescriptorForKey(node.GetKey())
 		if args.kv.origin != FromSB {
 			err = descriptor.Delete(node.GetKey(), node.GetValue(), node.GetMetadata())
 		}
@@ -271,9 +271,8 @@ func (scheduler *Scheduler) applyAdd(node graph.NodeRW, txnOp *recordedTxnOp, ar
 	node.SetValue(args.kv.value)
 
 	// get descriptor
-	var descriptor KVDescriptor
-	if node.GetValue().Type() != Property {
-		descriptor = scheduler.registry.GetDescriptorForKey(args.kv.key)
+	descriptor := scheduler.registry.GetDescriptorForKey(args.kv.key)
+	if descriptor != nil {
 		node.SetFlags(&DescriptorFlag{descriptor.GetName()})
 	}
 
@@ -282,10 +281,8 @@ func (scheduler *Scheduler) applyAdd(node graph.NodeRW, txnOp *recordedTxnOp, ar
 		derives      []KeyValuePair
 		dependencies []Dependency
 	)
-	if node.GetValue().Type() == Object {
+	if descriptor != nil {
 		derives = descriptor.DerivedValues(node.GetKey(), node.GetValue())
-	}
-	if node.GetValue().Type() != Property {
 		dependencies = descriptor.Dependencies(node.GetKey(), node.GetValue())
 	}
 	node.SetTargets(constructTargets(dependencies, derives))
@@ -298,7 +295,7 @@ func (scheduler *Scheduler) applyAdd(node graph.NodeRW, txnOp *recordedTxnOp, ar
 	}
 
 	// execute add operation
-	if !args.dryRun && node.GetValue().Type() != Property {
+	if !args.dryRun && descriptor != nil {
 		var (
 			err      error
 			metadata interface{}
@@ -368,21 +365,10 @@ func (scheduler *Scheduler) applyModify(node graph.NodeRW, txnOp *recordedTxnOp,
 
 	equivalent := node.GetValue().Equivalent(args.kv.value)
 
-	if node.GetValue().Type() == Property {
-		if !equivalent {
-			// just save the new property
-			node.SetValue(args.kv.value)
-			executed = append(executed, txnOp)
-			// update values that depend on this property
-			executed = append(executed, scheduler.runUpdates(node, args)...)
-		}
-		return executed, nil
-	}
-
 	// re-create the value if required by the descriptor
 	var recreate bool
 	descriptor := scheduler.registry.GetDescriptorForKey(args.kv.key)
-	if args.kv.origin != FromSB {
+	if descriptor != nil && args.kv.origin != FromSB {
 		recreate = descriptor.ModifyHasToRecreate(args.kv.key, node.GetValue(), args.kv.value, node.GetMetadata())
 	}
 	if !equivalent && recreate {
@@ -411,11 +397,14 @@ func (scheduler *Scheduler) applyModify(node graph.NodeRW, txnOp *recordedTxnOp,
 	prevDerived := getDerivedKeys(node)
 
 	// set new targets
-	var derives []KeyValuePair
-	if node.GetValue().Type() == Object {
+	var (
+		derives      []KeyValuePair
+		dependencies []Dependency
+	)
+	if descriptor != nil {
 		derives = descriptor.DerivedValues(node.GetKey(), node.GetValue())
+		dependencies = descriptor.Dependencies(node.GetKey(), node.GetValue())
 	}
-	dependencies := descriptor.Dependencies(node.GetKey(), node.GetValue())
 	node.SetTargets(constructTargets(dependencies, derives))
 
 	// remove obsolete derived values
@@ -449,7 +438,7 @@ func (scheduler *Scheduler) applyModify(node graph.NodeRW, txnOp *recordedTxnOp,
 	}
 
 	// execute modify operation
-	if !args.dryRun && !equivalent {
+	if !args.dryRun && !equivalent && descriptor != nil {
 		var (
 			err         error
 			newMetadata interface{}
@@ -479,7 +468,7 @@ func (scheduler *Scheduler) applyModify(node graph.NodeRW, txnOp *recordedTxnOp,
 	}
 
 	// if new value is equivalent, but the value is in failed state from previous txn => run update
-	if equivalent && wasErr == nil && getNodeError(node) != nil {
+	if equivalent && wasErr == nil && getNodeError(node) != nil && descriptor != nil {
 		txnOp.operation = update
 		err := descriptor.Update(node.GetKey(), node.GetValue(), node.GetMetadata())
 		if err != nil {
@@ -639,29 +628,11 @@ func (scheduler *Scheduler) runUpdates(node graph.Node, args *applyValueArgs) (e
 // validDerivedKV check validity of a derived KV pair.
 func (scheduler *Scheduler) validDerivedKV(graphR graph.ReadAccess, kv kvForTxn, txnSeqNum uint) bool {
 	node := graphR.GetNode(kv.key)
-	descriptor := scheduler.registry.GetDescriptorForKey(kv.key)
 	if kv.value == nil {
 		scheduler.Log.WithFields(logging.Fields{
 			"txnSeqNum": txnSeqNum,
 			"key":       kv.key,
 		}).Warn("Derived nil value")
-		return false
-	}
-	if descriptor == nil && kv.value.Type() != Property {
-		scheduler.Log.WithFields(logging.Fields{
-			"txnSeqNum": txnSeqNum,
-			"key":       kv.key,
-			"value":     kv.value,
-		}).Warn("Skipping unimplemented derived value from transaction")
-		return false
-	}
-	if descriptor != nil && kv.value.Type() == Property {
-		scheduler.Log.WithFields(logging.Fields{
-			"txnSeqNum":  txnSeqNum,
-			"descriptor": descriptor.GetName(),
-			"key":        kv.key,
-			"value":      kv.value,
-		}).Warn("Skipping property value with descriptor")
 		return false
 	}
 	if node != nil {
@@ -671,14 +642,6 @@ func (scheduler *Scheduler) validDerivedKV(graphR graph.ReadAccess, kv kvForTxn,
 				"value":     kv.value,
 				"key":       kv.key,
 			}).Warn("Skipping derived value colliding with a base value")
-			return false
-		}
-		if node.GetValue().Type() != kv.value.Type() {
-			scheduler.Log.WithFields(logging.Fields{
-				"txnSeqNum": txnSeqNum,
-				"value":     kv.value,
-				"key":       kv.key,
-			}).Warn("Transaction attempting to change value type")
 			return false
 		}
 	}

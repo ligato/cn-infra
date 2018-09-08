@@ -74,8 +74,3 @@ func (pv *protoValue) Equivalent(v2 Value) bool {
 func (pv *protoValue) String() string {
 	return pv.protoMessage.String()
 }
-
-// Type returns Object.
-func (pv *protoValue) Type() ValueType {
-	return Object
-}

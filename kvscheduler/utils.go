@@ -162,7 +162,7 @@ func isNodeReady(node graph.Node) bool {
 }
 
 func canNodeHaveMetadata(node graph.Node) bool {
-	return !isNodeDerived(node) && node.GetValue().Type() == Object
+	return !isNodeDerived(node)
 }
 
 func getNodeBase(node graph.Node) graph.Node {

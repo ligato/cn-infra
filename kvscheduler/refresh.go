@@ -135,7 +135,7 @@ func (scheduler *Scheduler) refreshGraph(graphW graph.RWAccess, keys keySet, res
 			// refresh node that represents this kv-pair
 			node := graphW.SetNode(dumpedKV.Key)
 			node.SetValue(dumpedKV.Value)
-			if withMeta, _ := descriptor.WithMetadata(); node.GetValue().Type() == Object && withMeta {
+			if withMeta, _ := descriptor.WithMetadata(); withMeta {
 				node.SetMetadataMap(descriptor.GetName())
 				node.SetMetadata(dumpedKV.Metadata)
 			}
@@ -150,9 +150,7 @@ func (scheduler *Scheduler) refreshGraph(graphW graph.RWAccess, keys keySet, res
 				if getNodeOrigin(node) == FromNB && getNodeLastChange(node).value != nil {
 					missingNode := graphW.SetNode(node.GetKey())
 					missingNode.SetFlags(&PendingFlag{})
-					if node.GetValue().Type() == Object {
-						missingNode.SetMetadata(nil)
-					}
+					missingNode.SetMetadata(nil)
 				}
 			}
 		}
@@ -228,10 +226,8 @@ func (scheduler *Scheduler) unwindDumpedRelations(graphW graph.RWAccess, root gr
 			// refresh relations with other values
 			var dependencies []Dependency
 			var derives []KeyValuePair
-			if node.GetValue().Type() == Object || node.GetValue().Type() == Action {
+			if descriptor != nil {
 				dependencies = descriptor.Dependencies(node.GetKey(), node.GetValue())
-			}
-			if node.GetValue().Type() == Object {
 				derives = descriptor.DerivedValues(node.GetKey(), node.GetValue())
 			}
 			node.SetTargets(constructTargets(dependencies, derives))
@@ -278,14 +274,6 @@ func (scheduler *Scheduler) validDumpedKV(kv KVWithMetadata, descriptor KVDescri
 		}).Warn("Descriptor dumped value outside of its key space")
 		return false
 	}
-	if kv.Value.Type() == Property {
-		scheduler.Log.WithFields(logging.Fields{
-			"descriptor": descriptor.GetName(),
-			"key":        kv.Key,
-			"value":      kv.Value.Label(),
-		}).Warn("Descriptor dumped property value")
-		return false
-	}
 	return true
 }
 
@@ -296,21 +284,6 @@ func (scheduler *Scheduler) validDumpedDerivedKV(node graph.Node, descriptor KVD
 			"descriptor": descriptor.GetName(),
 			"key":        node.GetKey(),
 		}).Warn("Derived nil value")
-		return false
-	}
-	if descriptor == nil && node.GetValue().Type() != Property {
-		scheduler.Log.WithFields(logging.Fields{
-			"key":   node.GetKey(),
-			"value": node.GetValue(),
-		}).Warn("Skipping unimplemented derived value from dump")
-		return false
-	}
-	if descriptor != nil && node.GetValue().Type() == Property {
-		scheduler.Log.WithFields(logging.Fields{
-			"descriptor": descriptor.GetName(),
-			"key":        node.GetKey(),
-			"value":      node.GetValue(),
-		}).Warn("Skipping property value with descriptor")
 		return false
 	}
 	if _, alreadyDumped := refreshed[node.GetKey()]; alreadyDumped {
