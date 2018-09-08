@@ -17,13 +17,13 @@ package kvscheduler
 import (
 	"context"
 	"errors"
+	. "github.com/onsi/gomega"
+	"strings"
 	"testing"
 	"time"
-	"strings"
-	. "github.com/onsi/gomega"
 
-	"github.com/ligato/cn-infra/kvscheduler/test"
 	. "github.com/ligato/cn-infra/kvscheduler/api"
+	"github.com/ligato/cn-infra/kvscheduler/test"
 )
 
 func TestDataChangeTransactions(t *testing.T) {
@@ -32,7 +32,7 @@ func TestDataChangeTransactions(t *testing.T) {
 	// prepare KV Scheduler
 	scheduler := NewPlugin(UseDeps(func(deps *Deps) {
 		deps.HTTPHandlers = nil
-		}))
+	}))
 	err := scheduler.Init()
 	Expect(err).To(BeNil())
 
@@ -50,18 +50,18 @@ func TestDataChangeTransactions(t *testing.T) {
 	}, mockSB, 0)
 	// -> descriptor2:
 	descriptor2 := test.NewMockDescriptor(&test.MockDescriptorArgs{
-		Name:            descriptor2Name,
-		KeySelector:     prefixSelector(prefixB),
-		NBKeyPrefixes:   []string{prefixB},
-		ValueBuilder:    test.ArrayValueBuilder(prefixB),
+		Name:          descriptor2Name,
+		KeySelector:   prefixSelector(prefixB),
+		NBKeyPrefixes: []string{prefixB},
+		ValueBuilder:  test.ArrayValueBuilder(prefixB),
 		DependencyBuilder: func(key string, value Value) []Dependency {
-			if key == prefixB + baseValue2 + "/item1" {
+			if key == prefixB+baseValue2+"/item1" {
 				depKey := prefixA + baseValue1
 				return []Dependency{
 					{Label: depKey, Key: depKey},
 				}
 			}
-			if key == prefixB + baseValue2 + "/item2" {
+			if key == prefixB+baseValue2+"/item2" {
 				depKey := prefixA + baseValue1 + "/item1"
 				return []Dependency{
 					{Label: depKey, Key: depKey},
@@ -76,10 +76,10 @@ func TestDataChangeTransactions(t *testing.T) {
 	}, mockSB, 0)
 	// -> descriptor3:
 	descriptor3 := test.NewMockDescriptor(&test.MockDescriptorArgs{
-		Name:            descriptor3Name,
-		KeySelector:     prefixSelector(prefixC),
-		NBKeyPrefixes:   []string{prefixC},
-		ValueBuilder:    func(key string, valueData interface{}) (value Value, err error) {
+		Name:          descriptor3Name,
+		KeySelector:   prefixSelector(prefixC),
+		NBKeyPrefixes: []string{prefixC},
+		ValueBuilder: func(key string, valueData interface{}) (value Value, err error) {
 			label := strings.TrimPrefix(key, prefixC)
 			items, ok := valueData.([]string)
 			if !ok {
@@ -89,7 +89,7 @@ func TestDataChangeTransactions(t *testing.T) {
 		},
 		DerValuesBuilder: test.ArrayValueDerBuilder(),
 		RecreateChecker: func(key string, oldValue, newValue Value, metadata Metadata) bool {
-			if key == prefixC + baseValue3 {
+			if key == prefixC+baseValue3 {
 				return true
 			}
 			return false
@@ -118,9 +118,9 @@ func TestDataChangeTransactions(t *testing.T) {
 	// run non-resync transaction against empty SB
 	startTime := time.Now()
 	schedulerTxn := scheduler.StartNBTransaction()
-	schedulerTxn.SetValueData(prefixB + baseValue2, []string{"item1", "item2"})
-	schedulerTxn.SetValueData(prefixA + baseValue1, []string{"item2"})
-	schedulerTxn.SetValueData(prefixC + baseValue3, []string{"item1", "item2"})
+	schedulerTxn.SetValueData(prefixB+baseValue2, []string{"item1", "item2"})
+	schedulerTxn.SetValueData(prefixA+baseValue1, []string{"item2"})
+	schedulerTxn.SetValueData(prefixC+baseValue3, []string{"item1", "item2"})
 	kvErrors, txnError := schedulerTxn.Commit(context.Background())
 	stopTime := time.Now()
 	Expect(txnError).ShouldNot(HaveOccurred())
@@ -346,8 +346,8 @@ func TestDataChangeTransactions(t *testing.T) {
 	// run 2nd non-resync transaction against empty SB
 	startTime = time.Now()
 	schedulerTxn2 := scheduler.StartNBTransaction()
-	schedulerTxn2.SetValueData(prefixC + baseValue3, []string{"item1"})
-	schedulerTxn2.SetValueData(prefixA + baseValue1, []string{"item1"})
+	schedulerTxn2.SetValueData(prefixC+baseValue3, []string{"item1"})
+	schedulerTxn2.SetValueData(prefixA+baseValue1, []string{"item1"})
 	kvErrors, txnError = schedulerTxn2.Commit(context.Background())
 	stopTime = time.Now()
 	Expect(txnError).ShouldNot(HaveOccurred())
@@ -510,7 +510,7 @@ func TestDataChangeTransactions(t *testing.T) {
 		{
 			operation:  del,
 			key:        prefixC + baseValue3,
-			prevValue:	&recordedValue{label: baseValue3, string: "[item1,item2]"},
+			prevValue:  &recordedValue{label: baseValue3, string: "[item1,item2]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isPending:  true,
@@ -628,18 +628,18 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 	}, mockSB, 0)
 	// -> descriptor2:
 	descriptor2 := test.NewMockDescriptor(&test.MockDescriptorArgs{
-		Name:            descriptor2Name,
-		KeySelector:     prefixSelector(prefixB),
-		NBKeyPrefixes:   []string{prefixB},
-		ValueBuilder:    test.ArrayValueBuilder(prefixB),
+		Name:          descriptor2Name,
+		KeySelector:   prefixSelector(prefixB),
+		NBKeyPrefixes: []string{prefixB},
+		ValueBuilder:  test.ArrayValueBuilder(prefixB),
 		DependencyBuilder: func(key string, value Value) []Dependency {
-			if key == prefixB + baseValue2 + "/item1" {
+			if key == prefixB+baseValue2+"/item1" {
 				depKey := prefixA + baseValue1
 				return []Dependency{
 					{Label: depKey, Key: depKey},
 				}
 			}
-			if key == prefixB + baseValue2 + "/item2" {
+			if key == prefixB+baseValue2+"/item2" {
 				depKey := prefixA + baseValue1 + "/item1"
 				return []Dependency{
 					{Label: depKey, Key: depKey},
@@ -654,13 +654,13 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 	}, mockSB, 0)
 	// -> descriptor3:
 	descriptor3 := test.NewMockDescriptor(&test.MockDescriptorArgs{
-		Name:            descriptor3Name,
-		KeySelector:     prefixSelector(prefixC),
-		NBKeyPrefixes:   []string{prefixC},
-		ValueBuilder:    test.ArrayValueBuilder(prefixC),
+		Name:             descriptor3Name,
+		KeySelector:      prefixSelector(prefixC),
+		NBKeyPrefixes:    []string{prefixC},
+		ValueBuilder:     test.ArrayValueBuilder(prefixC),
 		DerValuesBuilder: test.ArrayValueDerBuilder(),
 		RecreateChecker: func(key string, oldValue, newValue Value, metadata Metadata) bool {
-			if key == prefixC + baseValue3 {
+			if key == prefixC+baseValue3 {
 				return true
 			}
 			return false
@@ -688,9 +688,9 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 
 	// run 1st non-resync transaction against empty SB
 	schedulerTxn := scheduler.StartNBTransaction()
-	schedulerTxn.SetValueData(prefixB + baseValue2, []string{"item1", "item2"})
-	schedulerTxn.SetValueData(prefixA + baseValue1, []string{"item2"})
-	schedulerTxn.SetValueData(prefixC + baseValue3, []string{"item1", "item2"})
+	schedulerTxn.SetValueData(prefixB+baseValue2, []string{"item1", "item2"})
+	schedulerTxn.SetValueData(prefixA+baseValue1, []string{"item2"})
+	schedulerTxn.SetValueData(prefixC+baseValue3, []string{"item1", "item2"})
 	kvErrors, txnError := schedulerTxn.Commit(context.Background())
 	Expect(txnError).ShouldNot(HaveOccurred())
 	Expect(kvErrors).To(BeEmpty())
@@ -698,11 +698,11 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 
 	// plan error before 2nd txn
 	failedModifyClb := func() {
-		mockSB.SetValue(prefixA + baseValue1, test.NewArrayValue(baseValue1),
-			&test.OnlyInteger{Integer:0}, FromNB, false)
+		mockSB.SetValue(prefixA+baseValue1, test.NewArrayValue(baseValue1),
+			&test.OnlyInteger{Integer: 0}, FromNB, false)
 	}
-	mockSB.PlanError(prefixA + baseValue1, errors.New("failed to modify value"), failedModifyClb)
-	mockSB.PlanError(prefixA + baseValue1, errors.New("failed to modify value, again"), failedModifyClb) // the error will repeat one more time
+	mockSB.PlanError(prefixA+baseValue1, errors.New("failed to modify value"), failedModifyClb)
+	mockSB.PlanError(prefixA+baseValue1, errors.New("failed to modify value, again"), failedModifyClb) // the error will repeat one more time
 
 	// subscribe to receive notifications about errors
 	errorChan := make(chan KeyWithError, 5)
@@ -710,9 +710,9 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 
 	// run 2nd non-resync transaction against empty SB that will fail and will be reverted
 	startTime := time.Now()
-	schedulerTxn2 := scheduler.StartNBTransaction(WithRevert(), WithRetry(3 * time.Second, true))
-	schedulerTxn2.SetValueData(prefixC + baseValue3, []string{"item1"})
-	schedulerTxn2.SetValueData(prefixA + baseValue1, []string{"item1"})
+	schedulerTxn2 := scheduler.StartNBTransaction(WithRevert(), WithRetry(3*time.Second, true))
+	schedulerTxn2.SetValueData(prefixC+baseValue3, []string{"item1"})
+	schedulerTxn2.SetValueData(prefixA+baseValue1, []string{"item1"})
 	kvErrors, txnError = schedulerTxn2.Commit(context.Background())
 	stopTime := time.Now()
 	Expect(txnError).ShouldNot(HaveOccurred())
@@ -859,10 +859,10 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
-			Key: prefixA + baseValue1,
-			Value: test.NewArrayValue(baseValue1, "item1"),
-			Metadata: &test.OnlyInteger{Integer:0},
-			Origin: FromNB,
+			Key:      prefixA + baseValue1,
+			Value:    test.NewArrayValue(baseValue1, "item1"),
+			Metadata: &test.OnlyInteger{Integer: 0},
+			Origin:   FromNB,
 		},
 	})
 
@@ -902,7 +902,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		{
 			operation:  del,
 			key:        prefixC + baseValue3,
-			prevValue:	&recordedValue{label: baseValue3, string: "[item1,item2]"},
+			prevValue:  &recordedValue{label: baseValue3, string: "[item1,item2]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isPending:  true,
@@ -983,7 +983,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		{
 			operation:  del,
 			key:        prefixC + baseValue3,
-			prevValue:	&recordedValue{label: baseValue3, string: "[item1,item2]"},
+			prevValue:  &recordedValue{label: baseValue3, string: "[item1,item2]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isPending:  true,
@@ -1031,7 +1031,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		{
 			operation:  del,
 			key:        prefixC + baseValue3,
-			prevValue:	&recordedValue{label: baseValue3, string: "[item1]"},
+			prevValue:  &recordedValue{label: baseValue3, string: "[item1]"},
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isPending:  true,
@@ -1111,10 +1111,10 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
-			Key: prefixA + baseValue1,
-			Value: test.NewArrayValue(baseValue1, "item2"),
-			Metadata: &test.OnlyInteger{Integer:0},
-			Origin: FromNB,
+			Key:      prefixA + baseValue1,
+			Value:    test.NewArrayValue(baseValue1, "item2"),
+			Metadata: &test.OnlyInteger{Integer: 0},
+			Origin:   FromNB,
 		},
 	})
 
@@ -1264,4 +1264,3 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 	err = scheduler.Close()
 	Expect(err).To(BeNil())
 }
-

@@ -15,21 +15,21 @@
 package test
 
 import (
-	. "github.com/ligato/cn-infra/kvscheduler/api"
 	"github.com/ligato/cn-infra/idxmap"
+	. "github.com/ligato/cn-infra/kvscheduler/api"
 )
 
 // ValueBuilder is type of the callback used to build values.
-type ValueBuilder      func(key string, valueData interface{}) (value Value, err error)
+type ValueBuilder func(key string, valueData interface{}) (value Value, err error)
 
 // DependencyBuilder is type of the callback used to build dependencies.
 type DependencyBuilder func(key string, value Value) []Dependency
 
 // DerValuesBuilder is type of the callback used to build derived values.
-type DerValuesBuilder  func(key string, value Value) []KeyValuePair
+type DerValuesBuilder func(key string, value Value) []KeyValuePair
 
 // RecreateChecker is type of the callback used to tell if a value needs to be re-created.
-type RecreateChecker   func(key string, oldValue, newValue Value, metadata Metadata) bool
+type RecreateChecker func(key string, oldValue, newValue Value, metadata Metadata) bool
 
 // MockDescriptorArgs encapsulates arguments for the descriptor.
 type MockDescriptorArgs struct {
@@ -47,9 +47,9 @@ type MockDescriptorArgs struct {
 
 // mockDescriptor implements KVDescriptor for UTs.
 type mockDescriptor struct {
-	nextIndex        int
-	args             *MockDescriptorArgs
-	sb               *MockSouthbound
+	nextIndex int
+	args      *MockDescriptorArgs
+	sb        *MockSouthbound
 }
 
 // NewMockDescriptor creates a new instance of Mock Descriptor.
@@ -58,7 +58,7 @@ func NewMockDescriptor(args *MockDescriptorArgs, sb *MockSouthbound, firstFreeIn
 		nextIndex: firstFreeIndex,
 		args:      args,
 		sb:        sb,
-		}
+	}
 }
 
 // validateKey tests predicate for a key that should hold.
@@ -87,7 +87,7 @@ func (md *mockDescriptor) NBKeyPrefixes() []string {
 // by the input arguments.
 func (md *mockDescriptor) WithMetadata() (withMeta bool, customMapFactory MetadataMapFactory) {
 	if md.sb != nil && md.args.WithMetadata {
-		return true, func() idxmap.NamedMappingRW {return NewNameToInteger(md.args.Name)}
+		return true, func() idxmap.NamedMappingRW { return NewNameToInteger(md.args.Name) }
 	}
 	return false, nil
 }

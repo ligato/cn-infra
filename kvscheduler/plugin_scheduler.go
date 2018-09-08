@@ -22,11 +22,11 @@ import (
 
 	"github.com/ligato/cn-infra/idxmap"
 	"github.com/ligato/cn-infra/idxmap/mem"
+	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/kvscheduler/graph"
 	"github.com/ligato/cn-infra/kvscheduler/registry"
-	"github.com/ligato/cn-infra/infra"
-	"github.com/ligato/cn-infra/rpc/rest"
 	"github.com/ligato/cn-infra/logging"
+	"github.com/ligato/cn-infra/rpc/rest"
 )
 
 const (
@@ -66,8 +66,8 @@ type Scheduler struct {
 	resyncCount  uint
 
 	// TXN history
-	historyLock  sync.Mutex
-	txnHistory   []*recordedTxn // ordered from the oldest to the latest
+	historyLock sync.Mutex
+	txnHistory  []*recordedTxn // ordered from the oldest to the latest
 }
 
 // Deps lists dependencies of the scheduler.

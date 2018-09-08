@@ -17,9 +17,9 @@ package graph
 import (
 	"time"
 
+	"fmt"
 	"github.com/ligato/cn-infra/idxmap"
 	. "github.com/ligato/cn-infra/kvscheduler/api"
-	"fmt"
 	"sort"
 )
 
@@ -150,7 +150,7 @@ func (graph *graphR) Dump() string {
 	for key := range graph.nodes {
 		keys = append(keys, key)
 	}
-	sort.Slice(keys, func(i,j int) bool {
+	sort.Slice(keys, func(i, j int) bool {
 		return keys[i] < keys[j]
 	})
 

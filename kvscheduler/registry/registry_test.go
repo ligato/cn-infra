@@ -15,10 +15,10 @@
 package registry
 
 import (
-	"strings"
 	"fmt"
-	"testing"
 	. "github.com/onsi/gomega"
+	"strings"
+	"testing"
 
 	. "github.com/ligato/cn-infra/kvscheduler/test"
 )
@@ -33,7 +33,7 @@ const (
 	prefixB = "/prefixB/"
 	prefixC = "/prefixC/"
 
-	randomKey = "randomKey"
+	randomKey    = "randomKey"
 	randomSuffix = "randomSuffix"
 )
 
@@ -54,34 +54,33 @@ func prefixSelector(prefix string) func(key string) bool {
 	}
 }
 
-
 func TestRegistry(t *testing.T) {
 	RegisterTestingT(t)
 
 	descriptor1 := NewMockDescriptor(
 		&MockDescriptorArgs{
-			Name: descriptor1Name,
+			Name:        descriptor1Name,
 			KeySelector: prefixSelector(prefixA),
-			}, nil, 0)
+		}, nil, 0)
 
 	descriptor2 := NewMockDescriptor(
 		&MockDescriptorArgs{
-			Name: descriptor2Name,
-			KeySelector: prefixSelector(prefixB),
+			Name:             descriptor2Name,
+			KeySelector:      prefixSelector(prefixB),
 			DumpDependencies: []string{descriptor1Name},
 		}, nil, 0)
 
 	descriptor3 := NewMockDescriptor(
 		&MockDescriptorArgs{
-			Name: descriptor3Name,
-			KeySelector: prefixSelector(prefixC),
+			Name:             descriptor3Name,
+			KeySelector:      prefixSelector(prefixC),
 			DumpDependencies: []string{descriptor2Name},
 		}, nil, 0)
 
 	descriptor4 := NewMockDescriptor(
 		&MockDescriptorArgs{
-			Name: descriptor4Name,
-			KeySelector: keySelector(randomKey),
+			Name:             descriptor4Name,
+			KeySelector:      keySelector(randomKey),
 			DumpDependencies: []string{descriptor3Name},
 		}, nil, 0)
 
@@ -152,7 +151,7 @@ func TestRegistry(t *testing.T) {
 
 	// fill up the cache
 	for i := 0; i < maxKeyCacheSize; i++ {
-		if i % 2 == 0 {
+		if i%2 == 0 {
 			descriptor = registry.GetDescriptorForKey(fmt.Sprintf("%s%d", prefixA, i))
 			Expect(descriptor).ToNot(BeNil())
 			Expect(descriptor.GetName()).To(BeEquivalentTo(descriptor1Name))

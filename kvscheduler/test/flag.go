@@ -33,6 +33,7 @@ func (flag *TestingFlag) GetValue() string {
 
 // Color is a property to be assigned to nodes for testing purposes.
 type Color int
+
 const (
 	// Red color.
 	Red Color = iota
@@ -99,8 +100,8 @@ func AbstractFlag() *AbstractFlagImpl {
 		TestingFlag: TestingFlag{
 			Name: AbstractFlagName,
 			// empty value -> it is a boolean flag
-			},
-		}
+		},
+	}
 }
 
 // TemporaryFlagName is the name of the temporary flag.
@@ -120,6 +121,3 @@ func TemporaryFlag() *TemporaryFlagImpl {
 		},
 	}
 }
-
-
-

@@ -92,8 +92,8 @@ type recordedTxnOp struct {
 
 // recordedValue is used to record value.
 type recordedValue struct {
-	label     string
-	string    string
+	label  string
+	string string
 }
 
 // recordedKVPair is used to record key-value pair.
@@ -286,8 +286,8 @@ func (scheduler *Scheduler) recordValue(value Value) *recordedValue {
 		return nil
 	}
 	return &recordedValue{
-		label:     value.Label(),
-		string:    value.String(),
+		label:  value.Label(),
+		string: value.String(),
 	}
 }
 
@@ -370,7 +370,7 @@ func (scheduler *Scheduler) getTransactionHistory(since, until time.Time) (histo
 		}
 	}
 
-	return scheduler.txnHistory[lastBefore+1:firstAfter]
+	return scheduler.txnHistory[lastBefore+1 : firstAfter]
 }
 
 func errorToString(err error) string {

@@ -216,7 +216,7 @@ type RecordedNode struct {
 	Flags            map[string]string          // flag name -> flag value
 	MetadataFields   map[string][]string        // field name -> values
 	Targets          map[string]RecordedTargets // relation -> target
-	TargetUpdateOnly bool // true if only runtime Targets have changed since the last rev
+	TargetUpdateOnly bool                       // true if only runtime Targets have changed since the last rev
 }
 
 // KeySet is a set of keys.

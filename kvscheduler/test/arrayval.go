@@ -21,8 +21,8 @@ import (
 
 // ArrayValue is used in the UTs.
 type ArrayValue struct {
-	label     string
-	items     []string
+	label string
+	items []string
 }
 
 // NewArrayValue creates a new instance of ArrayValue.
@@ -78,8 +78,8 @@ func (av *ArrayValue) GetItems() []string {
 
 // ArrayValueDerBuilder can be used to generate DerValuesBuilder for MockDescriptorArgs
 // that will derive one StringValue for every item in the array.
-func ArrayValueDerBuilder() func(string, Value) ([]KeyValuePair) {
-	return func(key string, value Value) []KeyValuePair{
+func ArrayValueDerBuilder() func(string, Value) []KeyValuePair {
+	return func(key string, value Value) []KeyValuePair {
 		var derivedVals []KeyValuePair
 		arrayVal, isArrayVal := value.(*ArrayValue)
 		if isArrayVal {

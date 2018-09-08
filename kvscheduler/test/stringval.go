@@ -21,16 +21,16 @@ import (
 
 // StringValue is used in the UTs.
 type StringValue struct {
-	label     string
-	str       string
+	label string
+	str   string
 }
 
 // NewStringValue creates a new instance of StringValue.
 func NewStringValue(label, str string) Value {
 	return &StringValue{
-		label:     label,
-		str:       str,
-		}
+		label: label,
+		str:   str,
+	}
 }
 
 // Label returns value label as passed to the NewStringValue constructor.

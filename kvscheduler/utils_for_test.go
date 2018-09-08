@@ -15,10 +15,10 @@
 package kvscheduler
 
 import (
-	"strings"
-	. "github.com/onsi/gomega"
 	. "github.com/ligato/cn-infra/kvscheduler/api"
 	"github.com/ligato/cn-infra/kvscheduler/test"
+	. "github.com/onsi/gomega"
+	"strings"
 )
 
 const (

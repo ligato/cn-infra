@@ -126,7 +126,7 @@ func main() {
 
 	// generate adapter source code from the template
 	var buf bytes.Buffer
-	t := template.Must(template.New("").Parse(Template))
+	t := template.Must(template.New("").Parse(adapterTemplate))
 	err := t.Execute(&buf, inputData)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "ERROR: ", err)

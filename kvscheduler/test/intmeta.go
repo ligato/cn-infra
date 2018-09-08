@@ -70,7 +70,7 @@ const (
 func NewNameToInteger(title string) NameToIntegerRW {
 	return &nameToInteger{
 		NamedMappingRW: mem.NewNamedMapping(logging.DefaultLogger, title, internalIndexFunction),
-		}
+	}
 }
 
 // LookupByName retrieves a previously stored metadata identified by <name>.

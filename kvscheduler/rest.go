@@ -15,12 +15,12 @@
 package kvscheduler
 
 import (
+	"errors"
 	"net/http"
 	"time"
-	"errors"
 
-	"github.com/unrolled/render"
 	"github.com/ligato/cn-infra/rpc/rest"
+	"github.com/unrolled/render"
 	"strings"
 )
 

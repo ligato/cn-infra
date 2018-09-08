@@ -27,12 +27,13 @@ type MockSouthbound struct {
 	values         map[string]*KVWithMetadata // key -> value
 	plannedErrors  map[string][]plannedError  // key -> planned error
 	derivedKeys    map[string]struct{}
-	opHistory      []MockOperation            // from the oldest to the latest
+	opHistory      []MockOperation // from the oldest to the latest
 	invalidKeyData map[string]struct{}
 }
 
 // MockOpType is used to remember the type of a simulated operation.
 type MockOpType int
+
 const (
 	// Add new KV.
 	Add MockOpType = iota
@@ -189,7 +190,7 @@ func (ms *MockSouthbound) dump(descriptor string, correlate []KVWithMetadata, se
 		OpType:        Dump,
 		Descriptor:    descriptor,
 		CorrelateDump: correlate,
-		})
+	})
 	return dump, nil
 }
 

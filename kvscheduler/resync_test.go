@@ -17,12 +17,12 @@ package kvscheduler
 import (
 	"context"
 	"errors"
+	. "github.com/onsi/gomega"
 	"testing"
 	"time"
-	. "github.com/onsi/gomega"
 
-	"github.com/ligato/cn-infra/kvscheduler/test"
 	. "github.com/ligato/cn-infra/kvscheduler/api"
+	"github.com/ligato/cn-infra/kvscheduler/test"
 )
 
 func TestEmptyResync(t *testing.T) {
@@ -132,18 +132,18 @@ func TestResyncWithEmptySB(t *testing.T) {
 	// prepare mocks
 	mockSB := test.NewMockSouthbound()
 	descriptor1 := test.NewMockDescriptor(&test.MockDescriptorArgs{
-		Name:            descriptor1Name,
-		KeySelector:     prefixSelector(prefixA),
-		NBKeyPrefixes:   []string{prefixA},
-		ValueBuilder:    test.ArrayValueBuilder(prefixA),
+		Name:          descriptor1Name,
+		KeySelector:   prefixSelector(prefixA),
+		NBKeyPrefixes: []string{prefixA},
+		ValueBuilder:  test.ArrayValueBuilder(prefixA),
 		DependencyBuilder: func(key string, value Value) []Dependency {
-			if key == prefixA + baseValue2 {
+			if key == prefixA+baseValue2 {
 				depKey := prefixA + baseValue1 + "/item1" // base value depends on a derived value
 				return []Dependency{
 					{Label: depKey, Key: depKey},
 				}
 			}
-			if key == prefixA + baseValue1 + "/item2" {
+			if key == prefixA+baseValue1+"/item2" {
 				depKey := prefixA + baseValue2 + "/item1" // derived value depends on another derived value
 				return []Dependency{
 					{Label: depKey, Key: depKey},
@@ -152,8 +152,8 @@ func TestResyncWithEmptySB(t *testing.T) {
 			return nil
 		},
 		DerValuesBuilder: test.ArrayValueDerBuilder(),
-		WithMetadata:    true,
-		DumpIsSupported: true,
+		WithMetadata:     true,
+		DumpIsSupported:  true,
 	}, mockSB, 0)
 
 	// register descriptor with the scheduler
@@ -241,16 +241,16 @@ func TestResyncWithEmptySB(t *testing.T) {
 	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
-			Key: prefixA + baseValue1,
-			Value: test.NewArrayValue(baseValue1, "item1", "item2"),
+			Key:      prefixA + baseValue1,
+			Value:    test.NewArrayValue(baseValue1, "item1", "item2"),
 			Metadata: nil,
-			Origin: FromNB,
+			Origin:   FromNB,
 		},
 		{
-			Key: prefixA + baseValue2,
-			Value: test.NewArrayValue(baseValue2, "item1"),
+			Key:      prefixA + baseValue2,
+			Value:    test.NewArrayValue(baseValue2, "item1"),
 			Metadata: nil,
-			Origin: FromNB,
+			Origin:   FromNB,
 		},
 	})
 	operation = opHistory[1]
@@ -368,16 +368,16 @@ func TestResyncWithEmptySB(t *testing.T) {
 	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
-			Key: prefixA + baseValue1,
-			Value: test.NewArrayValue(baseValue1, "item1", "item2"),
+			Key:      prefixA + baseValue1,
+			Value:    test.NewArrayValue(baseValue1, "item1", "item2"),
 			Metadata: &test.OnlyInteger{Integer: 0},
-			Origin: FromNB,
+			Origin:   FromNB,
 		},
 		{
-			Key: prefixA + baseValue2,
-			Value: test.NewArrayValue(baseValue2, "item1"),
+			Key:      prefixA + baseValue2,
+			Value:    test.NewArrayValue(baseValue2, "item1"),
 			Metadata: &test.OnlyInteger{Integer: 1},
-			Origin: FromNB,
+			Origin:   FromNB,
 		},
 	})
 	operation = opHistory[1]
@@ -521,32 +521,32 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 	// prepare mocks
 	mockSB := test.NewMockSouthbound()
 	// -> initial content:
-	mockSB.SetValue(prefixA + baseValue1, test.NewArrayValue(baseValue1, "item1"),
+	mockSB.SetValue(prefixA+baseValue1, test.NewArrayValue(baseValue1, "item1"),
 		&test.OnlyInteger{Integer: 0}, FromNB, false)
-	mockSB.SetValue(prefixA + baseValue1 + "/item1", test.NewStringValue("item1", "item1"),
+	mockSB.SetValue(prefixA+baseValue1+"/item1", test.NewStringValue("item1", "item1"),
 		nil, FromNB, true)
-	mockSB.SetValue(prefixA + baseValue2, test.NewArrayValue(baseValue2, "item1"),
-		&test.OnlyInteger{Integer:1}, FromNB, false)
-	mockSB.SetValue(prefixA + baseValue2 + "/item1", test.NewStringValue("item1", "item1"),
+	mockSB.SetValue(prefixA+baseValue2, test.NewArrayValue(baseValue2, "item1"),
+		&test.OnlyInteger{Integer: 1}, FromNB, false)
+	mockSB.SetValue(prefixA+baseValue2+"/item1", test.NewStringValue("item1", "item1"),
 		nil, FromNB, true)
-	mockSB.SetValue(prefixA + baseValue3, test.NewArrayValue(baseValue3, "item1"),
-		&test.OnlyInteger{Integer:2}, FromNB, false)
-	mockSB.SetValue(prefixA + baseValue3 + "/item1", test.NewStringValue("item1", "item1"),
+	mockSB.SetValue(prefixA+baseValue3, test.NewArrayValue(baseValue3, "item1"),
+		&test.OnlyInteger{Integer: 2}, FromNB, false)
+	mockSB.SetValue(prefixA+baseValue3+"/item1", test.NewStringValue("item1", "item1"),
 		nil, FromNB, true)
 	// -> descriptor1:
 	descriptor1 := test.NewMockDescriptor(&test.MockDescriptorArgs{
-		Name:            descriptor1Name,
-		KeySelector:     prefixSelector(prefixA),
-		NBKeyPrefixes:   []string{prefixA},
-		ValueBuilder:    test.ArrayValueBuilder(prefixA),
+		Name:          descriptor1Name,
+		KeySelector:   prefixSelector(prefixA),
+		NBKeyPrefixes: []string{prefixA},
+		ValueBuilder:  test.ArrayValueBuilder(prefixA),
 		DependencyBuilder: func(key string, value Value) []Dependency {
-			if key == prefixA + baseValue2 + "/item1" {
+			if key == prefixA+baseValue2+"/item1" {
 				depKey := prefixA + baseValue1
 				return []Dependency{
 					{Label: depKey, Key: depKey},
 				}
 			}
-			if key == prefixA + baseValue2 + "/item2" {
+			if key == prefixA+baseValue2+"/item2" {
 				depKey := prefixA + baseValue1 + "/item1"
 				return []Dependency{
 					{Label: depKey, Key: depKey},
@@ -556,7 +556,7 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 		},
 		DerValuesBuilder: test.ArrayValueDerBuilder(),
 		RecreateChecker: func(key string, oldValue, newValue Value, metadata Metadata) bool {
-			if key == prefixA + baseValue3 {
+			if key == prefixA+baseValue3 {
 				return true
 			}
 			return false
@@ -659,22 +659,22 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
-			Key: prefixA + baseValue1,
-			Value: test.NewArrayValue(baseValue1, "item2"),
+			Key:      prefixA + baseValue1,
+			Value:    test.NewArrayValue(baseValue1, "item2"),
 			Metadata: nil,
-			Origin: FromNB,
+			Origin:   FromNB,
 		},
 		{
-			Key: prefixA + baseValue2,
-			Value: test.NewArrayValue(baseValue2, "item1", "item2"),
+			Key:      prefixA + baseValue2,
+			Value:    test.NewArrayValue(baseValue2, "item1", "item2"),
 			Metadata: nil,
-			Origin: FromNB,
+			Origin:   FromNB,
 		},
 		{
-			Key: prefixA + baseValue3,
-			Value: test.NewArrayValue(baseValue3, "item1", "item2"),
+			Key:      prefixA + baseValue3,
+			Value:    test.NewArrayValue(baseValue3, "item1", "item2"),
 			Metadata: nil,
-			Origin: FromNB,
+			Origin:   FromNB,
 		},
 	})
 	operation = opHistory[1]
@@ -874,16 +874,16 @@ func TestResyncNotRemovingSBValues(t *testing.T) {
 	// prepare mocks
 	mockSB := test.NewMockSouthbound()
 	// -> initial content:
-	mockSB.SetValue(prefixA + baseValue1, test.NewStringValue(baseValue1, baseValue1),
+	mockSB.SetValue(prefixA+baseValue1, test.NewStringValue(baseValue1, baseValue1),
 		nil, FromSB, false)
 	// -> descriptor1:
 	descriptor1 := test.NewMockDescriptor(&test.MockDescriptorArgs{
-		Name:            descriptor1Name,
-		KeySelector:     prefixSelector(prefixA),
-		NBKeyPrefixes:   []string{prefixA},
-		ValueBuilder:    test.ArrayValueBuilder(prefixA),
+		Name:          descriptor1Name,
+		KeySelector:   prefixSelector(prefixA),
+		NBKeyPrefixes: []string{prefixA},
+		ValueBuilder:  test.ArrayValueBuilder(prefixA),
 		DependencyBuilder: func(key string, value Value) []Dependency {
-			if key == prefixA + baseValue2  {
+			if key == prefixA+baseValue2 {
 				depKey := prefixA + baseValue1
 				return []Dependency{
 					{Label: depKey, Key: depKey},
@@ -892,8 +892,8 @@ func TestResyncNotRemovingSBValues(t *testing.T) {
 			return nil
 		},
 		DerValuesBuilder: test.ArrayValueDerBuilder(),
-		WithMetadata:    true,
-		DumpIsSupported: true,
+		WithMetadata:     true,
+		DumpIsSupported:  true,
 	}, mockSB, 0)
 
 	// register descriptor with the scheduler
@@ -952,10 +952,10 @@ func TestResyncNotRemovingSBValues(t *testing.T) {
 	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
-			Key: prefixA + baseValue2,
-			Value: test.NewArrayValue(baseValue2, "item1"),
+			Key:      prefixA + baseValue2,
+			Value:    test.NewArrayValue(baseValue2, "item1"),
 			Metadata: nil,
-			Origin: FromNB,
+			Origin:   FromNB,
 		},
 	})
 	operation = opHistory[1]
@@ -1047,17 +1047,17 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 	// prepare mocks
 	mockSB := test.NewMockSouthbound()
 	// -> initial content:
-	mockSB.SetValue(prefixA + baseValue1, test.NewArrayValue(baseValue1, "item1"),
+	mockSB.SetValue(prefixA+baseValue1, test.NewArrayValue(baseValue1, "item1"),
 		&test.OnlyInteger{Integer: 0}, FromNB, false)
-	mockSB.SetValue(prefixA + baseValue1 + "/item1", test.NewStringValue("item1", "item1"),
+	mockSB.SetValue(prefixA+baseValue1+"/item1", test.NewStringValue("item1", "item1"),
 		nil, FromNB, true)
-	mockSB.SetValue(prefixB + baseValue2, test.NewArrayValue(baseValue2, "item1"),
-		&test.OnlyInteger{Integer:0}, FromNB, false)
-	mockSB.SetValue(prefixB + baseValue2 + "/item1", test.NewStringValue("item1", "item1"),
+	mockSB.SetValue(prefixB+baseValue2, test.NewArrayValue(baseValue2, "item1"),
+		&test.OnlyInteger{Integer: 0}, FromNB, false)
+	mockSB.SetValue(prefixB+baseValue2+"/item1", test.NewStringValue("item1", "item1"),
 		nil, FromNB, true)
-	mockSB.SetValue(prefixC + baseValue3, test.NewArrayValue(baseValue3, "item1"),
-		&test.OnlyInteger{Integer:0}, FromNB, false)
-	mockSB.SetValue(prefixC + baseValue3 + "/item1", test.NewStringValue("item1", "item1"),
+	mockSB.SetValue(prefixC+baseValue3, test.NewArrayValue(baseValue3, "item1"),
+		&test.OnlyInteger{Integer: 0}, FromNB, false)
+	mockSB.SetValue(prefixC+baseValue3+"/item1", test.NewStringValue("item1", "item1"),
 		nil, FromNB, true)
 	// -> descriptor1:
 	descriptor1 := test.NewMockDescriptor(&test.MockDescriptorArgs{
@@ -1071,18 +1071,18 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 	}, mockSB, 1)
 	// -> descriptor2:
 	descriptor2 := test.NewMockDescriptor(&test.MockDescriptorArgs{
-		Name:            descriptor2Name,
-		KeySelector:     prefixSelector(prefixB),
-		NBKeyPrefixes:   []string{prefixB},
-		ValueBuilder:    test.ArrayValueBuilder(prefixB),
+		Name:          descriptor2Name,
+		KeySelector:   prefixSelector(prefixB),
+		NBKeyPrefixes: []string{prefixB},
+		ValueBuilder:  test.ArrayValueBuilder(prefixB),
 		DependencyBuilder: func(key string, value Value) []Dependency {
-			if key == prefixB + baseValue2 + "/item1" {
+			if key == prefixB+baseValue2+"/item1" {
 				depKey := prefixA + baseValue1
 				return []Dependency{
 					{Label: depKey, Key: depKey},
 				}
 			}
-			if key == prefixB + baseValue2 + "/item2" {
+			if key == prefixB+baseValue2+"/item2" {
 				depKey := prefixA + baseValue1 + "/item1"
 				return []Dependency{
 					{Label: depKey, Key: depKey},
@@ -1102,8 +1102,8 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 		NBKeyPrefixes:    []string{prefixC},
 		ValueBuilder:     test.ArrayValueBuilder(prefixC),
 		DerValuesBuilder: test.ArrayValueDerBuilder(),
-		RecreateChecker:  func(key string, oldValue, newValue Value, metadata Metadata) bool {
-			if key == prefixC + baseValue3 {
+		RecreateChecker: func(key string, oldValue, newValue Value, metadata Metadata) bool {
+			if key == prefixC+baseValue3 {
 				return true
 			}
 			return false
@@ -1220,10 +1220,10 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
-			Key: prefixA + baseValue1,
-			Value: test.NewArrayValue(baseValue1, "item2"),
+			Key:      prefixA + baseValue1,
+			Value:    test.NewArrayValue(baseValue1, "item2"),
 			Metadata: nil,
-			Origin: FromNB,
+			Origin:   FromNB,
 		},
 	})
 	operation = opHistory[1]
@@ -1231,10 +1231,10 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor2Name))
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
-			Key: prefixB + baseValue2,
-			Value: test.NewArrayValue(baseValue2, "item1", "item2"),
+			Key:      prefixB + baseValue2,
+			Value:    test.NewArrayValue(baseValue2, "item1", "item2"),
 			Metadata: nil,
-			Origin: FromNB,
+			Origin:   FromNB,
 		},
 	})
 	operation = opHistory[2]
@@ -1242,10 +1242,10 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor3Name))
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
-			Key: prefixC + baseValue3,
-			Value: test.NewArrayValue(baseValue3, "item1", "item2"),
+			Key:      prefixC + baseValue3,
+			Value:    test.NewArrayValue(baseValue3, "item1", "item2"),
 			Metadata: nil,
-			Origin: FromNB,
+			Origin:   FromNB,
 		},
 	})
 	operation = opHistory[3]
@@ -1449,8 +1449,8 @@ func TestResyncWithRetry(t *testing.T) {
 	// prepare mocks
 	mockSB := test.NewMockSouthbound()
 	// -> initial content:
-	mockSB.SetValue(prefixA + baseValue1, test.NewArrayValue(baseValue1),
-		&test.OnlyInteger{Integer:0}, FromNB, false)
+	mockSB.SetValue(prefixA+baseValue1, test.NewArrayValue(baseValue1),
+		&test.OnlyInteger{Integer: 0}, FromNB, false)
 	// -> descriptor1:
 	descriptor1 := test.NewMockDescriptor(&test.MockDescriptorArgs{
 		Name:             descriptor1Name,
@@ -1462,11 +1462,11 @@ func TestResyncWithRetry(t *testing.T) {
 		DumpIsSupported:  true,
 	}, mockSB, 1)
 	// -> planned error
-	mockSB.PlanError(prefixA + baseValue1 + "/item2", errors.New("failed to add value"),
+	mockSB.PlanError(prefixA+baseValue1+"/item2", errors.New("failed to add value"),
 		func() {
-			mockSB.SetValue(prefixA + baseValue1, test.NewArrayValue(baseValue1, "item1"),
-				&test.OnlyInteger{Integer:0}, FromNB, false)
-			})
+			mockSB.SetValue(prefixA+baseValue1, test.NewArrayValue(baseValue1, "item1"),
+				&test.OnlyInteger{Integer: 0}, FromNB, false)
+		})
 
 	// register descriptor with the scheduler
 	scheduler.RegisterKVDescriptor(descriptor1)
@@ -1485,7 +1485,7 @@ func TestResyncWithRetry(t *testing.T) {
 	values := []KeyValueDataPair{
 		{Key: prefixA + baseValue1, ValueData: []string{"item1", "item2"}},
 	}
-	resyncTxn := scheduler.StartNBTransaction(WithRetry(3 * time.Second, false))
+	resyncTxn := scheduler.StartNBTransaction(WithRetry(3*time.Second, false))
 	kvErrors, txnError := resyncTxn.Resync(values).Commit(context.Background())
 	stopTime := time.Now()
 	Expect(txnError).ShouldNot(HaveOccurred())
@@ -1526,10 +1526,10 @@ func TestResyncWithRetry(t *testing.T) {
 	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
-			Key: prefixA + baseValue1,
-			Value: test.NewArrayValue(baseValue1, "item1", "item2"),
+			Key:      prefixA + baseValue1,
+			Value:    test.NewArrayValue(baseValue1, "item1", "item2"),
 			Metadata: nil,
-			Origin: FromNB,
+			Origin:   FromNB,
 		},
 	})
 	operation = opHistory[1]
@@ -1553,10 +1553,10 @@ func TestResyncWithRetry(t *testing.T) {
 	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
-			Key: prefixA + baseValue1,
-			Value: test.NewArrayValue(baseValue1, "item1", "item2"),
-			Metadata: &test.OnlyInteger{Integer:0},
-			Origin: FromNB,
+			Key:      prefixA + baseValue1,
+			Value:    test.NewArrayValue(baseValue1, "item1", "item2"),
+			Metadata: &test.OnlyInteger{Integer: 0},
+			Origin:   FromNB,
 		},
 	})
 
@@ -1751,8 +1751,8 @@ func TestResyncWithRetry(t *testing.T) {
 }
 
 /* when graph dump is needed:
-	graphR := scheduler.graph.Read()
-	graphDump := graphR.Dump()
-	fmt.Print(graphDump)
-	graphR.Release()
- */
+graphR := scheduler.graph.Read()
+graphDump := graphR.Dump()
+fmt.Print(graphDump)
+graphR.Release()
+*/

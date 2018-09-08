@@ -17,12 +17,12 @@ package kvscheduler
 import (
 	"context"
 	"errors"
+	. "github.com/onsi/gomega"
 	"testing"
 	"time"
-	. "github.com/onsi/gomega"
 
-	"github.com/ligato/cn-infra/kvscheduler/test"
 	. "github.com/ligato/cn-infra/kvscheduler/api"
+	"github.com/ligato/cn-infra/kvscheduler/test"
 	"strings"
 )
 
@@ -40,8 +40,8 @@ func TestNotifications(t *testing.T) {
 	mockSB := test.NewMockSouthbound()
 	// -> descriptor1 (notifications):
 	descriptor1 := test.NewMockDescriptor(&test.MockDescriptorArgs{
-		Name:             descriptor1Name,
-		KeySelector:      func(key string) bool {
+		Name: descriptor1Name,
+		KeySelector: func(key string) bool {
 			if !strings.HasPrefix(key, prefixA) {
 				return false
 			}
@@ -58,18 +58,18 @@ func TestNotifications(t *testing.T) {
 	}, mockSB, 0)
 	// -> descriptor2:
 	descriptor2 := test.NewMockDescriptor(&test.MockDescriptorArgs{
-		Name:            descriptor2Name,
-		KeySelector:     prefixSelector(prefixB),
-		NBKeyPrefixes:   []string{prefixB},
-		ValueBuilder:    test.ArrayValueBuilder(prefixB),
+		Name:          descriptor2Name,
+		KeySelector:   prefixSelector(prefixB),
+		NBKeyPrefixes: []string{prefixB},
+		ValueBuilder:  test.ArrayValueBuilder(prefixB),
 		DependencyBuilder: func(key string, value Value) []Dependency {
-			if key == prefixB + baseValue2 {
+			if key == prefixB+baseValue2 {
 				depKey := prefixA + baseValue1
 				return []Dependency{
 					{Label: depKey, Key: depKey},
 				}
 			}
-			if key == prefixB + baseValue2 + "/item2" {
+			if key == prefixB+baseValue2+"/item2" {
 				depKey := prefixA + baseValue1 + "/item2"
 				return []Dependency{
 					{Label: depKey, Key: depKey},
@@ -120,10 +120,10 @@ func TestNotifications(t *testing.T) {
 	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor2Name))
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
-			Key: prefixB + baseValue2,
-			Value: test.NewArrayValue(baseValue2, "item1", "item2"),
+			Key:      prefixB + baseValue2,
+			Value:    test.NewArrayValue(baseValue2, "item1", "item2"),
 			Metadata: nil,
-			Origin: FromNB,
+			Origin:   FromNB,
 		},
 	})
 
@@ -181,15 +181,15 @@ func TestNotifications(t *testing.T) {
 
 	// send notification
 	startTime = time.Now()
-	mockSB.SetValue(prefixA + baseValue1, test.NewArrayValue(baseValue1, "item1"), &test.OnlyInteger{Integer:10}, FromSB, false)
-	notifError := scheduler.PushSBNotification(prefixA + baseValue1, test.NewArrayValue(baseValue1, "item1"),
-		&test.OnlyInteger{Integer:10})
+	mockSB.SetValue(prefixA+baseValue1, test.NewArrayValue(baseValue1, "item1"), &test.OnlyInteger{Integer: 10}, FromSB, false)
+	notifError := scheduler.PushSBNotification(prefixA+baseValue1, test.NewArrayValue(baseValue1, "item1"),
+		&test.OnlyInteger{Integer: 10})
 	Expect(notifError).ShouldNot(HaveOccurred())
 
 	// wait until the notification is processed
 	Eventually(func() []*KVWithMetadata {
 		return mockSB.GetValues(nil)
-	}, 2 * time.Second).Should(HaveLen(3))
+	}, 2*time.Second).Should(HaveLen(3))
 	stopTime = time.Now()
 
 	// check the state of SB
@@ -327,15 +327,15 @@ func TestNotifications(t *testing.T) {
 
 	// send 2nd notification
 	startTime = time.Now()
-	mockSB.SetValue(prefixA + baseValue1, test.NewArrayValue(baseValue1, "item1", "item2"), &test.OnlyInteger{Integer:11}, FromSB, false)
-	notifError = scheduler.PushSBNotification(prefixA + baseValue1, test.NewArrayValue(baseValue1, "item1", "item2"),
-		&test.OnlyInteger{Integer:11})
+	mockSB.SetValue(prefixA+baseValue1, test.NewArrayValue(baseValue1, "item1", "item2"), &test.OnlyInteger{Integer: 11}, FromSB, false)
+	notifError = scheduler.PushSBNotification(prefixA+baseValue1, test.NewArrayValue(baseValue1, "item1", "item2"),
+		&test.OnlyInteger{Integer: 11})
 	Expect(notifError).ShouldNot(HaveOccurred())
 
 	// wait until the notification is processed
 	Eventually(func() []*KVWithMetadata {
 		return mockSB.GetValues(nil)
-	}, 2 * time.Second).Should(HaveLen(4))
+	}, 2*time.Second).Should(HaveLen(4))
 	stopTime = time.Now()
 
 	// check the state of SB
@@ -438,7 +438,6 @@ func TestNotifications(t *testing.T) {
 			newOrigin:  FromNB,
 			wasPending: true,
 		},
-
 	}
 	checkTxnOperations(txn.planned, txnOps)
 	checkTxnOperations(txn.executed, txnOps)
@@ -471,14 +470,14 @@ func TestNotifications(t *testing.T) {
 
 	// send 3rd notification
 	startTime = time.Now()
-	mockSB.SetValue(prefixA + baseValue1, nil, nil, FromSB, false)
-	notifError = scheduler.PushSBNotification(prefixA + baseValue1, nil, nil)
+	mockSB.SetValue(prefixA+baseValue1, nil, nil, FromSB, false)
+	notifError = scheduler.PushSBNotification(prefixA+baseValue1, nil, nil)
 	Expect(notifError).ShouldNot(HaveOccurred())
 
 	// wait until the notification is processed
 	Eventually(func() []*KVWithMetadata {
 		return mockSB.GetValues(nil)
-	}, 2 * time.Second).Should(HaveLen(0))
+	}, 2*time.Second).Should(HaveLen(0))
 	stopTime = time.Now()
 
 	// check the state of SB
@@ -609,18 +608,18 @@ func TestNotificationsWithRetry(t *testing.T) {
 	}, mockSB, 0)
 	// -> descriptor2:
 	descriptor2 := test.NewMockDescriptor(&test.MockDescriptorArgs{
-		Name:            descriptor2Name,
-		KeySelector:     prefixSelector(prefixB),
-		NBKeyPrefixes:   []string{prefixB},
-		ValueBuilder:    test.ArrayValueBuilder(prefixB),
+		Name:          descriptor2Name,
+		KeySelector:   prefixSelector(prefixB),
+		NBKeyPrefixes: []string{prefixB},
+		ValueBuilder:  test.ArrayValueBuilder(prefixB),
 		DependencyBuilder: func(key string, value Value) []Dependency {
-			if key == prefixB + baseValue2 {
+			if key == prefixB+baseValue2 {
 				depKey := prefixA + baseValue1
 				return []Dependency{
 					{Label: depKey, Key: depKey},
 				}
 			}
-			if key == prefixB + baseValue2 + "/item2" {
+			if key == prefixB+baseValue2+"/item2" {
 				depKey := prefixA + baseValue1 + "/item2"
 				return []Dependency{
 					{Label: depKey, Key: depKey},
@@ -634,12 +633,12 @@ func TestNotificationsWithRetry(t *testing.T) {
 	}, mockSB, 0)
 	// -> descriptor3:
 	descriptor3 := test.NewMockDescriptor(&test.MockDescriptorArgs{
-		Name:            descriptor3Name,
-		KeySelector:     prefixSelector(prefixC),
-		NBKeyPrefixes:   []string{prefixC},
-		ValueBuilder:    test.StringValueBuilder(prefixC),
+		Name:          descriptor3Name,
+		KeySelector:   prefixSelector(prefixC),
+		NBKeyPrefixes: []string{prefixC},
+		ValueBuilder:  test.StringValueBuilder(prefixC),
 		DependencyBuilder: func(key string, value Value) []Dependency {
-			if key == prefixC + baseValue3 {
+			if key == prefixC+baseValue3 {
 				return []Dependency{
 					{Label: prefixA, AnyOf: prefixSelector(prefixA)},
 				}
@@ -652,10 +651,10 @@ func TestNotificationsWithRetry(t *testing.T) {
 	}, mockSB, 0)
 
 	// -> planned errors
-	mockSB.PlanError(prefixB + baseValue2 + "/item2", errors.New("failed to add derived value"),
+	mockSB.PlanError(prefixB+baseValue2+"/item2", errors.New("failed to add derived value"),
 		func() {
-			mockSB.SetValue(prefixB + baseValue2, test.NewArrayValue(baseValue2, "item1"),
-				&test.OnlyInteger{Integer:0}, FromNB, false)
+			mockSB.SetValue(prefixB+baseValue2, test.NewArrayValue(baseValue2, "item1"),
+				&test.OnlyInteger{Integer: 0}, FromNB, false)
 		})
 	for i := 0; i < 3; i++ {
 		mockSB.PlanError(prefixC+baseValue3, errors.New("failed to add value"),
@@ -685,15 +684,15 @@ func TestNotificationsWithRetry(t *testing.T) {
 	Expect(withMetadataMap).To(BeTrue())
 
 	// run 1st data-change transaction with retry against empty SB
-	schedulerTxn1 := scheduler.StartNBTransaction(WithRetry(3 * time.Second, true))
-	schedulerTxn1.SetValueData(prefixB + baseValue2, []string{"item1", "item2"})
+	schedulerTxn1 := scheduler.StartNBTransaction(WithRetry(3*time.Second, true))
+	schedulerTxn1.SetValueData(prefixB+baseValue2, []string{"item1", "item2"})
 	kvErrors, txnError := schedulerTxn1.Commit(context.Background())
 	Expect(txnError).ShouldNot(HaveOccurred())
 	Expect(kvErrors).To(BeEmpty())
 
 	// run 2nd data-change transaction with retry
-	schedulerTxn2 := scheduler.StartNBTransaction(WithRetry(6 * time.Second, true))
-	schedulerTxn2.SetValueData(prefixC + baseValue3, "base-value3-data")
+	schedulerTxn2 := scheduler.StartNBTransaction(WithRetry(6*time.Second, true))
+	schedulerTxn2.SetValueData(prefixC+baseValue3, "base-value3-data")
 	kvErrors, txnError = schedulerTxn2.Commit(context.Background())
 	Expect(txnError).ShouldNot(HaveOccurred())
 	Expect(kvErrors).To(BeEmpty())
@@ -708,14 +707,14 @@ func TestNotificationsWithRetry(t *testing.T) {
 
 	// send notification
 	startTime := time.Now()
-	notifError := scheduler.PushSBNotification(prefixA + baseValue1, test.NewArrayValue(baseValue1, "item1", "item2"),
-		&test.OnlyInteger{Integer:10})
+	notifError := scheduler.PushSBNotification(prefixA+baseValue1, test.NewArrayValue(baseValue1, "item1", "item2"),
+		&test.OnlyInteger{Integer: 10})
 	Expect(notifError).ShouldNot(HaveOccurred())
 
 	// wait until the notification is processed
 	Eventually(func() []*KVWithMetadata {
 		return mockSB.GetValues(nil)
-	}, 2 * time.Second).Should(HaveLen(2))
+	}, 2*time.Second).Should(HaveLen(2))
 	stopTime := time.Now()
 
 	// receive the error notifications
@@ -818,10 +817,10 @@ func TestNotificationsWithRetry(t *testing.T) {
 	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor2Name))
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
-			Key: prefixB + baseValue2,
-			Value: test.NewArrayValue(baseValue2, "item1", "item2"),
-			Metadata: &test.OnlyInteger{Integer:0},
-			Origin: FromNB,
+			Key:      prefixB + baseValue2,
+			Value:    test.NewArrayValue(baseValue2, "item1", "item2"),
+			Metadata: &test.OnlyInteger{Integer: 0},
+			Origin:   FromNB,
 		},
 	})
 	operation = opHistory[7] // refresh failed value

@@ -15,8 +15,8 @@
 package kvscheduler
 
 import (
-	"time"
 	"strconv"
+	"time"
 
 	. "github.com/ligato/cn-infra/kvscheduler/api"
 	"github.com/ligato/cn-infra/kvscheduler/graph"

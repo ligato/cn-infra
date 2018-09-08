@@ -15,8 +15,8 @@
 package graph
 
 import (
-	"testing"
 	. "github.com/onsi/gomega"
+	"testing"
 	"time"
 
 	. "github.com/ligato/cn-infra/kvscheduler/test"
@@ -63,7 +63,7 @@ func TestSingleNode(t *testing.T) {
 
 	// set attributes:
 	nodeW.SetValue(value1)
-	nodeW.SetMetadata(&OnlyInteger{Integer:1})
+	nodeW.SetMetadata(&OnlyInteger{Integer: 1})
 	nodeW.SetMetadataMap(metadataMapA)
 	nodeW.SetFlags(ColorFlag(Red), AbstractFlag())
 
@@ -140,7 +140,7 @@ func TestMultipleNodes(t *testing.T) {
 	RegisterTestingT(t)
 
 	startTime := time.Now()
-	graph := buildGraph(nil,true, true, selectNodesToBuild(1,2,3,4))
+	graph := buildGraph(nil, true, true, selectNodesToBuild(1, 2, 3, 4))
 
 	// check graph content
 	graphR := graph.Read()
@@ -249,19 +249,19 @@ func TestMultipleNodes(t *testing.T) {
 	flagStats := graphR.GetFlagStats(ColorFlagName, prefixASelector)
 	Expect(flagStats.TotalCount).To(BeEquivalentTo(3))
 	Expect(flagStats.PerValueCount).To(BeEquivalentTo(map[string]uint{
-		Red.String(): 1,
-		Blue.String(): 1,
+		Red.String():   1,
+		Blue.String():  1,
 		Green.String(): 1,
-		}))
+	}))
 	flagStats = graphR.GetFlagStats(ColorFlagName, prefixBSelector)
 	Expect(flagStats.TotalCount).To(BeEquivalentTo(0))
 	Expect(flagStats.PerValueCount).To(BeEmpty())
 	flagStats = graphR.GetFlagStats(AbstractFlagName, nil)
 	Expect(flagStats.TotalCount).To(BeEquivalentTo(2))
-	Expect(flagStats.PerValueCount).To(BeEquivalentTo(map[string]uint{"":2}))
+	Expect(flagStats.PerValueCount).To(BeEquivalentTo(map[string]uint{"": 2}))
 	flagStats = graphR.GetFlagStats(TemporaryFlagName, nil)
 	Expect(flagStats.TotalCount).To(BeEquivalentTo(2))
-	Expect(flagStats.PerValueCount).To(BeEquivalentTo(map[string]uint{"":2}))
+	Expect(flagStats.PerValueCount).To(BeEquivalentTo(map[string]uint{"": 2}))
 
 	// -> timeline node1:
 	timeline := graphR.GetNodeTimeline(keyA1)
@@ -356,14 +356,14 @@ func TestMultipleNodes(t *testing.T) {
 func TestSelectors(t *testing.T) {
 	RegisterTestingT(t)
 
-	graph := buildGraph(nil,true, true, selectNodesToBuild(1, 2, 3, 4))
+	graph := buildGraph(nil, true, true, selectNodesToBuild(1, 2, 3, 4))
 	graphR := graph.Read()
 
 	// test key selector
 	checkNodes(graphR.GetNodes(prefixASelector), keyA1, keyA2, keyA3)
 	checkNodes(graphR.GetNodes(prefixBSelector), keyB1)
 	checkNodes(graphR.GetNodes(keySelector(keyA1, keyB1)), keyA1, keyB1)
-	checkNodes(graphR.GetNodes(func(key string) bool {return false}))
+	checkNodes(graphR.GetNodes(func(key string) bool { return false }))
 
 	// test flag selectors
 	checkNodes(graphR.GetNodes(nil, WithFlags(AnyColorFlag())), keyA1, keyA2, keyA3)
@@ -492,8 +492,8 @@ func TestNodeRemoval(t *testing.T) {
 	flagStats := graphR.GetFlagStats(ColorFlagName, prefixASelector)
 	Expect(flagStats.TotalCount).To(BeEquivalentTo(3))
 	Expect(flagStats.PerValueCount).To(BeEquivalentTo(map[string]uint{
-		Red.String(): 1,
-		Blue.String(): 1,
+		Red.String():   1,
+		Blue.String():  1,
 		Green.String(): 1,
 	}))
 	flagStats = graphR.GetFlagStats(ColorFlagName, prefixBSelector)
@@ -501,10 +501,10 @@ func TestNodeRemoval(t *testing.T) {
 	Expect(flagStats.PerValueCount).To(BeEmpty())
 	flagStats = graphR.GetFlagStats(AbstractFlagName, nil)
 	Expect(flagStats.TotalCount).To(BeEquivalentTo(2))
-	Expect(flagStats.PerValueCount).To(BeEquivalentTo(map[string]uint{"":2}))
+	Expect(flagStats.PerValueCount).To(BeEquivalentTo(map[string]uint{"": 2}))
 	flagStats = graphR.GetFlagStats(TemporaryFlagName, nil)
 	Expect(flagStats.TotalCount).To(BeEquivalentTo(2))
-	Expect(flagStats.PerValueCount).To(BeEquivalentTo(map[string]uint{"":2}))
+	Expect(flagStats.PerValueCount).To(BeEquivalentTo(map[string]uint{"": 2}))
 
 	// -> timeline node1:
 	timeline := graphR.GetNodeTimeline(keyA1)
@@ -665,7 +665,7 @@ func TestNodeTimeline(t *testing.T) {
 	node = graphW.SetNode(keyA1)
 	node.SetFlags(TemporaryFlag())
 	node.DelFlags(AbstractFlagName)
-	node.SetMetadata(&OnlyInteger{Integer:2})
+	node.SetMetadata(&OnlyInteger{Integer: 2})
 	graphW.Save()
 	graphW.Release()
 
@@ -676,15 +676,15 @@ func TestNodeTimeline(t *testing.T) {
 	flagStats := graphR.GetFlagStats(ColorFlagName, nil)
 	Expect(flagStats.TotalCount).To(BeEquivalentTo(3))
 	Expect(flagStats.PerValueCount).To(BeEquivalentTo(map[string]uint{
-		Red.String(): 1,
+		Red.String():  1,
 		Blue.String(): 2,
 	}))
 	flagStats = graphR.GetFlagStats(AbstractFlagName, nil)
 	Expect(flagStats.TotalCount).To(BeEquivalentTo(2))
-	Expect(flagStats.PerValueCount).To(BeEquivalentTo(map[string]uint{"":2}))
+	Expect(flagStats.PerValueCount).To(BeEquivalentTo(map[string]uint{"": 2}))
 	flagStats = graphR.GetFlagStats(TemporaryFlagName, nil)
 	Expect(flagStats.TotalCount).To(BeEquivalentTo(1))
-	Expect(flagStats.PerValueCount).To(BeEquivalentTo(map[string]uint{"":1}))
+	Expect(flagStats.PerValueCount).To(BeEquivalentTo(map[string]uint{"": 1}))
 
 	// -> timeline node1:
 	timeline := graphR.GetNodeTimeline(keyA1)
@@ -789,7 +789,7 @@ func TestNodeMetadata(t *testing.T) {
 	buildGraph(graph, true, false, selectNodesToBuild(4))
 	graphW := graph.Write(true)
 	graphW.DeleteNode(keyA1)
-	graphW.SetNode(keyA2).SetMetadata(&OnlyInteger{Integer:4})
+	graphW.SetNode(keyA2).SetMetadata(&OnlyInteger{Integer: 4})
 	graphW.Save()
 	graphW.Release()
 
