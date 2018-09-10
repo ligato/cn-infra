@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"bytes"
+
 	"github.com/boltdb/bolt"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logrus"
@@ -43,6 +44,7 @@ func setupTest(t *testing.T, newDB bool) *testCtx {
 	if newDB {
 		err := os.Remove(testDbPath)
 		if err != nil && !os.IsNotExist(err) {
+			t.Fatal(err)
 			return nil
 		}
 	}
