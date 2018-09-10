@@ -90,8 +90,7 @@ type errorSubscription struct {
 	selector KeySelector
 }
 
-// Init initializes the scheduler. Single go routine is started that will process
-// all the transactions synchronously.
+// Init initializes the scheduler.
 func (scheduler *Scheduler) Init() error {
 	// prepare context for all go routines
 	scheduler.ctx, scheduler.cancel = context.WithCancel(context.Background())
@@ -103,10 +102,16 @@ func (scheduler *Scheduler) Init() error {
 	scheduler.txnQueue = make(chan *queuedTxn, 100)
 	// register REST API handlers
 	scheduler.registerHandlers(scheduler.HTTPHandlers)
-	// go routine processing serialized transactions
-	go scheduler.consumeTransactions()
 	// temporary until datasync and scheduler are properly integrated
 	scheduler.isInitialized = true
+	return nil
+}
+
+// AfterInit starts go routine that will process all the transactions
+// synchronously.
+func (scheduler *Scheduler) AfterInit() error {
+	// go routine processing serialized transactions
+	go scheduler.consumeTransactions()
 	return nil
 }
 
@@ -116,21 +121,44 @@ func (scheduler *Scheduler) IsInitialized() bool {
 	return scheduler.isInitialized
 }
 
-// Close stops all the go routines.
+// Close closes all registered descriptors and stops all the go routines.
 func (scheduler *Scheduler) Close() error {
+	// stop transaction processing first
 	scheduler.cancel()
 	scheduler.wg.Wait()
-	return nil
+
+	// close all registered descriptors
+	var wasErr error
+	for _, descriptor := range scheduler.registry.GetAllDescriptors() {
+		err := descriptor.Close()
+		if err != nil {
+			wasErr = err
+		}
+	}
+
+	return wasErr
 }
 
 // RegisterKVDescriptor registers descriptor for a set of selected
 // keys. It should be called in the Init phase of agent plugins.
 // Every key-value pair must have at most one descriptor associated with it
 // (none for derived values expressing properties).
-func (scheduler *Scheduler) RegisterKVDescriptor(descriptor KVDescriptor) {
+func (scheduler *Scheduler) RegisterKVDescriptor(descriptor KVDescriptor) error {
+	// try to initialize descriptor first
+	err := descriptor.Init()
+	if err != nil {
+		scheduler.Log.WithFields(logging.Fields{
+			"err": err,
+			"descriptor": descriptor.GetName(),
+		}).Error("Failed to initialize descriptor")
+		return err
+	}
+
+	// add descriptor to the registry
 	scheduler.registry.RegisterDescriptor(descriptor)
 	scheduler.keyPrefixes = append(scheduler.keyPrefixes, descriptor.NBKeyPrefixes()...)
 
+	// build metadata map
 	withMeta, metadataMapFactory := descriptor.WithMetadata()
 	if withMeta {
 		var metadataMap idxmap.NamedMappingRW
@@ -144,6 +172,8 @@ func (scheduler *Scheduler) RegisterKVDescriptor(descriptor KVDescriptor) {
 		graphW.Save()
 		graphW.Release()
 	}
+
+	return nil
 }
 
 // GetRegisteredNBKeyPrefixes returns a list of key prefixes from NB with values

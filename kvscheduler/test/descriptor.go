@@ -68,6 +68,16 @@ func (md *mockDescriptor) validateKey(key string, predicate bool) {
 	}
 }
 
+// Init does nothing here.
+func (md *mockDescriptor) Init() error {
+	return nil
+}
+
+// Close does nothing here.
+func (md *mockDescriptor) Close() error {
+	return nil
+}
+
 // GetName return name from the input arguments.
 func (md *mockDescriptor) GetName() string {
 	return md.args.Name

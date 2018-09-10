@@ -36,6 +36,16 @@ import (
 type DescriptorBase struct {
 }
 
+// Init does nothing.
+func (bkvd *DescriptorBase) Init() error {
+	return nil
+}
+
+// Close does nothing.
+func (bkvd *DescriptorBase) Close() error {
+	return nil
+}
+
 // GetName returns "base".
 func (bkvd *DescriptorBase) GetName() string {
 	return "base"

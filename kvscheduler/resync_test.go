@@ -56,6 +56,9 @@ func TestEmptyResync(t *testing.T) {
 	_, withMetadataMap := metadataMap.(test.NameToInteger)
 	Expect(withMetadataMap).To(BeTrue())
 
+	// start transaction processing
+	scheduler.AfterInit()
+
 	// transaction history should be initially empty
 	Expect(scheduler.getTransactionHistory(time.Time{}, time.Time{})).To(BeEmpty())
 
@@ -163,6 +166,9 @@ func TestResyncWithEmptySB(t *testing.T) {
 	metadataMap := scheduler.GetMetadataMap(descriptor1.GetName())
 	nameToInteger, withMetadataMap := metadataMap.(test.NameToInteger)
 	Expect(withMetadataMap).To(BeTrue())
+
+	// start transaction processing
+	scheduler.AfterInit()
 
 	// run resync transaction with empty SB
 	startTime := time.Now()
@@ -573,6 +579,9 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 	nameToInteger, withMetadataMap := metadataMap.(test.NameToInteger)
 	Expect(withMetadataMap).To(BeTrue())
 
+	// start transaction processing
+	scheduler.AfterInit()
+
 	// run resync transaction with SB that already has some values added
 	startTime := time.Now()
 	values := []KeyValueDataPair{
@@ -904,6 +913,9 @@ func TestResyncNotRemovingSBValues(t *testing.T) {
 	nameToInteger, withMetadataMap := metadataMap.(test.NameToInteger)
 	Expect(withMetadataMap).To(BeTrue())
 
+	// start transaction processing
+	scheduler.AfterInit()
+
 	// run resync transaction that should keep values not managed by NB untouched
 	startTime := time.Now()
 	values := []KeyValueDataPair{
@@ -1133,6 +1145,9 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 	metadataMap = scheduler.GetMetadataMap(descriptor3.GetName())
 	nameToInteger3, withMetadataMap := metadataMap.(test.NameToInteger)
 	Expect(withMetadataMap).To(BeTrue())
+
+	// start transaction processing
+	scheduler.AfterInit()
 
 	// run resync transaction with SB that already has some values added
 	startTime := time.Now()
@@ -1479,6 +1494,9 @@ func TestResyncWithRetry(t *testing.T) {
 	metadataMap := scheduler.GetMetadataMap(descriptor1.GetName())
 	nameToInteger, withMetadataMap := metadataMap.(test.NameToInteger)
 	Expect(withMetadataMap).To(BeTrue())
+
+	// start transaction processing
+	scheduler.AfterInit()
 
 	// run resync transaction that will fail for one value
 	startTime := time.Now()
