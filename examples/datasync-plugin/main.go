@@ -8,7 +8,7 @@ import (
 	"github.com/ligato/cn-infra/agent"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/kvdbsync"
-		"github.com/ligato/cn-infra/db/keyval/etcd"
+	"github.com/ligato/cn-infra/db/keyval/etcd"
 	"github.com/ligato/cn-infra/examples/model"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/servicelabel"
@@ -166,33 +166,37 @@ func (plugin *ExamplePlugin) consumer() {
 	for {
 		select {
 		// WATCH: demonstrate how to receive data change events.
-		case dataChng := <-plugin.changeChannel:
-			plugin.Log.Printf("Received event: %v", dataChng)
+		case dataEv := <-plugin.changeChannel:
+			plugin.Log.Printf("Received event: %v", dataEv)
 			// If event arrives, the key is extracted and used together with
 			// the expected prefix to identify item.
-			key := dataChng.GetKey()
-			if strings.HasPrefix(key, etcdKeyPrefix(plugin.ServiceLabel.GetAgentLabel())) {
-				var value, previousValue etcdexample.EtcdExample
-				// The first return value is diff - boolean flag whether previous value exists or not
-				err := dataChng.GetValue(&value)
-				if err != nil {
-					plugin.Log.Error(err)
-				}
-				diff, err := dataChng.GetPrevValue(&previousValue)
-				if err != nil {
-					plugin.Log.Error(err)
-				}
-				plugin.Log.Infof("Event arrived to etcd eventHandler, key %v, update: %v, change type: %v,",
-					dataChng.GetKey(), diff, dataChng.GetChangeType())
-				// Increase event counter (expecting two events).
-				plugin.eventCounter++
 
-				if plugin.eventCounter == 2 {
-					// After creating/updating data, unregister key
-					plugin.Log.Infof("Unregister key %v", etcdKeyPrefix(plugin.ServiceLabel.GetAgentLabel()))
-					plugin.watchDataReg.Unregister(etcdKeyPrefix(plugin.ServiceLabel.GetAgentLabel()))
+			for _, dataChng := range dataEv.GetChanges() {
+				key := dataChng.GetKey()
+				if strings.HasPrefix(key, etcdKeyPrefix(plugin.ServiceLabel.GetAgentLabel())) {
+					var value, previousValue etcdexample.EtcdExample
+					// The first return value is diff - boolean flag whether previous value exists or not
+					err := dataChng.GetValue(&value)
+					if err != nil {
+						plugin.Log.Error(err)
+					}
+					diff, err := dataChng.GetPrevValue(&previousValue)
+					if err != nil {
+						plugin.Log.Error(err)
+					}
+					plugin.Log.Infof("Event arrived to etcd eventHandler, key %v, update: %v, change type: %v,",
+						dataChng.GetKey(), diff, dataChng.GetChangeType())
+					// Increase event counter (expecting two events).
+					plugin.eventCounter++
+
+					if plugin.eventCounter == 2 {
+						// After creating/updating data, unregister key
+						plugin.Log.Infof("Unregister key %v", etcdKeyPrefix(plugin.ServiceLabel.GetAgentLabel()))
+						plugin.watchDataReg.Unregister(etcdKeyPrefix(plugin.ServiceLabel.GetAgentLabel()))
+					}
 				}
 			}
+
 			// Here you would test for other event types with one if statement
 			// for each key prefix:
 			//

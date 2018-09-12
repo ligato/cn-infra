@@ -70,7 +70,7 @@ func watchAndResyncBrokerKeys(resyncReg resync.Registration, changeChan chan dat
 	return keys, wasErr
 }
 
-func (keys *watchBrokerKeys) watchChanges(x keyval.ProtoWatchResp) {
+func (keys *watchBrokerKeys) watchChanges(x datasync.ProtoWatchResp) {
 	var prev datasync.LazyValue
 	if datasync.Delete == x.GetChangeType() {
 		_, prev = keys.adapter.base.LastRev().Del(x.GetKey())

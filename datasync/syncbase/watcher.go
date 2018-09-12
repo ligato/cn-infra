@@ -100,6 +100,7 @@ func (adapter *Registry) PropagateChanges(txData map[string]datasync.ChangeValue
 	var events []func(done chan error)
 
 	for _, sub := range adapter.subscriptions {
+		var changes []datasync.ProtoWatchResp
 		for _, prefix := range sub.KeyPrefixes {
 			for key, val := range txData {
 				var (
@@ -117,23 +118,27 @@ func (adapter *Registry) PropagateChanges(txData map[string]datasync.ChangeValue
 					} else {
 						_, prev, curRev = adapter.lastRev.Put(key, val)
 					}
+				}
 
-					sendTo := func(sub *Subscription, key string, val datasync.ChangeValue) func(done chan error) {
-						return func(done chan error) {
-							sub.ChangeChan <- &ChangeEvent{
-								Key:        key,
-								ChangeType: val.GetChangeType(),
-								CurrVal:    val,
-								CurrRev:    curRev,
-								PrevVal:    prev,
-								delegate:   NewDoneChannel(done),
-							}
-						}
-					}
-					events = append(events, sendTo(sub, key, val))
+				changes = append(changes, &ChangeResp{
+					Key:        key,
+					ChangeType: val.GetChangeType(),
+					CurrVal:    val,
+					CurrRev:    curRev,
+					PrevVal:    prev,
+				})
+			}
+		}
+
+		sendTo := func(sub *Subscription) func(done chan error) {
+			return func(done chan error) {
+				sub.ChangeChan <- &ChangeEvent{
+					Changes:  changes,
+					delegate: NewDoneChannel(done),
 				}
 			}
 		}
+		events = append(events, sendTo(sub))
 	}
 
 	done := make(chan error, 1)

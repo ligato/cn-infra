@@ -21,7 +21,7 @@ const (
 // (previous value) and the value *after* the change (current value).
 type ChangeEvent interface {
 	CallbackResult
-	ProtoWatchResp
+	GetChanges() []ProtoWatchResp
 }
 
 // ResyncEvent is used to define the data type for the resync channel
@@ -31,7 +31,7 @@ type ResyncEvent interface {
 
 	// GetValues returns key-value pairs sorted by key prefixes
 	// (<keyPrefix> variable list from KeyValProtoWatcher.Watch).
-	GetValues() map[ /*keyPrefix*/ string]KeyValIterator
+	GetValues() map[string]KeyValIterator
 }
 
 // CallbackResult can be used by an event receiver to indicate to the event

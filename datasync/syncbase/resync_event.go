@@ -19,13 +19,13 @@ import (
 )
 
 // NewResyncEventDB creates a new instance of ResyncEventDB using the given map of iterators.
-func NewResyncEventDB(its map[string] /*keyPrefix*/ datasync.KeyValIterator) *ResyncEventDB {
+func NewResyncEventDB(its map[string]datasync.KeyValIterator) *ResyncEventDB {
 	return &ResyncEventDB{its, NewDoneChannel(make(chan error, 1))}
 }
 
 // NewResyncEvent creates a new instance of ResyncEventDB using the give map of slice of KeyVal.
-func NewResyncEvent(m map[string] /*keyPrefix*/ []datasync.KeyVal) *ResyncEventDB {
-	its := map[string] /*keyPrefix*/ datasync.KeyValIterator{}
+func NewResyncEvent(m map[string][]datasync.KeyVal) *ResyncEventDB {
+	its := map[string]datasync.KeyValIterator{}
 	for keyPrefix, kvs := range m {
 		its[keyPrefix] = NewKVIterator(kvs)
 	}
@@ -35,11 +35,11 @@ func NewResyncEvent(m map[string] /*keyPrefix*/ []datasync.KeyVal) *ResyncEventD
 
 // ResyncEventDB implements the interface datasync.ResyncEvent (see comments in there).
 type ResyncEventDB struct {
-	its map[string] /*keyPrefix*/ datasync.KeyValIterator
+	its map[string]datasync.KeyValIterator
 	*DoneChannel
 }
 
 // GetValues returns values of the event.
-func (ev *ResyncEventDB) GetValues() map[string] /*keyPrefix*/ datasync.KeyValIterator {
+func (ev *ResyncEventDB) GetValues() map[string]datasync.KeyValIterator {
 	return ev.its
 }
