@@ -36,16 +36,6 @@ import (
 type DescriptorBase struct {
 }
 
-// Init does nothing.
-func (bkvd *DescriptorBase) Init() error {
-	return nil
-}
-
-// Close does nothing.
-func (bkvd *DescriptorBase) Close() error {
-	return nil
-}
-
 // GetName returns "base".
 func (bkvd *DescriptorBase) GetName() string {
 	return "base"
@@ -89,9 +79,9 @@ func (bkvd *DescriptorBase) Delete(key string, value Value, metadata Metadata) e
 }
 
 // Modify does nothing.
-func (bkvd *DescriptorBase) Modify(key string, oldValue, newValue Value, metadata Metadata) error {
+func (bkvd *DescriptorBase) Modify(key string, oldValue, newValue Value, metadata Metadata) (Metadata, error) {
 	fmt.Printf("Modify for key=%s is not implemented\n", key)
-	return nil
+	return nil, nil
 }
 
 // ModifyHasToRecreate returns false.

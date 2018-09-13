@@ -41,8 +41,6 @@ type {{ .DescriptorName }}KVWithMetadata struct {
 ////////// type-safe Descriptor interface //////////
 
 type {{ .DescriptorName }}DescriptorAPI interface {
-	Init() error
-	Close() error
 	GetName() string
 	KeySelector(key string) bool
 	NBKeyPrefixes() []string
@@ -68,14 +66,6 @@ type {{ .DescriptorName }}DescriptorAPI interface {
 // {{ .DescriptorName }}DescriptorBase provides default(=empty) implementations
 // for all the methods to extend from.
 type {{ .DescriptorName }}DescriptorBase struct {
-}
-
-func (db *{{ .DescriptorName }}DescriptorBase) Init() error {
-	return nil
-}
-
-func (db *{{ .DescriptorName }}DescriptorBase) Close() error {
-	return nil
 }
 
 func (db *{{ .DescriptorName }}DescriptorBase) GetName() string {
@@ -167,14 +157,6 @@ type {{ .DescriptorName }}DescriptorAdapter struct {
 
 func New{{ .DescriptorName }}Descriptor(impl {{ .DescriptorName }}DescriptorAPI) KVDescriptor {
 	return &{{ .DescriptorName }}DescriptorAdapter{descriptor: impl}
-}
-
-func (da *{{ .DescriptorName }}DescriptorAdapter) Init() error {
-	return da.descriptor.Init()
-}
-
-func (da *{{ .DescriptorName }}DescriptorAdapter) Close() error {
-	return da.descriptor.Close()
 }
 
 func (da *{{ .DescriptorName }}DescriptorAdapter) GetName() string {

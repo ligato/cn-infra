@@ -95,9 +95,6 @@ func TestNotifications(t *testing.T) {
 	nameToInteger2, withMetadataMap := metadataMap.(test.NameToInteger)
 	Expect(withMetadataMap).To(BeTrue())
 
-	// start transaction processing
-	scheduler.AfterInit()
-
 	// run resync transaction against empty SB
 	startTime := time.Now()
 	values := []KeyValueDataPair{
@@ -685,9 +682,6 @@ func TestNotificationsWithRetry(t *testing.T) {
 	metadataMap = scheduler.GetMetadataMap(descriptor3.GetName())
 	nameToInteger3, withMetadataMap := metadataMap.(test.NameToInteger)
 	Expect(withMetadataMap).To(BeTrue())
-
-	// start transaction processing
-	scheduler.AfterInit()
 
 	// run 1st data-change transaction with retry against empty SB
 	schedulerTxn1 := scheduler.StartNBTransaction(WithRetry(3*time.Second, true))

@@ -19,7 +19,7 @@ import (
 )
 
 // Registry can be used to register all descriptors and get quick (cached, O(log))
-// lookups by keys. The registry is NOT thread-safe!
+// lookups by keys.
 type Registry interface {
 	// RegisterDescriptor add new descriptor into the registry.
 	RegisterDescriptor(descriptor KVDescriptor)

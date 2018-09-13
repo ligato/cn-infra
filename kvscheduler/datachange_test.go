@@ -115,9 +115,6 @@ func TestDataChangeTransactions(t *testing.T) {
 	nameToInteger3, withMetadataMap := metadataMap.(test.NameToInteger)
 	Expect(withMetadataMap).To(BeTrue())
 
-	// start transaction processing
-	scheduler.AfterInit()
-
 	// run non-resync transaction against empty SB
 	startTime := time.Now()
 	schedulerTxn := scheduler.StartNBTransaction()
@@ -688,9 +685,6 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 	metadataMap = scheduler.GetMetadataMap(descriptor3.GetName())
 	nameToInteger3, withMetadataMap := metadataMap.(test.NameToInteger)
 	Expect(withMetadataMap).To(BeTrue())
-
-	// start transaction processing
-	scheduler.AfterInit()
 
 	// run 1st non-resync transaction against empty SB
 	schedulerTxn := scheduler.StartNBTransaction()

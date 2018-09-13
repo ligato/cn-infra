@@ -96,17 +96,6 @@ func (vo ValueOrigin) String() string {
 // (often empty) values without attached SB operations, used as targets for
 // dependencies.
 type KVDescriptor interface {
-	// Init initializes descriptor once it was registered with the scheduler.
-	// The method can be used for example to start go routines watching SB and
-	// sending notifications to the scheduler.
-	Init() error
-
-	// Close de-allocates resources held by the descriptor and stops all the
-	// go routines started in the Init method.
-	// The method is called on every descriptor when the scheduler is being
-	// closed.
-	Close() error
-
 	// GetName returns name of the descriptor unique across all registered
 	// descriptors.
 	GetName() string
