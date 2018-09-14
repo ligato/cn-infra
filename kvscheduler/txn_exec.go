@@ -291,6 +291,7 @@ func (scheduler *Scheduler) applyAdd(node graph.NodeRW, txnOp *recordedTxnOp, ar
 	if !isNodeReady(node) {
 		// if not ready, nothing to do
 		node.SetFlags(&PendingFlag{})
+		node.DelFlags(ErrorFlagName)
 		txnOp.isPending = true
 		return recordedTxnOps{txnOp}, nil
 	}

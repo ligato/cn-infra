@@ -15,6 +15,7 @@
 package kvscheduler
 
 import (
+	"fmt"
 	. "github.com/ligato/cn-infra/kvscheduler/api"
 	"github.com/ligato/cn-infra/kvscheduler/graph"
 	"github.com/ligato/cn-infra/logging"
@@ -167,6 +168,10 @@ func (scheduler *Scheduler) refreshGraph(graphW graph.RWAccess, keys keySet, res
 			graphW.DeleteNode(node.GetKey())
 		}
 	}
+
+	graphDump := graphW.Dump()
+	fmt.Println("Graph state after re-fresh:")
+	fmt.Print(graphDump)
 }
 
 // skipRefresh is used to mark nodes as refreshed without actual refreshing
