@@ -38,7 +38,7 @@ type applyValueArgs struct {
 	// failed base values for potential retry
 	failed keySet
 
-	// dependency cycle detection
+	// handling of dependency cycles
 	branch keySet
 }
 
@@ -49,7 +49,7 @@ func (scheduler *Scheduler) executeTransaction(txn *preProcessedTxn, dryRun bool
 	graphW := scheduler.graph.Write(true)
 	defer graphW.Release()
 	failed = make(keySet)  // non-derived values in a failed state
-	branch := make(keySet) // branch of current recursive calls to applyValue used to detect cycles
+	branch := make(keySet) // branch of current recursive calls to applyValue used to handle cycles
 
 	// order to achieve the shortest sequence of operations in average
 	orderedVals := scheduler.orderValuesByOp(graphW, txn.values)
@@ -122,7 +122,7 @@ func (scheduler *Scheduler) executeTransaction(txn *preProcessedTxn, dryRun bool
 func (scheduler *Scheduler) applyValue(args *applyValueArgs) (executed recordedTxnOps, prevValue KeyValuePair, err error) {
 	// dependency cycle detection
 	if _, cycle := args.branch[args.kv.key]; cycle {
-		panic("Dependency cycle!")
+		return executed, prevValue, err
 	}
 	args.branch[args.kv.key] = struct{}{}
 	defer delete(args.branch, args.kv.key)
@@ -210,6 +210,12 @@ func (scheduler *Scheduler) applyDelete(node graph.NodeRW, txnOp *recordedTxnOp,
 		return recordedTxnOps{txnOp}, nil
 	}
 
+	if pending {
+		// already mark as pending so that other nodes will not view it as satisfied
+		// dependency during removal
+		node.SetFlags(&PendingFlag{})
+	}
+
 	// remove derived values
 	var derivedVals []kvForTxn
 	for _, derivedNode := range getDerivedNodes(node) {
@@ -223,9 +229,7 @@ func (scheduler *Scheduler) applyDelete(node graph.NodeRW, txnOp *recordedTxnOp,
 	derExecs, wasErr := scheduler.applyDerived(derivedVals, args, false)
 	executed = append(executed, derExecs...)
 
-	// already mark as pending so that other nodes will not view it as satisfied
-	// dependency during removal
-	node.SetFlags(&PendingFlag{})
+	// continue even if removal of a derived value has failed ...
 
 	// update values that depend on this kv-pair
 	executed = append(executed, scheduler.runUpdates(node, args)...)
@@ -233,31 +237,28 @@ func (scheduler *Scheduler) applyDelete(node graph.NodeRW, txnOp *recordedTxnOp,
 	// execute delete operation
 	descriptor := scheduler.registry.GetDescriptorForKey(node.GetKey())
 	if !args.dryRun && descriptor != nil {
-		var err error
 		if args.kv.origin != FromSB {
 			err = descriptor.Delete(node.GetKey(), node.GetValue(), node.GetMetadata())
 		}
 		if err != nil {
 			wasErr = err
+			node.SetFlags(&ErrorFlag{err})
 		}
 		if withMeta, _ := descriptor.WithMetadata(); canNodeHaveMetadata(node) && withMeta {
 			node.SetMetadata(nil)
 		}
 	}
 
-	// delegate error from the derived to the base value
+	// remove node or mark as failed
 	if wasErr != nil {
 		if !isNodeDerived(node) {
 			args.failed[node.GetKey()] = struct{}{}
-		}
-		if pending {
-			node.SetFlags(&ErrorFlag{err: wasErr})
 		}
 	} else if !pending {
 		args.graphW.DeleteNode(args.kv.key)
 	}
 
-	txnOp.newErr = wasErr
+	txnOp.newErr = err
 	txnOp.isPending = pending
 	executed = append(executed, txnOp)
 	return executed, wasErr

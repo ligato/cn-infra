@@ -1264,3 +1264,458 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 	err = scheduler.Close()
 	Expect(err).To(BeNil())
 }
+
+func TestDependencyCycles(t *testing.T) {
+	RegisterTestingT(t)
+
+	// prepare KV Scheduler
+	scheduler := NewPlugin(UseDeps(func(deps *Deps) {
+		deps.HTTPHandlers = nil
+	}))
+	err := scheduler.Init()
+	Expect(err).To(BeNil())
+
+	// prepare mocks
+	mockSB := test.NewMockSouthbound()
+	// -> descriptor:
+	descriptor := test.NewMockDescriptor(&test.MockDescriptorArgs{
+		Name:             descriptor1Name,
+		KeySelector:      prefixSelector(prefixA),
+		NBKeyPrefixes:    []string{prefixA},
+		ValueBuilder:     test.StringValueBuilder(prefixA),
+		DependencyBuilder: func(key string, value Value) []Dependency {
+			if key == prefixA + baseValue1 {
+				depKey := prefixA + baseValue2
+				return []Dependency{
+					{Label: depKey, Key: depKey},
+				}
+			}
+			if key == prefixA + baseValue2 {
+				depKey := prefixA + baseValue3
+				return []Dependency{
+					{Label: depKey, Key: depKey},
+				}
+			}
+			if key == prefixA + baseValue3 {
+				depKey1 := prefixA + baseValue1
+				depKey2 := prefixA + baseValue4
+				return []Dependency{
+					{Label: depKey1, Key: depKey1},
+					{Label: depKey2, Key: depKey2},
+				}
+			}
+			return nil
+		},
+		WithMetadata:     false,
+		DumpIsSupported:  false,
+	}, mockSB, 0)
+
+	// register the descriptor
+	scheduler.RegisterKVDescriptor(descriptor)
+
+	// run non-resync transaction against empty SB
+	startTime := time.Now()
+	schedulerTxn := scheduler.StartNBTransaction()
+	schedulerTxn.SetValueData(prefixA+baseValue1, "base-value1-data")
+	schedulerTxn.SetValueData(prefixA+baseValue2, "base-value2-data")
+	schedulerTxn.SetValueData(prefixA+baseValue3, "base-value3-data")
+	kvErrors, txnError := schedulerTxn.Commit(context.Background())
+	stopTime := time.Now()
+	Expect(txnError).ShouldNot(HaveOccurred())
+	Expect(kvErrors).To(BeEmpty())
+
+	// check the state of SB
+	Expect(mockSB.GetKeysWithInvalidData()).To(BeEmpty())
+	Expect(mockSB.GetValues(nil)).To(HaveLen(0))
+
+	// check pending values
+	pendingValues := scheduler.GetPendingValues(nil)
+	checkValues(pendingValues, []KeyValuePair{
+		{Key: prefixA + baseValue1, Value: test.NewStringValue(baseValue1, "base-value1-data")},
+		{Key: prefixA + baseValue2, Value: test.NewStringValue(baseValue2, "base-value2-data")},
+		{Key: prefixA + baseValue3, Value: test.NewStringValue(baseValue3, "base-value3-data")},
+	})
+
+	// check operations executed in SB
+	opHistory := mockSB.PopHistoryOfOps()
+	Expect(opHistory).To(HaveLen(0))
+
+	// check transaction operations
+	txnHistory := scheduler.getTransactionHistory(time.Time{}, time.Now())
+	Expect(txnHistory).To(HaveLen(1))
+	txn := txnHistory[0]
+	Expect(txn.preRecord).To(BeFalse())
+	Expect(txn.start.After(startTime)).To(BeTrue())
+	Expect(txn.start.Before(txn.stop)).To(BeTrue())
+	Expect(txn.stop.Before(stopTime)).To(BeTrue())
+	Expect(txn.seqNum).To(BeEquivalentTo(0))
+	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
+	Expect(txn.isResync).To(BeFalse())
+	checkRecordedValues(txn.values, []recordedKVPair{
+		{key: prefixA + baseValue1, value: &recordedValue{label: baseValue1, string: "base-value1-data"}, origin: FromNB},
+		{key: prefixA + baseValue2, value: &recordedValue{label: baseValue2, string: "base-value2-data"}, origin: FromNB},
+		{key: prefixA + baseValue3, value: &recordedValue{label: baseValue3, string: "base-value3-data"}, origin: FromNB},
+	})
+	Expect(txn.preErrors).To(BeEmpty())
+
+	txnOps := recordedTxnOps{
+		{
+			operation:  add,
+			key:        prefixA + baseValue1,
+			newValue:   &recordedValue{label: baseValue1, string: "base-value1-data"},
+			prevOrigin: FromNB,
+			newOrigin:  FromNB,
+			isPending:  true,
+		},
+		{
+			operation:  add,
+			key:        prefixA + baseValue2,
+			newValue:   &recordedValue{label: baseValue2, string: "base-value2-data"},
+			prevOrigin: FromNB,
+			newOrigin:  FromNB,
+			isPending:  true,
+		},
+		{
+			operation:  add,
+			key:        prefixA + baseValue3,
+			newValue:   &recordedValue{label: baseValue3, string: "base-value3-data"},
+			prevOrigin: FromNB,
+			newOrigin:  FromNB,
+			isPending:  true,
+		},
+	}
+	checkTxnOperations(txn.planned, txnOps)
+	checkTxnOperations(txn.executed, txnOps)
+
+	// check flag stats
+	graphR := scheduler.graph.Read()
+	errorStats := graphR.GetFlagStats(ErrorFlagName, nil)
+	Expect(errorStats.TotalCount).To(BeEquivalentTo(0))
+	pendingStats := graphR.GetFlagStats(PendingFlagName, nil)
+	Expect(pendingStats.TotalCount).To(BeEquivalentTo(3))
+	derivedStats := graphR.GetFlagStats(DerivedFlagName, nil)
+	Expect(derivedStats.TotalCount).To(BeEquivalentTo(0))
+	lastUpdateStats := graphR.GetFlagStats(LastUpdateFlagName, nil)
+	Expect(lastUpdateStats.TotalCount).To(BeEquivalentTo(3))
+	lastChangeStats := graphR.GetFlagStats(LastChangeFlagName, nil)
+	Expect(lastChangeStats.TotalCount).To(BeEquivalentTo(3))
+	descriptorStats := graphR.GetFlagStats(DescriptorFlagName, nil)
+	Expect(descriptorStats.TotalCount).To(BeEquivalentTo(3))
+	Expect(descriptorStats.PerValueCount).To(HaveKey(descriptor1Name))
+	Expect(descriptorStats.PerValueCount[descriptor1Name]).To(BeEquivalentTo(3))
+	originStats := graphR.GetFlagStats(OriginFlagName, nil)
+	Expect(originStats.TotalCount).To(BeEquivalentTo(3))
+	Expect(originStats.PerValueCount).To(HaveKey(FromNB.String()))
+	Expect(originStats.PerValueCount[FromNB.String()]).To(BeEquivalentTo(3))
+	graphR.Release()
+
+	// run second transaction that will make the cycle of values ready to be added
+	startTime = time.Now()
+	schedulerTxn = scheduler.StartNBTransaction()
+	schedulerTxn.SetValueData(prefixA+baseValue4, "base-value4-data")
+	kvErrors, txnError = schedulerTxn.Commit(context.Background())
+	stopTime = time.Now()
+	Expect(txnError).ShouldNot(HaveOccurred())
+	Expect(kvErrors).To(BeEmpty())
+
+	// check the state of SB
+	Expect(mockSB.GetKeysWithInvalidData()).To(BeEmpty())
+	Expect(mockSB.GetValues(nil)).To(HaveLen(4))
+	// -> base value 1
+	value := mockSB.GetValue(prefixA + baseValue1)
+	Expect(value).ToNot(BeNil())
+	Expect(value.Value.Equivalent(test.NewStringValue(baseValue1, "base-value1-data"))).To(BeTrue())
+	Expect(value.Metadata).To(BeNil())
+	Expect(value.Origin).To(BeEquivalentTo(FromNB))
+	// -> base value 2
+	value = mockSB.GetValue(prefixA + baseValue2)
+	Expect(value).ToNot(BeNil())
+	Expect(value.Value.Equivalent(test.NewStringValue(baseValue2, "base-value2-data"))).To(BeTrue())
+	Expect(value.Metadata).To(BeNil())
+	Expect(value.Origin).To(BeEquivalentTo(FromNB))
+	// -> base value 3
+	value = mockSB.GetValue(prefixA + baseValue3)
+	Expect(value).ToNot(BeNil())
+	Expect(value.Value.Equivalent(test.NewStringValue(baseValue3, "base-value3-data"))).To(BeTrue())
+	Expect(value.Metadata).To(BeNil())
+	Expect(value.Origin).To(BeEquivalentTo(FromNB))
+	// -> base value 4
+	value = mockSB.GetValue(prefixA + baseValue4)
+	Expect(value).ToNot(BeNil())
+	Expect(value.Value.Equivalent(test.NewStringValue(baseValue4, "base-value4-data"))).To(BeTrue())
+	Expect(value.Metadata).To(BeNil())
+	Expect(value.Origin).To(BeEquivalentTo(FromNB))
+
+	// check pending values
+	pendingValues = scheduler.GetPendingValues(nil)
+	Expect(pendingValues).To(BeEmpty())
+
+	// check operations executed in SB
+	opHistory = mockSB.PopHistoryOfOps()
+	Expect(opHistory).To(HaveLen(4))
+	operation := opHistory[0]
+	Expect(operation.OpType).To(Equal(test.Add))
+	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
+	Expect(operation.Key).To(BeEquivalentTo(prefixA + baseValue4))
+	Expect(operation.Err).To(BeNil())
+	operation = opHistory[1]
+	Expect(operation.OpType).To(Equal(test.Add))
+	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
+	Expect(operation.Key).To(BeEquivalentTo(prefixA + baseValue3))
+	Expect(operation.Err).To(BeNil())
+	operation = opHistory[2]
+	Expect(operation.OpType).To(Equal(test.Add))
+	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
+	Expect(operation.Key).To(BeEquivalentTo(prefixA + baseValue2))
+	Expect(operation.Err).To(BeNil())
+	operation = opHistory[3]
+	Expect(operation.OpType).To(Equal(test.Add))
+	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
+	Expect(operation.Key).To(BeEquivalentTo(prefixA + baseValue1))
+	Expect(operation.Err).To(BeNil())
+
+	// check transaction operations
+	txnHistory = scheduler.getTransactionHistory(time.Time{}, time.Now())
+	Expect(txnHistory).To(HaveLen(2))
+	txn = txnHistory[1]
+	Expect(txn.preRecord).To(BeFalse())
+	Expect(txn.start.After(startTime)).To(BeTrue())
+	Expect(txn.start.Before(txn.stop)).To(BeTrue())
+	Expect(txn.stop.Before(stopTime)).To(BeTrue())
+	Expect(txn.seqNum).To(BeEquivalentTo(1))
+	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
+	Expect(txn.isResync).To(BeFalse())
+	checkRecordedValues(txn.values, []recordedKVPair{
+		{key: prefixA + baseValue4, value: &recordedValue{label: baseValue4, string: "base-value4-data"}, origin: FromNB},
+	})
+	Expect(txn.preErrors).To(BeEmpty())
+
+	txnOps = recordedTxnOps{
+		{
+			operation:  add,
+			key:        prefixA + baseValue4,
+			newValue:   &recordedValue{label: baseValue4, string: "base-value4-data"},
+			prevOrigin: FromNB,
+			newOrigin:  FromNB,
+		},
+		{
+			operation:  add,
+			key:        prefixA + baseValue3,
+			prevValue:  &recordedValue{label: baseValue3, string: "base-value3-data"},
+			newValue:   &recordedValue{label: baseValue3, string: "base-value3-data"},
+			prevOrigin: FromNB,
+			newOrigin:  FromNB,
+			wasPending: true,
+		},
+		{
+			operation:  add,
+			key:        prefixA + baseValue2,
+			prevValue:  &recordedValue{label: baseValue2, string: "base-value2-data"},
+			newValue:   &recordedValue{label: baseValue2, string: "base-value2-data"},
+			prevOrigin: FromNB,
+			newOrigin:  FromNB,
+			wasPending: true,
+		},
+		{
+			operation:  add,
+			key:        prefixA + baseValue1,
+			prevValue:  &recordedValue{label: baseValue1, string: "base-value1-data"},
+			newValue:   &recordedValue{label: baseValue1, string: "base-value1-data"},
+			prevOrigin: FromNB,
+			newOrigin:  FromNB,
+			wasPending: true,
+		},
+	}
+	checkTxnOperations(txn.planned, txnOps)
+	checkTxnOperations(txn.executed, txnOps)
+
+	// check flag stats
+	graphR = scheduler.graph.Read()
+	errorStats = graphR.GetFlagStats(ErrorFlagName, nil)
+	Expect(errorStats.TotalCount).To(BeEquivalentTo(0))
+	pendingStats = graphR.GetFlagStats(PendingFlagName, nil)
+	Expect(pendingStats.TotalCount).To(BeEquivalentTo(3))
+	derivedStats = graphR.GetFlagStats(DerivedFlagName, nil)
+	Expect(derivedStats.TotalCount).To(BeEquivalentTo(0))
+	lastUpdateStats = graphR.GetFlagStats(LastUpdateFlagName, nil)
+	Expect(lastUpdateStats.TotalCount).To(BeEquivalentTo(7))
+	lastChangeStats = graphR.GetFlagStats(LastChangeFlagName, nil)
+	Expect(lastChangeStats.TotalCount).To(BeEquivalentTo(7))
+	descriptorStats = graphR.GetFlagStats(DescriptorFlagName, nil)
+	Expect(descriptorStats.TotalCount).To(BeEquivalentTo(7))
+	Expect(descriptorStats.PerValueCount).To(HaveKey(descriptor1Name))
+	Expect(descriptorStats.PerValueCount[descriptor1Name]).To(BeEquivalentTo(7))
+	originStats = graphR.GetFlagStats(OriginFlagName, nil)
+	Expect(originStats.TotalCount).To(BeEquivalentTo(7))
+	Expect(originStats.PerValueCount).To(HaveKey(FromNB.String()))
+	Expect(originStats.PerValueCount[FromNB.String()]).To(BeEquivalentTo(7))
+	graphR.Release()
+
+	// plan error before 3rd txn
+	mockSB.PlanError(prefixA+baseValue2, errors.New("failed to remove the value"), nil)
+
+	// run third transaction that will break the cycle even though the delete operation will fail
+	startTime = time.Now()
+	schedulerTxn = scheduler.StartNBTransaction()
+	schedulerTxn.SetValueData(prefixA+baseValue2, nil)
+	kvErrors, txnError = schedulerTxn.Commit(context.Background())
+	stopTime = time.Now()
+	Expect(txnError).ShouldNot(HaveOccurred())
+	Expect(kvErrors).To(HaveLen(1))
+	Expect(kvErrors[0].Key).To(BeEquivalentTo(prefixA + baseValue2))
+	Expect(kvErrors[0].Error.Error()).To(BeEquivalentTo("failed to remove the value"))
+
+	// check the state of SB
+	Expect(mockSB.GetKeysWithInvalidData()).To(BeEmpty())
+	Expect(mockSB.GetValues(nil)).To(HaveLen(2))
+	// -> base value 1 - pending
+	value = mockSB.GetValue(prefixA + baseValue1)
+	Expect(value).To(BeNil())
+	// -> base value 2 - failed to remove
+	value = mockSB.GetValue(prefixA + baseValue2)
+	Expect(value).ToNot(BeNil())
+	Expect(value.Value.Equivalent(test.NewStringValue(baseValue2, "base-value2-data"))).To(BeTrue())
+	Expect(value.Metadata).To(BeNil())
+	Expect(value.Origin).To(BeEquivalentTo(FromNB))
+	// -> base value 3 - pending
+	value = mockSB.GetValue(prefixA + baseValue3)
+	Expect(value).To(BeNil())
+	// -> base value 4
+	value = mockSB.GetValue(prefixA + baseValue4)
+	Expect(value).ToNot(BeNil())
+	Expect(value.Value.Equivalent(test.NewStringValue(baseValue4, "base-value4-data"))).To(BeTrue())
+	Expect(value.Metadata).To(BeNil())
+	Expect(value.Origin).To(BeEquivalentTo(FromNB))
+
+	// check pending values
+	pendingValues = scheduler.GetPendingValues(nil)
+	checkValues(pendingValues, []KeyValuePair{
+		{Key: prefixA + baseValue1, Value: test.NewStringValue(baseValue1, "base-value1-data")},
+		{Key: prefixA + baseValue3, Value: test.NewStringValue(baseValue3, "base-value3-data")},
+	})
+
+	// check operations executed in SB
+	opHistory = mockSB.PopHistoryOfOps()
+	Expect(opHistory).To(HaveLen(3))
+	operation = opHistory[0]
+	Expect(operation.OpType).To(Equal(test.Delete))
+	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
+	Expect(operation.Key).To(BeEquivalentTo(prefixA + baseValue3))
+	Expect(operation.Err).To(BeNil())
+	operation = opHistory[1]
+	Expect(operation.OpType).To(Equal(test.Delete))
+	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
+	Expect(operation.Key).To(BeEquivalentTo(prefixA + baseValue1))
+	Expect(operation.Err).To(BeNil())
+	operation = opHistory[2]
+	Expect(operation.OpType).To(Equal(test.Delete))
+	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
+	Expect(operation.Key).To(BeEquivalentTo(prefixA + baseValue2))
+	Expect(operation.Err.Error()).To(BeEquivalentTo("failed to remove the value"))
+
+	// check transaction operations
+	txnHistory = scheduler.getTransactionHistory(time.Time{}, time.Now())
+	Expect(txnHistory).To(HaveLen(3))
+	txn = txnHistory[2]
+	Expect(txn.preRecord).To(BeFalse())
+	Expect(txn.start.After(startTime)).To(BeTrue())
+	Expect(txn.start.Before(txn.stop)).To(BeTrue())
+	Expect(txn.stop.Before(stopTime)).To(BeTrue())
+	Expect(txn.seqNum).To(BeEquivalentTo(2))
+	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
+	Expect(txn.isResync).To(BeFalse())
+	checkRecordedValues(txn.values, []recordedKVPair{
+		{key: prefixA + baseValue2, value: nil, origin: FromNB},
+	})
+	Expect(txn.preErrors).To(BeEmpty())
+
+	txnOps = recordedTxnOps{
+		{
+			operation:  del,
+			key:        prefixA + baseValue3,
+			prevValue:  &recordedValue{label: baseValue3, string: "base-value3-data"},
+			prevOrigin: FromNB,
+			newOrigin:  FromNB,
+			isPending:  true,
+		},
+		{
+			operation:  del,
+			key:        prefixA + baseValue1,
+			prevValue:  &recordedValue{label: baseValue1, string: "base-value1-data"},
+			prevOrigin: FromNB,
+			newOrigin:  FromNB,
+			isPending:  true,
+		},
+		{
+			operation:  del,
+			key:        prefixA + baseValue2,
+			prevValue:  &recordedValue{label: baseValue2, string: "base-value2-data"},
+			prevOrigin: FromNB,
+			newOrigin:  FromNB,
+		},
+	}
+	checkTxnOperations(txn.planned, txnOps)
+	txnOps[2].newErr = errors.New("failed to remove the value")
+	checkTxnOperations(txn.executed, txnOps)
+
+	// check flag stats
+	graphR = scheduler.graph.Read()
+	errorStats = graphR.GetFlagStats(ErrorFlagName, nil)
+	Expect(errorStats.TotalCount).To(BeEquivalentTo(1))
+	pendingStats = graphR.GetFlagStats(PendingFlagName, nil)
+	Expect(pendingStats.TotalCount).To(BeEquivalentTo(5))
+	derivedStats = graphR.GetFlagStats(DerivedFlagName, nil)
+	Expect(derivedStats.TotalCount).To(BeEquivalentTo(0))
+	lastUpdateStats = graphR.GetFlagStats(LastUpdateFlagName, nil)
+	Expect(lastUpdateStats.TotalCount).To(BeEquivalentTo(10))
+	lastChangeStats = graphR.GetFlagStats(LastChangeFlagName, nil)
+	Expect(lastChangeStats.TotalCount).To(BeEquivalentTo(10))
+	descriptorStats = graphR.GetFlagStats(DescriptorFlagName, nil)
+	Expect(descriptorStats.TotalCount).To(BeEquivalentTo(10))
+	Expect(descriptorStats.PerValueCount).To(HaveKey(descriptor1Name))
+	Expect(descriptorStats.PerValueCount[descriptor1Name]).To(BeEquivalentTo(10))
+	originStats = graphR.GetFlagStats(OriginFlagName, nil)
+	Expect(originStats.TotalCount).To(BeEquivalentTo(10))
+	Expect(originStats.PerValueCount).To(HaveKey(FromNB.String()))
+	Expect(originStats.PerValueCount[FromNB.String()]).To(BeEquivalentTo(10))
+	graphR.Release()
+
+	// finally, run 4th txn to get back the removed value
+	schedulerTxn = scheduler.StartNBTransaction()
+	schedulerTxn.SetValueData(prefixA+baseValue2, "base-value2-data-new")
+	kvErrors, txnError = schedulerTxn.Commit(context.Background())
+	Expect(txnError).ShouldNot(HaveOccurred())
+	Expect(kvErrors).To(HaveLen(0))
+
+	// check the state of SB
+	Expect(mockSB.GetKeysWithInvalidData()).To(BeEmpty())
+	Expect(mockSB.GetValues(nil)).To(HaveLen(4))
+	// -> base value 1
+	value = mockSB.GetValue(prefixA + baseValue1)
+	Expect(value).ToNot(BeNil())
+	Expect(value.Value.Equivalent(test.NewStringValue(baseValue1, "base-value1-data"))).To(BeTrue())
+	Expect(value.Metadata).To(BeNil())
+	Expect(value.Origin).To(BeEquivalentTo(FromNB))
+	// -> base value 2
+	value = mockSB.GetValue(prefixA + baseValue2)
+	Expect(value).ToNot(BeNil())
+	Expect(value.Value.Equivalent(test.NewStringValue(baseValue2, "base-value2-data-new"))).To(BeTrue())
+	Expect(value.Metadata).To(BeNil())
+	Expect(value.Origin).To(BeEquivalentTo(FromNB))
+	// -> base value 3
+	value = mockSB.GetValue(prefixA + baseValue3)
+	Expect(value).ToNot(BeNil())
+	Expect(value.Value.Equivalent(test.NewStringValue(baseValue3, "base-value3-data"))).To(BeTrue())
+	Expect(value.Metadata).To(BeNil())
+	Expect(value.Origin).To(BeEquivalentTo(FromNB))
+	// -> base value 4
+	value = mockSB.GetValue(prefixA + baseValue4)
+	Expect(value).ToNot(BeNil())
+	Expect(value.Value.Equivalent(test.NewStringValue(baseValue4, "base-value4-data"))).To(BeTrue())
+	Expect(value.Metadata).To(BeNil())
+	Expect(value.Origin).To(BeEquivalentTo(FromNB))
+
+	// check pending values
+	pendingValues = scheduler.GetPendingValues(nil)
+	Expect(pendingValues).To(BeEmpty())
+}

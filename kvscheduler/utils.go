@@ -97,22 +97,31 @@ func constructTargets(deps []Dependency, derives []KeyValuePair) (targets []grap
 }
 
 // dependsOn returns true if k1 depends on k2 based on dependencies from <deps>.
-func dependsOn(k1, k2 string, deps map[string]keySet, valCount int, depth int) bool {
-	if depth == valCount {
-		panic("Dependency cycle!")
+func dependsOn(k1, k2 string, deps map[string]keySet, visited keySet) bool {
+	if visited == nil {
+		visited = make(keySet)
 	}
+
+	// check direct dependencies
 	k1Deps := deps[k1]
 	if _, depends := k1Deps[k2]; depends {
 		return true
 	}
+
+	// continue transitively
+	visited[k1] = struct{}{}
 	for dep := range k1Deps {
-		if dependsOn(dep, k2, deps, valCount, depth+1) {
+		if _, wasVisited := visited[dep]; wasVisited {
+			continue
+		}
+		if dependsOn(dep, k2, deps, visited) {
 			return true
 		}
 	}
 	return false
 }
 
+// getNodeOrigin returns node origin stored in Origin flag.
 func getNodeOrigin(node graph.Node) ValueOrigin {
 	flag := node.GetFlag(OriginFlagName)
 	if flag != nil {
@@ -121,6 +130,7 @@ func getNodeOrigin(node graph.Node) ValueOrigin {
 	return UnknownOrigin
 }
 
+// getNodeOrigin returns node error stored in Error flag.
 func getNodeError(node graph.Node) error {
 	errorFlag := node.GetFlag(ErrorFlagName)
 	if errorFlag != nil {
@@ -129,8 +139,13 @@ func getNodeError(node graph.Node) error {
 	return nil
 }
 
+// getNodeOrigin returns info about last change for a given node, stored in LastChange flag.
 func getNodeLastChange(node graph.Node) *LastChangeFlag {
-	return node.GetFlag(LastChangeFlagName).(*LastChangeFlag)
+	flag := node.GetFlag(LastChangeFlagName)
+	if flag == nil {
+		return nil
+	}
+	return flag.(*LastChangeFlag)
 }
 
 func isNodeDerived(node graph.Node) bool {
@@ -141,15 +156,40 @@ func isNodePending(node graph.Node) bool {
 	return node.GetFlag(PendingFlagName) != nil
 }
 
+// isNodeReady return true if the given node has all dependencies satisfied.
+// Recursive calls are needed to handle circular dependencies - nodes of a strongly
+// connected component are treated as if they were squashed into one.
 func isNodeReady(node graph.Node) bool {
 	if getNodeOrigin(node) == FromSB {
 		// for SB values dependencies are not checked
 		return true
 	}
-	for _, targets := range node.GetTargets(DependencyRelation) {
+	return isNodeReadyRec(node, node, make(keySet))
+}
+
+// isNodeReadyRec is a recursive call from within isNodeReady.
+func isNodeReadyRec(src, current graph.Node, visited keySet) bool {
+	cycle := false
+	visited[current.GetKey()] = struct{}{}
+	defer delete(visited, current.GetKey())
+
+	for _, targets := range current.GetTargets(DependencyRelation) {
 		satisfied := false
 		for _, target := range targets {
+			if isNodeBeingRemoved(target) {
+				// do not consider values that are about to be removed
+				continue
+			}
 			if !isNodePending(target) {
+				satisfied = true
+				if current.GetKey() == src.GetKey() {
+					break
+				}
+			}
+			// test if this is a strongly-connected component that includes "src" (treated as one node)
+			_, wasVisited := visited[target.GetKey()]
+			if target.GetKey() == src.GetKey() || (!wasVisited && isNodeReadyRec(src, target, visited)) {
+				cycle = true
 				satisfied = true
 				break
 			}
@@ -158,7 +198,35 @@ func isNodeReady(node graph.Node) bool {
 			return false
 		}
 	}
-	return true
+	return current.GetKey() == src.GetKey() || cycle
+}
+
+// isNodeBeingRemoved returns true for a given node if it is being removed
+// by a transaction or a notification (including failed removal attempt).
+func isNodeBeingRemoved(node graph.Node) bool {
+	base := node
+	if isNodeDerived(node) {
+		for {
+			derivedFrom := base.GetSources(DerivesRelation)
+			if len(derivedFrom) == 0 {
+				break
+			}
+			base = derivedFrom[0]
+			if isNodePending(base) {
+				// one of the values from which this derives is pending
+				return true
+			}
+		}
+		if isNodeDerived(base) {
+			// derived without base -> is is being removed by Modify()
+			return true
+		}
+	}
+	if getNodeLastChange(base) != nil && getNodeLastChange(base).value == nil {
+		// about to be removed by transaction
+		return true
+	}
+	return false
 }
 
 func canNodeHaveMetadata(node graph.Node) bool {

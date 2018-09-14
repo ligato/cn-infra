@@ -82,12 +82,15 @@ func (scheduler *Scheduler) orderValuesByOp(graphR graph.ReadAccess, values []kv
 
 func (scheduler *Scheduler) orderValuesByDeps(values []kvForTxn, deps map[string]keySet, depFirst bool) {
 	sort.Slice(values, func(i, j int) bool {
-		iDepOnJ := dependsOn(values[i].key, values[j].key, deps, len(values), 0)
-		jDepOnI := dependsOn(values[j].key, values[i].key, deps, len(values), 0)
+		iDepOnJ := dependsOn(values[i].key, values[j].key, deps, nil)
+		jDepOnI := dependsOn(values[j].key, values[i].key, deps, nil)
+		if iDepOnJ == jDepOnI {
+			return values[i].key < values[j].key
+		}
 		if depFirst {
-			return jDepOnI || (!iDepOnJ && values[i].key < values[j].key)
+			return jDepOnI
 
 		}
-		return iDepOnJ || (!jDepOnI && values[i].key < values[j].key)
+		return iDepOnJ
 	})
 }

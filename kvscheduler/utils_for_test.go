@@ -33,6 +33,7 @@ const (
 	baseValue1 = "base-value1"
 	baseValue2 = "base-value2"
 	baseValue3 = "base-value3"
+	baseValue4 = "base-value4"
 )
 
 func prefixSelector(prefix string) func(key string) bool {
