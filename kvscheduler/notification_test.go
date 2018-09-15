@@ -656,12 +656,10 @@ func TestNotificationsWithRetry(t *testing.T) {
 			mockSB.SetValue(prefixB+baseValue2, test.NewArrayValue(baseValue2, "item1"),
 				&test.OnlyInteger{Integer: 0}, FromNB, false)
 		})
-	for i := 0; i < 3; i++ {
-		mockSB.PlanError(prefixC+baseValue3, errors.New("failed to add value"),
-			func() {
-				mockSB.SetValue(prefixC+baseValue3, nil, nil, FromNB, false)
-			})
-	}
+	mockSB.PlanError(prefixC+baseValue3, errors.New("failed to add value"),
+		func() {
+			mockSB.SetValue(prefixC+baseValue3, nil, nil, FromNB, false)
+		})
 
 	// subscribe to receive notifications about errors
 	errorChan := make(chan KeyWithError, 5)
@@ -724,17 +722,9 @@ func TestNotificationsWithRetry(t *testing.T) {
 	Expect(errorNotif.Error).ToNot(BeNil())
 	Expect(errorNotif.Error.Error()).To(BeEquivalentTo("failed to add value"))
 	Eventually(errorChan, time.Second).Should(Receive(&errorNotif))
-	Expect(errorNotif.Key).To(Equal(prefixC + baseValue3))
-	Expect(errorNotif.Error).ToNot(BeNil())
-	Expect(errorNotif.Error.Error()).To(BeEquivalentTo("failed to add value"))
-	Eventually(errorChan, time.Second).Should(Receive(&errorNotif))
 	Expect(errorNotif.Key).To(Equal(prefixB + baseValue2 + "/item2"))
 	Expect(errorNotif.Error).ToNot(BeNil())
 	Expect(errorNotif.Error.Error()).To(BeEquivalentTo("failed to add derived value"))
-	Eventually(errorChan, time.Second).Should(Receive(&errorNotif))
-	Expect(errorNotif.Key).To(Equal(prefixC + baseValue3))
-	Expect(errorNotif.Error).ToNot(BeNil())
-	Expect(errorNotif.Error.Error()).To(BeEquivalentTo("failed to add value"))
 
 	// check the state of SB
 	Expect(mockSB.GetKeysWithInvalidData()).To(BeEmpty())
@@ -777,7 +767,7 @@ func TestNotificationsWithRetry(t *testing.T) {
 
 	// check operations executed in SB
 	opHistory := mockSB.PopHistoryOfOps()
-	Expect(opHistory).To(HaveLen(8))
+	Expect(opHistory).To(HaveLen(6))
 	operation := opHistory[0]
 	Expect(operation.OpType).To(Equal(test.Add))
 	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor2Name))
@@ -796,23 +786,11 @@ func TestNotificationsWithRetry(t *testing.T) {
 	Expect(operation.Err.Error()).To(BeEquivalentTo("failed to add value"))
 	operation = opHistory[3]
 	Expect(operation.OpType).To(Equal(test.Add))
-	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor3Name))
-	Expect(operation.Key).To(BeEquivalentTo(prefixC + baseValue3))
-	Expect(operation.Err).ToNot(BeNil())
-	Expect(operation.Err.Error()).To(BeEquivalentTo("failed to add value"))
-	operation = opHistory[4]
-	Expect(operation.OpType).To(Equal(test.Add))
 	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor2Name))
 	Expect(operation.Key).To(BeEquivalentTo(prefixB + baseValue2 + "/item2"))
 	Expect(operation.Err).ToNot(BeNil())
 	Expect(operation.Err.Error()).To(BeEquivalentTo("failed to add derived value"))
-	operation = opHistory[5]
-	Expect(operation.OpType).To(Equal(test.Add))
-	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor3Name))
-	Expect(operation.Key).To(BeEquivalentTo(prefixC + baseValue3))
-	Expect(operation.Err).ToNot(BeNil())
-	Expect(operation.Err.Error()).To(BeEquivalentTo("failed to add value"))
-	operation = opHistory[6] // refresh failed value
+	operation = opHistory[4] // refresh failed value
 	Expect(operation.OpType).To(Equal(test.Dump))
 	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor2Name))
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
@@ -823,7 +801,7 @@ func TestNotificationsWithRetry(t *testing.T) {
 			Origin:   FromNB,
 		},
 	})
-	operation = opHistory[7] // refresh failed value
+	operation = opHistory[5] // refresh failed value
 	Expect(operation.OpType).To(Equal(test.Dump))
 	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor3Name))
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{})
@@ -981,18 +959,6 @@ func TestNotificationsWithRetry(t *testing.T) {
 		},
 		{
 			operation:  add,
-			key:        prefixC + baseValue3,
-			prevValue:  &recordedValue{label: baseValue3, string: "base-value3-data"},
-			newValue:   &recordedValue{label: baseValue3, string: "base-value3-data"},
-			prevOrigin: FromNB,
-			newOrigin:  FromNB,
-			wasPending: true,
-			isPending:  true,
-			prevErr:    errors.New("failed to add value"),
-			newErr:     errors.New("failed to add value"),
-		},
-		{
-			operation:  add,
 			key:        prefixA + baseValue1 + "/item2",
 			newValue:   &recordedValue{label: "item2", string: "item2"},
 			prevOrigin: FromSB,
@@ -1008,18 +974,6 @@ func TestNotificationsWithRetry(t *testing.T) {
 			wasPending: true,
 			isPending:  true,
 			newErr:     errors.New("failed to add derived value"),
-		},
-		{
-			operation:  add,
-			key:        prefixC + baseValue3,
-			prevValue:  &recordedValue{label: baseValue3, string: "base-value3-data"},
-			newValue:   &recordedValue{label: baseValue3, string: "base-value3-data"},
-			prevOrigin: FromNB,
-			newOrigin:  FromNB,
-			wasPending: true,
-			isPending:  true,
-			prevErr:    errors.New("failed to add value"),
-			newErr:     errors.New("failed to add value"),
 		},
 	}
 	checkTxnOperations(txn.executed, txnOps)

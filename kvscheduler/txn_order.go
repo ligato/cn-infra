@@ -47,7 +47,7 @@ func (scheduler *Scheduler) orderValuesByOp(graphR graph.ReadAccess, values []kv
 		for _, kv2 := range values {
 			for _, dep := range valDeps {
 				if kv2.key == dep.Key || (dep.AnyOf != nil && dep.AnyOf(kv2.key)) {
-					deps[kv.key][kv2.key] = struct{}{}
+					deps[kv.key].add(kv2.key)
 				}
 			}
 		}

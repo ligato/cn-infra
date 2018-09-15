@@ -24,6 +24,11 @@ import (
 
 type keySet map[string]struct{}
 
+func (ks keySet) add(key string) keySet {
+	ks[key] = struct{}{}
+	return ks
+}
+
 // subtract removes keys from <ks> that are in both key sets.
 func (ks keySet) subtract(ks2 keySet) keySet {
 	for key := range ks2 {
@@ -109,7 +114,7 @@ func dependsOn(k1, k2 string, deps map[string]keySet, visited keySet) bool {
 	}
 
 	// continue transitively
-	visited[k1] = struct{}{}
+	visited.add(k1)
 	for dep := range k1Deps {
 		if _, wasVisited := visited[dep]; wasVisited {
 			continue
@@ -139,13 +144,22 @@ func getNodeError(node graph.Node) error {
 	return nil
 }
 
-// getNodeOrigin returns info about last change for a given node, stored in LastChange flag.
+// getNodeLastChange returns info about the last change for a given node, stored in LastChange flag.
 func getNodeLastChange(node graph.Node) *LastChangeFlag {
 	flag := node.GetFlag(LastChangeFlagName)
 	if flag == nil {
 		return nil
 	}
 	return flag.(*LastChangeFlag)
+}
+
+// getNodeLastUpdate returns info about the last update for a given node, stored in LastChange flag.
+func getNodeLastUpdate(node graph.Node) *LastUpdateFlag {
+	flag := node.GetFlag(LastUpdateFlagName)
+	if flag == nil {
+		return nil
+	}
+	return flag.(*LastUpdateFlag)
 }
 
 func isNodeDerived(node graph.Node) bool {
@@ -170,7 +184,7 @@ func isNodeReady(node graph.Node) bool {
 // isNodeReadyRec is a recursive call from within isNodeReady.
 func isNodeReadyRec(src, current graph.Node, visited keySet) bool {
 	cycle := false
-	visited[current.GetKey()] = struct{}{}
+	visited.add(current.GetKey())
 	defer delete(visited, current.GetKey())
 
 	for _, targets := range current.GetTargets(DependencyRelation) {
@@ -253,7 +267,7 @@ func getDerivedNodes(node graph.Node) (derived []graph.Node) {
 func getDerivedKeys(node graph.Node) keySet {
 	set := make(keySet)
 	for _, derived := range getDerivedNodes(node) {
-		set[derived.GetKey()] = struct{}{}
+		set.add(derived.GetKey())
 	}
 	return set
 }

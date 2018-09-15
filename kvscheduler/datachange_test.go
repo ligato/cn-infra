@@ -702,7 +702,6 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 			&test.OnlyInteger{Integer: 0}, FromNB, false)
 	}
 	mockSB.PlanError(prefixA+baseValue1, errors.New("failed to modify value"), failedModifyClb)
-	mockSB.PlanError(prefixA+baseValue1, errors.New("failed to modify value, again"), failedModifyClb) // the error will repeat one more time
 
 	// subscribe to receive notifications about errors
 	errorChan := make(chan KeyWithError, 5)
@@ -710,7 +709,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 
 	// run 2nd non-resync transaction against empty SB that will fail and will be reverted
 	startTime := time.Now()
-	schedulerTxn2 := scheduler.StartNBTransaction(WithRevert(), WithRetry(3*time.Second, true))
+	schedulerTxn2 := scheduler.StartNBTransaction(WithRevert())
 	schedulerTxn2.SetValueData(prefixC+baseValue3, []string{"item1"})
 	schedulerTxn2.SetValueData(prefixA+baseValue1, []string{"item1"})
 	kvErrors, txnError = schedulerTxn2.Commit(context.Background())
@@ -732,16 +731,19 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 	// -> base value 1
 	value := mockSB.GetValue(prefixA + baseValue1)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue1))).To(BeTrue())
+	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue1, "item2"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(0))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item1 derived from base value was NOT added
 	value = mockSB.GetValue(prefixA + baseValue1 + "/item1")
 	Expect(value).To(BeNil())
-	// -> item2 derived from base value 1 was deleted
+	// -> item2 derived from base value 1 was first deleted by then added back
 	value = mockSB.GetValue(prefixA + baseValue1 + "/item2")
-	Expect(value).To(BeNil())
+	Expect(value).ToNot(BeNil())
+	Expect(value.Value.Equivalent(test.NewStringValue("item2", "item2"))).To(BeTrue())
+	Expect(value.Metadata).To(BeNil())
+	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> base value 2
 	value = mockSB.GetValue(prefixB + baseValue2)
 	Expect(value).ToNot(BeNil())
@@ -758,7 +760,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 	// -> item2 derived from base value 2 is still pending
 	value = mockSB.GetValue(prefixB + baseValue2 + "/item2")
 	Expect(value).To(BeNil())
-	// -> base value 3 was re-verted back to state after 1st txn
+	// -> base value 3 was reverted back to state after 1st txn
 	value = mockSB.GetValue(prefixC + baseValue3)
 	Expect(value).ToNot(BeNil())
 	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue3, "item1", "item2"))).To(BeTrue())
@@ -791,7 +793,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 
 	// check operations executed in SB during 2nd txn
 	opHistory := mockSB.PopHistoryOfOps()
-	Expect(opHistory).To(HaveLen(13))
+	Expect(opHistory).To(HaveLen(16))
 	operation := opHistory[0]
 	Expect(operation.OpType).To(Equal(test.Delete))
 	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor3Name))
@@ -829,32 +831,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 	Expect(operation.Err).ToNot(BeNil())
 	Expect(operation.Err.Error()).To(BeEquivalentTo("failed to modify value"))
 	// reverting:
-	operation = opHistory[7]
-	Expect(operation.OpType).To(Equal(test.Delete))
-	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor3Name))
-	Expect(operation.Key).To(BeEquivalentTo(prefixC + baseValue3 + "/item1"))
-	Expect(operation.Err).To(BeNil())
-	operation = opHistory[8]
-	Expect(operation.OpType).To(Equal(test.Delete))
-	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor3Name))
-	Expect(operation.Key).To(BeEquivalentTo(prefixC + baseValue3))
-	Expect(operation.Err).To(BeNil())
-	operation = opHistory[9]
-	Expect(operation.OpType).To(Equal(test.Add))
-	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor3Name))
-	Expect(operation.Key).To(BeEquivalentTo(prefixC + baseValue3))
-	Expect(operation.Err).To(BeNil())
-	operation = opHistory[10]
-	Expect(operation.OpType).To(Equal(test.Add))
-	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor3Name))
-	Expect(operation.Key).To(BeEquivalentTo(prefixC + baseValue3 + "/item1"))
-	Expect(operation.Err).To(BeNil())
-	operation = opHistory[11]
-	Expect(operation.OpType).To(Equal(test.Add))
-	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor3Name))
-	Expect(operation.Key).To(BeEquivalentTo(prefixC + baseValue3 + "/item2"))
-	Expect(operation.Err).To(BeNil())
-	operation = opHistory[12] // refresh failed value
+	operation = opHistory[7] // refresh failed value
 	Expect(operation.OpType).To(Equal(test.Dump))
 	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
@@ -865,6 +842,46 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 			Origin:   FromNB,
 		},
 	})
+	operation = opHistory[8]
+	Expect(operation.OpType).To(Equal(test.Modify))
+	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
+	Expect(operation.Key).To(BeEquivalentTo(prefixA + baseValue1))
+	Expect(operation.Err).To(BeNil())
+	operation = opHistory[9]
+	Expect(operation.OpType).To(Equal(test.Update))
+	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor2Name))
+	Expect(operation.Key).To(BeEquivalentTo(prefixB + baseValue2 + "/item1"))
+	Expect(operation.Err).To(BeNil())
+	operation = opHistory[10]
+	Expect(operation.OpType).To(Equal(test.Add))
+	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
+	Expect(operation.Key).To(BeEquivalentTo(prefixA + baseValue1 + "/item2"))
+	Expect(operation.Err).To(BeNil())
+	operation = opHistory[11]
+	Expect(operation.OpType).To(Equal(test.Delete))
+	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor3Name))
+	Expect(operation.Key).To(BeEquivalentTo(prefixC + baseValue3 + "/item1"))
+	Expect(operation.Err).To(BeNil())
+	operation = opHistory[12]
+	Expect(operation.OpType).To(Equal(test.Delete))
+	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor3Name))
+	Expect(operation.Key).To(BeEquivalentTo(prefixC + baseValue3))
+	Expect(operation.Err).To(BeNil())
+	operation = opHistory[13]
+	Expect(operation.OpType).To(Equal(test.Add))
+	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor3Name))
+	Expect(operation.Key).To(BeEquivalentTo(prefixC + baseValue3))
+	Expect(operation.Err).To(BeNil())
+	operation = opHistory[14]
+	Expect(operation.OpType).To(Equal(test.Add))
+	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor3Name))
+	Expect(operation.Key).To(BeEquivalentTo(prefixC + baseValue3 + "/item1"))
+	Expect(operation.Err).To(BeNil())
+	operation = opHistory[15]
+	Expect(operation.OpType).To(Equal(test.Add))
+	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor3Name))
+	Expect(operation.Key).To(BeEquivalentTo(prefixC + baseValue3 + "/item2"))
+	Expect(operation.Err).To(BeNil())
 
 	// check transaction operations
 	txnHistory := scheduler.getTransactionHistory(startTime, time.Now())
@@ -1021,6 +1038,33 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		},
 		// reverting:
 		{
+			operation:  modify,
+			key:        prefixA + baseValue1,
+			prevValue:  &recordedValue{label: baseValue1, string: "[]"},
+			newValue:   &recordedValue{label: baseValue1, string: "[item2]"},
+			prevOrigin: FromNB,
+			newOrigin:  FromNB,
+			prevErr:    errors.New("failed to modify value"),
+			isRevert:   true,
+		},
+		{
+			operation:  update,
+			key:        prefixB + baseValue2 + "/item1",
+			prevValue:  &recordedValue{label: "item1", string: "item1"},
+			newValue:   &recordedValue{label: "item1", string: "item1"},
+			prevOrigin: FromNB,
+			newOrigin:  FromNB,
+			isRevert:   true,
+		},
+		{
+			operation:  add,
+			key:        prefixA + baseValue1 + "/item2",
+			newValue:   &recordedValue{label: "item2", string: "item2"},
+			prevOrigin: FromNB,
+			newOrigin:  FromNB,
+			isRevert:   true,
+		},
+		{
 			operation:  del,
 			key:        prefixC + baseValue3 + "/item1",
 			prevValue:  &recordedValue{label: "item1", string: "item1"},
@@ -1072,193 +1116,24 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 	pendingStats := graphR.GetFlagStats(PendingFlagName, nil)
 	Expect(pendingStats.TotalCount).To(BeEquivalentTo(1))
 	derivedStats := graphR.GetFlagStats(DerivedFlagName, nil)
-	Expect(derivedStats.TotalCount).To(BeEquivalentTo(7))
+	Expect(derivedStats.TotalCount).To(BeEquivalentTo(10))
 	lastUpdateStats := graphR.GetFlagStats(LastUpdateFlagName, nil)
-	Expect(lastUpdateStats.TotalCount).To(BeEquivalentTo(12))
+	Expect(lastUpdateStats.TotalCount).To(BeEquivalentTo(17))
 	lastChangeStats := graphR.GetFlagStats(LastChangeFlagName, nil)
-	Expect(lastChangeStats.TotalCount).To(BeEquivalentTo(5))
+	Expect(lastChangeStats.TotalCount).To(BeEquivalentTo(7))
 	descriptorStats := graphR.GetFlagStats(DescriptorFlagName, nil)
-	Expect(descriptorStats.TotalCount).To(BeEquivalentTo(12))
+	Expect(descriptorStats.TotalCount).To(BeEquivalentTo(17))
 	Expect(descriptorStats.PerValueCount).To(HaveKey(descriptor1Name))
-	Expect(descriptorStats.PerValueCount[descriptor1Name]).To(BeEquivalentTo(3))
+	Expect(descriptorStats.PerValueCount[descriptor1Name]).To(BeEquivalentTo(5))
 	Expect(descriptorStats.PerValueCount).To(HaveKey(descriptor2Name))
-	Expect(descriptorStats.PerValueCount[descriptor2Name]).To(BeEquivalentTo(3))
+	Expect(descriptorStats.PerValueCount[descriptor2Name]).To(BeEquivalentTo(4))
 	Expect(descriptorStats.PerValueCount).To(HaveKey(descriptor3Name))
-	Expect(descriptorStats.PerValueCount[descriptor3Name]).To(BeEquivalentTo(6))
+	Expect(descriptorStats.PerValueCount[descriptor3Name]).To(BeEquivalentTo(8))
 	originStats := graphR.GetFlagStats(OriginFlagName, nil)
-	Expect(originStats.TotalCount).To(BeEquivalentTo(12))
+	Expect(originStats.TotalCount).To(BeEquivalentTo(17))
 	Expect(originStats.PerValueCount).To(HaveKey(FromNB.String()))
-	Expect(originStats.PerValueCount[FromNB.String()]).To(BeEquivalentTo(12))
+	Expect(originStats.PerValueCount[FromNB.String()]).To(BeEquivalentTo(17))
 	graphR.Release()
-
-	// first attempt to revert the baseValue1 to pre-txn2 state will fail
-	Eventually(errorChan, 5*time.Second).Should(Receive(&errorNotif))
-	Expect(errorNotif.Key).To(Equal(prefixA + baseValue1))
-	Expect(errorNotif.Error).ToNot(BeNil())
-	Expect(errorNotif.Error.Error()).To(BeEquivalentTo("failed to modify value, again"))
-
-	// check operations executed in SB during 1st revert attempt
-	opHistory = mockSB.PopHistoryOfOps()
-	Expect(opHistory).To(HaveLen(2))
-	operation = opHistory[0]
-	Expect(operation.OpType).To(Equal(test.Modify))
-	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
-	Expect(operation.Key).To(BeEquivalentTo(prefixA + baseValue1))
-	Expect(operation.Err).ToNot(BeNil())
-	Expect(operation.Err.Error()).To(BeEquivalentTo("failed to modify value, again"))
-	operation = opHistory[1] // refresh failed revert
-	Expect(operation.OpType).To(Equal(test.Dump))
-	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
-	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
-		{
-			Key:      prefixA + baseValue1,
-			Value:    test.NewArrayValue(baseValue1, "item2"),
-			Metadata: &test.OnlyInteger{Integer: 0},
-			Origin:   FromNB,
-		},
-	})
-
-	// check transaction operations
-	txnHistory = scheduler.getTransactionHistory(startTime, time.Now())
-	Expect(txnHistory).To(HaveLen(2))
-	txn = txnHistory[1]
-	Expect(txn.preRecord).To(BeFalse())
-	Expect(txn.start.After(stopTime)).To(BeTrue())
-	Expect(txn.start.Before(txn.stop)).To(BeTrue())
-	Expect(txn.stop.Before(time.Now())).To(BeTrue())
-	Expect(txn.seqNum).To(BeEquivalentTo(2))
-	Expect(txn.txnType).To(BeEquivalentTo(retryFailedOps))
-	Expect(txn.isResync).To(BeFalse())
-	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixA + baseValue1, value: &recordedValue{label: baseValue1, string: "[item2]"}, origin: FromNB},
-	})
-	Expect(txn.preErrors).To(BeEmpty())
-
-	// planned operations
-	txnOps = recordedTxnOps{
-		{
-			operation:  modify,
-			key:        prefixA + baseValue1,
-			prevValue:  &recordedValue{label: baseValue1, string: "[]"},
-			newValue:   &recordedValue{label: baseValue1, string: "[item2]"},
-			prevOrigin: FromNB,
-			newOrigin:  FromNB,
-			prevErr:    errors.New("failed to modify value"),
-			isRevert:   true,
-			isRetry:    true,
-		},
-		{
-			operation:  update,
-			key:        prefixB + baseValue2 + "/item1",
-			prevValue:  &recordedValue{label: "item1", string: "item1"},
-			newValue:   &recordedValue{label: "item1", string: "item1"},
-			prevOrigin: FromNB,
-			newOrigin:  FromNB,
-			isRevert:   true,
-			isRetry:    true,
-		},
-		{
-			operation:  add,
-			key:        prefixA + baseValue1 + "/item2",
-			newValue:   &recordedValue{label: "item2", string: "item2"},
-			prevOrigin: FromNB,
-			newOrigin:  FromNB,
-			isRevert:   true,
-			isRetry:    true,
-		},
-	}
-	checkTxnOperations(txn.planned, txnOps)
-
-	// executed operations
-	txnOps = recordedTxnOps{
-		{
-			operation:  modify,
-			key:        prefixA + baseValue1,
-			prevValue:  &recordedValue{label: baseValue1, string: "[]"},
-			newValue:   &recordedValue{label: baseValue1, string: "[item2]"},
-			prevOrigin: FromNB,
-			newOrigin:  FromNB,
-			prevErr:    errors.New("failed to modify value"),
-			newErr:     errors.New("failed to modify value, again"),
-			isRevert:   true,
-			isRetry:    true,
-		},
-	}
-	checkTxnOperations(txn.executed, txnOps)
-
-	// second attempt to revert the baseValue1 to pre-txn2 should succeed
-	Eventually(errorChan, 10*time.Second).Should(Receive(&errorNotif))
-	Expect(errorNotif.Key).To(Equal(prefixA + baseValue1))
-	Expect(errorNotif.Error).To(BeNil())
-
-	// check operations executed in SB during 2nd revert attempt
-	opHistory = mockSB.PopHistoryOfOps()
-	Expect(opHistory).To(HaveLen(3))
-	operation = opHistory[0]
-	Expect(operation.OpType).To(Equal(test.Modify))
-	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
-	Expect(operation.Key).To(BeEquivalentTo(prefixA + baseValue1))
-	Expect(operation.Err).To(BeNil())
-	operation = opHistory[1]
-	Expect(operation.OpType).To(Equal(test.Update))
-	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor2Name))
-	Expect(operation.Key).To(BeEquivalentTo(prefixB + baseValue2 + "/item1"))
-	Expect(operation.Err).To(BeNil())
-	operation = opHistory[2]
-	Expect(operation.OpType).To(Equal(test.Add))
-	Expect(operation.Descriptor).To(BeEquivalentTo(descriptor1Name))
-	Expect(operation.Key).To(BeEquivalentTo(prefixA + baseValue1 + "/item2"))
-	Expect(operation.Err).To(BeNil())
-
-	// check transaction operations
-	txnHistory = scheduler.getTransactionHistory(startTime, time.Now())
-	Expect(txnHistory).To(HaveLen(3))
-	txn = txnHistory[2]
-	Expect(txn.preRecord).To(BeFalse())
-	Expect(txn.start.After(stopTime)).To(BeTrue())
-	Expect(txn.start.Before(txn.stop)).To(BeTrue())
-	Expect(txn.stop.Before(time.Now())).To(BeTrue())
-	Expect(txn.seqNum).To(BeEquivalentTo(3))
-	Expect(txn.txnType).To(BeEquivalentTo(retryFailedOps))
-	Expect(txn.isResync).To(BeFalse())
-	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixA + baseValue1, value: &recordedValue{label: baseValue1, string: "[item2]"}, origin: FromNB},
-	})
-	Expect(txn.preErrors).To(BeEmpty())
-	txnOps = recordedTxnOps{
-		{
-			operation:  modify,
-			key:        prefixA + baseValue1,
-			prevValue:  &recordedValue{label: baseValue1, string: "[]"},
-			newValue:   &recordedValue{label: baseValue1, string: "[item2]"},
-			prevOrigin: FromNB,
-			newOrigin:  FromNB,
-			prevErr:    errors.New("failed to modify value, again"),
-			isRevert:   true,
-			isRetry:    true,
-		},
-		{
-			operation:  update,
-			key:        prefixB + baseValue2 + "/item1",
-			prevValue:  &recordedValue{label: "item1", string: "item1"},
-			newValue:   &recordedValue{label: "item1", string: "item1"},
-			prevOrigin: FromNB,
-			newOrigin:  FromNB,
-			isRevert:   true,
-			isRetry:    true,
-		},
-		{
-			operation:  add,
-			key:        prefixA + baseValue1 + "/item2",
-			newValue:   &recordedValue{label: "item2", string: "item2"},
-			prevOrigin: FromNB,
-			newOrigin:  FromNB,
-			isRevert:   true,
-			isRetry:    true,
-		},
-	}
-	checkTxnOperations(txn.planned, txnOps)
-	checkTxnOperations(txn.executed, txnOps)
 
 	// close scheduler
 	err = scheduler.Close()
