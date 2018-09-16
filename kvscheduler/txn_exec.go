@@ -127,17 +127,9 @@ func (scheduler *Scheduler) applyValue(args *applyValueArgs) (executed recordedT
 	// remember previous value for a potential revert
 	prevValue = KeyValuePair{Key: node.GetKey(), Value: node.GetValue()}
 
-	// if the value is already "broken" by this transaction, do not try to update
-	// anymore, unless this is a revert (needs to be refreshed first in the post-processing
-	// stage)
-	lastUpdate := getNodeLastUpdate(node)
-	prevErr := getNodeError(node)
-	if !args.kv.isRevert && prevErr != nil &&
-		lastUpdate != nil && lastUpdate.txnSeqNum == args.txn.seqNum {
-		return executed, prevValue, prevErr
-	}
-
 	// mark the value as newly visited
+	prevUpdate := getNodeLastUpdate(node)
+	prevErr := getNodeError(node)
 	node.SetFlags(&LastUpdateFlag{args.txn.seqNum})
 	if !args.isUpdate {
 		if !args.isDerived {
@@ -163,6 +155,14 @@ func (scheduler *Scheduler) applyValue(args *applyValueArgs) (executed recordedT
 			node.SetFlags(&DerivedFlag{})
 		}
 		node.SetFlags(&OriginFlag{args.kv.origin})
+	}
+
+	// if the value is already "broken" by this transaction, do not try to update
+	// anymore, unless this is a revert (needs to be refreshed first in the post-processing
+	// stage)
+	if !args.kv.isRevert && prevErr != nil &&
+		prevUpdate != nil && prevUpdate.txnSeqNum == args.txn.seqNum {
+		return executed, prevValue, prevErr
 	}
 
 	// prepare operation description - fill attributes that we can even before executing the operation
