@@ -232,7 +232,7 @@ func isNodeBeingRemoved(node graph.Node) bool {
 			}
 		}
 		if isNodeDerived(base) {
-			// derived without base -> is is being removed by Modify()
+			// derived without base -> it is being removed by Modify()
 			return true
 		}
 	}
