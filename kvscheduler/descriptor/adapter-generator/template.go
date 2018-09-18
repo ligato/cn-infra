@@ -128,7 +128,7 @@ func (db *{{ .DescriptorName }}DescriptorBase) ModifyHasToRecreate(key string, o
 }
 
 func (db *{{ .DescriptorName }}DescriptorBase) Update(key string, value {{ .ValueT }}, metadata {{ .MetadataT }}) error {
-	fmt.Printf("Modify for key=%s is not implemented\n", key)
+	fmt.Printf("Update for key=%s is not implemented\n", key)
 	return nil
 }
 
@@ -295,7 +295,11 @@ func (da *{{ .DescriptorName }}DescriptorAdapter) Dump(correlate []KVWithMetadat
 			Origin:   typedKVWithMetadata.Origin,
 			}
 		{{- if .IsProtoValue }}
-		kvWithMetadata.Value = NewProtoValue(typedKVWithMetadata.Value)
+		value, err := da.descriptor.Build(typedKVWithMetadata.Key, typedKVWithMetadata.Value)
+		if err != nil {
+			return nil, err
+		}
+		kvWithMetadata.Value = value
 		{{- else }}
 		kvWithMetadata.Value = typedKVWithMetadata.Value
 		{{- end }}
