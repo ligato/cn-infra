@@ -4,9 +4,8 @@ A simple utility able to log measured time periods various events. To create a n
 
 `t := NewTracer(name string, log logging.Logger)`
 
-Time measurement is started with `t.Start()`. Tracer object can store a new entry with `t.LogTime(entity string)` 
-where `entity` is a string representation of a measured object (name of a function, structure or just simple string) .
-Time duration is calculated since the start. 
+Tracer object can store a new entry with `t.LogTime(entity string, start Time)` where `entity` is a string 
+representation of a measured object (name of a function, structure or just simple string) and `start` is a start time. 
 
 Tracer can measure repeating event (in a loop for example). Every event will be stored with the particular index.
 
