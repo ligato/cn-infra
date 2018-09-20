@@ -128,7 +128,7 @@ func (db *{{ .DescriptorName }}DescriptorBase) ModifyHasToRecreate(key string, o
 }
 
 func (db *{{ .DescriptorName }}DescriptorBase) Update(key string, value {{ .ValueT }}, metadata {{ .MetadataT }}) error {
-	fmt.Printf("Modify for key=%s is not implemented\n", key)
+	fmt.Printf("Update for key=%s is not implemented\n", key)
 	return nil
 }
 
@@ -176,7 +176,7 @@ func (da *{{ .DescriptorName }}DescriptorAdapter) WithMetadata() (withMeta bool,
 }
 
 func (da *{{ .DescriptorName }}DescriptorAdapter) Build(key string, valueData interface{}) (value Value, err error) {
-	typedValueData, err := castValueData(key, valueData)
+	typedValueData, err := cast{{ .DescriptorName }}ValueData(key, valueData)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +184,7 @@ func (da *{{ .DescriptorName }}DescriptorAdapter) Build(key string, valueData in
 }
 
 func (da *{{ .DescriptorName }}DescriptorAdapter) Add(key string, value Value) (metadata Metadata, err error) {
-	typedValue, err := castValue(key, value)
+	typedValue, err := cast{{ .DescriptorName }}Value(key, value)
 	if err != nil {
 		return nil, err
 	}
@@ -192,15 +192,15 @@ func (da *{{ .DescriptorName }}DescriptorAdapter) Add(key string, value Value) (
 }
 
 func (da *{{ .DescriptorName }}DescriptorAdapter) Modify(key string, oldValue, newValue Value, oldMetadata Metadata) (newMetadata Metadata, err error) {
-	oldTypedValue, err := castValue(key, oldValue)
+	oldTypedValue, err := cast{{ .DescriptorName }}Value(key, oldValue)
 	if err != nil {
 		return nil, err
 	}
-	newTypedValue, err := castValue(key, newValue)
+	newTypedValue, err := cast{{ .DescriptorName }}Value(key, newValue)
 	if err != nil {
 		return nil, err
 	}
-	typedOldMetadata, err := castMetadata(key, oldMetadata)
+	typedOldMetadata, err := cast{{ .DescriptorName }}Metadata(key, oldMetadata)
 	if err != nil {
 		return nil, err
 	}
@@ -208,11 +208,11 @@ func (da *{{ .DescriptorName }}DescriptorAdapter) Modify(key string, oldValue, n
 }
 
 func (da *{{ .DescriptorName }}DescriptorAdapter) Delete(key string, value Value, metadata Metadata) error {
-	typedValue, err := castValue(key, value)
+	typedValue, err := cast{{ .DescriptorName }}Value(key, value)
 	if err != nil {
 		return err
 	}
-	typedMetadata, err := castMetadata(key, metadata)
+	typedMetadata, err := cast{{ .DescriptorName }}Metadata(key, metadata)
 	if err != nil {
 		return err
 	}
@@ -220,15 +220,15 @@ func (da *{{ .DescriptorName }}DescriptorAdapter) Delete(key string, value Value
 }
 
 func (da *{{ .DescriptorName }}DescriptorAdapter) ModifyHasToRecreate(key string, oldValue, newValue Value, metadata Metadata) bool {
-	oldTypedValue, err := castValue(key, oldValue)
+	oldTypedValue, err := cast{{ .DescriptorName }}Value(key, oldValue)
 	if err != nil {
 		return true
 	}
-	newTypedValue, err := castValue(key, newValue)
+	newTypedValue, err := cast{{ .DescriptorName }}Value(key, newValue)
 	if err != nil {
 		return true
 	}
-	typedMetadata, err := castMetadata(key, metadata)
+	typedMetadata, err := cast{{ .DescriptorName }}Metadata(key, metadata)
 	if err != nil {
 		return true
 	}
@@ -236,11 +236,11 @@ func (da *{{ .DescriptorName }}DescriptorAdapter) ModifyHasToRecreate(key string
 }
 
 func (da *{{ .DescriptorName }}DescriptorAdapter) Update(key string, value Value, metadata Metadata) error {
-	typedValue, err := castValue(key, value)
+	typedValue, err := cast{{ .DescriptorName }}Value(key, value)
 	if err != nil {
 		return err
 	}
-	typedMetadata, err := castMetadata(key, metadata)
+	typedMetadata, err := cast{{ .DescriptorName }}Metadata(key, metadata)
 	if err != nil {
 		return err
 	}
@@ -248,7 +248,7 @@ func (da *{{ .DescriptorName }}DescriptorAdapter) Update(key string, value Value
 }
 
 func (da *{{ .DescriptorName }}DescriptorAdapter) Dependencies(key string, value Value) []Dependency {
-	typedValue, err := castValue(key, value)
+	typedValue, err := cast{{ .DescriptorName }}Value(key, value)
 	if err != nil {
 		return nil
 	}
@@ -256,7 +256,7 @@ func (da *{{ .DescriptorName }}DescriptorAdapter) Dependencies(key string, value
 }
 
 func (da *{{ .DescriptorName }}DescriptorAdapter) DerivedValues(key string, value Value) []KeyValuePair {
-	typedValue, err := castValue(key, value)
+	typedValue, err := cast{{ .DescriptorName }}Value(key, value)
 	if err != nil {
 		return nil
 	}
@@ -266,11 +266,11 @@ func (da *{{ .DescriptorName }}DescriptorAdapter) DerivedValues(key string, valu
 func (da *{{ .DescriptorName }}DescriptorAdapter) Dump(correlate []KVWithMetadata) ([]KVWithMetadata, error) {
 	var correlateWithType []{{ .DescriptorName }}KVWithMetadata
 	for _, kvpair := range correlate {
-		typedValue, err := castValue(kvpair.Key, kvpair.Value)
+		typedValue, err := cast{{ .DescriptorName }}Value(kvpair.Key, kvpair.Value)
 		if err != nil {
 			continue
 		}
-		typedMetadata, err := castMetadata(kvpair.Key, kvpair.Metadata)
+		typedMetadata, err := cast{{ .DescriptorName }}Metadata(kvpair.Key, kvpair.Metadata)
 		if err != nil {
 			continue
 		}
@@ -295,7 +295,11 @@ func (da *{{ .DescriptorName }}DescriptorAdapter) Dump(correlate []KVWithMetadat
 			Origin:   typedKVWithMetadata.Origin,
 			}
 		{{- if .IsProtoValue }}
-		kvWithMetadata.Value = NewProtoValue(typedKVWithMetadata.Value)
+		value, err := da.descriptor.Build(typedKVWithMetadata.Key, typedKVWithMetadata.Value)
+		if err != nil {
+			return nil, err
+		}
+		kvWithMetadata.Value = value
 		{{- else }}
 		kvWithMetadata.Value = typedKVWithMetadata.Value
 		{{- end }}
@@ -310,7 +314,7 @@ func (da *{{ .DescriptorName }}DescriptorAdapter) DumpDependencies() []string {
 
 ////////// Helper methods //////////
 
-func castValueData(key string, valueData interface{}) ({{ .ValueDataT }}, error) {
+func cast{{ .DescriptorName }}ValueData(key string, valueData interface{}) ({{ .ValueDataT }}, error) {
 {{- if .FromDatasync }}
 	changeValue, isChange := valueData.(datasync.ChangeValue)
 	if !isChange {
@@ -331,7 +335,7 @@ func castValueData(key string, valueData interface{}) ({{ .ValueDataT }}, error)
 {{- end }}
 }
 
-func castValue(key string, value Value) ({{ .ValueT }}, error) {
+func cast{{ .DescriptorName }}Value(key string, value Value) ({{ .ValueT }}, error) {
 {{- if .IsProtoValue }}
 	protoValue, isProto := value.(ProtoValue)
 	if !isProto {
@@ -351,7 +355,7 @@ func castValue(key string, value Value) ({{ .ValueT }}, error) {
 {{- end }}
 }
 
-func castMetadata(key string, metadata Metadata) ({{ .MetadataT }}, error) {
+func cast{{ .DescriptorName }}Metadata(key string, metadata Metadata) ({{ .MetadataT }}, error) {
 	if metadata == nil {
 		return nil, nil
 	}

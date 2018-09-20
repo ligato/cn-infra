@@ -15,6 +15,7 @@
 package kvscheduler
 
 import (
+	"fmt"
 	. "github.com/ligato/cn-infra/kvscheduler/api"
 	"github.com/ligato/cn-infra/kvscheduler/graph"
 	"github.com/ligato/cn-infra/logging"
@@ -167,6 +168,10 @@ func (scheduler *Scheduler) refreshGraph(graphW graph.RWAccess, keys keySet, res
 			graphW.DeleteNode(node.GetKey())
 		}
 	}
+
+	graphDump := graphW.Dump()
+	fmt.Println("Graph state after re-fresh:")
+	fmt.Print(graphDump)
 }
 
 // skipRefresh is used to mark nodes as refreshed without actual refreshing
@@ -179,14 +184,14 @@ func (scheduler *Scheduler) skipRefresh(graphR graph.ReadAccess, descriptor stri
 		if _, toRefresh := except[node.GetKey()]; toRefresh {
 			continue
 		}
-		refreshed[node.GetKey()] = struct{}{}
+		refreshed.add(node.GetKey())
 
 		// BFS over derived nodes
 		derived := getDerivedNodes(node)
 		for len(derived) > 0 {
 			var next []graph.Node
 			for _, derivedNode := range derived {
-				refreshed[derivedNode.GetKey()] = struct{}{}
+				refreshed.add(derivedNode.GetKey())
 				next = append(next, getDerivedNodes(derivedNode)...)
 			}
 			derived = next
@@ -238,7 +243,7 @@ func (scheduler *Scheduler) unwindDumpedRelations(graphW graph.RWAccess, root gr
 				nextNode.SetValue(derived.Value)
 				next = append(next, nextNode)
 			}
-			refreshed[node.GetKey()] = struct{}{}
+			refreshed.add(node.GetKey())
 		}
 		nodes = next
 	}

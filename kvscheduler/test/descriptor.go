@@ -139,7 +139,7 @@ func (md *mockDescriptor) Delete(key string, value Value, metadata Metadata) (er
 		md.validateKey(key, kv.Metadata == metadata)
 		err = md.sb.executeChange(md.GetName(), Delete, key, nil, metadata)
 	}
-	return nil
+	return err
 }
 
 // Modify executes modify operation in the mock SB.

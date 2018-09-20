@@ -163,7 +163,7 @@ func (scheduler *Scheduler) preProcessTransaction(qTxn *queuedTxn) (txn *preProc
 			// get the set of keys currently in NB
 			nbKeys := make(keySet)
 			for _, kv := range preTxn.values {
-				nbKeys[kv.key] = struct{}{}
+				nbKeys.add(kv.key)
 			}
 
 			// revert not supported with resync
@@ -260,7 +260,7 @@ func (scheduler *Scheduler) postProcessTransaction(txn *preProcessedTxn, execute
 						keys:      make(keySet),
 					}
 				}
-				retryTxns[seqNum].keys[failedKey] = struct{}{}
+				retryTxns[seqNum].keys.add(failedKey)
 			}
 		}
 

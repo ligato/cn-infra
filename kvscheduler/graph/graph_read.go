@@ -204,10 +204,10 @@ func (graph *graphR) recordNode(node *node, targetUpdateOnly bool) *RecordedNode
 	for _, flag := range node.flags {
 		record.Flags[flag.GetName()] = flag.GetValue()
 	}
-	if node.metadataAdded {
+	writeCopy := graph.parent.graph != graph
+	if !writeCopy && node.metadataAdded {
 		mapping := graph.mappings[node.metadataMap]
 		record.MetadataFields = mapping.ListFields(node.value.Label())
 	}
-
 	return record
 }

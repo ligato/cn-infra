@@ -120,7 +120,7 @@ func (value *recordedValue) StringWithOpts(verbose bool) string {
 		return "NIL"
 	}
 	if verbose {
-		return fmt.Sprintf("%s [label=%s]", value.string, value.label)
+		return fmt.Sprintf("{ %s }", value.string)
 	}
 	return fmt.Sprintf("%s", value.label)
 }

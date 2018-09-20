@@ -81,7 +81,7 @@ func (flag *LastChangeFlag) GetValue() string {
 }
 
 // LastUpdateFlag is set to all values to remember the last transaction which
-// has changed/updated the value - it is used purely for debugging purposes.
+// has changed/updated the value.
 type LastUpdateFlag struct {
 	txnSeqNum uint
 }

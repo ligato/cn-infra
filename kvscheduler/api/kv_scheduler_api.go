@@ -172,7 +172,6 @@ type KVWithMetadata struct {
 //     interface
 //   - clearly describing the sequence of actions to be executed and postponed
 //     in the log file
-//   - deadlock (circular dependency) detection
 //   - TBD: consider exposing the current config as a plotted graph (returned via
 //          REST) with values as nodes (colored to distinguish cached from added
 //          ones) and dependencies as edges (unsatisfied marked with red color).

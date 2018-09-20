@@ -61,27 +61,27 @@ func TestRegistry(t *testing.T) {
 		&MockDescriptorArgs{
 			Name:        descriptor1Name,
 			KeySelector: prefixSelector(prefixA),
+			DumpDependencies: []string{descriptor2Name},
 		}, nil, 0)
 
 	descriptor2 := NewMockDescriptor(
 		&MockDescriptorArgs{
 			Name:             descriptor2Name,
 			KeySelector:      prefixSelector(prefixB),
-			DumpDependencies: []string{descriptor1Name},
+			DumpDependencies: []string{descriptor3Name},
 		}, nil, 0)
 
 	descriptor3 := NewMockDescriptor(
 		&MockDescriptorArgs{
 			Name:             descriptor3Name,
 			KeySelector:      prefixSelector(prefixC),
-			DumpDependencies: []string{descriptor2Name},
+			DumpDependencies: []string{descriptor4Name},
 		}, nil, 0)
 
 	descriptor4 := NewMockDescriptor(
 		&MockDescriptorArgs{
 			Name:             descriptor4Name,
 			KeySelector:      keySelector(randomKey),
-			DumpDependencies: []string{descriptor3Name},
 		}, nil, 0)
 
 	registry := NewRegistry()
@@ -94,10 +94,10 @@ func TestRegistry(t *testing.T) {
 	// test that descriptors are ordered by dependencies
 	allDescriptors := registry.GetAllDescriptors()
 	Expect(allDescriptors).To(HaveLen(4))
-	Expect(allDescriptors[0].GetName()).To(BeEquivalentTo(descriptor1Name))
-	Expect(allDescriptors[1].GetName()).To(BeEquivalentTo(descriptor2Name))
-	Expect(allDescriptors[2].GetName()).To(BeEquivalentTo(descriptor3Name))
-	Expect(allDescriptors[3].GetName()).To(BeEquivalentTo(descriptor4Name))
+	Expect(allDescriptors[0].GetName()).To(BeEquivalentTo(descriptor4Name))
+	Expect(allDescriptors[1].GetName()).To(BeEquivalentTo(descriptor3Name))
+	Expect(allDescriptors[2].GetName()).To(BeEquivalentTo(descriptor2Name))
+	Expect(allDescriptors[3].GetName()).To(BeEquivalentTo(descriptor1Name))
 
 	// test GetDescriptor() method
 	descriptor := registry.GetDescriptor(descriptor1Name)

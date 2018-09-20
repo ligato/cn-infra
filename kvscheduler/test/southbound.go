@@ -216,6 +216,7 @@ func (ms *MockSouthbound) executeChange(descriptor string, opType MockOpType, ke
 		if clb != nil {
 			clb()
 		}
+
 		return err
 	}
 

@@ -16,7 +16,6 @@ package registry
 
 import (
 	"container/list"
-	"sort"
 
 	. "github.com/ligato/cn-infra/kvscheduler/api"
 )
@@ -56,13 +55,13 @@ func (reg *registry) RegisterDescriptor(descriptor KVDescriptor) {
 
 // GetAllDescriptors returns all registered descriptors.
 func (reg *registry) GetAllDescriptors() (descriptors []KVDescriptor) {
+	// order topologically respecting dependencies.
 	deps := make(map[string][]string)
 	for _, descriptor := range reg.descriptors {
 		descriptors = append(descriptors, descriptor)
 		deps[descriptor.GetName()] = descriptor.DumpDependencies()
 	}
-	orderDescriptorsByDeps(descriptors, deps)
-	return
+	return topologicalOrder(descriptors, deps)
 }
 
 // GetDescriptor returns descriptor with the given name.
@@ -105,28 +104,44 @@ func (reg *registry) GetDescriptorForKey(key string) KVDescriptor {
 	return keyDescriptor
 }
 
-func orderDescriptorsByDeps(descriptors []KVDescriptor, deps map[string][]string) {
-	sort.Slice(descriptors, func(i, j int) bool {
-		iDepOnJ := dependsOn(descriptors[j].GetName(), descriptors[i].GetName(), deps, len(descriptors), 0)
-		jDepOnI := dependsOn(descriptors[j].GetName(), descriptors[i].GetName(), deps, len(descriptors), 0)
-		return jDepOnI || (!iDepOnJ && descriptors[i].GetName() < descriptors[j].GetName())
-	})
+// topologicalOrder orders descriptors topologically by Kahn's algorithm to respect
+// the dump dependencies.
+func topologicalOrder(descriptors []KVDescriptor, deps map[string][]string) (sorted []KVDescriptor) {
+	// move descriptors from the list to a map
+	descMap := make(map[string]KVDescriptor)
+	for _, desc := range descriptors {
+		descMap[desc.GetName()] = desc
+	}
+	for len(descMap) > 0 {
+		// find first node without any dependencies within the remaining set
+		oneDown := false
+		for descName, desc := range descMap {
+			descDeps := deps[descName]
+			if len(descDeps) == 0 {
+				sorted = append(sorted, desc)
+				delete(descMap, descName)
+				oneDown = true
+				// remove the dependency edges going to this descriptor
+				for descName2, descDeps2 := range deps {
+					deps[descName2] = removeFromSlice(descDeps2, descName)
+				}
+				break
+			}
+		}
+		if !oneDown {
+			panic("Dependency cycle!")
+		}
+	}
+	return sorted
 }
 
-func dependsOn(desc1, desc2 string, deps map[string][]string, valCount int, depth int) bool {
-	if depth == valCount {
-		panic("Dependency cycle!")
-	}
-	desc1Deps := deps[desc1]
-	for _, dep := range desc1Deps {
-		if dep == desc2 {
-			return true
+func removeFromSlice(slice []string, itemToRemove string) []string {
+	var filtered []string
+	for _, item := range slice {
+		if item == itemToRemove {
+			continue
 		}
+		filtered = append(filtered, item)
 	}
-	for _, dep := range desc1Deps {
-		if dependsOn(dep, desc2, deps, valCount, depth+1) {
-			return true
-		}
-	}
-	return false
+	return filtered
 }
