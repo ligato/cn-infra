@@ -127,10 +127,14 @@ func (scheduler *Scheduler) applyValue(args *applyValueArgs) (executed recordedT
 	// remember previous value for a potential revert
 	prevValue = KeyValuePair{Key: node.GetKey(), Value: node.GetValue()}
 
-	// mark the value as newly visited
+	// update node flags
 	prevUpdate := getNodeLastUpdate(node)
 	prevErr := getNodeError(node)
-	node.SetFlags(&LastUpdateFlag{args.txn.seqNum})
+	if !args.isUpdate {
+		// with update it is not certain if any update is actually needed,
+		// so let applyUpdate() to refresh LastUpdateFlag
+		node.SetFlags(&LastUpdateFlag{args.txn.seqNum})
+	}
 	if !args.isUpdate {
 		if !args.isDerived {
 			lastChangeFlag := &LastChangeFlag{
@@ -539,13 +543,15 @@ func (scheduler *Scheduler) applyUpdate(node graph.NodeRW, txnOp *recordedTxnOp,
 	// add node if dependencies are now all met
 	if isNodePending(node) {
 		if !isNodeReady(node) {
-			// nothing to do
+			// nothing to do - do NOT refresh LastUpdateFlag
 			return executed, nil
 		}
+		node.SetFlags(&LastUpdateFlag{args.txn.seqNum})
 		addOp := scheduler.preRecordTxnOp(args, node)
 		addOp.operation = add
 		executed, err = scheduler.applyAdd(node, addOp, args)
 	} else {
+		node.SetFlags(&LastUpdateFlag{args.txn.seqNum})
 		// node is not pending
 		if !isNodeReady(node) {
 			// delete value and flag node as pending if some dependency is no longer satisfied
