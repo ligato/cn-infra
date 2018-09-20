@@ -42,7 +42,7 @@ type memNamedMapping struct {
 	// createIndexes is function that computes secondary indexes for a given item.
 	createIndexes func(interface{}) map[string][]string
 	// indexes is a register of secondary indexes
-	indexes map[string] /* index name */ map[string] /* index value */ *nameSet
+	indexes map[string]map[string]*nameSet // index name/value
 	// subscribers to whom notifications are delivered
 	subscribers sync.Map //map[core.PluginName]func(idxmap.NamedMappingGenericEvent)
 	title       string

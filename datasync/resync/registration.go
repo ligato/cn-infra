@@ -14,33 +14,51 @@
 
 package resync
 
-import (
-	"sync"
-	"time"
-)
+import "time"
 
-// registration for Resync (implementation of Resync interface)
+// registration for Resync (implementation of Registration interface)
 type registration struct {
 	resyncName string
 	statusChan chan StatusEvent
-
-	rwlock    sync.RWMutex
-	waitStamp time.Time // last timestamp of WaitUntilReconciliationFinishes
-	//waingForReconciliationChan chan *PluginEvent
-	reconciliationFinishedChan chan time.Time
 }
 
-// NewRegistration is a constructor.
-func NewRegistration(resyncName string, statusChan chan StatusEvent) Registration {
+// newRegistration is a constructor.
+func newRegistration(resyncName string, statusChan chan StatusEvent) *registration {
 	return &registration{resyncName: resyncName, statusChan: statusChan}
 }
 
 // StatusChan enables Plugins to get channel for notifications about Resync status.
-func (reg *registration) StatusChan() chan StatusEvent {
+func (reg *registration) StatusChan() <-chan StatusEvent {
 	return reg.statusChan
 }
 
 // String returns the name of the registration.
 func (reg *registration) String() string {
 	return reg.resyncName
+}
+
+// newStatusEvent is a constructor.
+func newStatusEvent(status Status) *statusEvent {
+	return &statusEvent{status: status, ackChan: make(chan time.Time)}
+}
+
+// StatusEvent is propagated to Plugins using GOLANG channel.
+type statusEvent struct {
+	status  Status
+	ackChan chan time.Time
+}
+
+// Status gets the status.
+func (event *statusEvent) ResyncStatus() Status {
+	return event.status
+}
+
+// Ack - see the comment in interface chngapi.StatusEvent.Ack().
+func (event *statusEvent) Ack() {
+	event.ackChan <- time.Now()
+}
+
+// ReceiveAck allows waiting until Plugin calls the Ack().
+func (event *statusEvent) ReceiveAck() chan time.Time {
+	return event.ackChan
 }
