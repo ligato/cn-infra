@@ -110,7 +110,7 @@ func (adapter *Registry) PropagateChanges(txData map[string]datasync.ChangeValue
 		keyPrefixes := scheduler.GetRegisteredNBKeyPrefixes()
 
 		// TODO: add options to localclient
-		txn := scheduler.StartNBTransaction()
+		txn := scheduler.StartNBTransaction(scheduler_api.WithRetry(time.Second, true))
 		for key, val := range txData {
 			registered := false
 			for _, prefix := range keyPrefixes {
@@ -211,7 +211,7 @@ func (adapter *Registry) PropagateResync(txData map[string]datasync.ChangeValue)
 			})
 		}
 		// TODO: return error(s)
-		txn := scheduler.StartNBTransaction()
+		txn := scheduler.StartNBTransaction(scheduler_api.WithRetry(time.Second, true))
 		txn.Resync(values)
 		txn.Commit(context.Background())
 	}
