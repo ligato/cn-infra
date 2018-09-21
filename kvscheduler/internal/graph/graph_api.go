@@ -15,9 +15,13 @@
 package graph
 
 import (
+	"time"
+
+	"github.com/gogo/protobuf/proto"
+
 	"github.com/ligato/cn-infra/idxmap"
 	. "github.com/ligato/cn-infra/kvscheduler/api"
-	"time"
+	"github.com/ligato/cn-infra/kvscheduler/internal/utils"
 )
 
 // Graph is an in-memory graph representation of key-value pairs and their
@@ -113,8 +117,11 @@ type Node interface {
 	// GetKey returns the key associated with the node.
 	GetKey() string
 
+	// GetLabel returns the label associated with this node.
+	GetLabel() string
+
 	// GetKey returns the value associated with the node.
-	GetValue() Value
+	GetValue() proto.Message
 
 	// GetFlag returns reference to the given flag or nil if the node doesn't have
 	// this flag associated.
@@ -136,8 +143,11 @@ type Node interface {
 type NodeRW interface {
 	Node
 
+	// SetLabel associates given label with this node.
+	SetLabel(label string)
+
 	// SetValue associates given value with this node.
-	SetValue(value Value)
+	SetValue(value proto.Message)
 
 	// SetFlags associates given flag with this node.
 	SetFlags(flags ...Flag)
@@ -211,28 +221,16 @@ type RecordedNode struct {
 	Since            time.Time
 	Until            time.Time
 	Key              string
-	ValueLabel       string
-	ValueString      string
+	Label            string
+	Value            string
 	Flags            map[string]string          // flag name -> flag value
 	MetadataFields   map[string][]string        // field name -> values
 	Targets          map[string]RecordedTargets // relation -> target
 	TargetUpdateOnly bool                       // true if only runtime Targets have changed since the last rev
 }
 
-// KeySet is a set of keys.
-type KeySet map[string]struct{}
-
-// Copy returns a copy of the key set.
-func (ks KeySet) Copy() KeySet {
-	copy := make(KeySet)
-	for key := range ks {
-		copy[key] = struct{}{}
-	}
-	return copy
-}
-
 // RecordedTargets is a record of target nodes at a given time.
-type RecordedTargets map[string]KeySet // label -> node keys (empty if missing)
+type RecordedTargets map[string]utils.KeySet // label -> node keys (empty if missing)
 
 // FlagStats is a summary of the usage for a given flag.
 type FlagStats struct {

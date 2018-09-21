@@ -15,13 +15,18 @@
 package graph
 
 import (
+	"fmt"
+	"sort"
 	"time"
 
-	"fmt"
 	"github.com/ligato/cn-infra/idxmap"
+
 	. "github.com/ligato/cn-infra/kvscheduler/api"
-	"sort"
+	"github.com/ligato/cn-infra/kvscheduler/internal/utils"
 )
+
+// printDelimiter is used in pretty-printing of the graph.
+const printDelimiter = ", "
 
 // graphR implements ReadAccess.
 type graphR struct {
@@ -157,14 +162,13 @@ func (graph *graphR) Dump() string {
 	var str string
 	for _, key := range keys {
 		node := graph.nodes[key]
-		record := graph.recordNode(node, false)
 		str += fmt.Sprintf("- key: %s\n", key)
-		str += fmt.Sprintf("  value-label: %s\n", record.ValueLabel)
-		str += fmt.Sprintf("  value-string: %s\n", record.ValueString)
-		str += fmt.Sprintf("  flags: %v\n", record.Flags)
-		str += fmt.Sprintf("  targets: %v\n", record.Targets)
-		str += fmt.Sprintf("  sources: %v\n", node.sources)
-		str += fmt.Sprintf("  metadata-fields: %v\n", record.MetadataFields)
+		str += fmt.Sprintf("  label: %s\n", node.GetLabel())
+		str += fmt.Sprintf("  value: %s\n", utils.ProtoToString(node.GetValue()))
+		str += fmt.Sprintf("  flags: %v\n", prettyPrintFlags(node.flags))
+		str += fmt.Sprintf("  targets: %v\n", prettyPrintTargets(node.targets))
+		str += fmt.Sprintf("  sources: %v\n", prettyPrintSources(node.sources))
+		str += fmt.Sprintf("  metadata-fields: %v\n", graph.getMetadataFields(node))
 	}
 	return str
 }
@@ -195,19 +199,94 @@ func (graph *graphR) recordNode(node *node, targetUpdateOnly bool) *RecordedNode
 	record := &RecordedNode{
 		Since:            time.Now(),
 		Key:              node.key,
-		ValueLabel:       node.value.Label(),
-		ValueString:      node.value.String(),
+		Label:            node.label,
+		Value:            utils.ProtoToString(node.value),
 		Flags:            make(map[string]string),
+		MetadataFields:   graph.getMetadataFields(node), // returned already copied
 		Targets:          node.targets, // no need to copy, never changed in graphR
 		TargetUpdateOnly: targetUpdateOnly,
 	}
 	for _, flag := range node.flags {
 		record.Flags[flag.GetName()] = flag.GetValue()
 	}
+	return record
+}
+
+// getMetadataFields returns secondary fields from metadata attached to the given node.
+func (graph *graphR) getMetadataFields(node *node) map[string][]string {
 	writeCopy := graph.parent.graph != graph
 	if !writeCopy && node.metadataAdded {
 		mapping := graph.mappings[node.metadataMap]
-		record.MetadataFields = mapping.ListFields(node.value.Label())
+		return mapping.ListFields(node.label)
 	}
-	return record
+	return nil
+}
+
+// prettyPrintFlags returns nicely formatted string representation of the given list of flags.
+func prettyPrintFlags(flags []Flag) string {
+	var str string
+	for idx, flag := range flags {
+		if flag.GetValue() == "" {
+			str += flag.GetName()
+		} else {
+			str += fmt.Sprintf("%s:<%s>", flag.GetName(), flag.GetValue())
+		}
+		if idx < len(flags) -1 {
+			str += printDelimiter
+		}
+	}
+	return str
+}
+
+// prettyPrintTargets returns nicely formatted relation targets.
+func prettyPrintTargets(targets map[string]RecordedTargets) string {
+	if len(targets) ==  0 {
+		return "<NONE>"
+	}
+	var str string
+	idx := 0
+	for relation, edges := range targets {
+		str += fmt.Sprintf("[%s]{%s}", relation, prettyPrintEdges(edges))
+		if idx < len(targets)-1 {
+			str += printDelimiter
+		}
+		idx++
+	}
+	return str
+}
+
+// prettyPrintSources returns nicely formatted relation sources.
+func prettyPrintSources(sources map[string]utils.KeySet) string {
+	if len(sources) ==  0 {
+		return "<NONE>"
+	}
+	var str string
+	idx := 0
+	for relation, keys := range sources {
+		str += fmt.Sprintf("[%s]%s", relation, keys.String())
+		if idx < len(sources)-1 {
+			str += printDelimiter
+		}
+		idx++
+	}
+	return str
+}
+
+// prettyPrintEdges returns nicely formatted node edges.
+func prettyPrintEdges(edges map[string]utils.KeySet) string {
+	var str string
+	idx := 0
+	for label, keys := range edges {
+		if len(keys) == 1 && keys.Has(label) {
+			// special case: there 1:1 between label and the key
+			str += label
+		} else {
+			str += label + " -> " + keys.String()
+		}
+		if idx < len(edges)-1 {
+			str += printDelimiter
+		}
+		idx++
+	}
+	return str
 }

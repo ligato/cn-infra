@@ -15,6 +15,7 @@
 package test
 
 import (
+	"github.com/gogo/protobuf/proto"
 	"sync"
 
 	. "github.com/ligato/cn-infra/kvscheduler/api"
@@ -52,7 +53,7 @@ type MockOperation struct {
 	OpType        MockOpType
 	Descriptor    string
 	Key           string
-	Value         Value
+	Value         proto.Message
 	Err           error
 	CorrelateDump []KVWithMetadata
 }
@@ -91,7 +92,7 @@ func (ms *MockSouthbound) PlanError(key string, err error, afterErrClb func()) {
 }
 
 // SetValue is used in UTs to prepare the state of SB for the next Dump.
-func (ms *MockSouthbound) SetValue(key string, value Value, metadata Metadata, origin ValueOrigin, isDerived bool) {
+func (ms *MockSouthbound) SetValue(key string, value proto.Message, metadata Metadata, origin ValueOrigin, isDerived bool) {
 	ms.Lock()
 	defer ms.Unlock()
 
@@ -136,7 +137,7 @@ func (ms *MockSouthbound) PopHistoryOfOps() []MockOperation {
 }
 
 // setValueUnsafe changes the value under given key without acquiring the lock.
-func (ms *MockSouthbound) setValueUnsafe(key string, value Value, metadata Metadata, origin ValueOrigin, isDerived bool) {
+func (ms *MockSouthbound) setValueUnsafe(key string, value proto.Message, metadata Metadata, origin ValueOrigin, isDerived bool) {
 	if value == nil {
 		delete(ms.values, key)
 	} else {
@@ -164,6 +165,7 @@ func (ms *MockSouthbound) isKeyDerived(key string) bool {
 // registerKeyWithInvalidData is used to remember that for the given key invalid input
 // data were provided.
 func (ms *MockSouthbound) registerKeyWithInvalidData(key string) {
+	//panic(key)
 	ms.invalidKeyData[key] = struct{}{}
 }
 
@@ -195,7 +197,7 @@ func (ms *MockSouthbound) dump(descriptor string, correlate []KVWithMetadata, se
 }
 
 // executeChange is used by MockDescriptor to simulate execution of a operation in SB.
-func (ms *MockSouthbound) executeChange(descriptor string, opType MockOpType, key string, value Value, metadata Metadata) error {
+func (ms *MockSouthbound) executeChange(descriptor string, opType MockOpType, key string, value proto.Message, metadata Metadata) error {
 	ms.Lock()
 
 	operation := MockOperation{OpType: opType, Descriptor: descriptor, Key: key, Value: value}

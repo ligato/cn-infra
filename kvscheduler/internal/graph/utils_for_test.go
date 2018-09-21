@@ -19,10 +19,15 @@ import (
 	"strings"
 
 	"github.com/ligato/cn-infra/idxmap"
-	. "github.com/ligato/cn-infra/kvscheduler/test"
+	. "github.com/ligato/cn-infra/kvscheduler/internal/test"
 )
 
 const (
+	value1Label = "value1"
+	value2Label = "value2"
+	value3Label = "value3"
+	value4Label = "value4"
+
 	prefixA = "/prefixA/"
 	prefixB = "/prefixB/"
 
@@ -39,10 +44,10 @@ const (
 )
 
 var (
-	value1 = NewStringValue("value1", "this is value1")
-	value2 = NewStringValue("value2", "this is value2")
-	value3 = NewStringValue("value3", "this is value3")
-	value4 = NewStringValue("value4", "this is value4")
+	value1 = NewStringValue("this is value1")
+	value2 = NewStringValue("this is value2")
+	value3 = NewStringValue("this is value3")
+	value4 = NewStringValue("this is value4")
 )
 
 func prefixASelector(key string) bool {
@@ -85,6 +90,7 @@ func buildGraph(graph Graph, record, regMaps bool, nodes map[int]struct{}) Graph
 
 	if _, addNode1 := nodes[1]; addNode1 {
 		node1 := graphW.SetNode(keyA1)
+		node1.SetLabel(value1Label)
 		node1.SetValue(value1)
 		node1.SetMetadata(&OnlyInteger{Integer: 1})
 		node1.SetMetadataMap(metadataMapA)
@@ -97,6 +103,7 @@ func buildGraph(graph Graph, record, regMaps bool, nodes map[int]struct{}) Graph
 
 	if _, addNode2 := nodes[2]; addNode2 {
 		node2 := graphW.SetNode(keyA2)
+		node2.SetLabel(value2Label)
 		node2.SetValue(value2)
 		node2.SetMetadata(&OnlyInteger{Integer: 2})
 		node2.SetMetadataMap(metadataMapA)
@@ -108,6 +115,7 @@ func buildGraph(graph Graph, record, regMaps bool, nodes map[int]struct{}) Graph
 
 	if _, addNode3 := nodes[3]; addNode3 {
 		node3 := graphW.SetNode(keyA3)
+		node3.SetLabel(value3Label)
 		node3.SetValue(value3)
 		node3.SetMetadata(&OnlyInteger{Integer: 3})
 		node3.SetMetadataMap(metadataMapA)
@@ -120,6 +128,7 @@ func buildGraph(graph Graph, record, regMaps bool, nodes map[int]struct{}) Graph
 
 	if _, addNode4 := nodes[4]; addNode4 {
 		node4 := graphW.SetNode(keyB1)
+		node4.SetLabel(value4Label)
 		node4.SetValue(value4)
 		node4.SetMetadata(&OnlyInteger{Integer: 1})
 		node4.SetMetadataMap(metadataMapB)

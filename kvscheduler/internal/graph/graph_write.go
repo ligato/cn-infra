@@ -109,7 +109,7 @@ func (graph *graphRW) Save() {
 			// remove metadata
 			if node.metadataAdded {
 				if mapping, hasMapping := destGraph.mappings[node.metadataMap]; hasMapping {
-					mapping.Delete(node.value.Label())
+					mapping.Delete(node.label)
 				}
 			}
 			// remove node from graph
@@ -131,12 +131,12 @@ func (graph *graphRW) Save() {
 			if mapping, hasMapping := destGraph.mappings[node.metadataMap]; hasMapping {
 				if node.metadataAdded {
 					if node.metadata == nil {
-						mapping.Delete(node.value.Label())
+						mapping.Delete(node.label)
 						node.metadataAdded = false
 					}
-					mapping.Update(node.value.Label(), node.metadata)
+					mapping.Update(node.label, node.metadata)
 				} else if node.metadata != nil {
-					mapping.Put(node.value.Label(), node.metadata)
+					mapping.Put(node.label, node.metadata)
 					node.metadataAdded = true
 				}
 			}

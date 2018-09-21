@@ -15,7 +15,9 @@
 package graph
 
 import (
-	. "github.com/ligato/cn-infra/kvscheduler/api"
+	"github.com/gogo/protobuf/proto"
+
+	"github.com/ligato/cn-infra/kvscheduler/internal/utils"
 )
 
 // nodeR implements Node.
@@ -23,21 +25,22 @@ type nodeR struct {
 	graph *graphR
 
 	key           string
-	value         Value
+	label         string
+	value         proto.Message
 	flags         []Flag
 	metadata      interface{}
 	metadataAdded bool
 	metadataMap   string
 	targetsDef    []RelationTarget
 	targets       map[string]RecordedTargets // relation -> (label -> keys))
-	sources       map[string]KeySet          // relation -> nodes
+	sources       map[string]utils.KeySet    // relation -> nodes
 }
 
 // newNodeR creates a new instance of nodeR.
 func newNodeR() *nodeR {
 	return &nodeR{
 		targets: make(map[string]RecordedTargets),
-		sources: make(map[string]KeySet),
+		sources: make(map[string]utils.KeySet),
 	}
 }
 
@@ -46,8 +49,13 @@ func (node *nodeR) GetKey() string {
 	return node.key
 }
 
+// GetLabel returns the label associated with this node.
+func (node *nodeR) GetLabel() string {
+	return node.label
+}
+
 // GetKey returns the value associated with the node.
-func (node *nodeR) GetValue() Value {
+func (node *nodeR) GetValue() proto.Message {
 	return node.value
 }
 
@@ -105,6 +113,7 @@ func (node *nodeR) GetSources(relation string) []Node {
 func (node *nodeR) copy() *nodeR {
 	nodeCopy := newNodeR()
 	nodeCopy.key = node.key
+	nodeCopy.label = node.label
 	nodeCopy.value = node.value
 	nodeCopy.metadata = node.metadata
 	nodeCopy.metadataAdded = node.metadataAdded
@@ -124,13 +133,13 @@ func (node *nodeR) copy() *nodeR {
 	for relation, targets := range node.targets {
 		nodeCopy.targets[relation] = make(RecordedTargets)
 		for label, keys := range targets {
-			nodeCopy.targets[relation][label] = keys.Copy()
+			nodeCopy.targets[relation][label] = keys.DeepCopy()
 		}
 	}
 
 	// copy sources
 	for relation, keys := range node.sources {
-		nodeCopy.sources[relation] = keys.Copy()
+		nodeCopy.sources[relation] = keys.DeepCopy()
 	}
 	return nodeCopy
 }

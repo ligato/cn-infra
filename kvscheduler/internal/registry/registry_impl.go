@@ -18,6 +18,7 @@ import (
 	"container/list"
 
 	. "github.com/ligato/cn-infra/kvscheduler/api"
+	"github.com/ligato/cn-infra/kvscheduler/internal/utils"
 )
 
 const (
@@ -28,44 +29,61 @@ const (
 
 // registry is an implementation of Registry for descriptors.
 type registry struct {
-	descriptors     map[string]KVDescriptor  // descriptor name -> descriptor
-	keyToCacheEntry map[string]*list.Element // key -> cache entry
-	keyCache        *list.List               // doubly linked list of cached entries key->descriptor
+	descriptors      map[string]*KVDescriptor // descriptor name -> descriptor
+	descriptorList   []*KVDescriptor          // ordered by dump dependencies
+	upToDateDescList bool                     // true if descriptorList is in sync with descriptors
+	keyToCacheEntry  map[string]*list.Element // key -> cache entry
+	keyCache         *list.List               // doubly linked list of cached entries key->descriptor
 }
 
 // cacheEntry encapsulates data for one entry in registry.keyCache
 type cacheEntry struct {
 	key        string
-	descriptor KVDescriptor
+	descriptor *KVDescriptor
 }
 
 // NewRegistry creates a new instance of registry.
 func NewRegistry() Registry {
 	return &registry{
-		descriptors:     make(map[string]KVDescriptor),
+		descriptors:     make(map[string]*KVDescriptor),
 		keyToCacheEntry: make(map[string]*list.Element),
 		keyCache:        list.New(),
 	}
 }
 
 // RegisterDescriptor add new descriptor into the registry.
-func (reg *registry) RegisterDescriptor(descriptor KVDescriptor) {
-	reg.descriptors[descriptor.GetName()] = descriptor
+func (reg *registry) RegisterDescriptor(descriptor *KVDescriptor) {
+	reg.descriptors[descriptor.Name] = descriptor
+	reg.upToDateDescList = false
 }
 
 // GetAllDescriptors returns all registered descriptors.
-func (reg *registry) GetAllDescriptors() (descriptors []KVDescriptor) {
-	// order topologically respecting dependencies.
-	deps := make(map[string][]string)
-	for _, descriptor := range reg.descriptors {
-		descriptors = append(descriptors, descriptor)
-		deps[descriptor.GetName()] = descriptor.DumpDependencies()
+func (reg *registry) GetAllDescriptors() (descriptors []*KVDescriptor) {
+	if reg.upToDateDescList {
+		return reg.descriptorList
 	}
-	return topologicalOrder(descriptors, deps)
+
+	// collect descriptor dump dependencies
+	deps := make(map[string]utils.KeySet)
+	descNames := utils.NewKeySet()
+	for _, descriptor := range reg.descriptors {
+		descNames.Add(descriptor.Name)
+		deps[descriptor.Name] = utils.NewKeySet(descriptor.DumpDependencies...)
+	}
+
+	// order topologically respecting dependencies.
+	orderedNames := utils.TopologicalOrder(descNames, deps, true, false)
+	reg.descriptorList = []*KVDescriptor{}
+	for _, descName := range orderedNames {
+		reg.descriptorList = append(reg.descriptorList, reg.descriptors[descName])
+	}
+
+	reg.upToDateDescList = true
+	return reg.descriptorList
 }
 
 // GetDescriptor returns descriptor with the given name.
-func (reg *registry) GetDescriptor(name string) KVDescriptor {
+func (reg *registry) GetDescriptor(name string) *KVDescriptor {
 	descriptor, has := reg.descriptors[name]
 	if !has {
 		return nil
@@ -74,7 +92,7 @@ func (reg *registry) GetDescriptor(name string) KVDescriptor {
 }
 
 // GetDescriptorForKey returns descriptor handling the given key.
-func (reg *registry) GetDescriptorForKey(key string) KVDescriptor {
+func (reg *registry) GetDescriptorForKey(key string) *KVDescriptor {
 	elem, cached := reg.keyToCacheEntry[key]
 	if cached {
 		// get descriptor from the cache
@@ -90,7 +108,7 @@ func (reg *registry) GetDescriptorForKey(key string) KVDescriptor {
 		reg.keyCache.Remove(toRemove)
 	}
 	// find the descriptor
-	var keyDescriptor KVDescriptor
+	var keyDescriptor *KVDescriptor
 	for _, descriptor := range reg.descriptors {
 		if descriptor.KeySelector(key) {
 			keyDescriptor = descriptor
@@ -102,46 +120,4 @@ func (reg *registry) GetDescriptorForKey(key string) KVDescriptor {
 	elem = reg.keyCache.PushFront(entry)
 	reg.keyToCacheEntry[key] = elem
 	return keyDescriptor
-}
-
-// topologicalOrder orders descriptors topologically by Kahn's algorithm to respect
-// the dump dependencies.
-func topologicalOrder(descriptors []KVDescriptor, deps map[string][]string) (sorted []KVDescriptor) {
-	// move descriptors from the list to a map
-	descMap := make(map[string]KVDescriptor)
-	for _, desc := range descriptors {
-		descMap[desc.GetName()] = desc
-	}
-	for len(descMap) > 0 {
-		// find first node without any dependencies within the remaining set
-		oneDown := false
-		for descName, desc := range descMap {
-			descDeps := deps[descName]
-			if len(descDeps) == 0 {
-				sorted = append(sorted, desc)
-				delete(descMap, descName)
-				oneDown = true
-				// remove the dependency edges going to this descriptor
-				for descName2, descDeps2 := range deps {
-					deps[descName2] = removeFromSlice(descDeps2, descName)
-				}
-				break
-			}
-		}
-		if !oneDown {
-			panic("Dependency cycle!")
-		}
-	}
-	return sorted
-}
-
-func removeFromSlice(slice []string, itemToRemove string) []string {
-	var filtered []string
-	for _, item := range slice {
-		if item == itemToRemove {
-			continue
-		}
-		filtered = append(filtered, item)
-	}
-	return filtered
 }

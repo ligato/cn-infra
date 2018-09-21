@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// adapter-generator generates all boiler-plate code needed to adapt type-safe
-// KV descriptor for the KVDescriptor interface.
+// descriptor-generator generates all boiler-plate code needed to adapt type-safe
+// KV descriptor for the KVDescriptor structure definition.
 //
 // To use the generator, add go generate command into your descriptor as a comment:
-//  //go:generate adapter-generator --descriptor-name <descriptor-name> --value-type <typename> [--value-data-type <typename>] [--meta-type <typename>] [--is-proto] [--from-datasync] [--output-dir <path>] [--import <path>]...
+//  //go:generate descriptor-adapter --descriptor-name <descriptor-name> --value-type <typename> [--meta-type <typename>] [--output-dir <path>] [--import <path>]...
+//
+// Note: import paths can be relative to the file with the go:generate comment.
 
 package main
 
@@ -61,23 +63,15 @@ var (
 	outputDirFlag      = flag.String("output-dir", ".", "Output directory where adapter package will be generated.")
 	descriptorNameFlag = flag.String("descriptor-name", "", "Name of the descriptor.")
 	valueTypeFlag      = flag.String("value-type", "", "Type of the described values.")
-	valueDataTypeFlag  = flag.String("value-data-type", "interface{}", "Type of the value data as received from NB.")
 	metaTypeFlag       = flag.String("meta-type", "interface{}", "Type of the metadata used by the descriptor.")
-	isProtoFlag        = flag.Bool("is-proto", false, "Whether the described values are instances of ProtoValue (value-type = specific proto.Message).")
-	fromDatasyncFlag   = flag.Bool("from-datasync", false, "Whether the described values are propagated from datasync as ChangeValue-s.")
 )
 
 // TemplateData encapsulates input arguments for the template.
 type TemplateData struct {
-	Package        string
-	Imports        []string
 	DescriptorName string
 	ValueT         string
-	ValueDataT     string
-	ValueDataBaseT string
 	MetadataT      string
-	IsProtoValue   bool
-	FromDatasync   bool
+	Imports        []string
 }
 
 // PathExists return true if the given path already exist in the file system.
@@ -94,14 +88,7 @@ func main() {
 	inputData := TemplateData{
 		DescriptorName: *descriptorNameFlag,
 		ValueT:         *valueTypeFlag,
-		ValueDataT:     *valueDataTypeFlag,
 		MetadataT:      *metaTypeFlag,
-		IsProtoValue:   *isProtoFlag || *fromDatasyncFlag,
-		FromDatasync:   *fromDatasyncFlag,
-	}
-	if inputData.FromDatasync {
-		inputData.ValueDataT = inputData.ValueT
-		inputData.ValueDataBaseT = strings.TrimLeft(inputData.ValueDataT, "*")
 	}
 
 	// expand relative import paths

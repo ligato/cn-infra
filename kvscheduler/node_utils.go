@@ -15,35 +15,10 @@
 package kvscheduler
 
 import (
-	"strconv"
-	"time"
-
 	. "github.com/ligato/cn-infra/kvscheduler/api"
-	"github.com/ligato/cn-infra/kvscheduler/graph"
+	"github.com/ligato/cn-infra/kvscheduler/internal/graph"
+	"github.com/ligato/cn-infra/kvscheduler/internal/utils"
 )
-
-type keySet map[string]struct{}
-
-func (ks keySet) add(key string) keySet {
-	ks[key] = struct{}{}
-	return ks
-}
-
-// subtract removes keys from <ks> that are in both key sets.
-func (ks keySet) subtract(ks2 keySet) keySet {
-	for key := range ks2 {
-		delete(ks, key)
-	}
-	return ks
-}
-
-func stringToTime(s string) (time.Time, error) {
-	sec, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		return time.Time{}, err
-	}
-	return time.Unix(sec, 0), nil
-}
 
 func nodesToKVPairs(nodes []graph.Node) (kvPairs []KeyValuePair) {
 	for _, node := range nodes {
@@ -91,7 +66,7 @@ func constructTargets(deps []Dependency, derives []KeyValuePair) (targets []grap
 	for _, derived := range derives {
 		target := graph.RelationTarget{
 			Relation: DerivesRelation,
-			Label:    derived.Value.Label(),
+			Label:    derived.Key,
 			Key:      derived.Key,
 			Selector: nil,
 		}
@@ -99,31 +74,6 @@ func constructTargets(deps []Dependency, derives []KeyValuePair) (targets []grap
 	}
 
 	return targets
-}
-
-// dependsOn returns true if k1 depends on k2 based on dependencies from <deps>.
-func dependsOn(k1, k2 string, deps map[string]keySet, visited keySet) bool {
-	if visited == nil {
-		visited = make(keySet)
-	}
-
-	// check direct dependencies
-	k1Deps := deps[k1]
-	if _, depends := k1Deps[k2]; depends {
-		return true
-	}
-
-	// continue transitively
-	visited.add(k1)
-	for dep := range k1Deps {
-		if _, wasVisited := visited[dep]; wasVisited {
-			continue
-		}
-		if dependsOn(dep, k2, deps, visited) {
-			return true
-		}
-	}
-	return false
 }
 
 // getNodeOrigin returns node origin stored in Origin flag.
@@ -178,16 +128,21 @@ func isNodeReady(node graph.Node) bool {
 		// for SB values dependencies are not checked
 		return true
 	}
-	return isNodeReadyRec(node, node, make(keySet))
+	ready, _ := isNodeReadyRec(node, 0, make(map[string]int))
+	return ready
 }
 
 // isNodeReadyRec is a recursive call from within isNodeReady.
-func isNodeReadyRec(src, current graph.Node, visited keySet) bool {
-	cycle := false
-	visited.add(current.GetKey())
-	defer delete(visited, current.GetKey())
+// visited = map{ key -> depth }
+func isNodeReadyRec(node graph.Node, depth int, visited map[string]int) (ready bool, cycleDepth int) {
+	if targetDepth, wasVisited := visited[node.GetKey()]; wasVisited {
+		return true, targetDepth
+	}
+	cycleDepth = depth
+	visited[node.GetKey()] = depth
+	defer delete(visited, node.GetKey())
 
-	for _, targets := range current.GetTargets(DependencyRelation) {
+	for _, targets := range node.GetTargets(DependencyRelation) {
 		satisfied := false
 		for _, target := range targets {
 			if isNodeBeingRemoved(target) {
@@ -196,23 +151,24 @@ func isNodeReadyRec(src, current graph.Node, visited keySet) bool {
 			}
 			if !isNodePending(target) {
 				satisfied = true
-				if current.GetKey() == src.GetKey() {
-					break
-				}
 			}
-			// test if this is a strongly-connected component that includes "src" (treated as one node)
-			_, wasVisited := visited[target.GetKey()]
-			if target.GetKey() == src.GetKey() || (!wasVisited && isNodeReadyRec(src, target, visited)) {
-				cycle = true
+
+			// test if node is inside a strongly-connected component (treated as one node)
+			targetReady, targetCycleDepth := isNodeReadyRec(target, depth+1, visited)
+			if targetReady && targetCycleDepth <= depth {
+				// this node is reachable from the target
 				satisfied = true
-				break
+				if targetCycleDepth < cycleDepth {
+					// update how far back in the branch this node can reach following dependencies
+					cycleDepth = targetCycleDepth
+				}
 			}
 		}
 		if !satisfied {
-			return false
+			return false, cycleDepth
 		}
 	}
-	return current.GetKey() == src.GetKey() || cycle
+	return true, cycleDepth
 }
 
 // isNodeBeingRemoved returns true for a given node if it is being removed
@@ -264,10 +220,10 @@ func getDerivedNodes(node graph.Node) (derived []graph.Node) {
 	return derived
 }
 
-func getDerivedKeys(node graph.Node) keySet {
-	set := make(keySet)
+func getDerivedKeys(node graph.Node) utils.KeySet {
+	set := utils.NewKeySet()
 	for _, derived := range getDerivedNodes(node) {
-		set.add(derived.GetKey())
+		set.Add(derived.GetKey())
 	}
 	return set
 }

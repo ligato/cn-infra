@@ -15,7 +15,8 @@
 package graph
 
 import (
-	. "github.com/ligato/cn-infra/kvscheduler/api"
+	"github.com/gogo/protobuf/proto"
+	"github.com/ligato/cn-infra/kvscheduler/internal/utils"
 )
 
 type node struct {
@@ -42,8 +43,14 @@ func newNode(nodeR *nodeR) *node {
 	}
 }
 
+// SetLabel associates given label with this node.
+func (node *node) SetLabel(label string) {
+	node.label = label
+	node.dataUpdated = true
+}
+
 // SetValue associates given value with this node.
-func (node *node) SetValue(value Value) {
+func (node *node) SetValue(value proto.Message) {
 	node.value = value
 	node.dataUpdated = true
 }
@@ -132,7 +139,7 @@ func (node *node) initRuntimeTarget() {
 			node.targets[targetDef.Relation] = make(RecordedTargets)
 		}
 		if _, hasLabel := node.targets[targetDef.Relation][targetDef.Label]; !hasLabel {
-			node.targets[targetDef.Relation][targetDef.Label] = make(KeySet)
+			node.targets[targetDef.Relation][targetDef.Label] = utils.NewKeySet()
 		}
 	}
 }
@@ -141,12 +148,12 @@ func (node *node) initRuntimeTarget() {
 func (node *node) checkPotentialTarget(node2 *node) {
 	for _, targetDef := range node.targetsDef {
 		if targetDef.Key == node2.key || (targetDef.Key == "" && targetDef.Selector(node2.key)) {
-			node.targets[targetDef.Relation][targetDef.Label][node2.key] = struct{}{}
+			node.targets[targetDef.Relation][targetDef.Label].Add(node2.key)
 			node.targetsUpdated = true
 			if _, hasRelation := node2.sources[targetDef.Relation]; !hasRelation {
-				node2.sources[targetDef.Relation] = make(KeySet)
+				node2.sources[targetDef.Relation] = utils.NewKeySet()
 			}
-			node2.sources[targetDef.Relation][node.key] = struct{}{}
+			node2.sources[targetDef.Relation].Add(node.key)
 			node2.targetsUpdated = true
 		}
 	}
@@ -157,7 +164,7 @@ func (node *node) removeFromTargets(key string) {
 	for relation, targets := range node.targets {
 		for label := range targets {
 			if _, has := node.targets[relation][label][key]; has {
-				delete(node.targets[relation][label], key)
+				node.targets[relation][label].Del(key)
 				node.targetsUpdated = true
 			}
 		}
@@ -170,7 +177,7 @@ func (node *node) removeThisFromSources() {
 		for _, targetNodes := range targets {
 			for key := range targetNodes {
 				targetNode := node.graph.nodes[key]
-				delete(targetNode.sources[relation], node.GetKey())
+				targetNode.sources[relation].Del(node.GetKey())
 				targetNode.targetsUpdated = true
 			}
 		}

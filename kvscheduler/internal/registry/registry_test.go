@@ -20,7 +20,8 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/ligato/cn-infra/kvscheduler/test"
+	. "github.com/ligato/cn-infra/kvscheduler/api"
+	. "github.com/ligato/cn-infra/kvscheduler/internal/test"
 )
 
 const (
@@ -58,30 +59,30 @@ func TestRegistry(t *testing.T) {
 	RegisterTestingT(t)
 
 	descriptor1 := NewMockDescriptor(
-		&MockDescriptorArgs{
-			Name:        descriptor1Name,
-			KeySelector: prefixSelector(prefixA),
+		&KVDescriptor{
+			Name:             descriptor1Name,
+			KeySelector:      prefixSelector(prefixA),
 			DumpDependencies: []string{descriptor2Name},
 		}, nil, 0)
 
 	descriptor2 := NewMockDescriptor(
-		&MockDescriptorArgs{
+		&KVDescriptor{
 			Name:             descriptor2Name,
 			KeySelector:      prefixSelector(prefixB),
 			DumpDependencies: []string{descriptor3Name},
 		}, nil, 0)
 
 	descriptor3 := NewMockDescriptor(
-		&MockDescriptorArgs{
+		&KVDescriptor{
 			Name:             descriptor3Name,
 			KeySelector:      prefixSelector(prefixC),
 			DumpDependencies: []string{descriptor4Name},
 		}, nil, 0)
 
 	descriptor4 := NewMockDescriptor(
-		&MockDescriptorArgs{
-			Name:             descriptor4Name,
-			KeySelector:      keySelector(randomKey),
+		&KVDescriptor{
+			Name:        descriptor4Name,
+			KeySelector: keySelector(randomKey),
 		}, nil, 0)
 
 	registry := NewRegistry()
@@ -94,85 +95,85 @@ func TestRegistry(t *testing.T) {
 	// test that descriptors are ordered by dependencies
 	allDescriptors := registry.GetAllDescriptors()
 	Expect(allDescriptors).To(HaveLen(4))
-	Expect(allDescriptors[0].GetName()).To(BeEquivalentTo(descriptor4Name))
-	Expect(allDescriptors[1].GetName()).To(BeEquivalentTo(descriptor3Name))
-	Expect(allDescriptors[2].GetName()).To(BeEquivalentTo(descriptor2Name))
-	Expect(allDescriptors[3].GetName()).To(BeEquivalentTo(descriptor1Name))
+	Expect(allDescriptors[0].Name).To(BeEquivalentTo(descriptor4Name))
+	Expect(allDescriptors[1].Name).To(BeEquivalentTo(descriptor3Name))
+	Expect(allDescriptors[2].Name).To(BeEquivalentTo(descriptor2Name))
+	Expect(allDescriptors[3].Name).To(BeEquivalentTo(descriptor1Name))
 
 	// test GetDescriptor() method
 	descriptor := registry.GetDescriptor(descriptor1Name)
 	Expect(descriptor).ToNot(BeNil())
-	Expect(descriptor.GetName()).To(BeEquivalentTo(descriptor1Name))
+	Expect(descriptor.Name).To(BeEquivalentTo(descriptor1Name))
 	Expect(descriptor.KeySelector(prefixA + randomSuffix)).To(BeTrue())
 	Expect(descriptor.KeySelector(prefixB + randomSuffix)).To(BeFalse())
 	descriptor = registry.GetDescriptor(descriptor2Name)
 	Expect(descriptor).ToNot(BeNil())
-	Expect(descriptor.GetName()).To(BeEquivalentTo(descriptor2Name))
+	Expect(descriptor.Name).To(BeEquivalentTo(descriptor2Name))
 	Expect(descriptor.KeySelector(prefixA + randomSuffix)).To(BeFalse())
 	Expect(descriptor.KeySelector(prefixB + randomSuffix)).To(BeTrue())
 	descriptor = registry.GetDescriptor(descriptor3Name)
 	Expect(descriptor).ToNot(BeNil())
-	Expect(descriptor.GetName()).To(BeEquivalentTo(descriptor3Name))
+	Expect(descriptor.Name).To(BeEquivalentTo(descriptor3Name))
 	Expect(descriptor.KeySelector(prefixA + randomSuffix)).To(BeFalse())
 	Expect(descriptor.KeySelector(prefixC + randomSuffix)).To(BeTrue())
 	descriptor = registry.GetDescriptor(descriptor4Name)
 	Expect(descriptor).ToNot(BeNil())
-	Expect(descriptor.GetName()).To(BeEquivalentTo(descriptor4Name))
+	Expect(descriptor.Name).To(BeEquivalentTo(descriptor4Name))
 	Expect(descriptor.KeySelector(prefixA + randomSuffix)).To(BeFalse())
 	Expect(descriptor.KeySelector(randomKey)).To(BeTrue())
 
 	// basic GetDescriptorForKey tests
 	descriptor = registry.GetDescriptorForKey(prefixA + randomSuffix)
 	Expect(descriptor).ToNot(BeNil())
-	Expect(descriptor.GetName()).To(BeEquivalentTo(descriptor1Name))
+	Expect(descriptor.Name).To(BeEquivalentTo(descriptor1Name))
 	descriptor = registry.GetDescriptorForKey(prefixB + randomSuffix)
 	Expect(descriptor).ToNot(BeNil())
-	Expect(descriptor.GetName()).To(BeEquivalentTo(descriptor2Name))
+	Expect(descriptor.Name).To(BeEquivalentTo(descriptor2Name))
 	descriptor = registry.GetDescriptorForKey(prefixC + randomSuffix)
 	Expect(descriptor).ToNot(BeNil())
-	Expect(descriptor.GetName()).To(BeEquivalentTo(descriptor3Name))
+	Expect(descriptor.Name).To(BeEquivalentTo(descriptor3Name))
 	descriptor = registry.GetDescriptorForKey(randomKey)
 	Expect(descriptor).ToNot(BeNil())
-	Expect(descriptor.GetName()).To(BeEquivalentTo(descriptor4Name))
+	Expect(descriptor.Name).To(BeEquivalentTo(descriptor4Name))
 
 	// repeated lookups will take result from the cache
 	descriptor = registry.GetDescriptorForKey(prefixA + randomSuffix)
 	Expect(descriptor).ToNot(BeNil())
-	Expect(descriptor.GetName()).To(BeEquivalentTo(descriptor1Name))
+	Expect(descriptor.Name).To(BeEquivalentTo(descriptor1Name))
 	descriptor = registry.GetDescriptorForKey(prefixB + randomSuffix)
 	Expect(descriptor).ToNot(BeNil())
-	Expect(descriptor.GetName()).To(BeEquivalentTo(descriptor2Name))
+	Expect(descriptor.Name).To(BeEquivalentTo(descriptor2Name))
 	descriptor = registry.GetDescriptorForKey(prefixC + randomSuffix)
 	Expect(descriptor).ToNot(BeNil())
-	Expect(descriptor.GetName()).To(BeEquivalentTo(descriptor3Name))
+	Expect(descriptor.Name).To(BeEquivalentTo(descriptor3Name))
 	descriptor = registry.GetDescriptorForKey(randomKey)
 	Expect(descriptor).ToNot(BeNil())
-	Expect(descriptor.GetName()).To(BeEquivalentTo(descriptor4Name))
+	Expect(descriptor.Name).To(BeEquivalentTo(descriptor4Name))
 
 	// fill up the cache
 	for i := 0; i < maxKeyCacheSize; i++ {
 		if i%2 == 0 {
 			descriptor = registry.GetDescriptorForKey(fmt.Sprintf("%s%d", prefixA, i))
 			Expect(descriptor).ToNot(BeNil())
-			Expect(descriptor.GetName()).To(BeEquivalentTo(descriptor1Name))
+			Expect(descriptor.Name).To(BeEquivalentTo(descriptor1Name))
 		} else {
 			descriptor = registry.GetDescriptorForKey(fmt.Sprintf("%s%d", prefixB, i))
 			Expect(descriptor).ToNot(BeNil())
-			Expect(descriptor.GetName()).To(BeEquivalentTo(descriptor2Name))
+			Expect(descriptor.Name).To(BeEquivalentTo(descriptor2Name))
 		}
 	}
 
 	// results for these lookups were already removed from the cache and thus will have to be repeated
 	descriptor = registry.GetDescriptorForKey(prefixA + randomSuffix)
 	Expect(descriptor).ToNot(BeNil())
-	Expect(descriptor.GetName()).To(BeEquivalentTo(descriptor1Name))
+	Expect(descriptor.Name).To(BeEquivalentTo(descriptor1Name))
 	descriptor = registry.GetDescriptorForKey(prefixB + randomSuffix)
 	Expect(descriptor).ToNot(BeNil())
-	Expect(descriptor.GetName()).To(BeEquivalentTo(descriptor2Name))
+	Expect(descriptor.Name).To(BeEquivalentTo(descriptor2Name))
 	descriptor = registry.GetDescriptorForKey(prefixC + randomSuffix)
 	Expect(descriptor).ToNot(BeNil())
-	Expect(descriptor.GetName()).To(BeEquivalentTo(descriptor3Name))
+	Expect(descriptor.Name).To(BeEquivalentTo(descriptor3Name))
 	descriptor = registry.GetDescriptorForKey(randomKey)
 	Expect(descriptor).ToNot(BeNil())
-	Expect(descriptor.GetName()).To(BeEquivalentTo(descriptor4Name))
+	Expect(descriptor.Name).To(BeEquivalentTo(descriptor4Name))
 }

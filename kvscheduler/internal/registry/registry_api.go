@@ -12,37 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package emptyval
+package registry
 
 import (
 	. "github.com/ligato/cn-infra/kvscheduler/api"
 )
 
-// emptyValue can be used whenever the mere existence of the value is the only
-// information needed (typically Property values).
-type emptyValue struct {
-}
+// Registry can be used to register all descriptors and get quick (cached, O(log))
+// lookups by keys.
+type Registry interface {
+	// RegisterDescriptor add new descriptor into the registry.
+	RegisterDescriptor(descriptor *KVDescriptor)
 
-// NewEmptyValue creates a new instance of empty value.
-func NewEmptyValue() Value {
-	return &emptyValue{}
-}
+	// GetAllDescriptors returns all registered descriptors ordered by dump-dependencies.
+	GetAllDescriptors() []*KVDescriptor
 
-// Label returns empty string.
-func (ev *emptyValue) Label() string {
-	return ""
-}
+	// GetDescriptor returns descriptor with the given name.
+	GetDescriptor(name string) *KVDescriptor
 
-// Equivalent returns true for two empty values.
-func (ev *emptyValue) Equivalent(v2 Value) bool {
-	_, isEmpty := v2.(*emptyValue)
-	if !isEmpty {
-		return false
-	}
-	return true
-}
-
-// String returns empty string.
-func (ev *emptyValue) String() string {
-	return ""
+	// GetDescriptorForKey returns descriptor handling the given key.
+	GetDescriptorForKey(key string) *KVDescriptor
 }
