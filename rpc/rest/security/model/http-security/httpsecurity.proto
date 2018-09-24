@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+// Package http_security provides basic definition of user and permission group
+package http_security;
+
+message User {
+    string name = 1;
+    string password = 2;
+    repeated string permissions = 3;    // Permission name, user is allowed for more permission groups
+}
+
+message PermissionGroup {
+    string name = 1;
+    repeated string urls = 2;           // A list of URLs enabled in
+}
