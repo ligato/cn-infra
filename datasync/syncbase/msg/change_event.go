@@ -28,9 +28,7 @@ import (
 func NewChangeWatchResp(message *DataChangeRequest, callback func(error)) *ChangeEvent {
 	return &ChangeEvent{
 		changes: []datasync.ProtoWatchResp{
-			&ChangeWatchResp{
-				message: message,
-			},
+			&ChangeWatchResp{message: message},
 		},
 		callback: callback,
 	}

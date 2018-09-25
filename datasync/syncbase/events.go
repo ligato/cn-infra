@@ -20,6 +20,25 @@ import (
 	"github.com/ligato/cn-infra/logging/logrus"
 )
 
+// NewResyncEventDB creates a new instance of ResyncEventDB using the given map of iterators.
+func NewResyncEventDB(its map[string]datasync.KeyValIterator) *ResyncEventDB {
+	return &ResyncEventDB{
+		its:         its,
+		DoneChannel: &DoneChannel{make(chan error, 1)},
+	}
+}
+
+// ResyncEventDB implements the interface datasync.ResyncEvent (see comments in there).
+type ResyncEventDB struct {
+	its map[string]datasync.KeyValIterator
+	*DoneChannel
+}
+
+// GetValues returns values of the event.
+func (ev *ResyncEventDB) GetValues() map[string]datasync.KeyValIterator {
+	return ev.its
+}
+
 // ChangeEvent is a simple structure that implements interface datasync.ChangeEvent.
 type ChangeEvent struct {
 	Changes  []datasync.ProtoWatchResp
