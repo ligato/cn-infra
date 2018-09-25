@@ -25,6 +25,8 @@ import (
 )
 
 var (
+	// ResyncTimeout defines timeout used during
+	// resync after which resync will return an error.
 	ResyncTimeout = time.Second * 5
 )
 

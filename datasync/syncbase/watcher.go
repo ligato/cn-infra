@@ -27,6 +27,8 @@ import (
 )
 
 var (
+	// PropagateChangesTimeout defines timeout used during
+	// change propagation after which it will return an error.
 	PropagateChangesTimeout = time.Second * 20
 )
 
