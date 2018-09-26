@@ -34,22 +34,26 @@ import (
 
 const (
 	// Helps to obtain authorization header matching the field in a request
-	authHeaderStr = "authorization"
+	authLabel = "authorization"
 	// Admin constant, used to define admin security group and user
 	admin = "admin"
-	// Token header constant
-	bearer = "Bearer"
 )
 
 const (
-	// URL for login. Successful login returns token. Re-login invalidates old token and returns a new one.
+	// Returns login page where credentials may be put. Redirects to authenticate, and if successful, moves to index.
 	login = "/login"
 	// URL key for logout, invalidates current token.
 	logout = "/logout"
+	// Authentication page, validates credentials and if successful, returns a token or writes a cookie to a browser
+	authenticate = "/authenticate"
+	// Cookie name identifier
+	cookieName = "ligato-rest"
 )
 
 // Default value to sign the token, if not provided from config file
 var signature = "secret"
+
+// Default expiration time for token/cookie
 var expTime time.Duration = 3600000000000 // 1 Hour
 
 // AuthenticatorAPI provides methods for handling permissions
@@ -72,7 +76,7 @@ type Context struct {
 	Signature   string
 }
 
-// Credentials struct represents user login input
+// Credentials struct represents simple user login input
 type credentials struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -135,7 +139,7 @@ func NewAuthenticator(router *mux.Router, ctx *Context, log logging.Logger) Auth
 				a.log.Errorf("failed to add user %s: %v", user.Name, err)
 				continue
 			}
-			a.log.Warnf("Registered user %s, permissions: %v", user.Name, user.Permissions)
+			a.log.Debug("Registered user %s, permissions: %v", user.Name, user.Permissions)
 		}
 	}()
 
@@ -162,21 +166,35 @@ func (a *authenticator) AddPermissionGroup(group ...*httpsecurity.PermissionGrou
 // Validate the request
 func (a *authenticator) Validate(provider http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		authHeader := req.Header.Get(authHeaderStr)
-		if authHeader == "" {
-			a.formatter.Text(w, http.StatusUnauthorized, "401 Unauthorized: authorization header required")
-			return
+		// Token may be accessed via cookie, or from authentication header
+		var tokenString string
+		// Try to read the cookie first
+		cookie, err := req.Cookie(cookieName)
+		if err == nil && cookie != nil {
+			tokenString = cookie.Value
+		} else {
+			// Do not return error yet
+			a.log.Debugf("Authentication cookie not found (err: %v)", err)
+			// Continue with reading header
+			authHeader := req.Header.Get(authLabel)
+			if authHeader == "" {
+				a.formatter.Text(w, http.StatusUnauthorized, "401 Unauthorized: authorization required")
+				return
+			}
+			bearerToken := strings.Split(authHeader, " ")
+			if len(bearerToken) != 2 {
+				a.formatter.Text(w, http.StatusUnauthorized, "401 Unauthorized: invalid authorization token")
+				return
+			}
+			// Parse token header constant
+			if bearerToken[0] != "Bearer" {
+				a.formatter.Text(w, http.StatusUnauthorized, "401 Unauthorized: invalid authorization header")
+				return
+			}
+			tokenString = bearerToken[1]
 		}
-		bearerToken := strings.Split(authHeader, " ")
-		if len(bearerToken) != 2 {
-			a.formatter.Text(w, http.StatusUnauthorized, "401 Unauthorized: invalid authorization token")
-			return
-		}
-		if bearerToken[0] != bearer {
-			a.formatter.Text(w, http.StatusUnauthorized, "401 Unauthorized: invalid authorization header")
-			return
-		}
-		token, err := jwt.Parse(bearerToken[1], func(token *jwt.Token) (interface{}, error) {
+		// Retrieve token object from raw string
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := jwt.GetSigningMethod(token.Header["alg"].(string)).(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("error parsing token")
 			}
@@ -208,36 +226,71 @@ func (a *authenticator) Validate(provider http.HandlerFunc) http.HandlerFunc {
 
 // Register authenticator-wide security handlers
 func (a *authenticator) registerSecurityHandlers() {
-	a.router.HandleFunc(login, a.createTokenEndpoint).Methods(http.MethodPost)
-	a.router.HandleFunc(logout, a.invalidateTokenEndpoint).Methods(http.MethodPost)
+	a.router.HandleFunc(login, a.loginHandler).Methods(http.MethodGet, http.MethodPost)
+	a.router.HandleFunc(authenticate, a.authenticationHandler).Methods(http.MethodPost)
+	a.router.HandleFunc(logout, a.logoutHandler).Methods(http.MethodPost)
 }
 
-// Validates credentials and provides new token
-func (a *authenticator) createTokenEndpoint(w http.ResponseWriter, req *http.Request) {
-	name, errCode, err := a.validateCredentials(req)
+// Login handler shows simple page to log in
+func (a *authenticator) loginHandler(w http.ResponseWriter, req *http.Request) {
+	// GET returns login page. Submit redirects to authenticate.
+	if req.Method == http.MethodGet {
+		r := render.New(render.Options{
+			Directory:  "templates",
+			Asset:      Asset,
+			AssetNames: AssetNames,
+		})
+		r.HTML(w, http.StatusOK, "login", nil)
+	}
+	// POST decodes provided credentials
+	if req.Method == http.MethodPost {
+		credentials := &credentials{}
+		decoder := json.NewDecoder(req.Body)
+		err := decoder.Decode(&credentials)
+		if err != nil {
+			errStr := fmt.Sprintf("500 internal server error: failed to decode json: %v", err)
+			a.formatter.Text(w, http.StatusInternalServerError, errStr)
+			return
+		}
+		token, errCode, err := a.getTokenFor(credentials)
+		if err != nil {
+			a.formatter.Text(w, errCode, err.Error())
+			return
+		}
+
+		// Returns token string.
+		a.formatter.Text(w, http.StatusOK, token)
+	}
+}
+
+// Authentication handler verifies credentials from login page (GET) and writes cookie with token
+func (a *authenticator) authenticationHandler(w http.ResponseWriter, req *http.Request) {
+	// Read name and password from the form (if accessed from browser)
+	credentials := &credentials{}
+	credentials.Username = req.FormValue("name")
+	credentials.Password = req.FormValue("password")
+
+	token, errCode, err := a.getTokenFor(credentials)
 	if err != nil {
 		a.formatter.Text(w, errCode, err.Error())
 		return
 	}
-	claims := jwt.StandardClaims{
-		Audience:  name,
-		ExpiresAt: a.expTime.Nanoseconds(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(signature))
-	if err != nil {
-		errStr := fmt.Sprintf("500 internal server error: failed to sign token: %v", err)
-		a.log.Error(errStr)
-		a.formatter.Text(w, http.StatusInternalServerError, errStr)
-		return
-	}
-	a.userDb.SetLoginTime(name)
-	a.formatter.Text(w, http.StatusOK, tokenString)
-	a.log.Debugf("user %s was logged in", name)
+
+	// Writes cookie with token.
+	http.SetCookie(w, &http.Cookie{
+		Name:   cookieName,
+		Path:   "/",
+		MaxAge: int(a.expTime.Seconds()),
+		Value:  token,
+		Secure: false,
+	})
+	// Automatically move to index page.
+	target := "http://" + req.Host + "/"
+	http.Redirect(w, req, target, http.StatusMovedPermanently)
 }
 
 // Removes token endpoint from the DB. During processing, token will not be found and will be considered as invalid.
-func (a *authenticator) invalidateTokenEndpoint(w http.ResponseWriter, req *http.Request) {
+func (a *authenticator) logoutHandler(w http.ResponseWriter, req *http.Request) {
 	decoder := json.NewDecoder(req.Body)
 	var credentials credentials
 	err := decoder.Decode(&credentials)
@@ -248,20 +301,35 @@ func (a *authenticator) invalidateTokenEndpoint(w http.ResponseWriter, req *http
 	}
 
 	a.userDb.SetLogoutTime(credentials.Username)
-	a.log.Debugf("user %s was logged in", credentials.Username)
+	a.log.Debugf("user %s was logged out", credentials.Username)
+}
+
+// Get token for credentials
+func (a *authenticator) getTokenFor(credentials *credentials) (string, int, error) {
+	name, errCode, err := a.validateCredentials(credentials)
+	if err != nil {
+		return "", errCode, err
+	}
+	claims := jwt.StandardClaims{
+		Audience:  name,
+		ExpiresAt: a.expTime.Nanoseconds(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(signature))
+	if err != nil {
+		return "", http.StatusInternalServerError, fmt.Errorf("500 internal server error: failed to sign token: %v", err)
+	}
+	a.userDb.SetLoginTime(name)
+	a.log.Debugf("user %s was logged in", name)
+
+	return tokenString, 0, nil
 }
 
 // Validates credentials, returns name and error code/message if invalid
-func (a *authenticator) validateCredentials(req *http.Request) (string, int, error) {
-	decoder := json.NewDecoder(req.Body)
-	var credentials credentials
-	err := decoder.Decode(&credentials)
-	if err != nil {
-		return "", http.StatusInternalServerError, errors.Errorf("500 internal server error: failed to decode json: %v", err)
-	}
+func (a *authenticator) validateCredentials(credentials *credentials) (string, int, error) {
 	user, err := a.userDb.GetUser(credentials.Username)
 	if err != nil {
-		return credentials.Username, http.StatusUnauthorized, errors.Errorf("401 unauthorized: user name or password is incorrect")
+		return "", http.StatusUnauthorized, errors.Errorf("401 unauthorized: user name or password is incorrect")
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(credentials.Password)); err != nil {
 		return credentials.Username, http.StatusUnauthorized, fmt.Errorf("401 unauthorized: user name or password is incorrect")

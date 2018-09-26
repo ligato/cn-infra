@@ -26,6 +26,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// A simple utility to help with password hashing. Hashed password can be stored as
+// user password in config file. Always provide two parameters; password and cost.
+
 func main() {
 	// Read args
 	args := os.Args
@@ -37,7 +40,7 @@ func main() {
 	pass := args[1]
 	cost, err := strconv.Atoi(args[2])
 	if err != nil {
-		logrus.DefaultLogger().Errorf("invalid cost value: %v", err)
+		logrus.DefaultLogger().Errorf("invalid cost format: %v", err)
 		os.Exit(1)
 	}
 	if cost < 4 || cost > 31 {
@@ -60,13 +63,13 @@ func usage() {
 	buffer.WriteString(` 
 
 	Simple password hasher. Since the user credentials 
-	can be stored in config file, this utility allows 
+	can be stored in the config file, this utility helps 
 	to hash the password and store it as such. 
 
 	./password-hasher <password> <cost>
 
-	The cost value has to match the one in config file.
-	Allowed interval is 4-31. Note that high number
+	The cost value has to match the one in the config file.
+	Allowed interval is 4-31. Note that the high number
 	takes a lot of time to process.
 
 	Please do not use your bank account password. 
