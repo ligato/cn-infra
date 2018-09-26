@@ -92,8 +92,6 @@ type authenticator struct {
 	userDb AuthStore
 	// Permission database is a map of name/permissions and bound URLs
 	groupDb map[string][]*httpsecurity.PermissionGroup_Permissions
-	// Token database keeps information of actual token and its owner.
-	tokenDb map[string]string
 
 	// Token claims
 	expTime time.Duration
@@ -109,7 +107,6 @@ func NewAuthenticator(router *mux.Router, ctx *Context, log logging.Logger) Auth
 		}),
 		userDb:  CreateAuthStore(ctx.StorageType),
 		groupDb: make(map[string][]*httpsecurity.PermissionGroup_Permissions),
-		tokenDb: make(map[string]string),
 		expTime: ctx.ExpTime,
 	}
 
@@ -199,7 +196,7 @@ func (a *authenticator) Validate(provider http.HandlerFunc) http.HandlerFunc {
 			}
 		}
 		// Validate token itself
-		if err := a.validateToken(token.Raw, req.URL.Path, req.Method); err != nil {
+		if err := a.validateToken(token, req.URL.Path, req.Method); err != nil {
 			errStr := fmt.Sprintf("401 Unauthorized: %v", err)
 			a.formatter.Text(w, http.StatusUnauthorized, errStr)
 			return
@@ -222,7 +219,7 @@ func (a *authenticator) createTokenEndpoint(w http.ResponseWriter, req *http.Req
 		a.formatter.Text(w, errCode, err.Error())
 		return
 	}
-	claims := &jwt.StandardClaims{
+	claims := jwt.StandardClaims{
 		Audience:  name,
 		ExpiresAt: a.expTime.Nanoseconds(),
 	}
@@ -234,8 +231,9 @@ func (a *authenticator) createTokenEndpoint(w http.ResponseWriter, req *http.Req
 		a.formatter.Text(w, http.StatusInternalServerError, errStr)
 		return
 	}
-	a.tokenDb[name] = tokenString
+	a.userDb.SetLoginTime(name)
 	a.formatter.Text(w, http.StatusOK, tokenString)
+	a.log.Debugf("user %s was logged in", name)
 }
 
 // Removes token endpoint from the DB. During processing, token will not be found and will be considered as invalid.
@@ -248,7 +246,9 @@ func (a *authenticator) invalidateTokenEndpoint(w http.ResponseWriter, req *http
 		a.formatter.Text(w, http.StatusInternalServerError, errStr)
 		return
 	}
-	delete(a.tokenDb, credentials.Username)
+
+	a.userDb.SetLogoutTime(credentials.Username)
+	a.log.Debugf("user %s was logged in", credentials.Username)
 }
 
 // Validates credentials, returns name and error code/message if invalid
@@ -270,12 +270,34 @@ func (a *authenticator) validateCredentials(req *http.Request) (string, int, err
 }
 
 // Validates token itself and permissions
-func (a *authenticator) validateToken(token, url, method string) error {
-	owner, err := a.getTokenOwner(token)
-	if err != nil {
-		return err
+func (a *authenticator) validateToken(token *jwt.Token, url, method string) error {
+	var userName string
+	// Read audience from the token
+	switch v := token.Claims.(type) {
+	case jwt.MapClaims:
+		var ok bool
+		if userName, ok = v["aud"].(string); !ok {
+			return fmt.Errorf("failed to validate token claims audience")
+		}
+	case jwt.StandardClaims:
+		userName = v.Audience
+	default:
+		return fmt.Errorf("failed to validate token claims")
 	}
-	user, err := a.userDb.GetUser(owner)
+	lastLogin, err := a.userDb.GetLoginTime(userName)
+	if err != nil {
+		return fmt.Errorf("failed to validate token: %v", err)
+	}
+	lastLogout, err := a.userDb.GetLogoutTime(userName)
+	if err != nil {
+		return fmt.Errorf("failed to validate token: %v", err)
+	}
+	if lastLogout.After(lastLogin) {
+		// User logged out
+		token.Valid = false
+		return fmt.Errorf("invalid token")
+	}
+	user, err := a.userDb.GetUser(userName)
 	if err != nil {
 		return fmt.Errorf("failed to validate token: %v", err)
 	}
@@ -283,7 +305,6 @@ func (a *authenticator) validateToken(token, url, method string) error {
 	if userIsAdmin(user) {
 		return nil
 	}
-
 	perms := a.getPermissionsForURL(url, method)
 	for _, userPerm := range user.Permissions {
 		for _, perm := range perms {
@@ -294,16 +315,6 @@ func (a *authenticator) validateToken(token, url, method string) error {
 	}
 
 	return fmt.Errorf("not permitted")
-}
-
-// Returns token owner, or error if not found
-func (a *authenticator) getTokenOwner(token string) (string, error) {
-	for name, knownToken := range a.tokenDb {
-		if token == knownToken {
-			return name, nil
-		}
-	}
-	return "", fmt.Errorf("authorization token is invalid")
 }
 
 // Returns all permission groups provided URL/Method is allowed for
@@ -326,7 +337,7 @@ func (a *authenticator) getPermissionsForURL(url, method string) []string {
 }
 
 // Checks user admin permission
-func userIsAdmin(user *httpsecurity.User) bool {
+func userIsAdmin(user *User) bool {
 	for _, permission := range user.Permissions {
 		if permission == admin {
 			return true
