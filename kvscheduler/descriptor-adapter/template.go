@@ -218,7 +218,7 @@ func (da *{{ .DescriptorName }}DescriptorAdapter) Dump(correlate []KVWithMetadat
 				Origin:   kvpair.Origin,
 			})
 	}
-	
+
 	typedDump, err := da.descriptor.Dump(correlateWithType)
 	if err != nil {
 		return nil, err
