@@ -94,13 +94,16 @@ type Config struct {
 	EnableTokenAuth bool `json:"enable-token-auth"`
 
 	// TokenExpiration set globaly for all user tokens
-	TokenExpiration int `json:"token-expiration"`
+	TokenExpiration time.Duration `json:"token-expiration"`
 
 	// Users laoded from config file
 	Users []httpsecurity.User `json:"users"`
 
 	// Hash cost for password. High values take a lot of time to process.
 	PasswordHashCost int `json:"password-hash-cost"`
+
+	// TokenSignature is used to sign a token. Default value is used if not set.
+	TokenSignature string `json:"token-signature"`
 }
 
 // DefaultConfig returns new instance of config with default endpoint

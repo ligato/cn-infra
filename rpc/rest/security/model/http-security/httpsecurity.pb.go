@@ -4,7 +4,7 @@
 package http_security
 
 /*
-Package apitrace provides data model for binary API trace informations.
+Package http_security provides basic definition of user and permission group
 */
 
 import proto "github.com/gogo/protobuf/proto"
@@ -24,7 +24,7 @@ const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
 type User struct {
 	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Password             string   `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	PasswordHash         string   `protobuf:"bytes,2,opt,name=password_hash,json=passwordHash,proto3" json:"password_hash,omitempty"`
 	Permissions          []string `protobuf:"bytes,3,rep,name=permissions" json:"permissions,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -35,7 +35,7 @@ func (m *User) Reset()         { *m = User{} }
 func (m *User) String() string { return proto.CompactTextString(m) }
 func (*User) ProtoMessage()    {}
 func (*User) Descriptor() ([]byte, []int) {
-	return fileDescriptor_httpsecurity_db48c2918451fae2, []int{0}
+	return fileDescriptor_httpsecurity_0a2ac8ea7a0d109e, []int{0}
 }
 func (m *User) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_User.Unmarshal(m, b)
@@ -62,9 +62,9 @@ func (m *User) GetName() string {
 	return ""
 }
 
-func (m *User) GetPassword() string {
+func (m *User) GetPasswordHash() string {
 	if m != nil {
-		return m.Password
+		return m.PasswordHash
 	}
 	return ""
 }
@@ -77,18 +77,18 @@ func (m *User) GetPermissions() []string {
 }
 
 type PermissionGroup struct {
-	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Urls                 []string `protobuf:"bytes,2,rep,name=urls" json:"urls,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Name                 string                         `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Permissions          []*PermissionGroup_Permissions `protobuf:"bytes,2,rep,name=permissions" json:"permissions,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                       `json:"-"`
+	XXX_unrecognized     []byte                         `json:"-"`
+	XXX_sizecache        int32                          `json:"-"`
 }
 
 func (m *PermissionGroup) Reset()         { *m = PermissionGroup{} }
 func (m *PermissionGroup) String() string { return proto.CompactTextString(m) }
 func (*PermissionGroup) ProtoMessage()    {}
 func (*PermissionGroup) Descriptor() ([]byte, []int) {
-	return fileDescriptor_httpsecurity_db48c2918451fae2, []int{1}
+	return fileDescriptor_httpsecurity_0a2ac8ea7a0d109e, []int{1}
 }
 func (m *PermissionGroup) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PermissionGroup.Unmarshal(m, b)
@@ -115,9 +115,55 @@ func (m *PermissionGroup) GetName() string {
 	return ""
 }
 
-func (m *PermissionGroup) GetUrls() []string {
+func (m *PermissionGroup) GetPermissions() []*PermissionGroup_Permissions {
 	if m != nil {
-		return m.Urls
+		return m.Permissions
+	}
+	return nil
+}
+
+type PermissionGroup_Permissions struct {
+	Url                  string   `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
+	AllowedMethods       []string `protobuf:"bytes,2,rep,name=allowed_methods,json=allowedMethods" json:"allowed_methods,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *PermissionGroup_Permissions) Reset()         { *m = PermissionGroup_Permissions{} }
+func (m *PermissionGroup_Permissions) String() string { return proto.CompactTextString(m) }
+func (*PermissionGroup_Permissions) ProtoMessage()    {}
+func (*PermissionGroup_Permissions) Descriptor() ([]byte, []int) {
+	return fileDescriptor_httpsecurity_0a2ac8ea7a0d109e, []int{1, 0}
+}
+func (m *PermissionGroup_Permissions) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PermissionGroup_Permissions.Unmarshal(m, b)
+}
+func (m *PermissionGroup_Permissions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PermissionGroup_Permissions.Marshal(b, m, deterministic)
+}
+func (dst *PermissionGroup_Permissions) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PermissionGroup_Permissions.Merge(dst, src)
+}
+func (m *PermissionGroup_Permissions) XXX_Size() int {
+	return xxx_messageInfo_PermissionGroup_Permissions.Size(m)
+}
+func (m *PermissionGroup_Permissions) XXX_DiscardUnknown() {
+	xxx_messageInfo_PermissionGroup_Permissions.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PermissionGroup_Permissions proto.InternalMessageInfo
+
+func (m *PermissionGroup_Permissions) GetUrl() string {
+	if m != nil {
+		return m.Url
+	}
+	return ""
+}
+
+func (m *PermissionGroup_Permissions) GetAllowedMethods() []string {
+	if m != nil {
+		return m.AllowedMethods
 	}
 	return nil
 }
@@ -125,20 +171,25 @@ func (m *PermissionGroup) GetUrls() []string {
 func init() {
 	proto.RegisterType((*User)(nil), "http_security.User")
 	proto.RegisterType((*PermissionGroup)(nil), "http_security.PermissionGroup")
+	proto.RegisterType((*PermissionGroup_Permissions)(nil), "http_security.PermissionGroup.Permissions")
 }
 
-func init() { proto.RegisterFile("httpsecurity.proto", fileDescriptor_httpsecurity_db48c2918451fae2) }
+func init() { proto.RegisterFile("httpsecurity.proto", fileDescriptor_httpsecurity_0a2ac8ea7a0d109e) }
 
-var fileDescriptor_httpsecurity_db48c2918451fae2 = []byte{
-	// 149 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0xca, 0x28, 0x29, 0x29,
-	0x28, 0x4e, 0x4d, 0x2e, 0x2d, 0xca, 0x2c, 0xa9, 0xd4, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2,
-	0x05, 0x89, 0xc5, 0xc3, 0x04, 0x95, 0x22, 0xb8, 0x58, 0x42, 0x8b, 0x53, 0x8b, 0x84, 0x84, 0xb8,
-	0x58, 0xf2, 0x12, 0x73, 0x53, 0x25, 0x18, 0x15, 0x18, 0x35, 0x38, 0x83, 0xc0, 0x6c, 0x21, 0x29,
-	0x2e, 0x8e, 0x82, 0xc4, 0xe2, 0xe2, 0xf2, 0xfc, 0xa2, 0x14, 0x09, 0x26, 0xb0, 0x38, 0x9c, 0x2f,
-	0xa4, 0xc0, 0xc5, 0x5d, 0x90, 0x5a, 0x94, 0x9b, 0x59, 0x5c, 0x9c, 0x99, 0x9f, 0x57, 0x2c, 0xc1,
-	0xac, 0xc0, 0xac, 0xc1, 0x19, 0x84, 0x2c, 0xa4, 0x64, 0xc9, 0xc5, 0x1f, 0x00, 0xe7, 0xba, 0x17,
-	0xe5, 0x97, 0x16, 0x60, 0xb5, 0x44, 0x88, 0x8b, 0xa5, 0xb4, 0x28, 0xa7, 0x58, 0x82, 0x09, 0x6c,
-	0x02, 0x98, 0x9d, 0xc4, 0x06, 0x76, 0xaa, 0x31, 0x20, 0x00, 0x00, 0xff, 0xff, 0x77, 0xad, 0x16,
-	0x78, 0xc0, 0x00, 0x00, 0x00,
+var fileDescriptor_httpsecurity_0a2ac8ea7a0d109e = []byte{
+	// 213 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x90, 0xcf, 0x4a, 0x87, 0x40,
+	0x14, 0x85, 0xd1, 0x91, 0xc0, 0x6b, 0x66, 0xdc, 0x95, 0xb4, 0x1a, 0x6c, 0x91, 0xb4, 0x70, 0x51,
+	0x0f, 0x91, 0x8b, 0x82, 0x10, 0x5a, 0xcb, 0x94, 0x03, 0x23, 0xa8, 0x33, 0xcc, 0x1d, 0x91, 0x1e,
+	0xae, 0x77, 0x0b, 0xff, 0x85, 0xc6, 0x6f, 0x77, 0xcf, 0x77, 0xe0, 0x7c, 0xc3, 0x00, 0x2a, 0xe7,
+	0x0c, 0xc9, 0xaf, 0xd1, 0xb6, 0xee, 0xbb, 0x30, 0x56, 0x3b, 0x8d, 0xf1, 0xcc, 0xea, 0x1d, 0x66,
+	0x02, 0x82, 0x0f, 0x92, 0x16, 0x11, 0x82, 0x41, 0xf4, 0x32, 0xf5, 0xb8, 0x97, 0x87, 0xd5, 0x72,
+	0xe3, 0x3d, 0xc4, 0x46, 0x10, 0x4d, 0xda, 0x36, 0xb5, 0x12, 0xa4, 0x52, 0x7f, 0x29, 0xaf, 0x77,
+	0x58, 0x0a, 0x52, 0xc8, 0x21, 0x32, 0xd2, 0xf6, 0x2d, 0x51, 0xab, 0x07, 0x4a, 0x19, 0x67, 0x79,
+	0x58, 0x1d, 0x51, 0xf6, 0xe3, 0x41, 0xf2, 0xfe, 0x97, 0x5f, 0xac, 0x1e, 0xcd, 0x45, 0xdd, 0xeb,
+	0x79, 0xc9, 0xe7, 0x2c, 0x8f, 0x9e, 0x1e, 0x8b, 0xd3, 0x7b, 0x8b, 0x7f, 0x43, 0x87, 0x4c, 0x27,
+	0xeb, 0x5d, 0x09, 0xd1, 0xa1, 0xc3, 0x5b, 0x60, 0xa3, 0xed, 0x36, 0xdf, 0x7c, 0xe2, 0x03, 0x24,
+	0xa2, 0xeb, 0xf4, 0x24, 0x9b, 0xba, 0x97, 0x4e, 0xe9, 0x66, 0x55, 0x86, 0xd5, 0xcd, 0x86, 0xdf,
+	0x56, 0xfa, 0x79, 0xb5, 0x7c, 0xdc, 0xf3, 0x6f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x10, 0x67, 0x77,
+	0x16, 0x4e, 0x01, 0x00, 0x00,
 }
