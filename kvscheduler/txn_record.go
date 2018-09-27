@@ -147,9 +147,6 @@ func (txn *recordedTxn) StringWithOpts(resultOnly bool, indent int) string {
 			}
 			str += indent3 + fmt.Sprintf("- key: %s\n", kv.key)
 			str += indent3 + fmt.Sprintf("  value: %s\n", kv.value)
-			if resync {
-				str += indent3 + fmt.Sprintf("  origin: %s\n", kv.origin.String())
-			}
 		}
 
 		// pre-processing errors
