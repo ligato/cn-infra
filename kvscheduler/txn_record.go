@@ -193,6 +193,9 @@ func (op *recordedTxnOp) StringWithOpts(index int, indent int) string {
 	indent2 := strings.Repeat(" ", indent+4)
 
 	var flags []string
+	if op.newOrigin == FromSB {
+		flags = append(flags, "NOTIFICATION")
+	}
 	if op.derived {
 		flags = append(flags, "DERIVED")
 	}
@@ -243,8 +246,6 @@ func (op *recordedTxnOp) StringWithOpts(index int, indent int) string {
 	if op.prevOrigin != op.newOrigin {
 		str += indent2 + fmt.Sprintf("- prev-origin: %s\n", op.prevOrigin.String())
 		str += indent2 + fmt.Sprintf("- new-origin: %s\n", op.newOrigin.String())
-	} else {
-		str += indent2 + fmt.Sprintf("- origin: %s\n", op.prevOrigin.String())
 	}
 	if op.prevErr != nil {
 		str += indent2 + fmt.Sprintf("- prev-error: %s\n", utils.ErrorToString(op.prevErr))
