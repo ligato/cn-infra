@@ -33,8 +33,8 @@ import (
 )
 
 const (
-	// Helps to obtain authorization header matching the field in a request
-	authLabel = "authorization"
+	// AuthHeaderKey helps to obtain authorization header matching the field in a request
+	AuthHeaderKey = "authorization"
 	// Admin constant, used to define admin security group and user
 	admin = "admin"
 )
@@ -134,12 +134,11 @@ func NewAuthenticator(router *mux.Router, ctx *Settings, log logging.Logger) Aut
 
 	// Process users in go routine, since hashing may take some time
 	go func() {
-		// Add admin-user, enabled by default, always has access to every URL
-		hash, err := bcrypt.GenerateFromPassword([]byte("ligato123"), ctx.Cost)
-		if err != nil {
-			a.log.Errorf("failed to hash password for admin: %v", err)
+		// Hash of default admin password, hashed with cost 10
+		hash := "$2a$10$q5s1LP7xbCJWJlLet1g/h.rGrsHtciILps90bNRdJ.6DRekw9b.zK"
+		if err := a.userDb.AddUser(admin, hash, []string{admin}); err != nil {
+			a.log.Errorf("failed to add admin user: %v", err)
 		}
-		a.userDb.AddUser(admin, string(hash), []string{admin})
 
 		for _, user := range ctx.Users {
 			if user.Name == admin {
@@ -178,31 +177,10 @@ func (a *authenticator) AddPermissionGroup(group ...*access.PermissionGroup) {
 func (a *authenticator) Validate(provider http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// Token may be accessed via cookie, or from authentication header
-		var tokenString string
-		// Try to read the cookie first
-		cookie, err := req.Cookie(cookieName)
-		if err == nil && cookie != nil {
-			tokenString = cookie.Value
-		} else {
-			// Do not return error yet
-			a.log.Debugf("Authentication cookie not found (err: %v)", err)
-			// Continue with reading header
-			authHeader := req.Header.Get(authLabel)
-			if authHeader == "" {
-				a.formatter.Text(w, http.StatusUnauthorized, "401 Unauthorized: authorization required")
-				return
-			}
-			bearerToken := strings.Split(authHeader, " ")
-			if len(bearerToken) != 2 {
-				a.formatter.Text(w, http.StatusUnauthorized, "401 Unauthorized: invalid authorization token")
-				return
-			}
-			// Parse token header constant
-			if bearerToken[0] != "Bearer" {
-				a.formatter.Text(w, http.StatusUnauthorized, "401 Unauthorized: invalid authorization header")
-				return
-			}
-			tokenString = bearerToken[1]
+		tokenString, errCode, err := a.getTokenStringFromRequest(req)
+		if err != nil {
+			a.formatter.Text(w, errCode, err.Error())
+			return
 		}
 		// Retrieve token object from raw string
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
@@ -252,9 +230,8 @@ func (a *authenticator) loginHandler(w http.ResponseWriter, req *http.Request) {
 			AssetNames: AssetNames,
 		})
 		r.HTML(w, http.StatusOK, "login", nil)
-	}
-	// POST decodes provided credentials
-	if req.Method == http.MethodPost {
+	} else {
+		// POST decodes provided credentials
 		credentials := &credentials{}
 		decoder := json.NewDecoder(req.Body)
 		err := decoder.Decode(&credentials)
@@ -277,16 +254,15 @@ func (a *authenticator) loginHandler(w http.ResponseWriter, req *http.Request) {
 // Authentication handler verifies credentials from login page (GET) and writes cookie with token
 func (a *authenticator) authenticationHandler(w http.ResponseWriter, req *http.Request) {
 	// Read name and password from the form (if accessed from browser)
-	credentials := &credentials{}
-	credentials.Username = req.FormValue("name")
-	credentials.Password = req.FormValue("password")
-
+	credentials := &credentials{
+		Username: req.FormValue("name"),
+		Password: req.FormValue("password"),
+	}
 	token, errCode, err := a.getTokenFor(credentials)
 	if err != nil {
 		a.formatter.Text(w, errCode, err.Error())
 		return
 	}
-
 	// Writes cookie with token.
 	http.SetCookie(w, &http.Cookie{
 		Name:   cookieName,
@@ -296,7 +272,7 @@ func (a *authenticator) authenticationHandler(w http.ResponseWriter, req *http.R
 		Secure: false,
 	})
 	// Automatically move to index page.
-	target := "http://" + req.Host + "/"
+	target := "/"
 	http.Redirect(w, req, target, http.StatusMovedPermanently)
 }
 
@@ -313,6 +289,33 @@ func (a *authenticator) logoutHandler(w http.ResponseWriter, req *http.Request) 
 
 	a.userDb.SetLogoutTime(credentials.Username)
 	a.log.Debugf("user %s was logged out", credentials.Username)
+}
+
+// Read raw token from request.
+func (a *authenticator) getTokenStringFromRequest(req *http.Request) (result string, errCode int, err error) {
+	// Try to read header, validate it if exists.
+	authHeader := req.Header.Get(AuthHeaderKey)
+	if authHeader != "" {
+		bearerToken := strings.Split(authHeader, " ")
+		if len(bearerToken) != 2 {
+			return "", http.StatusUnauthorized, fmt.Errorf("401 Unauthorized: invalid authorization token")
+		}
+		// Parse token header constant
+		if bearerToken[0] != "Bearer" {
+			return "", http.StatusUnauthorized, fmt.Errorf("401 Unauthorized: invalid authorization header")
+		}
+		return bearerToken[1], 0, nil
+	}
+	a.log.Debugf("Authentication header not found (err: %v)", err)
+
+	// Otherwise read cookie
+	cookie, err := req.Cookie(cookieName)
+	if err == nil && cookie != nil {
+		return cookie.Value, 0, nil
+	}
+	a.log.Debugf("Authentication cookie not found (err: %v)", err)
+
+	return "", http.StatusUnauthorized, fmt.Errorf("401 Unauthorized: authorization required")
 }
 
 // Get token for credentials

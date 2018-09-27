@@ -62,15 +62,10 @@ func (ds *defaultAuthDB) AddUser(name, passwordHash string, permissions []string
 	defer ds.Unlock()
 
 	// Verify user does not exist yet
-	var exists bool
 	for _, userData := range ds.db {
 		if userData.Name == name {
-			exists = true
+			return fmt.Errorf("user %s already exists", name)
 		}
-	}
-	if exists {
-		// User already exists
-		return fmt.Errorf("user %s already exists", name)
 	}
 
 	ds.db = append(ds.db, &User{

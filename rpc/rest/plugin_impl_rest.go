@@ -78,7 +78,6 @@ func (p *Plugin) Init() (err error) {
 	if p.EnableTokenAuth {
 		p.Log.Info("Token authentication for HTTP enabled")
 		p.auth = security.NewAuthenticator(p.mx, &security.Settings{
-			// Since there is currently only one storage type, set it directly
 			Users:     p.Users,
 			ExpTime:   p.TokenExpiration,
 			Cost:      p.PasswordHashCost,

@@ -1,7 +1,7 @@
 syntax = "proto3";
 
-// Package http_security provides basic definition of user and permission group
-package http_security;
+// Package access_security provides basic definition of user and permission group
+package access_security;
 
 message User {
     string name = 1;
