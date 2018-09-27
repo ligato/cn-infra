@@ -138,7 +138,7 @@ func TestResyncWithEmptySB(t *testing.T) {
 		Name:            descriptor1Name,
 		NBKeyPrefix:     prefixA,
 		KeySelector:     prefixSelector(prefixA),
-		ValueTypeName:   test.ArrayValueTypeName,
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
 		DerivedValues:   test.ArrayValueDerBuilder,
 		Dependencies: func(key string, value proto.Message) []Dependency {
 			if key == prefixA+baseValue2 {
@@ -549,7 +549,7 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 		Name:            descriptor1Name,
 		NBKeyPrefix:     prefixA,
 		KeySelector:     prefixSelector(prefixA),
-		ValueTypeName:   test.ArrayValueTypeName,
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
 		DerivedValues:   test.ArrayValueDerBuilder,
 		Dependencies: func(key string, value proto.Message) []Dependency {
 			if key == prefixA+baseValue2+"/item1" {
@@ -898,7 +898,7 @@ func TestResyncNotRemovingSBValues(t *testing.T) {
 		Name:            descriptor1Name,
 		KeySelector:     prefixSelector(prefixA),
 		NBKeyPrefix:     prefixA,
-		ValueTypeName:   test.ArrayValueTypeName,
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
 		DerivedValues:   test.ArrayValueDerBuilder,
 		Dependencies: func(key string, value proto.Message) []Dependency {
 			if key == prefixA+baseValue2 {
@@ -1081,7 +1081,7 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 		Name:            descriptor1Name,
 		NBKeyPrefix:     prefixA,
 		KeySelector:     prefixSelector(prefixA),
-		ValueTypeName:   test.ArrayValueTypeName,
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
 		DerivedValues:   test.ArrayValueDerBuilder,
 		WithMetadata:    true,
 	}, mockSB, 1)
@@ -1090,7 +1090,7 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 		Name:            descriptor2Name,
 		NBKeyPrefix:     prefixB,
 		KeySelector:     prefixSelector(prefixB),
-		ValueTypeName:   test.ArrayValueTypeName,
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
 		DerivedValues:   test.ArrayValueDerBuilder,
 		Dependencies: func(key string, value proto.Message) []Dependency {
 			if key == prefixB+baseValue2+"/item1" {
@@ -1115,7 +1115,7 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 		Name:            descriptor3Name,
 		NBKeyPrefix:     prefixC,
 		KeySelector:     prefixSelector(prefixC),
-		ValueTypeName:   test.ArrayValueTypeName,
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
 		DerivedValues:   test.ArrayValueDerBuilder,
 		ModifyWithRecreate: func(key string, oldValue, newValue proto.Message, metadata Metadata) bool {
 			if key == prefixC+baseValue3 {
@@ -1477,7 +1477,7 @@ func TestResyncWithRetry(t *testing.T) {
 		Name:            descriptor1Name,
 		NBKeyPrefix:     prefixA,
 		KeySelector:     prefixSelector(prefixA),
-		ValueTypeName:   test.ArrayValueTypeName,
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
 		DerivedValues:   test.ArrayValueDerBuilder,
 		WithMetadata:    true,
 	}, mockSB, 1)

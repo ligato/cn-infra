@@ -45,7 +45,7 @@ func TestDataChangeTransactions(t *testing.T) {
 		Name:            descriptor1Name,
 		NBKeyPrefix:     prefixA,
 		KeySelector:     prefixSelector(prefixA),
-		ValueTypeName:   test.ArrayValueTypeName,
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
 		DerivedValues:   test.ArrayValueDerBuilder,
 		WithMetadata:    true,
 	}, mockSB, 0)
@@ -54,7 +54,7 @@ func TestDataChangeTransactions(t *testing.T) {
 		Name:            descriptor2Name,
 		NBKeyPrefix:     prefixB,
 		KeySelector:     prefixSelector(prefixB),
-		ValueTypeName:   test.ArrayValueTypeName,
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
 		DerivedValues:   test.ArrayValueDerBuilder,
 		Dependencies: func(key string, value proto.Message) []Dependency {
 			if key == prefixB+baseValue2+"/item1" {
@@ -79,7 +79,7 @@ func TestDataChangeTransactions(t *testing.T) {
 		Name:            descriptor3Name,
 		NBKeyPrefix:     prefixC,
 		KeySelector:     prefixSelector(prefixC),
-		ValueTypeName:   test.ArrayValueTypeName,
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
 		DerivedValues:   test.ArrayValueDerBuilder,
 		ModifyWithRecreate: func(key string, oldValue, newValue proto.Message, metadata Metadata) bool {
 			if key == prefixC+baseValue3 {
@@ -627,7 +627,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		Name:            descriptor1Name,
 		NBKeyPrefix:     prefixA,
 		KeySelector:     prefixSelector(prefixA),
-		ValueTypeName:   test.ArrayValueTypeName,
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
 		DerivedValues:   test.ArrayValueDerBuilder,
 		WithMetadata:    true,
 	}, mockSB, 0)
@@ -636,7 +636,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		Name:            descriptor2Name,
 		NBKeyPrefix:     prefixB,
 		KeySelector:     prefixSelector(prefixB),
-		ValueTypeName:   test.ArrayValueTypeName,
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
 		DerivedValues:   test.ArrayValueDerBuilder,
 		Dependencies: func(key string, value proto.Message) []Dependency {
 			if key == prefixB+baseValue2+"/item1" {
@@ -661,7 +661,7 @@ func TestDataChangeTransactionWithRevert(t *testing.T) {
 		Name:            descriptor3Name,
 		NBKeyPrefix:     prefixC,
 		KeySelector:     prefixSelector(prefixC),
-		ValueTypeName:   test.ArrayValueTypeName,
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
 		DerivedValues:   test.ArrayValueDerBuilder,
 		ModifyWithRecreate: func(key string, oldValue, newValue proto.Message, metadata Metadata) bool {
 			if key == prefixC+baseValue3 {
@@ -1177,7 +1177,7 @@ func TestDependencyCycles(t *testing.T) {
 		Name:            descriptor1Name,
 		KeySelector:     prefixSelector(prefixA),
 		NBKeyPrefix:     prefixA,
-		ValueTypeName:   test.StringValueTypeName,
+		ValueTypeName:   proto.MessageName(test.NewStringValue("")),
 		ValueComparator: test.StringValueComparator,
 		Dependencies: func(key string, value proto.Message) []Dependency {
 			if key == prefixA+baseValue1 {
@@ -1635,7 +1635,7 @@ func TestSpecialCase(t *testing.T) {
 		Name:            descriptor1Name,
 		NBKeyPrefix:     prefixA,
 		KeySelector:     prefixSelector(prefixA),
-		ValueTypeName:   test.ArrayValueTypeName,
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
 		DerivedValues:   test.ArrayValueDerBuilder,
 		WithMetadata:    true,
 	}, mockSB, 0)

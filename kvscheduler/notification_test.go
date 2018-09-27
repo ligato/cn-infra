@@ -54,7 +54,7 @@ func TestNotifications(t *testing.T) {
 			}
 			return true
 		},
-		ValueTypeName:   test.ArrayValueTypeName,
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
 		DerivedValues:   test.ArrayValueDerBuilder,
 		WithMetadata:    true,
 	}, mockSB, 0, test.WithoutDump)
@@ -63,7 +63,7 @@ func TestNotifications(t *testing.T) {
 		Name:            descriptor2Name,
 		NBKeyPrefix:     prefixB,
 		KeySelector:     prefixSelector(prefixB),
-		ValueTypeName:   test.ArrayValueTypeName,
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
 		DerivedValues:   test.ArrayValueDerBuilder,
 		Dependencies: func(key string, value proto.Message) []Dependency {
 			if key == prefixB+baseValue2 {
@@ -615,7 +615,7 @@ func TestNotificationsWithRetry(t *testing.T) {
 		Name:            descriptor1Name,
 		NBKeyPrefix:     prefixA,
 		KeySelector:     prefixSelector(prefixA),
-		ValueTypeName:   test.ArrayValueTypeName,
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
 		DerivedValues:   test.ArrayValueDerBuilder,
 		WithMetadata:    true,
 	}, mockSB, 0, test.WithoutDump)
@@ -624,7 +624,7 @@ func TestNotificationsWithRetry(t *testing.T) {
 		Name:            descriptor2Name,
 		NBKeyPrefix:     prefixB,
 		KeySelector:     prefixSelector(prefixB),
-		ValueTypeName:   test.ArrayValueTypeName,
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
 		Dependencies: func(key string, value proto.Message) []Dependency {
 			if key == prefixB+baseValue2 {
 				depKey := prefixA + baseValue1
@@ -648,7 +648,7 @@ func TestNotificationsWithRetry(t *testing.T) {
 		Name:            descriptor3Name,
 		NBKeyPrefix:     prefixC,
 		KeySelector:     prefixSelector(prefixC),
-		ValueTypeName:   test.StringValueTypeName,
+		ValueTypeName:   proto.MessageName(test.NewStringValue("")),
 		ValueComparator: test.StringValueComparator,
 		Dependencies: func(key string, value proto.Message) []Dependency {
 			if key == prefixC+baseValue3 {

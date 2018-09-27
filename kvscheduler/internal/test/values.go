@@ -24,14 +24,6 @@ import (
 	. "github.com/ligato/cn-infra/kvscheduler/internal/test/model"
 )
 
-const (
-	// ArrayValueTypeName is the type name of the Array proto Message.
-	ArrayValueTypeName = "model.ArrayValue"
-
-	// StringValueTypeName is the type name of the String proto Message.
-	StringValueTypeName = "model.StringValue"
-)
-
 // LazyArrayValue implements datasync.LazyValue for ArrayValue.
 type LazyArrayValue struct {
 	items []string
