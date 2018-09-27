@@ -221,14 +221,15 @@ func (op *recordedTxnOp) StringWithOpts(index int, indent int) string {
 	}
 
 	str += indent2 + fmt.Sprintf("- key: %s\n", op.key)
-	if op.operation == modify || (op.operation == add && op.prevValue != op.newValue) {
+	showPrevForAdd := op.wasPending && op.prevValue != op.newValue
+	if op.operation == modify || (op.operation == add && showPrevForAdd) {
 		str += indent2 + fmt.Sprintf("- prev-value: %s \n", op.prevValue)
 		str += indent2 + fmt.Sprintf("- new-value: %s \n", op.newValue)
 	}
 	if op.operation == del || op.operation == update {
 		str += indent2 + fmt.Sprintf("- value: %s \n", op.prevValue)
 	}
-	if op.operation == add && op.prevValue == op.newValue {
+	if op.operation == add && !showPrevForAdd {
 		str += indent2 + fmt.Sprintf("- value: %s \n", op.newValue)
 	}
 	if op.prevOrigin != op.newOrigin {
