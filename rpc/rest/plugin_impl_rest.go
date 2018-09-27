@@ -20,7 +20,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/rpc/rest/security"
-	httpsecurity "github.com/ligato/cn-infra/rpc/rest/security/model/http-security"
+	access "github.com/ligato/cn-infra/rpc/rest/security/model/access-security"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/unrolled/render"
 )
@@ -77,13 +77,12 @@ func (p *Plugin) Init() (err error) {
 	// Enable authentication if defined by config
 	if p.EnableTokenAuth {
 		p.Log.Info("Token authentication for HTTP enabled")
-		p.auth = security.NewAuthenticator(p.mx, &security.Context{
+		p.auth = security.NewAuthenticator(p.mx, &security.Settings{
 			// Since there is currently only one storage type, set it directly
-			StorageType: security.DefaultStorageType,
-			Users:       p.Users,
-			ExpTime:     p.TokenExpiration,
-			Cost:        p.PasswordHashCost,
-			Signature:   p.TokenSignature,
+			Users:     p.Users,
+			ExpTime:   p.TokenExpiration,
+			Cost:      p.PasswordHashCost,
+			Signature: p.TokenSignature,
 		}, p.Log)
 	}
 
@@ -124,7 +123,7 @@ func (p *Plugin) RegisterHTTPHandler(path string, provider HandlerProvider, meth
 }
 
 // RegisterPermissionGroup adds new permission group if token authentication is enabled
-func (p *Plugin) RegisterPermissionGroup(group ...*httpsecurity.PermissionGroup) {
+func (p *Plugin) RegisterPermissionGroup(group ...*access.PermissionGroup) {
 	if p.Config.EnableTokenAuth {
 		p.Log.Debugf("Registering permission group(s): %s", group)
 		p.auth.AddPermissionGroup(group...)

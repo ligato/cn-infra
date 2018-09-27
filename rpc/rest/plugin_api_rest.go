@@ -18,7 +18,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	httpsecurity "github.com/ligato/cn-infra/rpc/rest/security/model/http-security"
+	access "github.com/ligato/cn-infra/rpc/rest/security/model/access-security"
 	"github.com/unrolled/render"
 )
 
@@ -38,7 +38,7 @@ type HTTPHandlers interface {
 	RegisterHTTPHandler(path string, provider HandlerProvider, methods ...string) *mux.Route
 
 	// RegisterPermissionGroup registers new permission groups for users
-	RegisterPermissionGroup(group ...*httpsecurity.PermissionGroup)
+	RegisterPermissionGroup(group ...*access.PermissionGroup)
 
 	// GetPort returns configured port number (for debugging purposes)
 	GetPort() int

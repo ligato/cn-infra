@@ -16,73 +16,65 @@ package security
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
-	"github.com/ligato/cn-infra/rpc/rest/security/model/http-security"
+	access "github.com/ligato/cn-infra/rpc/rest/security/model/access-security"
 )
 
-// StorageType defines user storage type
-type StorageType string
-
-// Available storage types
-const (
-	// DefaultStorageType is type definition of basic AuthStore implementation
-	DefaultStorageType StorageType = "default"
-)
-
-// AuthStore is common interface to access user database/permissions
-type AuthStore interface {
+// AuthenticationDB is common interface to access user database/permissions
+type AuthenticationDB interface {
 	// AddUser adds new user with name, password and permission groups. Password should be already hashed.
 	AddUser(name, passwordHash string, permissions []string) error
 	// GetUser returns user data according to name, or nil of not found
 	GetUser(name string) (*User, error)
 	// SetLoginTime writes last login time for specific user
 	SetLoginTime(name string)
-	// GetLoginTime returns las login time or error if user does not exist
-	GetLoginTime(name string) (time.Time, error)
 	// SetLoginTime writes last logout time for specific user
 	SetLogoutTime(name string)
-	// GetLoginTime returns last logout time or error if user does not exist
-	GetLogoutTime(name string) (time.Time, error)
+	// IsLoggedOut uses login/logout timestamps to evaluate whether the user was logged out
+	IsLoggedOut(name string) (bool, error)
 }
 
 // User stores credentials, permissions and tracks last login/logout
 type User struct {
-	http_security.User
+	access.User
 	lastLogin  time.Time
 	lastLogout time.Time
 }
 
 // defaultAuthStorage is default implementation of AuthStore
-type defaultAuthStorage struct {
+type defaultAuthDB struct {
+	sync.Mutex
+
 	db []*User
 }
 
-// CreateAuthStore builds new storage type of provided type
-func CreateAuthStore(storageType StorageType) AuthStore {
-	switch storageType {
-	case DefaultStorageType:
-		return &defaultAuthStorage{
-			db: make([]*User, 0),
-		}
-	default:
-		// Return also as default
-		return &defaultAuthStorage{
-			db: make([]*User, 0),
-		}
+// CreateDefaultAuthDB builds new default storage
+func CreateDefaultAuthDB() AuthenticationDB {
+	return &defaultAuthDB{
+		db: make([]*User, 0),
 	}
 }
 
-func (ds *defaultAuthStorage) AddUser(name, passwordHash string, permissions []string) error {
+func (ds *defaultAuthDB) AddUser(name, passwordHash string, permissions []string) error {
+	ds.Lock()
+	defer ds.Unlock()
+
 	// Verify user does not exist yet
-	_, err := ds.GetUser(name)
-	if err == nil {
+	var exists bool
+	for _, userData := range ds.db {
+		if userData.Name == name {
+			exists = true
+		}
+	}
+	if exists {
 		// User already exists
 		return fmt.Errorf("user %s already exists", name)
 	}
 
 	ds.db = append(ds.db, &User{
-		User: http_security.User{
+		User: access.User{
 			Name:         name,
 			PasswordHash: passwordHash,
 			Permissions:  permissions,
@@ -91,7 +83,10 @@ func (ds *defaultAuthStorage) AddUser(name, passwordHash string, permissions []s
 	return nil
 }
 
-func (ds *defaultAuthStorage) GetUser(name string) (*User, error) {
+func (ds *defaultAuthDB) GetUser(name string) (*User, error) {
+	ds.Lock()
+	defer ds.Unlock()
+
 	for _, userData := range ds.db {
 		if userData.Name == name {
 			return userData, nil
@@ -100,7 +95,10 @@ func (ds *defaultAuthStorage) GetUser(name string) (*User, error) {
 	return nil, fmt.Errorf("user %s not found", name)
 }
 
-func (ds *defaultAuthStorage) SetLoginTime(name string) {
+func (ds *defaultAuthDB) SetLoginTime(name string) {
+	ds.Lock()
+	defer ds.Unlock()
+
 	for _, userData := range ds.db {
 		if userData.Name == name {
 			userData.lastLogin = time.Now()
@@ -108,16 +106,10 @@ func (ds *defaultAuthStorage) SetLoginTime(name string) {
 	}
 }
 
-func (ds *defaultAuthStorage) GetLoginTime(name string) (time.Time, error) {
-	for _, userData := range ds.db {
-		if userData.Name == name {
-			return userData.lastLogin, nil
-		}
-	}
-	return time.Time{}, fmt.Errorf("user %s not found", name)
-}
+func (ds *defaultAuthDB) SetLogoutTime(name string) {
+	ds.Lock()
+	defer ds.Unlock()
 
-func (ds *defaultAuthStorage) SetLogoutTime(name string) {
 	for _, userData := range ds.db {
 		if userData.Name == name {
 			userData.lastLogout = time.Now()
@@ -125,11 +117,17 @@ func (ds *defaultAuthStorage) SetLogoutTime(name string) {
 	}
 }
 
-func (ds *defaultAuthStorage) GetLogoutTime(name string) (time.Time, error) {
-	for _, userData := range ds.db {
-		if userData.Name == name {
-			return userData.lastLogout, nil
+func (ds *defaultAuthDB) IsLoggedOut(name string) (bool, error) {
+	ds.Lock()
+	defer ds.Unlock()
+
+	for _, user := range ds.db {
+		if user.Name == name {
+			if user.lastLogout.After(user.lastLogin) {
+				return true, nil
+			}
+			return false, nil
 		}
 	}
-	return time.Time{}, fmt.Errorf("user %s not found", name)
+	return false, fmt.Errorf("user %s not found", name)
 }

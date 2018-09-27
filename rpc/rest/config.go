@@ -21,7 +21,7 @@ import (
 
 	"github.com/ligato/cn-infra/config"
 	"github.com/ligato/cn-infra/infra"
-	httpsecurity "github.com/ligato/cn-infra/rpc/rest/security/model/http-security"
+	access "github.com/ligato/cn-infra/rpc/rest/security/model/access-security"
 	"github.com/namsral/flag"
 )
 
@@ -97,7 +97,7 @@ type Config struct {
 	TokenExpiration time.Duration `json:"token-expiration"`
 
 	// Users laoded from config file
-	Users []httpsecurity.User `json:"users"`
+	Users []access.User `json:"users"`
 
 	// Hash cost for password. High values take a lot of time to process.
 	PasswordHashCost int `json:"password-hash-cost"`

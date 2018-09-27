@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate protoc --proto_path=model/http-security --gogo_out=model/http-security model/http-security/httpsecurity.proto
+//go:generate protoc --proto_path=model/access-security --gogo_out=model/access-security model/access-security/accesssecurity.proto
 
 package security
 
@@ -26,7 +26,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"github.com/ligato/cn-infra/logging"
-	httpsecurity "github.com/ligato/cn-infra/rpc/rest/security/model/http-security"
+	access "github.com/ligato/cn-infra/rpc/rest/security/model/access-security"
 	"github.com/pkg/errors"
 	"github.com/unrolled/render"
 	"golang.org/x/crypto/bcrypt"
@@ -54,26 +54,31 @@ const (
 var signature = "secret"
 
 // Default expiration time for token/cookie
-var expTime time.Duration = 3600000000000 // 1 Hour
+var defaultExpTime = time.Hour
 
 // AuthenticatorAPI provides methods for handling permissions
 type AuthenticatorAPI interface {
 	// AddPermissionGroup adds new permission group. PG is defined by name and a set of URL keys. User with
 	// permission group enabled has access to that set of keys. PGs with duplicated names are skipped.
-	AddPermissionGroup(group ...*httpsecurity.PermissionGroup)
+	AddPermissionGroup(group ...*access.PermissionGroup)
 
 	// Validate serves as middleware used while registering new HTTP handler. For every request, token
 	// and permission group is validated.
 	Validate(provider http.HandlerFunc) http.HandlerFunc
 }
 
-// Context defines fields required to instantiate authenticator
-type Context struct {
-	StorageType StorageType
-	Users       []httpsecurity.User
-	ExpTime     time.Duration
-	Cost        int
-	Signature   string
+// Settings defines fields required to instantiate authenticator
+type Settings struct {
+	// Authentication database, default implementation is used if not set
+	AuthStore AuthenticationDB
+	// List of registered users
+	Users []access.User
+	// Expiration time (token claim). If not set, default value of 1 hour will be used.
+	ExpTime time.Duration
+	// Cost value used to hash user passwords
+	Cost int
+	// Custom token signature. If not set, default value will be used.
+	Signature string
 }
 
 // Credentials struct represents simple user login input
@@ -93,43 +98,49 @@ type authenticator struct {
 	// User database keeps all known users with permissions and hashed password. Users are loaded from
 	// HTTP config file
 	// TODO add option to register users
-	userDb AuthStore
+	userDb AuthenticationDB
 	// Permission database is a map of name/permissions and bound URLs
-	groupDb map[string][]*httpsecurity.PermissionGroup_Permissions
+	groupDb map[string][]*access.PermissionGroup_Permissions
 
 	// Token claims
 	expTime time.Duration
 }
 
 // NewAuthenticator prepares new instance of authenticator.
-func NewAuthenticator(router *mux.Router, ctx *Context, log logging.Logger) AuthenticatorAPI {
+func NewAuthenticator(router *mux.Router, ctx *Settings, log logging.Logger) AuthenticatorAPI {
 	a := &authenticator{
 		router: router,
 		log:    log,
 		formatter: render.New(render.Options{
 			IndentJSON: true,
 		}),
-		userDb:  CreateAuthStore(ctx.StorageType),
-		groupDb: make(map[string][]*httpsecurity.PermissionGroup_Permissions),
+		groupDb: make(map[string][]*access.PermissionGroup_Permissions),
 		expTime: ctx.ExpTime,
+	}
+
+	// Authentication store
+	if ctx.AuthStore != nil {
+		a.userDb = ctx.AuthStore
+	} else {
+		a.userDb = CreateDefaultAuthDB()
 	}
 
 	// Set token signature
 	signature = ctx.Signature
 	if a.expTime == 0 {
-		a.expTime = expTime
+		a.expTime = defaultExpTime
 		a.log.Debugf("Token expiration time claim not set, defaulting to 1 hour")
 	}
 
-	// Add admin-user, enabled by default, always has access to every URL
-	hash, err := bcrypt.GenerateFromPassword([]byte("ligato123"), ctx.Cost)
-	if err != nil {
-		a.log.Errorf("failed to hash password for admin: %v", err)
-	}
-	a.userDb.AddUser(admin, string(hash), []string{admin})
-
 	// Process users in go routine, since hashing may take some time
 	go func() {
+		// Add admin-user, enabled by default, always has access to every URL
+		hash, err := bcrypt.GenerateFromPassword([]byte("ligato123"), ctx.Cost)
+		if err != nil {
+			a.log.Errorf("failed to hash password for admin: %v", err)
+		}
+		a.userDb.AddUser(admin, string(hash), []string{admin})
+
 		for _, user := range ctx.Users {
 			if user.Name == admin {
 				a.log.Errorf("rejected to create user-defined account named 'admin'")
@@ -144,7 +155,7 @@ func NewAuthenticator(router *mux.Router, ctx *Context, log logging.Logger) Auth
 	}()
 
 	// Admin-group, available by default and always enabled for all URLs
-	a.groupDb[admin] = []*httpsecurity.PermissionGroup_Permissions{}
+	a.groupDb[admin] = []*access.PermissionGroup_Permissions{}
 
 	a.registerSecurityHandlers()
 
@@ -152,7 +163,7 @@ func NewAuthenticator(router *mux.Router, ctx *Context, log logging.Logger) Auth
 }
 
 // AddPermissionGroup adds new permission group.
-func (a *authenticator) AddPermissionGroup(group ...*httpsecurity.PermissionGroup) {
+func (a *authenticator) AddPermissionGroup(group ...*access.PermissionGroup) {
 	for _, newPermissionGroup := range group {
 		if _, ok := a.groupDb[newPermissionGroup.Name]; ok {
 			a.log.Warnf("permission group %s already exists, skipped")
@@ -352,15 +363,11 @@ func (a *authenticator) validateToken(token *jwt.Token, url, method string) erro
 	default:
 		return fmt.Errorf("failed to validate token claims")
 	}
-	lastLogin, err := a.userDb.GetLoginTime(userName)
+	loggedOut, err := a.userDb.IsLoggedOut(userName)
 	if err != nil {
 		return fmt.Errorf("failed to validate token: %v", err)
 	}
-	lastLogout, err := a.userDb.GetLogoutTime(userName)
-	if err != nil {
-		return fmt.Errorf("failed to validate token: %v", err)
-	}
-	if lastLogout.After(lastLogin) {
+	if loggedOut {
 		// User logged out
 		token.Valid = false
 		return fmt.Errorf("invalid token")
