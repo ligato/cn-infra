@@ -46,7 +46,7 @@ type {{ .DescriptorName }}Descriptor struct {
 	ValueTypeName      string
 	KeyLabel           func(key string) string
 	ValueComparator    func(key string, v1, v2 {{ .ValueT }}) bool
-	NBKeyPrefix        []string
+	NBKeyPrefix        string
 	WithMetadata       bool
 	MetadataMapFactory MetadataMapFactory
 	Add                func(key string, value {{ .ValueT }}) (metadata {{ .MetadataT }}, err error)
@@ -238,7 +238,7 @@ func (da *{{ .DescriptorName }}DescriptorAdapter) Dump(correlate []KVWithMetadat
 
 ////////// Helper methods //////////
 
-func cast{{ .DescriptorName }}Value(key string, value Value) ({{ .ValueT }}, error) {
+func cast{{ .DescriptorName }}Value(key string, value proto.Message) ({{ .ValueT }}, error) {
 	typedValue, ok := value.({{ .ValueT }})
 	if !ok {
 		return nil, ErrInvalidValueType(key, value)
