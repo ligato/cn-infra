@@ -122,10 +122,17 @@ func (txn *recordedTxn) StringWithOpts(resultOnly bool, indent int) string {
 		// transaction arguments
 		str += indent1 + "* transaction arguments:\n"
 		str += indent2 + fmt.Sprintf("- seq-num: %d\n", txn.seqNum)
-		str += indent2 + fmt.Sprintf("- type: %s\n", txn.txnType.String())
-		if txn.txnType == nbTransaction {
-			str += indent2 + fmt.Sprintf("- is-full-resync: %t\n", txn.isFullResync)
-			str += indent2 + fmt.Sprintf("- is-downstream-resync: %t\n", txn.isDownstreamResync)
+		if txn.txnType == nbTransaction && (txn.isFullResync || txn.isDownstreamResync) {
+			resyncType := "Full-Resync"
+			if txn.isDownstreamResync {
+				resyncType = "Downstream-Resync"
+			}
+			str += indent2 + fmt.Sprintf("- type: %s, %s\n", txn.txnType.String(), resyncType)
+		} else {
+			str += indent2 + fmt.Sprintf("- type: %s\n", txn.txnType.String())
+		}
+		if txn.isDownstreamResync {
+			goto printOps
 		}
 		if len(txn.values) == 0 {
 			str += indent2 + fmt.Sprintf("- values: NONE\n")
@@ -154,9 +161,10 @@ func (txn *recordedTxn) StringWithOpts(resultOnly bool, indent int) string {
 			}
 		}
 
+	printOps:
 		// planned operations
 		str += indent1 + "* planned operations:\n"
-		str += txn.planned.StringWithOpts(indent+4)
+		str += txn.planned.StringWithOpts(indent + 4)
 	}
 
 	if !txn.preRecord {
@@ -166,7 +174,7 @@ func (txn *recordedTxn) StringWithOpts(resultOnly bool, indent int) string {
 			str += indent1 + fmt.Sprintf("* executed operations (%s - %s):\n",
 				txn.start.String(), txn.stop.String())
 		}
-		str += txn.executed.StringWithOpts(indent+4)
+		str += txn.executed.StringWithOpts(indent + 4)
 	}
 
 	return str
@@ -317,13 +325,13 @@ func (scheduler *Scheduler) preRecordTxnOp(args *applyValueArgs, node graph.Node
 func (scheduler *Scheduler) preRecordTransaction(txn *preProcessedTxn, planned recordedTxnOps, preErrors []KeyWithError) *recordedTxn {
 	// allocate new transaction record
 	record := &recordedTxn{
-		preRecord:       true,
-		seqNum:          txn.seqNum,
-		txnType:         txn.args.txnType,
-		isFullResync:    txn.args.txnType == nbTransaction && txn.args.nb.isFullResync,
+		preRecord:          true,
+		seqNum:             txn.seqNum,
+		txnType:            txn.args.txnType,
+		isFullResync:       txn.args.txnType == nbTransaction && txn.args.nb.isFullResync,
 		isDownstreamResync: txn.args.txnType == nbTransaction && txn.args.nb.isDownstreamResync,
-		preErrors:       preErrors,
-		planned:         planned,
+		preErrors:          preErrors,
+		planned:            planned,
 	}
 
 	// record values
