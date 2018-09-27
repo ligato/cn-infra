@@ -25,9 +25,9 @@ const (
 	// into the context.
 	fullResyncCtxKey schedulerCtxKey = iota
 
-	// halfwayResyncCtxKey is a key under which *halfway-resync* txn option is
+	// downstreamResyncCtxKey is a key under which *downstream-resync* txn option is
 	// stored into the context.
-	halfwayResyncCtxKey
+	downstreamResyncCtxKey
 
 	// nonBlockingTxnCtxKey is a key under which *non-blocking* txn option is
 	// stored into the context.
@@ -64,26 +64,26 @@ func IsFullResync(ctx context.Context) bool {
 	return isFullResync
 }
 
-/* Halfway-Resync */
+/* Downstream-Resync */
 
-// halfwayResyncOpt represents the *halfway-resync* transaction option.
-type halfwayResyncOpt struct {
+// downstreamResyncOpt represents the *downstream-resync* transaction option.
+type downstreamResyncOpt struct {
 	// no attributes
 }
 
-// WithHalfwayResync prepares context for transaction that will trigger resync
+// WithDownstreamResync prepares context for transaction that will trigger resync
 // between scheduler and SB - i.e. without NB providing up-to-date snapshot of
-// key-value pairs, hence "half-way" reconciliation.
+// key-value pairs, hence "downstream" reconciliation.
 // Transaction is thus expected to carry no key-value pairs.
-func WithHalfwayResync(ctx context.Context) context.Context {
-	return context.WithValue(ctx, halfwayResyncCtxKey, &halfwayResyncOpt{})
+func WithDownstreamResync(ctx context.Context) context.Context {
+	return context.WithValue(ctx, downstreamResyncCtxKey, &downstreamResyncOpt{})
 }
 
-// IsHalfwayResync returns true if the transaction context is configured
-// to trigger halfway-resync.
-func IsHalfwayResync(ctx context.Context) bool {
-	_, isHalfwayResync := ctx.Value(halfwayResyncCtxKey).(*halfwayResyncOpt)
-	return isHalfwayResync
+// IsDownstreamResync returns true if the transaction context is configured
+// to trigger downstream-resync.
+func IsDownstreamResync(ctx context.Context) bool {
+	_, isDownstreamResync := ctx.Value(downstreamResyncCtxKey).(*downstreamResyncOpt)
+	return isDownstreamResync
 }
 
 /* Non-blocking Txn */

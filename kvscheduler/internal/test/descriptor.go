@@ -59,7 +59,7 @@ func NewMockDescriptor(args *KVDescriptor, sb *MockSouthbound, firstFreeIndex in
 		KeyLabel:           args.KeyLabel,
 		NBKeyPrefix:        args.NBKeyPrefix,
 		WithMetadata:       args.WithMetadata,
-		RetriableFailure:   args.RetriableFailure,
+		IsRetriableFailure: args.IsRetriableFailure,
 		ModifyWithRecreate: args.ModifyWithRecreate,
 		Dependencies:       args.Dependencies,
 		DumpDependencies:   args.DumpDependencies,

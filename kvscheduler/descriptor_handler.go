@@ -77,20 +77,21 @@ func (h *descriptorHandler) update(key string, value proto.Message, metadata Met
 	return h.descriptor.Update(key, value, metadata)
 }
 
-// retriableFailure first checks for errors returned by the handler itself.
-// If descriptor does not define RetriableFailure, it is assumed any failure
+// isRetriableFailure first checks for errors returned by the handler itself.
+// If descriptor does not define IsRetriableFailure, it is assumed any failure
 // can be potentially fixed by retry.
-func (h *descriptorHandler) retriableFailure(err error) bool {
+func (h *descriptorHandler) isRetriableFailure(err error) bool {
 	// first check for errors returned by the handler itself
 	handlerErrs := []error{ErrUnimplementedAdd, ErrUnimplementedModify, ErrUnimplementedDelete}
-	retriableFailure := NonRetriableIfInTheList(handlerErrs)
-	if !retriableFailure(err) {
-		return false
+	for _, handlerError := range handlerErrs {
+		if err == handlerError {
+			return false
+		}
 	}
-	if h.descriptor == nil || h.descriptor.RetriableFailure == nil {
+	if h.descriptor == nil || h.descriptor.IsRetriableFailure == nil {
 		return true
 	}
-	return h.descriptor.RetriableFailure(err)
+	return h.descriptor.IsRetriableFailure(err)
 }
 
 // dependencies returns empty list if descriptor does not define any.

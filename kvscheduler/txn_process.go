@@ -183,14 +183,14 @@ func (scheduler *Scheduler) preProcessNBTransaction(qTxn *queuedTxn, preTxn *pre
 	graphR.Release()
 
 	// for resync refresh the graph + collect deletes
-	if len(errors) == 0 && (qTxn.nb.isFullResync || qTxn.nb.isHalfwayResync) {
+	if len(errors) == 0 && (qTxn.nb.isFullResync || qTxn.nb.isDownstreamResync) {
 		graphW := scheduler.graph.Write(false)
 		defer graphW.Release()
 		defer graphW.Save()
 		scheduler.resyncCount++
 
-		if qTxn.nb.isHalfwayResync {
-			// for halfway resync it is assumed that scheduler is in-sync with NB
+		if qTxn.nb.isDownstreamResync {
+			// for downstream resync it is assumed that scheduler is in-sync with NB
 			currentNodes := graphW.GetNodes(nil,
 				graph.WithFlags(&OriginFlag{FromNB}),
 				graph.WithoutFlags(&DerivedFlag{}))

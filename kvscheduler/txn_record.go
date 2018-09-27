@@ -59,11 +59,11 @@ type recordedTxn struct {
 	stop  time.Time
 
 	// arguments
-	seqNum          uint
-	txnType         txnType
-	isFullResync    bool
-	isHalfwayResync bool
-	values          []recordedKVPair
+	seqNum             uint
+	txnType            txnType
+	isFullResync       bool
+	isDownstreamResync bool
+	values             []recordedKVPair
 
 	// result
 	preErrors []KeyWithError // pre-processing errors
@@ -125,7 +125,7 @@ func (txn *recordedTxn) StringWithOpts(resultOnly bool, indent int) string {
 		str += indent2 + fmt.Sprintf("- type: %s\n", txn.txnType.String())
 		if txn.txnType == nbTransaction {
 			str += indent2 + fmt.Sprintf("- is-full-resync: %t\n", txn.isFullResync)
-			str += indent2 + fmt.Sprintf("- is-halfway-resync: %t\n", txn.isHalfwayResync)
+			str += indent2 + fmt.Sprintf("- is-downstream-resync: %t\n", txn.isDownstreamResync)
 		}
 		if len(txn.values) == 0 {
 			str += indent2 + fmt.Sprintf("- values: NONE\n")
@@ -133,7 +133,7 @@ func (txn *recordedTxn) StringWithOpts(resultOnly bool, indent int) string {
 			str += indent2 + fmt.Sprintf("- values:\n")
 		}
 		for _, kv := range txn.values {
-			resync := txn.isFullResync || txn.isHalfwayResync
+			resync := txn.isFullResync || txn.isDownstreamResync
 			if resync && kv.origin == FromSB {
 				// do not print SB values updated during resync
 				continue
@@ -320,7 +320,7 @@ func (scheduler *Scheduler) preRecordTransaction(txn *preProcessedTxn, planned r
 		seqNum:          txn.seqNum,
 		txnType:         txn.args.txnType,
 		isFullResync:    txn.args.txnType == nbTransaction && txn.args.nb.isFullResync,
-		isHalfwayResync: txn.args.txnType == nbTransaction && txn.args.nb.isHalfwayResync,
+		isDownstreamResync: txn.args.txnType == nbTransaction && txn.args.nb.isDownstreamResync,
 		preErrors:       preErrors,
 		planned:         planned,
 	}
@@ -392,4 +392,18 @@ func (scheduler *Scheduler) getTransactionHistory(since, until time.Time) (histo
 	}
 
 	return scheduler.txnHistory[lastBefore+1 : firstAfter]
+}
+
+// getRecordedTransaction returns record of a transaction referenced by the sequence number.
+func (scheduler *Scheduler) getRecordedTransaction(seqNum uint) (txn *recordedTxn) {
+	scheduler.historyLock.Lock()
+	defer scheduler.historyLock.Unlock()
+
+	for _, txn := range scheduler.txnHistory {
+		if txn.seqNum == seqNum {
+			return txn
+		}
+	}
+
+	return nil
 }

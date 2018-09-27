@@ -44,6 +44,10 @@ const (
 	// window for the transaction history to display.
 	untilArg = "until"
 
+	// seqNumArg is the name of the argument used to define the sequence number
+	// of the transaction to display (txnHistoryURL).
+	seqNumArg = "seq-num"
+
 	// keyTimelineURL is URL used to obtain timeline of value changes for a given key.
 	keyTimelineURL = urlPrefix + "key-timeline"
 
@@ -67,8 +71,8 @@ const (
 	// to retrieve.
 	timeArg = "time"
 
-	// halfwayResyncURL is URL used to trigger halfway-resync.
-	halfwayResyncURL = urlPrefix + "halfway-resync"
+	// downstreamResyncURL is URL used to trigger downstream-resync.
+	downstreamResyncURL = urlPrefix + "downstream-resync"
 
 	// dumpURL is URL used to dump either SB or scheduler's internal state of kv-pairs
 	// under the given descriptor.
@@ -92,7 +96,7 @@ func (scheduler *Scheduler) registerHandlers(http rest.HTTPHandlers) {
 	http.RegisterHTTPHandler(keyTimelineURL, scheduler.keyTimelineGetHandler, "GET")
 	http.RegisterHTTPHandler(graphSnapshotURL, scheduler.graphSnapshotGetHandler, "GET")
 	http.RegisterHTTPHandler(flagStatsURL, scheduler.flagStatsGetHandler, "GET")
-	http.RegisterHTTPHandler(halfwayResyncURL, scheduler.halfwayResyncPostHandler, "POST")
+	http.RegisterHTTPHandler(downstreamResyncURL, scheduler.downstreamResyncPostHandler, "POST")
 	http.RegisterHTTPHandler(dumpURL, scheduler.dumpGetHandler, "GET")
 }
 
@@ -100,7 +104,28 @@ func (scheduler *Scheduler) registerHandlers(http rest.HTTPHandlers) {
 func (scheduler *Scheduler) txnHistoryGetHandler(formatter *render.Render) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		var since, until time.Time
+		var seqNum int
 		args := req.URL.Query()
+
+		// parse optional *seq-num* argument
+		if seqNumStr, withSeqNum := args[seqNumArg]; withSeqNum && len(seqNumStr) == 1 {
+			var err error
+			seqNum, err = strconv.Atoi(seqNumStr[0])
+			if err != nil {
+				formatter.JSON(w, http.StatusInternalServerError, err)
+				return
+			}
+
+			// sequence number takes precedence over the since-until time window
+			txn := scheduler.getRecordedTransaction(uint(seqNum))
+			if txn == nil {
+				formatter.JSON(w, http.StatusNotFound, "transaction with such sequence is not recorded")
+				return
+			}
+
+			formatter.Text(w, http.StatusOK, txn.StringWithOpts(false, 0))
+			return
+		}
 
 		// parse optional *until* argument
 		if untilStr, withUntil := args[untilArg]; withUntil && len(untilStr) == 1 {
@@ -206,11 +231,11 @@ func (scheduler *Scheduler) flagStatsGetHandler(formatter *render.Render) http.H
 	}
 }
 
-// halfwayResyncPostHandler is the POST handler for "halfway-resync" API.
-func (scheduler *Scheduler) halfwayResyncPostHandler(formatter *render.Render) http.HandlerFunc {
+// downstreamResyncPostHandler is the POST handler for "downstream-resync" API.
+func (scheduler *Scheduler) downstreamResyncPostHandler(formatter *render.Render) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		ctx := context.Background()
-		ctx = WithHalfwayResync(ctx)
+		ctx = WithDownstreamResync(ctx)
 		kvErrors, txnError := scheduler.StartNBTransaction().Commit(ctx)
 		if txnError != nil {
 			formatter.JSON(w, http.StatusInternalServerError, txnError)

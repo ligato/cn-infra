@@ -21,8 +21,8 @@ import (
 )
 
 var (
-	// ErrCombinedHalfwayResyncWithChange is returned when transaction combines halfway-resync with data changes.
-	ErrCombinedHalfwayResyncWithChange = errors.New("halfway resync combined with data changes in one transaction")
+	// ErrCombinedDownstreamResyncWithChange is returned when transaction combines downstream-resync with data changes.
+	ErrCombinedDownstreamResyncWithChange = errors.New("downstream resync combined with data changes in one transaction")
 
 	// ErrRevertNotSupportedWithResync is returned when transaction combines resync with revert.
 	ErrRevertNotSupportedWithResync = errors.New("it is not supported to combine resync with revert")
@@ -72,17 +72,4 @@ func ErrInvalidMetadataType(key string) error {
 		return errors.New("metadata has invalid type")
 	}
 	return fmt.Errorf("metadata has invalid type for key: %s", key)
-}
-
-// NonRetriableIfInTheList returns callback suitable for KVDescriptor.RetriableFailure
-// based on an exhaustive list of all possible non-retriable errors.
-func NonRetriableIfInTheList(errorList []error) func(err error) bool {
-	return func(err error) bool {
-		for _, nonRetriableError := range errorList {
-			if err.Error() == nonRetriableError.Error() {
-				return false
-			}
-		}
-		return true
-	}
 }

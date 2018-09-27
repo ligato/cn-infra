@@ -56,15 +56,15 @@ type sbNotif struct {
 
 // nbTxn encapsulates data for NB transaction.
 type nbTxn struct {
-	value           map[string]datasync.LazyValue // key -> lazy value
-	isFullResync    bool
-	isHalfwayResync bool
-	isBlocking      bool
-	retryFailed     bool
-	retryPeriod     time.Duration
-	expBackoffRetry bool
-	revertOnFailure bool
-	resultChan      chan []KeyWithError
+	value              map[string]datasync.LazyValue // key -> lazy value
+	isFullResync       bool
+	isDownstreamResync bool
+	isBlocking         bool
+	retryFailed        bool
+	retryPeriod        time.Duration
+	expBackoffRetry    bool
+	revertOnFailure    bool
+	resultChan         chan []KeyWithError
 }
 
 // retryOps encapsulates data for retry of failed operations.

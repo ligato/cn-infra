@@ -54,7 +54,7 @@ type {{ .DescriptorName }}Descriptor struct {
 	Modify             func(key string, oldValue, newValue {{ .ValueT }}, oldMetadata {{ .MetadataT }}) (newMetadata {{ .MetadataT }}, err error)
 	ModifyWithRecreate func(key string, oldValue, newValue {{ .ValueT }}, metadata {{ .MetadataT }}) bool
 	Update             func(key string, value {{ .ValueT }}, metadata {{ .MetadataT }}) error
-	RetriableFailure   func(err error) bool
+	IsRetriableFailure func(err error) bool
 	Dependencies       func(key string, value {{ .ValueT }}) []Dependency
 	DerivedValues      func(key string, value {{ .ValueT }}) []KeyValuePair
 	Dump               func(correlate []{{ .DescriptorName }}KVWithMetadata) ([]{{ .DescriptorName }}KVWithMetadata, error)
@@ -77,7 +77,7 @@ func New{{ .DescriptorName }}Descriptor(typedDescriptor *{{ .DescriptorName }}De
 		NBKeyPrefix:        typedDescriptor.NBKeyPrefix,
 		WithMetadata:       typedDescriptor.WithMetadata,
         MetadataMapFactory: typedDescriptor.MetadataMapFactory,
-		RetriableFailure:   typedDescriptor.RetriableFailure,
+		IsRetriableFailure: typedDescriptor.IsRetriableFailure,
 		DumpDependencies:   typedDescriptor.DumpDependencies,
 	}
 	if typedDescriptor.ValueComparator != nil {

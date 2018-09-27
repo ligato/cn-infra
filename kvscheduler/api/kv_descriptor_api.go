@@ -180,12 +180,12 @@ type KVDescriptor struct {
 	// preventing the existence of this value.
 	Update func(key string, value proto.Message, metadata Metadata) error
 
-	// RetriableFailure tells scheduler if the given error, returned by one
+	// IsRetriableFailure tells scheduler if the given error, returned by one
 	// of Add/Delete/Modify/Update handlers, will always be returned for the
 	// the same value (non-retriable) or if the value can be theoretically
 	// fixed merely by repeating the operation.
 	// If the callback is not defined, every error will be considered retriable.
-	RetriableFailure func(err error) bool
+	IsRetriableFailure func(err error) bool
 
 	// Dependencies are keys that must already exist for the value to be added.
 	// Conversely, if a dependency is to be removed, all values that depend on it
@@ -219,7 +219,7 @@ type KVDescriptor struct {
 	// <correlate> represents the non-derived values currently created
 	// as viewed from the northbound/scheduler point of view:
 	//   -> startup resync: <correlate> = values received from NB to be applied
-	//   -> run-time/halfway resync: <correlate> = values applied according to the
+	//   -> run-time/downstream resync: <correlate> = values applied according to the
 	//      in-memory kv-store (scheduler's view of SB)
 	//
 	// The callback is optional - if not defined, it is assumed that descriptor

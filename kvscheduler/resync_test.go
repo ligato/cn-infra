@@ -93,7 +93,7 @@ func TestEmptyResync(t *testing.T) {
 	Expect(txn.seqNum).To(BeEquivalentTo(0))
 	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
 	Expect(txn.isFullResync).To(BeTrue())
-	Expect(txn.isHalfwayResync).To(BeFalse())
+	Expect(txn.isDownstreamResync).To(BeFalse())
 	Expect(txn.values).To(BeEmpty())
 	Expect(txn.preErrors).To(BeEmpty())
 	Expect(txn.planned).To(BeEmpty())
@@ -291,7 +291,7 @@ func TestResyncWithEmptySB(t *testing.T) {
 	Expect(txn.seqNum).To(BeEquivalentTo(0))
 	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
 	Expect(txn.isFullResync).To(BeTrue())
-	Expect(txn.isHalfwayResync).To(BeFalse())
+	Expect(txn.isDownstreamResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
 		{key: prefixA + baseValue1, value: utils.ProtoToString(test.NewArrayValue("item1", "item2")), origin: FromNB},
 		{key: prefixA + baseValue2, value: utils.ProtoToString(test.NewArrayValue("item1")), origin: FromNB},
@@ -423,7 +423,7 @@ func TestResyncWithEmptySB(t *testing.T) {
 	Expect(txn.seqNum).To(BeEquivalentTo(1))
 	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
 	Expect(txn.isFullResync).To(BeTrue())
-	Expect(txn.isHalfwayResync).To(BeFalse())
+	Expect(txn.isDownstreamResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
 		{key: prefixA + baseValue1, value: utils.ProtoToString(nil), origin: FromNB},
 		{key: prefixA + baseValue2, value: utils.ProtoToString(nil), origin: FromNB},
@@ -748,7 +748,7 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 	Expect(txn.seqNum).To(BeEquivalentTo(0))
 	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
 	Expect(txn.isFullResync).To(BeTrue())
-	Expect(txn.isHalfwayResync).To(BeFalse())
+	Expect(txn.isDownstreamResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
 		{key: prefixA + baseValue1, value: utils.ProtoToString(test.NewArrayValue("item2")), origin: FromNB},
 		{key: prefixA + baseValue2, value: utils.ProtoToString(test.NewArrayValue("item1", "item2")), origin: FromNB},
@@ -995,7 +995,7 @@ func TestResyncNotRemovingSBValues(t *testing.T) {
 	Expect(txn.seqNum).To(BeEquivalentTo(0))
 	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
 	Expect(txn.isFullResync).To(BeTrue())
-	Expect(txn.isHalfwayResync).To(BeFalse())
+	Expect(txn.isDownstreamResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
 		{key: prefixA + baseValue1, value: utils.ProtoToString(test.NewStringValue(baseValue1)), origin: FromSB},
 		{key: prefixA + baseValue2, value: utils.ProtoToString(test.NewArrayValue("item1")), origin: FromNB},
@@ -1323,7 +1323,7 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 	Expect(txn.seqNum).To(BeEquivalentTo(0))
 	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
 	Expect(txn.isFullResync).To(BeTrue())
-	Expect(txn.isHalfwayResync).To(BeFalse())
+	Expect(txn.isDownstreamResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
 		{key: prefixA + baseValue1, value: utils.ProtoToString(test.NewArrayValue("item2")), origin: FromNB},
 		{key: prefixB + baseValue2, value: utils.ProtoToString(test.NewArrayValue("item1", "item2")), origin: FromNB},
@@ -1592,7 +1592,7 @@ func TestResyncWithRetry(t *testing.T) {
 	Expect(txn.seqNum).To(BeEquivalentTo(0))
 	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
 	Expect(txn.isFullResync).To(BeTrue())
-	Expect(txn.isHalfwayResync).To(BeFalse())
+	Expect(txn.isDownstreamResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
 		{key: prefixA + baseValue1, value: utils.ProtoToString(test.NewArrayValue("item1", "item2")), origin: FromNB},
 	})
@@ -1717,7 +1717,7 @@ func TestResyncWithRetry(t *testing.T) {
 	Expect(txn.seqNum).To(BeEquivalentTo(1))
 	Expect(txn.txnType).To(BeEquivalentTo(retryFailedOps))
 	Expect(txn.isFullResync).To(BeFalse())
-	Expect(txn.isHalfwayResync).To(BeFalse())
+	Expect(txn.isDownstreamResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
 		{key: prefixA + baseValue1, value: utils.ProtoToString(test.NewArrayValue("item1", "item2")), origin: FromNB},
 	})

@@ -262,18 +262,18 @@ func (txn *SchedulerTxn) Commit(ctx context.Context) (kvErrors []KeyWithError, t
 	txn.data.nb.retryPeriod, txn.data.nb.expBackoffRetry, txn.data.nb.retryFailed = IsWithRetry(ctx)
 	txn.data.nb.revertOnFailure = IsWithRevert(ctx)
 	txn.data.nb.isFullResync = IsFullResync(ctx)
-	txn.data.nb.isHalfwayResync = IsHalfwayResync(ctx)
+	txn.data.nb.isDownstreamResync = IsDownstreamResync(ctx)
 
 	// validate transaction options
 	if txn.data.nb.isFullResync {
-		// full resync overrides halfway resync
-		txn.data.nb.isHalfwayResync = false
+		// full resync overrides downstream resync
+		txn.data.nb.isDownstreamResync = false
 	}
-	if txn.data.nb.isHalfwayResync && len(txn.data.nb.value) > 0 {
-		return nil, ErrCombinedHalfwayResyncWithChange
+	if txn.data.nb.isDownstreamResync && len(txn.data.nb.value) > 0 {
+		return nil, ErrCombinedDownstreamResyncWithChange
 	}
 	if txn.data.nb.revertOnFailure &&
-		(txn.data.nb.isHalfwayResync || txn.data.nb.isFullResync) {
+		(txn.data.nb.isDownstreamResync || txn.data.nb.isFullResync) {
 		return nil, ErrRevertNotSupportedWithResync
 	}
 

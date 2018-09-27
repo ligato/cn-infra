@@ -272,7 +272,7 @@ func (scheduler *Scheduler) applyDelete(node graph.NodeRW, txnOp *recordedTxnOp,
 		if err != nil {
 			wasErr = err
 			// propagate error to the base value
-			args.addFailed(getNodeBase(node).GetKey(), handler.retriableFailure(err))
+			args.addFailed(getNodeBase(node).GetKey(), handler.isRetriableFailure(err))
 			scheduler.propagateError(args.graphW, node, err)
 
 		}
@@ -344,7 +344,7 @@ func (scheduler *Scheduler) applyAdd(node graph.NodeRW, txnOp *recordedTxnOp, ar
 
 		if err != nil {
 			// propate error to the base value
-			args.addFailed(getNodeBase(node).GetKey(), handler.retriableFailure(err))
+			args.addFailed(getNodeBase(node).GetKey(), handler.isRetriableFailure(err))
 			scheduler.propagateError(args.graphW, node, err)
 			// add failed => keep value pending
 			node.SetFlags(&PendingFlag{})
@@ -474,7 +474,7 @@ func (scheduler *Scheduler) applyModify(node graph.NodeRW, txnOp *recordedTxnOp,
 		if err != nil {
 			// propagate error to the base value
 			scheduler.propagateError(args.graphW, node, err)
-			args.addFailed(getNodeBase(node).GetKey(), handler.retriableFailure(err))
+			args.addFailed(getNodeBase(node).GetKey(), handler.isRetriableFailure(err))
 			// record transaction operation
 			txnOp.newErr = err
 			executed = append(executed, txnOp)
@@ -500,7 +500,7 @@ func (scheduler *Scheduler) applyModify(node graph.NodeRW, txnOp *recordedTxnOp,
 		if err != nil {
 			// propagate error to the base value
 			scheduler.propagateError(args.graphW, node, err)
-			args.addFailed(getNodeBase(node).GetKey(), handler.retriableFailure(err))
+			args.addFailed(getNodeBase(node).GetKey(), handler.isRetriableFailure(err))
 			// record transaction operation
 			txnOp.newErr = err
 			executed = append(executed, txnOp)
@@ -578,7 +578,7 @@ func (scheduler *Scheduler) applyUpdate(node graph.NodeRW, txnOp *recordedTxnOp,
 					// propagate error to the base value
 					txnOp.newErr = err
 					scheduler.propagateError(args.graphW, node, err)
-					args.addFailed(getNodeBase(node).GetKey(), handler.retriableFailure(err))
+					args.addFailed(getNodeBase(node).GetKey(), handler.isRetriableFailure(err))
 				}
 			}
 			executed = append(executed, txnOp)
