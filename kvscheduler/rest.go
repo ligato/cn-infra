@@ -245,7 +245,7 @@ func (scheduler *Scheduler) downstreamResyncPostHandler(formatter *render.Render
 			formatter.JSON(w, http.StatusInternalServerError, kvErrors)
 			return
 		}
-		formatter.Text(w, http.StatusOK, "SB was successfully synchronized with KVScheduler")
+		formatter.Text(w, http.StatusOK, "SB was successfully synchronized with KVScheduler\n")
 		return
 	}
 }
