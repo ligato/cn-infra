@@ -91,6 +91,7 @@ const (
 	stateArg = "state"
 
 	/* recognized system states: */
+
 	// SB = southbound (what there really is)
 	SB = "SB"
 	// internalState (scheduler's view of SB)
