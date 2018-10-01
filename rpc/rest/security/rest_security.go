@@ -132,26 +132,23 @@ func NewAuthenticator(router *mux.Router, ctx *Settings, log logging.Logger) Aut
 		a.log.Debugf("Token expiration time claim not set, defaulting to 1 hour")
 	}
 
-	// Process users in go routine, since hashing may take some time
-	go func() {
-		// Hash of default admin password, hashed with cost 10
-		hash := "$2a$10$q5s1LP7xbCJWJlLet1g/h.rGrsHtciILps90bNRdJ.6DRekw9b.zK"
-		if err := a.userDb.AddUser(admin, hash, []string{admin}); err != nil {
-			a.log.Errorf("failed to add admin user: %v", err)
-		}
+	// Hash of default admin password, hashed with cost 10
+	hash := "$2a$10$q5s1LP7xbCJWJlLet1g/h.rGrsHtciILps90bNRdJ.6DRekw9b.zK"
+	if err := a.userDb.AddUser(admin, hash, []string{admin}); err != nil {
+		a.log.Errorf("failed to add admin user: %v", err)
+	}
 
-		for _, user := range ctx.Users {
-			if user.Name == admin {
-				a.log.Errorf("rejected to create user-defined account named 'admin'")
-				continue
-			}
-			if err := a.userDb.AddUser(user.Name, user.PasswordHash, user.Permissions); err != nil {
-				a.log.Errorf("failed to add user %s: %v", user.Name, err)
-				continue
-			}
-			a.log.Debug("Registered user %s, permissions: %v", user.Name, user.Permissions)
+	for _, user := range ctx.Users {
+		if user.Name == admin {
+			a.log.Errorf("rejected to create user-defined account named 'admin'")
+			continue
 		}
-	}()
+		if err := a.userDb.AddUser(user.Name, user.PasswordHash, user.Permissions); err != nil {
+			a.log.Errorf("failed to add user %s: %v", user.Name, err)
+			continue
+		}
+		a.log.Debug("Registered user %s, permissions: %v", user.Name, user.Permissions)
+	}
 
 	// Admin-group, available by default and always enabled for all URLs
 	a.groupDb[admin] = []*access.PermissionGroup_Permissions{}
