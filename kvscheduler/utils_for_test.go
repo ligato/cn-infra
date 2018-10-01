@@ -15,10 +15,13 @@
 package kvscheduler
 
 import (
-	. "github.com/ligato/cn-infra/kvscheduler/api"
-	"github.com/ligato/cn-infra/kvscheduler/test"
+	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/gomega"
 	"strings"
+
+	. "github.com/ligato/cn-infra/kvscheduler/api"
+	"github.com/ligato/cn-infra/kvscheduler/internal/test"
+	"github.com/ligato/cn-infra/kvscheduler/internal/utils"
 )
 
 const (
@@ -48,22 +51,12 @@ func checkValues(received, expected []KeyValuePair) {
 		found := false
 		for _, kv2 := range received {
 			if kv2.Key == kv.Key {
-				Expect(kv2.Value.Equivalent(kv.Value)).To(BeTrue())
+				Expect(proto.Equal(kv2.Value, kv.Value)).To(BeTrue())
 				found = true
 			}
 		}
 		Expect(found).To(BeTrue())
 	}
-}
-
-func checkRecordedValue(recorded, expected *recordedValue) {
-	if expected == nil {
-		Expect(recorded).To(BeNil())
-		return
-	}
-	Expect(recorded).ToNot(BeNil())
-	Expect(recorded.string).To(BeEquivalentTo(expected.string))
-	Expect(recorded.label).To(BeEquivalentTo(expected.label))
 }
 
 func checkRecordedValues(recorded, expected []recordedKVPair) {
@@ -73,7 +66,7 @@ func checkRecordedValues(recorded, expected []recordedKVPair) {
 		for _, kv2 := range recorded {
 			if kv2.key == kv.key {
 				found = true
-				checkRecordedValue(kv2.value, kv.value)
+				Expect(kv2.value).To(Equal(kv.value))
 				Expect(kv2.origin).To(Equal(kv.origin))
 			}
 		}
@@ -84,8 +77,17 @@ func checkRecordedValues(recorded, expected []recordedKVPair) {
 func checkTxnOperation(recorded, expected *recordedTxnOp) {
 	Expect(recorded.operation).To(Equal(expected.operation))
 	Expect(recorded.key).To(Equal(expected.key))
-	checkRecordedValue(recorded.prevValue, expected.prevValue)
-	checkRecordedValue(recorded.newValue, expected.newValue)
+	Expect(recorded.derived).To(Equal(expected.derived))
+	if expected.prevValue == "" {
+		Expect(recorded.prevValue).To(Equal(utils.ProtoToString(nil)))
+	} else {
+		Expect(recorded.prevValue).To(Equal(expected.prevValue))
+	}
+	if expected.newValue == "" {
+		Expect(recorded.newValue).To(Equal(utils.ProtoToString(nil)))
+	} else {
+		Expect(recorded.newValue).To(Equal(expected.newValue))
+	}
 	Expect(recorded.prevOrigin).To(Equal(expected.prevOrigin))
 	Expect(recorded.newOrigin).To(Equal(expected.newOrigin))
 	Expect(recorded.wasPending).To(Equal(expected.wasPending))
@@ -121,7 +123,7 @@ func checkValuesForCorrelation(received, expected []KVWithMetadata) {
 			if kv2.Key == kv.Key {
 				found = true
 				Expect(kv2.Origin).To(BeEquivalentTo(kv.Origin))
-				Expect(kv2.Value.Equivalent(kv.Value)).To(BeTrue())
+				Expect(proto.Equal(kv2.Value, kv.Value)).To(BeTrue())
 				if kv.Metadata == nil {
 					Expect(kv2.Metadata).To(BeNil())
 				} else {
