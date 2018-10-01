@@ -21,8 +21,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	. "github.com/ligato/cn-infra/kvscheduler/api"
-	"github.com/ligato/cn-infra/kvscheduler/test"
+	"github.com/ligato/cn-infra/kvscheduler/internal/test"
+	"github.com/ligato/cn-infra/kvscheduler/internal/utils"
+
 )
 
 func TestEmptyResync(t *testing.T) {
@@ -37,12 +40,11 @@ func TestEmptyResync(t *testing.T) {
 
 	// prepare mocks
 	mockSB := test.NewMockSouthbound()
-	descriptor1 := test.NewMockDescriptor(&test.MockDescriptorArgs{
-		Name:            descriptor1Name,
-		KeySelector:     prefixSelector(prefixA),
-		NBKeyPrefixes:   []string{prefixA},
-		WithMetadata:    true,
-		DumpIsSupported: true,
+	descriptor1 := test.NewMockDescriptor(&KVDescriptor{
+		Name:         descriptor1Name,
+		NBKeyPrefix:  prefixA,
+		KeySelector:  prefixSelector(prefixA),
+		WithMetadata: true,
 	}, mockSB, 0)
 
 	// register descriptor with the scheduler
@@ -52,7 +54,7 @@ func TestEmptyResync(t *testing.T) {
 	Expect(nbPrefixes).To(ContainElement(prefixA))
 
 	// get metadata map created for the descriptor
-	metadataMap := scheduler.GetMetadataMap(descriptor1.GetName())
+	metadataMap := scheduler.GetMetadataMap(descriptor1.Name)
 	_, withMetadataMap := metadataMap.(test.NameToInteger)
 	Expect(withMetadataMap).To(BeTrue())
 
@@ -61,7 +63,7 @@ func TestEmptyResync(t *testing.T) {
 
 	// run transaction with empty resync
 	startTime := time.Now()
-	kvErrors, txnError := scheduler.StartNBTransaction().Resync([]KeyValueDataPair{}).Commit(context.Background())
+	kvErrors, txnError := scheduler.StartNBTransaction().Commit(WithFullResync(context.Background()))
 	stopTime := time.Now()
 	Expect(txnError).ShouldNot(HaveOccurred())
 	Expect(kvErrors).To(BeEmpty())
@@ -90,7 +92,8 @@ func TestEmptyResync(t *testing.T) {
 	Expect(txn.stop.Before(stopTime)).To(BeTrue())
 	Expect(txn.seqNum).To(BeEquivalentTo(0))
 	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
-	Expect(txn.isResync).To(BeTrue())
+	Expect(txn.isFullResync).To(BeTrue())
+	Expect(txn.isDownstreamResync).To(BeFalse())
 	Expect(txn.values).To(BeEmpty())
 	Expect(txn.preErrors).To(BeEmpty())
 	Expect(txn.planned).To(BeEmpty())
@@ -131,12 +134,13 @@ func TestResyncWithEmptySB(t *testing.T) {
 
 	// prepare mocks
 	mockSB := test.NewMockSouthbound()
-	descriptor1 := test.NewMockDescriptor(&test.MockDescriptorArgs{
-		Name:          descriptor1Name,
-		KeySelector:   prefixSelector(prefixA),
-		NBKeyPrefixes: []string{prefixA},
-		ValueBuilder:  test.ArrayValueBuilder(prefixA),
-		DependencyBuilder: func(key string, value Value) []Dependency {
+	descriptor1 := test.NewMockDescriptor(&KVDescriptor{
+		Name:            descriptor1Name,
+		NBKeyPrefix:     prefixA,
+		KeySelector:     prefixSelector(prefixA),
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
+		DerivedValues:   test.ArrayValueDerBuilder,
+		Dependencies: func(key string, value proto.Message) []Dependency {
 			if key == prefixA+baseValue2 {
 				depKey := prefixA + baseValue1 + "/item1" // base value depends on a derived value
 				return []Dependency{
@@ -151,26 +155,23 @@ func TestResyncWithEmptySB(t *testing.T) {
 			}
 			return nil
 		},
-		DerValuesBuilder: test.ArrayValueDerBuilder(),
-		WithMetadata:     true,
-		DumpIsSupported:  true,
+		WithMetadata: true,
 	}, mockSB, 0)
 
 	// register descriptor with the scheduler
 	scheduler.RegisterKVDescriptor(descriptor1)
 
 	// get metadata map created for the descriptor
-	metadataMap := scheduler.GetMetadataMap(descriptor1.GetName())
+	metadataMap := scheduler.GetMetadataMap(descriptor1.Name)
 	nameToInteger, withMetadataMap := metadataMap.(test.NameToInteger)
 	Expect(withMetadataMap).To(BeTrue())
 
 	// run resync transaction with empty SB
 	startTime := time.Now()
-	values := []KeyValueDataPair{
-		{Key: prefixA + baseValue2, ValueData: []string{"item1"}},
-		{Key: prefixA + baseValue1, ValueData: []string{"item1", "item2"}},
-	}
-	kvErrors, txnError := scheduler.StartNBTransaction().Resync(values).Commit(context.Background())
+	schedulerTxn := scheduler.StartNBTransaction()
+	schedulerTxn.SetValue(prefixA+baseValue2, test.NewLazyArrayValue("item1"))
+	schedulerTxn.SetValue(prefixA+baseValue1, test.NewLazyArrayValue("item1", "item2"))
+	kvErrors, txnError := schedulerTxn.Commit(WithFullResync(context.Background()))
 	stopTime := time.Now()
 	Expect(txnError).ShouldNot(HaveOccurred())
 	Expect(kvErrors).To(BeEmpty())
@@ -180,33 +181,33 @@ func TestResyncWithEmptySB(t *testing.T) {
 	// -> base value 1
 	value := mockSB.GetValue(prefixA + baseValue1)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue1, "item1", "item2"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewArrayValue("item1", "item2"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(0))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item1 derived from base value 1
 	value = mockSB.GetValue(prefixA + baseValue1 + "/item1")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue("item1", "item1"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewStringValue("item1"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item2 derived from base value 1
 	value = mockSB.GetValue(prefixA + baseValue1 + "/item2")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue("item2", "item2"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewStringValue("item2"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> base value 2
 	value = mockSB.GetValue(prefixA + baseValue2)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue2, "item1"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewArrayValue("item1"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(1))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item1 derived from base value 2
 	value = mockSB.GetValue(prefixA + baseValue2 + "/item1")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue("item1", "item1"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewStringValue("item1"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	Expect(mockSB.GetValues(nil)).To(HaveLen(5))
@@ -214,14 +215,14 @@ func TestResyncWithEmptySB(t *testing.T) {
 	// check scheduler API
 	prefixAValues := scheduler.GetValues(prefixSelector(prefixA))
 	checkValues(prefixAValues, []KeyValuePair{
-		{Key: prefixA + baseValue1, Value: test.NewArrayValue(baseValue1, "item1", "item2")},
-		{Key: prefixA + baseValue1 + "/item1", Value: test.NewStringValue("item1", "item1")},
-		{Key: prefixA + baseValue1 + "/item2", Value: test.NewStringValue("item2", "item2")},
-		{Key: prefixA + baseValue2, Value: test.NewArrayValue(baseValue2, "item1")},
-		{Key: prefixA + baseValue2 + "/item1", Value: test.NewStringValue("item1", "item1")},
+		{Key: prefixA + baseValue1, Value: test.NewArrayValue("item1", "item2")},
+		{Key: prefixA + baseValue1 + "/item1", Value: test.NewStringValue("item1")},
+		{Key: prefixA + baseValue1 + "/item2", Value: test.NewStringValue("item2")},
+		{Key: prefixA + baseValue2, Value: test.NewArrayValue("item1")},
+		{Key: prefixA + baseValue2 + "/item1", Value: test.NewStringValue("item1")},
 	})
-	Expect(scheduler.GetValue(prefixA + baseValue1).Equivalent(test.NewArrayValue(baseValue1, "item1", "item2"))).To(BeTrue())
-	Expect(scheduler.GetValue(prefixA + baseValue1 + "/item1").Equivalent(test.NewStringValue("item1", "item1"))).To(BeTrue())
+	Expect(proto.Equal(scheduler.GetValue(prefixA+baseValue1), test.NewArrayValue("item1", "item2"))).To(BeTrue())
+	Expect(proto.Equal(scheduler.GetValue(prefixA+baseValue1+"/item1"), test.NewStringValue("item1"))).To(BeTrue())
 	Expect(scheduler.GetFailedValues(nil)).To(BeEmpty())
 	Expect(scheduler.GetPendingValues(nil)).To(BeEmpty())
 
@@ -242,13 +243,13 @@ func TestResyncWithEmptySB(t *testing.T) {
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
 			Key:      prefixA + baseValue1,
-			Value:    test.NewArrayValue(baseValue1, "item1", "item2"),
+			Value:    test.NewArrayValue("item1", "item2"),
 			Metadata: nil,
 			Origin:   FromNB,
 		},
 		{
 			Key:      prefixA + baseValue2,
-			Value:    test.NewArrayValue(baseValue2, "item1"),
+			Value:    test.NewArrayValue("item1"),
 			Metadata: nil,
 			Origin:   FromNB,
 		},
@@ -289,10 +290,11 @@ func TestResyncWithEmptySB(t *testing.T) {
 	Expect(txn.stop.Before(stopTime)).To(BeTrue())
 	Expect(txn.seqNum).To(BeEquivalentTo(0))
 	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
-	Expect(txn.isResync).To(BeTrue())
+	Expect(txn.isFullResync).To(BeTrue())
+	Expect(txn.isDownstreamResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixA + baseValue1, value: &recordedValue{label: baseValue1, string: "[item1,item2]"}, origin: FromNB},
-		{key: prefixA + baseValue2, value: &recordedValue{label: baseValue2, string: "[item1]"}, origin: FromNB},
+		{key: prefixA + baseValue1, value: utils.ProtoToString(test.NewArrayValue("item1", "item2")), origin: FromNB},
+		{key: prefixA + baseValue2, value: utils.ProtoToString(test.NewArrayValue("item1")), origin: FromNB},
 	})
 	Expect(txn.preErrors).To(BeEmpty())
 
@@ -300,21 +302,23 @@ func TestResyncWithEmptySB(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixA + baseValue1,
-			newValue:   &recordedValue{label: baseValue1, string: "[item1,item2]"},
+			newValue:   utils.ProtoToString(test.NewArrayValue("item1", "item2")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixA + baseValue1 + "/item1",
-			newValue:   &recordedValue{label: "item1", string: "item1"},
+			derived:    true,
+			newValue:   utils.ProtoToString(test.NewStringValue("item1")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixA + baseValue1 + "/item2",
-			newValue:   &recordedValue{label: "item2", string: "item2"},
+			derived:    true,
+			newValue:   utils.ProtoToString(test.NewStringValue("item2")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isPending:  true,
@@ -322,22 +326,24 @@ func TestResyncWithEmptySB(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixA + baseValue2,
-			newValue:   &recordedValue{label: baseValue2, string: "[item1]"},
+			newValue:   utils.ProtoToString(test.NewArrayValue("item1")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixA + baseValue2 + "/item1",
-			newValue:   &recordedValue{label: "item1", string: "item1"},
+			derived:    true,
+			newValue:   utils.ProtoToString(test.NewStringValue("item1")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixA + baseValue1 + "/item2",
-			prevValue:  &recordedValue{label: "item2", string: "item2"},
-			newValue:   &recordedValue{label: "item2", string: "item2"},
+			derived:    true,
+			prevValue:  utils.ProtoToString(test.NewStringValue("item2")),
+			newValue:   utils.ProtoToString(test.NewStringValue("item2")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,
@@ -348,7 +354,7 @@ func TestResyncWithEmptySB(t *testing.T) {
 
 	// now remove everything using resync with empty data
 	startTime = time.Now()
-	kvErrors, txnError = scheduler.StartNBTransaction().Resync([]KeyValueDataPair{}).Commit(context.Background())
+	kvErrors, txnError = scheduler.StartNBTransaction().Commit(WithFullResync(context.Background()))
 	stopTime = time.Now()
 	Expect(txnError).ShouldNot(HaveOccurred())
 	Expect(kvErrors).To(BeEmpty())
@@ -369,13 +375,13 @@ func TestResyncWithEmptySB(t *testing.T) {
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
 			Key:      prefixA + baseValue1,
-			Value:    test.NewArrayValue(baseValue1, "item1", "item2"),
+			Value:    test.NewArrayValue("item1", "item2"),
 			Metadata: &test.OnlyInteger{Integer: 0},
 			Origin:   FromNB,
 		},
 		{
 			Key:      prefixA + baseValue2,
-			Value:    test.NewArrayValue(baseValue2, "item1"),
+			Value:    test.NewArrayValue("item1"),
 			Metadata: &test.OnlyInteger{Integer: 1},
 			Origin:   FromNB,
 		},
@@ -416,10 +422,11 @@ func TestResyncWithEmptySB(t *testing.T) {
 	Expect(txn.stop.Before(stopTime)).To(BeTrue())
 	Expect(txn.seqNum).To(BeEquivalentTo(1))
 	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
-	Expect(txn.isResync).To(BeTrue())
+	Expect(txn.isFullResync).To(BeTrue())
+	Expect(txn.isDownstreamResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixA + baseValue1, value: nil, origin: FromNB},
-		{key: prefixA + baseValue2, value: nil, origin: FromNB},
+		{key: prefixA + baseValue1, value: utils.ProtoToString(nil), origin: FromNB},
+		{key: prefixA + baseValue2, value: utils.ProtoToString(nil), origin: FromNB},
 	})
 	Expect(txn.preErrors).To(BeEmpty())
 
@@ -427,7 +434,8 @@ func TestResyncWithEmptySB(t *testing.T) {
 		{
 			operation:  del,
 			key:        prefixA + baseValue1 + "/item2",
-			prevValue:  &recordedValue{label: "item2", string: "item2"},
+			derived:    true,
+			prevValue:  utils.ProtoToString(test.NewStringValue("item2")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isPending:  true,
@@ -435,14 +443,15 @@ func TestResyncWithEmptySB(t *testing.T) {
 		{
 			operation:  del,
 			key:        prefixA + baseValue2 + "/item1",
-			prevValue:  &recordedValue{label: "item1", string: "item1"},
+			derived:    true,
+			prevValue:  utils.ProtoToString(test.NewStringValue("item1")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  del,
 			key:        prefixA + baseValue2,
-			prevValue:  &recordedValue{label: baseValue2, string: "[item1]"},
+			prevValue:  utils.ProtoToString(test.NewArrayValue("item1")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isPending:  true,
@@ -450,14 +459,16 @@ func TestResyncWithEmptySB(t *testing.T) {
 		{
 			operation:  del,
 			key:        prefixA + baseValue1 + "/item1",
-			prevValue:  &recordedValue{label: "item1", string: "item1"},
+			derived:    true,
+			prevValue:  utils.ProtoToString(test.NewStringValue("item1")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  del,
 			key:        prefixA + baseValue1 + "/item2",
-			prevValue:  &recordedValue{label: "item2", string: "item2"},
+			derived:    true,
+			prevValue:  utils.ProtoToString(test.NewStringValue("item2")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,
@@ -465,14 +476,14 @@ func TestResyncWithEmptySB(t *testing.T) {
 		{
 			operation:  del,
 			key:        prefixA + baseValue1,
-			prevValue:  &recordedValue{label: baseValue1, string: "[item1,item2]"},
+			prevValue:  utils.ProtoToString(test.NewArrayValue("item1", "item2")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  del,
 			key:        prefixA + baseValue2,
-			prevValue:  &recordedValue{label: baseValue2, string: "[item1]"},
+			prevValue:  utils.ProtoToString(test.NewArrayValue("item1")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,
@@ -521,25 +532,26 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 	// prepare mocks
 	mockSB := test.NewMockSouthbound()
 	// -> initial content:
-	mockSB.SetValue(prefixA+baseValue1, test.NewArrayValue(baseValue1, "item1"),
+	mockSB.SetValue(prefixA+baseValue1, test.NewArrayValue("item1"),
 		&test.OnlyInteger{Integer: 0}, FromNB, false)
-	mockSB.SetValue(prefixA+baseValue1+"/item1", test.NewStringValue("item1", "item1"),
+	mockSB.SetValue(prefixA+baseValue1+"/item1", test.NewStringValue("item1"),
 		nil, FromNB, true)
-	mockSB.SetValue(prefixA+baseValue2, test.NewArrayValue(baseValue2, "item1"),
+	mockSB.SetValue(prefixA+baseValue2, test.NewArrayValue("item1"),
 		&test.OnlyInteger{Integer: 1}, FromNB, false)
-	mockSB.SetValue(prefixA+baseValue2+"/item1", test.NewStringValue("item1", "item1"),
+	mockSB.SetValue(prefixA+baseValue2+"/item1", test.NewStringValue("item1"),
 		nil, FromNB, true)
-	mockSB.SetValue(prefixA+baseValue3, test.NewArrayValue(baseValue3, "item1"),
+	mockSB.SetValue(prefixA+baseValue3, test.NewArrayValue("item1"),
 		&test.OnlyInteger{Integer: 2}, FromNB, false)
-	mockSB.SetValue(prefixA+baseValue3+"/item1", test.NewStringValue("item1", "item1"),
+	mockSB.SetValue(prefixA+baseValue3+"/item1", test.NewStringValue("item1"),
 		nil, FromNB, true)
 	// -> descriptor1:
-	descriptor1 := test.NewMockDescriptor(&test.MockDescriptorArgs{
-		Name:          descriptor1Name,
-		KeySelector:   prefixSelector(prefixA),
-		NBKeyPrefixes: []string{prefixA},
-		ValueBuilder:  test.ArrayValueBuilder(prefixA),
-		DependencyBuilder: func(key string, value Value) []Dependency {
+	descriptor1 := test.NewMockDescriptor(&KVDescriptor{
+		Name:            descriptor1Name,
+		NBKeyPrefix:     prefixA,
+		KeySelector:     prefixSelector(prefixA),
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
+		DerivedValues:   test.ArrayValueDerBuilder,
+		Dependencies: func(key string, value proto.Message) []Dependency {
 			if key == prefixA+baseValue2+"/item1" {
 				depKey := prefixA + baseValue1
 				return []Dependency{
@@ -554,33 +566,30 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 			}
 			return nil
 		},
-		DerValuesBuilder: test.ArrayValueDerBuilder(),
-		RecreateChecker: func(key string, oldValue, newValue Value, metadata Metadata) bool {
+		ModifyWithRecreate: func(key string, oldValue, newValue proto.Message, metadata Metadata) bool {
 			if key == prefixA+baseValue3 {
 				return true
 			}
 			return false
 		},
-		WithMetadata:    true,
-		DumpIsSupported: true,
+		WithMetadata: true,
 	}, mockSB, 3)
 
 	// register descriptor with the scheduler
 	scheduler.RegisterKVDescriptor(descriptor1)
 
 	// get metadata map created for the descriptor
-	metadataMap := scheduler.GetMetadataMap(descriptor1.GetName())
+	metadataMap := scheduler.GetMetadataMap(descriptor1.Name)
 	nameToInteger, withMetadataMap := metadataMap.(test.NameToInteger)
 	Expect(withMetadataMap).To(BeTrue())
 
 	// run resync transaction with SB that already has some values added
 	startTime := time.Now()
-	values := []KeyValueDataPair{
-		{Key: prefixA + baseValue2, ValueData: []string{"item1", "item2"}},
-		{Key: prefixA + baseValue1, ValueData: []string{"item2"}},
-		{Key: prefixA + baseValue3, ValueData: []string{"item1", "item2"}},
-	}
-	kvErrors, txnError := scheduler.StartNBTransaction().Resync(values).Commit(context.Background())
+	schedulerTxn := scheduler.StartNBTransaction()
+	schedulerTxn.SetValue(prefixA+baseValue2, test.NewLazyArrayValue("item1", "item2"))
+	schedulerTxn.SetValue(prefixA+baseValue1, test.NewLazyArrayValue("item2"))
+	schedulerTxn.SetValue(prefixA+baseValue3, test.NewLazyArrayValue("item1", "item2"))
+	kvErrors, txnError := schedulerTxn.Commit(WithFullResync(context.Background()))
 	stopTime := time.Now()
 	Expect(txnError).ShouldNot(HaveOccurred())
 	Expect(kvErrors).To(BeEmpty())
@@ -590,7 +599,7 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 	// -> base value 1
 	value := mockSB.GetValue(prefixA + baseValue1)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue1, "item2"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewArrayValue("item2"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(0))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
@@ -600,20 +609,20 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 	// -> item2 derived from base value 1
 	value = mockSB.GetValue(prefixA + baseValue1 + "/item2")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue("item2", "item2"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewStringValue("item2"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> base value 2
 	value = mockSB.GetValue(prefixA + baseValue2)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue2, "item1", "item2"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewArrayValue("item1", "item2"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(1))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item1 derived from base value 2
 	value = mockSB.GetValue(prefixA + baseValue2 + "/item1")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue("item1", "item1"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewStringValue("item1"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item2 derived from base value 2 is pending
@@ -622,20 +631,20 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 	// -> base value 3
 	value = mockSB.GetValue(prefixA + baseValue3)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue3, "item1", "item2"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewArrayValue("item1", "item2"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(3))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item1 derived from base value 3
 	value = mockSB.GetValue(prefixA + baseValue3 + "/item1")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue("item1", "item1"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewStringValue("item1"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item2 derived from base value 3
 	value = mockSB.GetValue(prefixA + baseValue3 + "/item2")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue("item2", "item2"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewStringValue("item2"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	Expect(mockSB.GetValues(nil)).To(HaveLen(7))
@@ -660,19 +669,19 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
 			Key:      prefixA + baseValue1,
-			Value:    test.NewArrayValue(baseValue1, "item2"),
+			Value:    test.NewArrayValue("item2"),
 			Metadata: nil,
 			Origin:   FromNB,
 		},
 		{
 			Key:      prefixA + baseValue2,
-			Value:    test.NewArrayValue(baseValue2, "item1", "item2"),
+			Value:    test.NewArrayValue("item1", "item2"),
 			Metadata: nil,
 			Origin:   FromNB,
 		},
 		{
 			Key:      prefixA + baseValue3,
-			Value:    test.NewArrayValue(baseValue3, "item1", "item2"),
+			Value:    test.NewArrayValue("item1", "item2"),
 			Metadata: nil,
 			Origin:   FromNB,
 		},
@@ -738,11 +747,12 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 	Expect(txn.stop.Before(stopTime)).To(BeTrue())
 	Expect(txn.seqNum).To(BeEquivalentTo(0))
 	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
-	Expect(txn.isResync).To(BeTrue())
+	Expect(txn.isFullResync).To(BeTrue())
+	Expect(txn.isDownstreamResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixA + baseValue1, value: &recordedValue{label: baseValue1, string: "[item2]"}, origin: FromNB},
-		{key: prefixA + baseValue2, value: &recordedValue{label: baseValue2, string: "[item1,item2]"}, origin: FromNB},
-		{key: prefixA + baseValue3, value: &recordedValue{label: baseValue3, string: "[item1,item2]"}, origin: FromNB},
+		{key: prefixA + baseValue1, value: utils.ProtoToString(test.NewArrayValue("item2")), origin: FromNB},
+		{key: prefixA + baseValue2, value: utils.ProtoToString(test.NewArrayValue("item1", "item2")), origin: FromNB},
+		{key: prefixA + baseValue3, value: utils.ProtoToString(test.NewArrayValue("item1", "item2")), origin: FromNB},
 	})
 	Expect(txn.preErrors).To(BeEmpty())
 
@@ -750,14 +760,15 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 		{
 			operation:  del,
 			key:        prefixA + baseValue3 + "/item1",
-			prevValue:  &recordedValue{label: "item1", string: "item1"},
+			derived:    true,
+			prevValue:  utils.ProtoToString(test.NewStringValue("item1")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  del,
 			key:        prefixA + baseValue3,
-			prevValue:  &recordedValue{label: baseValue3, string: "[item1]"},
+			prevValue:  utils.ProtoToString(test.NewArrayValue("item1")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isPending:  true,
@@ -765,7 +776,7 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixA + baseValue3,
-			newValue:   &recordedValue{label: baseValue3, string: "[item1,item2]"},
+			newValue:   utils.ProtoToString(test.NewArrayValue("item1", "item2")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,
@@ -773,59 +784,65 @@ func TestResyncWithNonEmptySB(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixA + baseValue3 + "/item1",
-			newValue:   &recordedValue{label: "item1", string: "item1"},
+			derived:    true,
+			newValue:   utils.ProtoToString(test.NewStringValue("item1")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixA + baseValue3 + "/item2",
-			newValue:   &recordedValue{label: "item2", string: "item2"},
+			derived:    true,
+			newValue:   utils.ProtoToString(test.NewStringValue("item2")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  del,
 			key:        prefixA + baseValue1 + "/item1",
-			prevValue:  &recordedValue{label: "item1", string: "item1"},
+			derived:    true,
+			prevValue:  utils.ProtoToString(test.NewStringValue("item1")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  modify,
 			key:        prefixA + baseValue1,
-			prevValue:  &recordedValue{label: baseValue1, string: "[item1]"},
-			newValue:   &recordedValue{label: baseValue1, string: "[item2]"},
+			prevValue:  utils.ProtoToString(test.NewArrayValue("item1")),
+			newValue:   utils.ProtoToString(test.NewArrayValue("item2")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  update,
 			key:        prefixA + baseValue2 + "/item1",
-			prevValue:  &recordedValue{label: "item1", string: "item1"},
-			newValue:   &recordedValue{label: "item1", string: "item1"},
+			derived:    true,
+			prevValue:  utils.ProtoToString(test.NewStringValue("item1")),
+			newValue:   utils.ProtoToString(test.NewStringValue("item1")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixA + baseValue1 + "/item2",
-			newValue:   &recordedValue{label: "item2", string: "item2"},
+			derived:    true,
+			newValue:   utils.ProtoToString(test.NewStringValue("item2")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  modify,
 			key:        prefixA + baseValue2,
-			prevValue:  &recordedValue{label: baseValue2, string: "[item1]"},
-			newValue:   &recordedValue{label: baseValue2, string: "[item1,item2]"},
+			prevValue:  utils.ProtoToString(test.NewArrayValue("item1")),
+			newValue:   utils.ProtoToString(test.NewArrayValue("item1", "item2")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixA + baseValue2 + "/item2",
-			newValue:   &recordedValue{label: "item2", string: "item2"},
+			derived:    true,
+			newValue:   utils.ProtoToString(test.NewStringValue("item2")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isPending:  true,
@@ -874,15 +891,16 @@ func TestResyncNotRemovingSBValues(t *testing.T) {
 	// prepare mocks
 	mockSB := test.NewMockSouthbound()
 	// -> initial content:
-	mockSB.SetValue(prefixA+baseValue1, test.NewStringValue(baseValue1, baseValue1),
+	mockSB.SetValue(prefixA+baseValue1, test.NewStringValue(baseValue1),
 		nil, FromSB, false)
 	// -> descriptor1:
-	descriptor1 := test.NewMockDescriptor(&test.MockDescriptorArgs{
-		Name:          descriptor1Name,
-		KeySelector:   prefixSelector(prefixA),
-		NBKeyPrefixes: []string{prefixA},
-		ValueBuilder:  test.ArrayValueBuilder(prefixA),
-		DependencyBuilder: func(key string, value Value) []Dependency {
+	descriptor1 := test.NewMockDescriptor(&KVDescriptor{
+		Name:            descriptor1Name,
+		KeySelector:     prefixSelector(prefixA),
+		NBKeyPrefix:     prefixA,
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
+		DerivedValues:   test.ArrayValueDerBuilder,
+		Dependencies: func(key string, value proto.Message) []Dependency {
 			if key == prefixA+baseValue2 {
 				depKey := prefixA + baseValue1
 				return []Dependency{
@@ -891,25 +909,22 @@ func TestResyncNotRemovingSBValues(t *testing.T) {
 			}
 			return nil
 		},
-		DerValuesBuilder: test.ArrayValueDerBuilder(),
-		WithMetadata:     true,
-		DumpIsSupported:  true,
+		WithMetadata: true,
 	}, mockSB, 0)
 
 	// register descriptor with the scheduler
 	scheduler.RegisterKVDescriptor(descriptor1)
 
 	// get metadata map created for the descriptor
-	metadataMap := scheduler.GetMetadataMap(descriptor1.GetName())
+	metadataMap := scheduler.GetMetadataMap(descriptor1.Name)
 	nameToInteger, withMetadataMap := metadataMap.(test.NameToInteger)
 	Expect(withMetadataMap).To(BeTrue())
 
 	// run resync transaction that should keep values not managed by NB untouched
 	startTime := time.Now()
-	values := []KeyValueDataPair{
-		{Key: prefixA + baseValue2, ValueData: []string{"item1"}},
-	}
-	kvErrors, txnError := scheduler.StartNBTransaction().Resync(values).Commit(context.Background())
+	schedulerTxn := scheduler.StartNBTransaction()
+	schedulerTxn.SetValue(prefixA+baseValue2, test.NewLazyArrayValue("item1"))
+	kvErrors, txnError := schedulerTxn.Commit(WithFullResync(context.Background()))
 	stopTime := time.Now()
 	Expect(txnError).ShouldNot(HaveOccurred())
 	Expect(kvErrors).To(BeEmpty())
@@ -919,20 +934,20 @@ func TestResyncNotRemovingSBValues(t *testing.T) {
 	// -> base value 1
 	value := mockSB.GetValue(prefixA + baseValue1)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue(baseValue1, baseValue1))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewStringValue(baseValue1))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromSB))
 	// -> base value 2
 	value = mockSB.GetValue(prefixA + baseValue2)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue2, "item1"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewArrayValue("item1"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(0))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item1 derived from base value 2
 	value = mockSB.GetValue(prefixA + baseValue2 + "/item1")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue("item1", "item1"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewStringValue("item1"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	Expect(mockSB.GetValues(nil)).To(HaveLen(3))
@@ -953,7 +968,7 @@ func TestResyncNotRemovingSBValues(t *testing.T) {
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
 			Key:      prefixA + baseValue2,
-			Value:    test.NewArrayValue(baseValue2, "item1"),
+			Value:    test.NewArrayValue("item1"),
 			Metadata: nil,
 			Origin:   FromNB,
 		},
@@ -979,10 +994,11 @@ func TestResyncNotRemovingSBValues(t *testing.T) {
 	Expect(txn.stop.Before(stopTime)).To(BeTrue())
 	Expect(txn.seqNum).To(BeEquivalentTo(0))
 	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
-	Expect(txn.isResync).To(BeTrue())
+	Expect(txn.isFullResync).To(BeTrue())
+	Expect(txn.isDownstreamResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixA + baseValue1, value: &recordedValue{label: baseValue1, string: baseValue1}, origin: FromSB},
-		{key: prefixA + baseValue2, value: &recordedValue{label: baseValue2, string: "[item1]"}, origin: FromNB},
+		{key: prefixA + baseValue1, value: utils.ProtoToString(test.NewStringValue(baseValue1)), origin: FromSB},
+		{key: prefixA + baseValue2, value: utils.ProtoToString(test.NewArrayValue("item1")), origin: FromNB},
 	})
 	Expect(txn.preErrors).To(BeEmpty())
 
@@ -990,14 +1006,15 @@ func TestResyncNotRemovingSBValues(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixA + baseValue2,
-			newValue:   &recordedValue{label: baseValue2, string: "[item1]"},
+			newValue:   utils.ProtoToString(test.NewArrayValue("item1")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixA + baseValue2 + "/item1",
-			newValue:   &recordedValue{label: "item1", string: "item1"},
+			derived:    true,
+			newValue:   utils.ProtoToString(test.NewStringValue("item1")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
@@ -1047,35 +1064,35 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 	// prepare mocks
 	mockSB := test.NewMockSouthbound()
 	// -> initial content:
-	mockSB.SetValue(prefixA+baseValue1, test.NewArrayValue(baseValue1, "item1"),
+	mockSB.SetValue(prefixA+baseValue1, test.NewArrayValue("item1"),
 		&test.OnlyInteger{Integer: 0}, FromNB, false)
-	mockSB.SetValue(prefixA+baseValue1+"/item1", test.NewStringValue("item1", "item1"),
+	mockSB.SetValue(prefixA+baseValue1+"/item1", test.NewStringValue("item1"),
 		nil, FromNB, true)
-	mockSB.SetValue(prefixB+baseValue2, test.NewArrayValue(baseValue2, "item1"),
+	mockSB.SetValue(prefixB+baseValue2, test.NewArrayValue("item1"),
 		&test.OnlyInteger{Integer: 0}, FromNB, false)
-	mockSB.SetValue(prefixB+baseValue2+"/item1", test.NewStringValue("item1", "item1"),
+	mockSB.SetValue(prefixB+baseValue2+"/item1", test.NewStringValue("item1"),
 		nil, FromNB, true)
-	mockSB.SetValue(prefixC+baseValue3, test.NewArrayValue(baseValue3, "item1"),
+	mockSB.SetValue(prefixC+baseValue3, test.NewArrayValue("item1"),
 		&test.OnlyInteger{Integer: 0}, FromNB, false)
-	mockSB.SetValue(prefixC+baseValue3+"/item1", test.NewStringValue("item1", "item1"),
+	mockSB.SetValue(prefixC+baseValue3+"/item1", test.NewStringValue("item1"),
 		nil, FromNB, true)
 	// -> descriptor1:
-	descriptor1 := test.NewMockDescriptor(&test.MockDescriptorArgs{
-		Name:             descriptor1Name,
-		KeySelector:      prefixSelector(prefixA),
-		NBKeyPrefixes:    []string{prefixA},
-		ValueBuilder:     test.ArrayValueBuilder(prefixA),
-		DerValuesBuilder: test.ArrayValueDerBuilder(),
-		WithMetadata:     true,
-		DumpIsSupported:  true,
+	descriptor1 := test.NewMockDescriptor(&KVDescriptor{
+		Name:            descriptor1Name,
+		NBKeyPrefix:     prefixA,
+		KeySelector:     prefixSelector(prefixA),
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
+		DerivedValues:   test.ArrayValueDerBuilder,
+		WithMetadata:    true,
 	}, mockSB, 1)
 	// -> descriptor2:
-	descriptor2 := test.NewMockDescriptor(&test.MockDescriptorArgs{
-		Name:          descriptor2Name,
-		KeySelector:   prefixSelector(prefixB),
-		NBKeyPrefixes: []string{prefixB},
-		ValueBuilder:  test.ArrayValueBuilder(prefixB),
-		DependencyBuilder: func(key string, value Value) []Dependency {
+	descriptor2 := test.NewMockDescriptor(&KVDescriptor{
+		Name:            descriptor2Name,
+		NBKeyPrefix:     prefixB,
+		KeySelector:     prefixSelector(prefixB),
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
+		DerivedValues:   test.ArrayValueDerBuilder,
+		Dependencies: func(key string, value proto.Message) []Dependency {
 			if key == prefixB+baseValue2+"/item1" {
 				depKey := prefixA + baseValue1
 				return []Dependency{
@@ -1090,26 +1107,23 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 			}
 			return nil
 		},
-		DerValuesBuilder: test.ArrayValueDerBuilder(),
 		WithMetadata:     true,
-		DumpIsSupported:  true,
 		DumpDependencies: []string{descriptor1Name},
 	}, mockSB, 1)
 	// -> descriptor3:
-	descriptor3 := test.NewMockDescriptor(&test.MockDescriptorArgs{
-		Name:             descriptor3Name,
-		KeySelector:      prefixSelector(prefixC),
-		NBKeyPrefixes:    []string{prefixC},
-		ValueBuilder:     test.ArrayValueBuilder(prefixC),
-		DerValuesBuilder: test.ArrayValueDerBuilder(),
-		RecreateChecker: func(key string, oldValue, newValue Value, metadata Metadata) bool {
+	descriptor3 := test.NewMockDescriptor(&KVDescriptor{
+		Name:            descriptor3Name,
+		NBKeyPrefix:     prefixC,
+		KeySelector:     prefixSelector(prefixC),
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
+		DerivedValues:   test.ArrayValueDerBuilder,
+		ModifyWithRecreate: func(key string, oldValue, newValue proto.Message, metadata Metadata) bool {
 			if key == prefixC+baseValue3 {
 				return true
 			}
 			return false
 		},
 		WithMetadata:     true,
-		DumpIsSupported:  true,
 		DumpDependencies: []string{descriptor2Name},
 	}, mockSB, 1)
 
@@ -1124,24 +1138,23 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 	Expect(nbPrefixes).To(ContainElement(prefixC))
 
 	// get metadata map created for each descriptor
-	metadataMap := scheduler.GetMetadataMap(descriptor1.GetName())
+	metadataMap := scheduler.GetMetadataMap(descriptor1.Name)
 	nameToInteger1, withMetadataMap := metadataMap.(test.NameToInteger)
 	Expect(withMetadataMap).To(BeTrue())
-	metadataMap = scheduler.GetMetadataMap(descriptor2.GetName())
+	metadataMap = scheduler.GetMetadataMap(descriptor2.Name)
 	nameToInteger2, withMetadataMap := metadataMap.(test.NameToInteger)
 	Expect(withMetadataMap).To(BeTrue())
-	metadataMap = scheduler.GetMetadataMap(descriptor3.GetName())
+	metadataMap = scheduler.GetMetadataMap(descriptor3.Name)
 	nameToInteger3, withMetadataMap := metadataMap.(test.NameToInteger)
 	Expect(withMetadataMap).To(BeTrue())
 
 	// run resync transaction with SB that already has some values added
 	startTime := time.Now()
-	values := []KeyValueDataPair{
-		{Key: prefixB + baseValue2, ValueData: []string{"item1", "item2"}},
-		{Key: prefixA + baseValue1, ValueData: []string{"item2"}},
-		{Key: prefixC + baseValue3, ValueData: []string{"item1", "item2"}},
-	}
-	kvErrors, txnError := scheduler.StartNBTransaction().Resync(values).Commit(context.Background())
+	schedulerTxn := scheduler.StartNBTransaction()
+	schedulerTxn.SetValue(prefixB+baseValue2, test.NewLazyArrayValue("item1", "item2"))
+	schedulerTxn.SetValue(prefixA+baseValue1, test.NewLazyArrayValue("item2"))
+	schedulerTxn.SetValue(prefixC+baseValue3, test.NewLazyArrayValue("item1", "item2"))
+	kvErrors, txnError := schedulerTxn.Commit(WithFullResync(context.Background()))
 	stopTime := time.Now()
 	Expect(txnError).ShouldNot(HaveOccurred())
 	Expect(kvErrors).To(BeEmpty())
@@ -1151,7 +1164,7 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 	// -> base value 1
 	value := mockSB.GetValue(prefixA + baseValue1)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue1, "item2"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewArrayValue("item2"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(0))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
@@ -1161,20 +1174,20 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 	// -> item2 derived from base value 1
 	value = mockSB.GetValue(prefixA + baseValue1 + "/item2")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue("item2", "item2"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewStringValue("item2"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> base value 2
 	value = mockSB.GetValue(prefixB + baseValue2)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue2, "item1", "item2"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewArrayValue("item1", "item2"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(0))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item1 derived from base value 2
 	value = mockSB.GetValue(prefixB + baseValue2 + "/item1")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue("item1", "item1"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewStringValue("item1"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item2 derived from base value 2 is pending
@@ -1183,20 +1196,20 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 	// -> base value 3
 	value = mockSB.GetValue(prefixC + baseValue3)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue3, "item1", "item2"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewArrayValue("item1", "item2"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(1))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item1 derived from base value 3
 	value = mockSB.GetValue(prefixC + baseValue3 + "/item1")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue("item1", "item1"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewStringValue("item1"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item2 derived from base value 3
 	value = mockSB.GetValue(prefixC + baseValue3 + "/item2")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue("item2", "item2"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewStringValue("item2"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	Expect(mockSB.GetValues(nil)).To(HaveLen(7))
@@ -1221,7 +1234,7 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
 			Key:      prefixA + baseValue1,
-			Value:    test.NewArrayValue(baseValue1, "item2"),
+			Value:    test.NewArrayValue("item2"),
 			Metadata: nil,
 			Origin:   FromNB,
 		},
@@ -1232,7 +1245,7 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
 			Key:      prefixB + baseValue2,
-			Value:    test.NewArrayValue(baseValue2, "item1", "item2"),
+			Value:    test.NewArrayValue("item1", "item2"),
 			Metadata: nil,
 			Origin:   FromNB,
 		},
@@ -1243,7 +1256,7 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
 			Key:      prefixC + baseValue3,
-			Value:    test.NewArrayValue(baseValue3, "item1", "item2"),
+			Value:    test.NewArrayValue("item1", "item2"),
 			Metadata: nil,
 			Origin:   FromNB,
 		},
@@ -1309,11 +1322,12 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 	Expect(txn.stop.Before(stopTime)).To(BeTrue())
 	Expect(txn.seqNum).To(BeEquivalentTo(0))
 	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
-	Expect(txn.isResync).To(BeTrue())
+	Expect(txn.isFullResync).To(BeTrue())
+	Expect(txn.isDownstreamResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixA + baseValue1, value: &recordedValue{label: baseValue1, string: "[item2]"}, origin: FromNB},
-		{key: prefixB + baseValue2, value: &recordedValue{label: baseValue2, string: "[item1,item2]"}, origin: FromNB},
-		{key: prefixC + baseValue3, value: &recordedValue{label: baseValue3, string: "[item1,item2]"}, origin: FromNB},
+		{key: prefixA + baseValue1, value: utils.ProtoToString(test.NewArrayValue("item2")), origin: FromNB},
+		{key: prefixB + baseValue2, value: utils.ProtoToString(test.NewArrayValue("item1", "item2")), origin: FromNB},
+		{key: prefixC + baseValue3, value: utils.ProtoToString(test.NewArrayValue("item1", "item2")), origin: FromNB},
 	})
 	Expect(txn.preErrors).To(BeEmpty())
 
@@ -1321,14 +1335,15 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 		{
 			operation:  del,
 			key:        prefixC + baseValue3 + "/item1",
-			prevValue:  &recordedValue{label: "item1", string: "item1"},
+			derived:    true,
+			prevValue:  utils.ProtoToString(test.NewStringValue("item1")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  del,
 			key:        prefixC + baseValue3,
-			prevValue:  &recordedValue{label: baseValue3, string: "[item1]"},
+			prevValue:  utils.ProtoToString(test.NewArrayValue("item1")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isPending:  true,
@@ -1336,7 +1351,7 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixC + baseValue3,
-			newValue:   &recordedValue{label: baseValue3, string: "[item1,item2]"},
+			newValue:   utils.ProtoToString(test.NewArrayValue("item1", "item2")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			wasPending: true,
@@ -1344,59 +1359,65 @@ func TestResyncWithMultipleDescriptors(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixC + baseValue3 + "/item1",
-			newValue:   &recordedValue{label: "item1", string: "item1"},
+			derived:    true,
+			newValue:   utils.ProtoToString(test.NewStringValue("item1")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixC + baseValue3 + "/item2",
-			newValue:   &recordedValue{label: "item2", string: "item2"},
+			derived:    true,
+			newValue:   utils.ProtoToString(test.NewStringValue("item2")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  del,
 			key:        prefixA + baseValue1 + "/item1",
-			prevValue:  &recordedValue{label: "item1", string: "item1"},
+			derived:    true,
+			prevValue:  utils.ProtoToString(test.NewStringValue("item1")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  modify,
 			key:        prefixA + baseValue1,
-			prevValue:  &recordedValue{label: baseValue1, string: "[item1]"},
-			newValue:   &recordedValue{label: baseValue1, string: "[item2]"},
+			prevValue:  utils.ProtoToString(test.NewArrayValue("item1")),
+			newValue:   utils.ProtoToString(test.NewArrayValue("item2")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  update,
 			key:        prefixB + baseValue2 + "/item1",
-			prevValue:  &recordedValue{label: "item1", string: "item1"},
-			newValue:   &recordedValue{label: "item1", string: "item1"},
+			derived:    true,
+			prevValue:  utils.ProtoToString(test.NewStringValue("item1")),
+			newValue:   utils.ProtoToString(test.NewStringValue("item1")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixA + baseValue1 + "/item2",
-			newValue:   &recordedValue{label: "item2", string: "item2"},
+			derived:    true,
+			newValue:   utils.ProtoToString(test.NewStringValue("item2")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  modify,
 			key:        prefixB + baseValue2,
-			prevValue:  &recordedValue{label: baseValue2, string: "[item1]"},
-			newValue:   &recordedValue{label: baseValue2, string: "[item1,item2]"},
+			prevValue:  utils.ProtoToString(test.NewArrayValue("item1")),
+			newValue:   utils.ProtoToString(test.NewArrayValue("item1", "item2")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixB + baseValue2 + "/item2",
-			newValue:   &recordedValue{label: "item2", string: "item2"},
+			derived:    true,
+			newValue:   utils.ProtoToString(test.NewStringValue("item2")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isPending:  true,
@@ -1449,22 +1470,21 @@ func TestResyncWithRetry(t *testing.T) {
 	// prepare mocks
 	mockSB := test.NewMockSouthbound()
 	// -> initial content:
-	mockSB.SetValue(prefixA+baseValue1, test.NewArrayValue(baseValue1),
+	mockSB.SetValue(prefixA+baseValue1, test.NewArrayValue(),
 		&test.OnlyInteger{Integer: 0}, FromNB, false)
 	// -> descriptor1:
-	descriptor1 := test.NewMockDescriptor(&test.MockDescriptorArgs{
-		Name:             descriptor1Name,
-		KeySelector:      prefixSelector(prefixA),
-		NBKeyPrefixes:    []string{prefixA},
-		ValueBuilder:     test.ArrayValueBuilder(prefixA),
-		DerValuesBuilder: test.ArrayValueDerBuilder(),
-		WithMetadata:     true,
-		DumpIsSupported:  true,
+	descriptor1 := test.NewMockDescriptor(&KVDescriptor{
+		Name:            descriptor1Name,
+		NBKeyPrefix:     prefixA,
+		KeySelector:     prefixSelector(prefixA),
+		ValueTypeName:   proto.MessageName(test.NewArrayValue()),
+		DerivedValues:   test.ArrayValueDerBuilder,
+		WithMetadata:    true,
 	}, mockSB, 1)
 	// -> planned error
 	mockSB.PlanError(prefixA+baseValue1+"/item2", errors.New("failed to add value"),
 		func() {
-			mockSB.SetValue(prefixA+baseValue1, test.NewArrayValue(baseValue1, "item1"),
+			mockSB.SetValue(prefixA+baseValue1, test.NewArrayValue("item1"),
 				&test.OnlyInteger{Integer: 0}, FromNB, false)
 		})
 
@@ -1476,17 +1496,18 @@ func TestResyncWithRetry(t *testing.T) {
 	scheduler.SubscribeForErrors(errorChan, prefixSelector(prefixA))
 
 	// get metadata map created for the descriptor
-	metadataMap := scheduler.GetMetadataMap(descriptor1.GetName())
+	metadataMap := scheduler.GetMetadataMap(descriptor1.Name)
 	nameToInteger, withMetadataMap := metadataMap.(test.NameToInteger)
 	Expect(withMetadataMap).To(BeTrue())
 
 	// run resync transaction that will fail for one value
 	startTime := time.Now()
-	values := []KeyValueDataPair{
-		{Key: prefixA + baseValue1, ValueData: []string{"item1", "item2"}},
-	}
-	resyncTxn := scheduler.StartNBTransaction(WithRetry(3*time.Second, false))
-	kvErrors, txnError := resyncTxn.Resync(values).Commit(context.Background())
+	resyncTxn := scheduler.StartNBTransaction()
+	resyncTxn.SetValue(prefixA+baseValue1, test.NewLazyArrayValue("item1", "item2"))
+	ctx := context.Background()
+	ctx = WithRetry(ctx, 3*time.Second, false)
+	ctx = WithFullResync(ctx)
+	kvErrors, txnError := resyncTxn.Commit(ctx)
 	stopTime := time.Now()
 	Expect(txnError).ShouldNot(HaveOccurred())
 	Expect(kvErrors).To(HaveLen(1))
@@ -1498,14 +1519,14 @@ func TestResyncWithRetry(t *testing.T) {
 	// -> base value 1
 	value := mockSB.GetValue(prefixA + baseValue1)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue1, "item1"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewArrayValue("item1"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(0))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item1 derived from base value 1
 	value = mockSB.GetValue(prefixA + baseValue1 + "/item1")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue("item1", "item1"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewStringValue("item1"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item2 derived from base value 1 failed to get added
@@ -1527,7 +1548,7 @@ func TestResyncWithRetry(t *testing.T) {
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
 			Key:      prefixA + baseValue1,
-			Value:    test.NewArrayValue(baseValue1, "item1", "item2"),
+			Value:    test.NewArrayValue("item1", "item2"),
 			Metadata: nil,
 			Origin:   FromNB,
 		},
@@ -1554,7 +1575,7 @@ func TestResyncWithRetry(t *testing.T) {
 	checkValuesForCorrelation(operation.CorrelateDump, []KVWithMetadata{
 		{
 			Key:      prefixA + baseValue1,
-			Value:    test.NewArrayValue(baseValue1, "item1", "item2"),
+			Value:    test.NewArrayValue("item1", "item2"),
 			Metadata: &test.OnlyInteger{Integer: 0},
 			Origin:   FromNB,
 		},
@@ -1570,9 +1591,10 @@ func TestResyncWithRetry(t *testing.T) {
 	Expect(txn.stop.Before(stopTime)).To(BeTrue())
 	Expect(txn.seqNum).To(BeEquivalentTo(0))
 	Expect(txn.txnType).To(BeEquivalentTo(nbTransaction))
-	Expect(txn.isResync).To(BeTrue())
+	Expect(txn.isFullResync).To(BeTrue())
+	Expect(txn.isDownstreamResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixA + baseValue1, value: &recordedValue{label: baseValue1, string: "[item1,item2]"}, origin: FromNB},
+		{key: prefixA + baseValue1, value: utils.ProtoToString(test.NewArrayValue("item1", "item2")), origin: FromNB},
 	})
 	Expect(txn.preErrors).To(BeEmpty())
 
@@ -1580,22 +1602,24 @@ func TestResyncWithRetry(t *testing.T) {
 		{
 			operation:  modify,
 			key:        prefixA + baseValue1,
-			prevValue:  &recordedValue{label: baseValue1, string: "[]"},
-			newValue:   &recordedValue{label: baseValue1, string: "[item1,item2]"},
+			prevValue:  utils.ProtoToString(test.NewArrayValue()),
+			newValue:   utils.ProtoToString(test.NewArrayValue("item1", "item2")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixA + baseValue1 + "/item1",
-			newValue:   &recordedValue{label: "item1", string: "item1"},
+			derived:    true,
+			newValue:   utils.ProtoToString(test.NewStringValue("item1")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
 		{
 			operation:  add,
 			key:        prefixA + baseValue1 + "/item2",
-			newValue:   &recordedValue{label: "item2", string: "item2"},
+			derived:    true,
+			newValue:   utils.ProtoToString(test.NewStringValue("item2")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 		},
@@ -1644,21 +1668,21 @@ func TestResyncWithRetry(t *testing.T) {
 	// -> base value 1
 	value = mockSB.GetValue(prefixA + baseValue1)
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewArrayValue(baseValue1, "item1", "item2"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewArrayValue("item1", "item2"))).To(BeTrue())
 	Expect(value.Metadata).ToNot(BeNil())
 	Expect(value.Metadata.(test.MetaWithInteger).GetInteger()).To(BeEquivalentTo(0))
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	// -> item1 derived from base value 1
 	value = mockSB.GetValue(prefixA + baseValue1 + "/item1")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue("item1", "item1"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewStringValue("item1"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	Expect(mockSB.GetValues(nil)).To(HaveLen(3))
 	// -> item2 derived from base value 1 was re-added
 	value = mockSB.GetValue(prefixA + baseValue1 + "/item2")
 	Expect(value).ToNot(BeNil())
-	Expect(value.Value.Equivalent(test.NewStringValue("item2", "item2"))).To(BeTrue())
+	Expect(proto.Equal(value.Value, test.NewStringValue("item2"))).To(BeTrue())
 	Expect(value.Metadata).To(BeNil())
 	Expect(value.Origin).To(BeEquivalentTo(FromNB))
 	Expect(mockSB.GetValues(nil)).To(HaveLen(3))
@@ -1692,9 +1716,10 @@ func TestResyncWithRetry(t *testing.T) {
 	Expect(txn.stop.Before(time.Now())).To(BeTrue())
 	Expect(txn.seqNum).To(BeEquivalentTo(1))
 	Expect(txn.txnType).To(BeEquivalentTo(retryFailedOps))
-	Expect(txn.isResync).To(BeFalse())
+	Expect(txn.isFullResync).To(BeFalse())
+	Expect(txn.isDownstreamResync).To(BeFalse())
 	checkRecordedValues(txn.values, []recordedKVPair{
-		{key: prefixA + baseValue1, value: &recordedValue{label: baseValue1, string: "[item1,item2]"}, origin: FromNB},
+		{key: prefixA + baseValue1, value: utils.ProtoToString(test.NewArrayValue("item1", "item2")), origin: FromNB},
 	})
 	Expect(txn.preErrors).To(BeEmpty())
 
@@ -1702,8 +1727,8 @@ func TestResyncWithRetry(t *testing.T) {
 		{
 			operation:  modify,
 			key:        prefixA + baseValue1,
-			prevValue:  &recordedValue{label: baseValue1, string: "[item1]"},
-			newValue:   &recordedValue{label: baseValue1, string: "[item1,item2]"},
+			prevValue:  utils.ProtoToString(test.NewArrayValue("item1")),
+			newValue:   utils.ProtoToString(test.NewArrayValue("item1", "item2")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			isRetry:    true,
@@ -1711,12 +1736,11 @@ func TestResyncWithRetry(t *testing.T) {
 		{
 			operation:  add,
 			key:        prefixA + baseValue1 + "/item2",
-			prevValue:  &recordedValue{label: "item2", string: "item2"},
-			newValue:   &recordedValue{label: "item2", string: "item2"},
+			derived:    true,
+			newValue:   utils.ProtoToString(test.NewStringValue("item2")),
 			prevOrigin: FromNB,
 			newOrigin:  FromNB,
 			prevErr:    errors.New("failed to add value"),
-			wasPending: true,
 			isRetry:    true,
 		},
 	}
