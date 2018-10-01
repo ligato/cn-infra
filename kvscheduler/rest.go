@@ -347,6 +347,8 @@ func (scheduler *Scheduler) dumpGetHandler(formatter *render.Render) http.Handle
 					Origin:   FromNB,
 				})
 			}
+			formatter.JSON(w, http.StatusOK, kvPairs)
+			return
 		}
 
 		/* internal/SB: */
@@ -357,7 +359,7 @@ func (scheduler *Scheduler) dumpGetHandler(formatter *render.Render) http.Handle
 				graph.WithFlags(&DescriptorFlag{descriptor}),
 				graph.WithoutFlags(&PendingFlag{}, &DerivedFlag{})))
 
-		if state == SB {
+		if state == internalState {
 			// return the scheduler's view of SB for the given descriptor
 			formatter.JSON(w, http.StatusOK, inMemNodes)
 			return
