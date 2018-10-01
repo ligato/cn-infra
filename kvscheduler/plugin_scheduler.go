@@ -17,6 +17,7 @@ package kvscheduler
 import (
 	"context"
 	"sync"
+	"time"
 
 	. "github.com/ligato/cn-infra/kvscheduler/api"
 
@@ -48,9 +49,9 @@ type Scheduler struct {
 	isInitialized bool
 
 	// management of go routines
-	ctx     context.Context
-	cancel  context.CancelFunc
-	wg      sync.WaitGroup
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 
 	// in-memory representation of all added+pending kv-pair and their dependencies
 	graph graph.Graph
@@ -72,6 +73,11 @@ type Scheduler struct {
 	// TXN history
 	historyLock sync.Mutex
 	txnHistory  []*recordedTxn // ordered from the oldest to the latest
+
+	// datasync channels
+	changeChan   chan datasync.ChangeEvent
+	resyncChan   chan datasync.ResyncEvent
+	watchDataReg datasync.WatchRegistration
 }
 
 // Deps lists dependencies of the scheduler.
@@ -79,6 +85,7 @@ type Deps struct {
 	infra.PluginName
 	Log          logging.PluginLogger
 	HTTPHandlers rest.HTTPHandlers
+	Watcher      datasync.KeyValProtoWatcher
 }
 
 // SchedulerTxn implements transaction for the KV scheduler.
@@ -96,6 +103,10 @@ type errorSubscription struct {
 // Init initializes the scheduler. Single go routine is started that will process
 // all the transactions synchronously.
 func (scheduler *Scheduler) Init() error {
+	// initialize datasync channels
+	scheduler.resyncChan = make(chan datasync.ResyncEvent)
+	scheduler.changeChan = make(chan datasync.ChangeEvent)
+
 	// prepare context for all go routines
 	scheduler.ctx, scheduler.cancel = context.WithCancel(context.Background())
 	// initialize graph for in-memory storage of added+pending kv pairs
@@ -119,6 +130,64 @@ func (scheduler *Scheduler) Init() error {
 // and scheduler are properly integrated.
 func (scheduler *Scheduler) IsInitialized() bool {
 	return scheduler.isInitialized
+}
+
+func (p *Scheduler) AfterInit() error {
+	go p.watchEvents()
+
+	var err error
+	p.watchDataReg, err = p.Watcher.Watch("scheduler",
+		p.changeChan, p.resyncChan, p.GetRegisteredNBKeyPrefixes()...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *Scheduler) watchEvents() {
+	for {
+		select {
+		case e := <-p.changeChan:
+			p.Log.Debugf("=> SCHEDULER received CHANGE EVENT: %v changes", len(e.GetChanges()))
+
+			txn := p.StartNBTransaction()
+			for _, x := range e.GetChanges() {
+				p.Log.Debugf("  - Change %v: %q (rev: %v)",
+					x.GetChangeType(), x.GetKey(), x.GetRevision())
+				if x.GetChangeType() == datasync.Delete {
+					txn.SetValue(x.GetKey(), nil)
+				} else {
+					txn.SetValue(x.GetKey(), x)
+				}
+			}
+			kvErrs, err := txn.Commit(WithRetry(context.Background(), time.Second, true))
+			p.Log.Debugf("commit result: err=%v kvErrs=%+v", err, kvErrs)
+			e.Done(err)
+
+		case e := <-p.resyncChan:
+			p.Log.Debugf("=> SCHEDULER received RESYNC EVENT: %v prefixes", len(e.GetValues()))
+
+			txn := p.StartNBTransaction()
+			for prefix, iter := range e.GetValues() {
+				var keyVals []datasync.KeyVal
+				for x, done := iter.GetNext(); done == false; x, done = iter.GetNext() {
+					keyVals = append(keyVals, x)
+					txn.SetValue(x.GetKey(), x)
+				}
+				p.Log.Debugf(" - Resync: %q (%v key-values)", prefix, len(keyVals))
+				for _, x := range keyVals {
+					p.Log.Debugf("\t%q: (rev: %v)", x.GetKey(), x.GetRevision())
+				}
+			}
+			ctx := context.Background()
+			ctx = WithRetry(ctx, time.Second, true)
+			ctx = WithFullResync(ctx)
+			kvErrs, err := txn.Commit(ctx)
+			p.Log.Debugf("commit result: err=%v kvErrs=%+v", err, kvErrs)
+			e.Done(err)
+		}
+	}
 }
 
 // Close stops all the go routines.

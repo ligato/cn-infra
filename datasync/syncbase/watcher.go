@@ -15,7 +15,6 @@
 package syncbase
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -25,9 +24,6 @@ import (
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/utils/safeclose"
-
-	"github.com/ligato/cn-infra/kvscheduler"
-	scheduler_api "github.com/ligato/cn-infra/kvscheduler/api"
 )
 
 var (
@@ -104,35 +100,6 @@ func (adapter *Registry) Watch(resyncName string, changeChan chan datasync.Chang
 func (adapter *Registry) PropagateChanges(txData map[string]datasync.ChangeValue) error {
 	var events []func(done chan error)
 
-	// propagate transaction to KV scheduler
-	// TODO: scheduler should subscribe to registry and receive TXN as a whole
-	scheduler := &kvscheduler.DefaultPlugin // temporary hack
-	if scheduler.IsInitialized() {
-		keyPrefixes := scheduler.GetRegisteredNBKeyPrefixes()
-
-		// TODO: add options to localclient
-		txn := scheduler.StartNBTransaction()
-		for key, val := range txData {
-			registered := false
-			for _, prefix := range keyPrefixes {
-				if strings.HasPrefix(key, prefix) {
-					registered = true
-					break
-				}
-			}
-			if !registered {
-				continue
-			}
-			if val.GetChangeType() == datasync.Delete {
-				txn.SetValue(key, nil)
-			} else {
-				txn.SetValue(key, val)
-			}
-		}
-		// TODO: return error(s)
-		txn.Commit(scheduler_api.WithRetry(context.Background(), time.Second, true))
-	}
-
 	for _, sub := range adapter.subscriptions {
 		var changes []datasync.ProtoWatchResp
 
@@ -198,35 +165,6 @@ func (adapter *Registry) PropagateChanges(txData map[string]datasync.ChangeValue
 
 // PropagateResync fills registered channels with the data.
 func (adapter *Registry) PropagateResync(txData map[string]datasync.ChangeValue) error {
-	// propagate transaction to KV scheduler
-	// TODO: scheduler should subscribe to registry and receive TXN as a whole
-	scheduler := &kvscheduler.DefaultPlugin // temporary hack
-	if scheduler.IsInitialized() {
-		keyPrefixes := scheduler.GetRegisteredNBKeyPrefixes()
-
-		// TODO: add options to localclient
-		txn := scheduler.StartNBTransaction()
-		for key, val := range txData {
-			registered := false
-			for _, prefix := range keyPrefixes {
-				if strings.HasPrefix(key, prefix) {
-					registered = true
-					break
-				}
-			}
-			if !registered {
-				continue
-			}
-
-			txn.SetValue(key, val)
-		}
-		// TODO: return error(s)
-		ctx := context.Background()
-		ctx = scheduler_api.WithRetry(ctx, time.Second, true)
-		ctx = scheduler_api.WithFullResync(ctx)
-		txn.Commit(ctx)
-	}
-
 	adapter.lastRev.Cleanup()
 
 	for _, sub := range adapter.subscriptions {
