@@ -132,12 +132,13 @@ func (scheduler *Scheduler) IsInitialized() bool {
 	return scheduler.isInitialized
 }
 
-func (p *Scheduler) AfterInit() error {
-	go p.watchEvents()
+// AfterInit subscribes to known NB prefixes.
+func (scheduler *Scheduler) AfterInit() error {
+	go scheduler.watchEvents()
 
 	var err error
-	p.watchDataReg, err = p.Watcher.Watch("scheduler",
-		p.changeChan, p.resyncChan, p.GetRegisteredNBKeyPrefixes()...)
+	scheduler.watchDataReg, err = scheduler.Watcher.Watch("scheduler",
+		scheduler.changeChan, scheduler.resyncChan, scheduler.GetRegisteredNBKeyPrefixes()...)
 	if err != nil {
 		return err
 	}
@@ -145,15 +146,15 @@ func (p *Scheduler) AfterInit() error {
 	return nil
 }
 
-func (p *Scheduler) watchEvents() {
+func (scheduler *Scheduler) watchEvents() {
 	for {
 		select {
-		case e := <-p.changeChan:
-			p.Log.Debugf("=> SCHEDULER received CHANGE EVENT: %v changes", len(e.GetChanges()))
+		case e := <-scheduler.changeChan:
+			scheduler.Log.Debugf("=> SCHEDULER received CHANGE EVENT: %v changes", len(e.GetChanges()))
 
-			txn := p.StartNBTransaction()
+			txn := scheduler.StartNBTransaction()
 			for _, x := range e.GetChanges() {
-				p.Log.Debugf("  - Change %v: %q (rev: %v)",
+				scheduler.Log.Debugf("  - Change %v: %q (rev: %v)",
 					x.GetChangeType(), x.GetKey(), x.GetRevision())
 				if x.GetChangeType() == datasync.Delete {
 					txn.SetValue(x.GetKey(), nil)
@@ -162,29 +163,29 @@ func (p *Scheduler) watchEvents() {
 				}
 			}
 			kvErrs, err := txn.Commit(WithRetry(context.Background(), time.Second, true))
-			p.Log.Debugf("commit result: err=%v kvErrs=%+v", err, kvErrs)
+			scheduler.Log.Debugf("commit result: err=%v kvErrs=%+v", err, kvErrs)
 			e.Done(err)
 
-		case e := <-p.resyncChan:
-			p.Log.Debugf("=> SCHEDULER received RESYNC EVENT: %v prefixes", len(e.GetValues()))
+		case e := <-scheduler.resyncChan:
+			scheduler.Log.Debugf("=> SCHEDULER received RESYNC EVENT: %v prefixes", len(e.GetValues()))
 
-			txn := p.StartNBTransaction()
+			txn := scheduler.StartNBTransaction()
 			for prefix, iter := range e.GetValues() {
 				var keyVals []datasync.KeyVal
 				for x, done := iter.GetNext(); done == false; x, done = iter.GetNext() {
 					keyVals = append(keyVals, x)
 					txn.SetValue(x.GetKey(), x)
 				}
-				p.Log.Debugf(" - Resync: %q (%v key-values)", prefix, len(keyVals))
+				scheduler.Log.Debugf(" - Resync: %q (%v key-values)", prefix, len(keyVals))
 				for _, x := range keyVals {
-					p.Log.Debugf("\t%q: (rev: %v)", x.GetKey(), x.GetRevision())
+					scheduler.Log.Debugf("\t%q: (rev: %v)", x.GetKey(), x.GetRevision())
 				}
 			}
 			ctx := context.Background()
 			ctx = WithRetry(ctx, time.Second, true)
 			ctx = WithFullResync(ctx)
 			kvErrs, err := txn.Commit(ctx)
-			p.Log.Debugf("commit result: err=%v kvErrs=%+v", err, kvErrs)
+			scheduler.Log.Debugf("commit result: err=%v kvErrs=%+v", err, kvErrs)
 			e.Done(err)
 		}
 	}
