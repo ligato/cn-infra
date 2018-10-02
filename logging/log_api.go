@@ -192,12 +192,14 @@ func NewParentLogger(name string, factory LoggerFactory) *ParentLogger {
 	}
 }
 
+// ParentLogger provides logger with logger factory that creates loggers with prefix.
 type ParentLogger struct {
 	Logger
 	Prefix  string
 	Factory LoggerFactory
 }
 
+// NewLogger returns logger using name prefixed with prefix defined in parent logger.
 func (p *ParentLogger) NewLogger(name string) Logger {
 	return p.Factory.NewLogger(fmt.Sprintf("%s/%s", p.Prefix, name))
 }
