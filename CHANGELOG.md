@@ -304,11 +304,11 @@ Added TLS support
   * TODO Minimalistic examples & documentation for Kafka API will be improved in a later release.
 
 ## Flavors
-* optionally GPRC server can be enabled in [rpc flavor](flavors/rpc) using --grpc-port=9111 (or using config gprc.conf)
-* [Flavor interface](core/list_flavor_plugin.go) now contains three methods: Plugins(), Inject(), LogRegistry() to standardize these methods over all flavors. Note, LogRegistry() is usually embedded using local flavor.
+* optionally GPRC server can be enabled in rpc flavor using --grpc-port=9111 (or using config gprc.conf)
+* Flavor interface now contains three methods: Plugins(), Inject(), LogRegistry() to standardize these methods over all flavors. Note, LogRegistry() is usually embedded using local flavor.
 
 # Release v1.0.3 (2017-09-08)
-* [FlavorAllConnectors](flavors/connectors)
+* FlavorAllConnectors (obsolete link)
     * Inlined plugins: ETCD, Kafka, Redis, Cassandra
 * [Kafka Partitions](messaging/kafka)
     * Implemented new methods that allow to specify partitions & offset parameters:
@@ -328,15 +328,15 @@ The major themes for Release v1.0.2 are as follows:
     * [Redis](db/keyval/redis)
     * [Kafka](db/)
 * [Data Synchronization](datasync) plugin for watching and writing data asynchronously; it is currently implemented only for the [db/keyval API](db/keyval) API. It facilitates reading of data during startup or after reconnection to a data store and then watching incremental changes.
-* Agent [Core](core) that provides plugin lifecycle management
+* Agent [Core](agent) that provides plugin lifecycle management
 (initialization and graceful shutdown of plugins) is able to run
-different [flavors](flavors) (reusable collection of plugins):
-    * [local flavor](flavors/local) - a minimal collection of plugins:
+different flavors (reusable collection of plugins):
+    * local flavor - a minimal collection of plugins:
       * [statuscheck](health/statuscheck)
       * [servicelabel](servicelabel)
       * [resync orch](datasync/restsync)
       * [log registry](logging)
-    * [RPC flavor](flavors/rpc) - exposes REST API for all plugins, especially for:
+    * RPC flavor - exposes REST API for all plugins, especially for:
       * [statuscheck](health/statuscheck) (RPCs probed from systems such as K8s)
       * [logging](logging/logmanager) (for changing log level at runtime remotely)
     * connector flavors:
