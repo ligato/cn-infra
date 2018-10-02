@@ -24,10 +24,10 @@ import (
 	"github.com/ligato/cn-infra/logging/logrus"
 )
 
-var agentLogger = logrus.NewLogger("infra")
+var agentLogger = logrus.NewLogger("agent")
 
 func init() {
-	if os.Getenv("DEBUG_INFRA") != "" {
+	if os.Getenv("DEBUG_AGENT") != "" {
 		agentLogger.SetLevel(logging.DebugLevel)
 		agentLogger.Debugf("agent debug logger enabled")
 	}
