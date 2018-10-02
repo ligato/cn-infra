@@ -24,12 +24,12 @@ import (
 	"github.com/ligato/cn-infra/logging/logrus"
 )
 
-var agentLogger = logrus.NewLogger("agent")
+var infraLogger = logrus.NewLogger("infra")
 
 func init() {
-	if os.Getenv("DEBUG_AGENT") != "" {
-		agentLogger.SetLevel(logging.DebugLevel)
-		agentLogger.Debugf("agent debug logger enabled")
+	if os.Getenv("DEBUG_INFRA") != "" {
+		infraLogger.SetLevel(logging.DebugLevel)
+		infraLogger.Debugf("infra debug logger enabled")
 	}
 }
 
@@ -44,8 +44,8 @@ func findPlugins(val reflect.Value, uniqueness map[infra.Plugin]struct{}, x ...i
 		for i := 0; i < n; i++ {
 			f = "\t" + f
 		}
-		//agentLogger.Debugf(f, a...)
-		if agentLogger.GetLevel() == logging.DebugLevel {
+		//infraLogger.Debugf(f, a...)
+		if infraLogger.GetLevel() == logging.DebugLevel {
 			fmt.Printf(f+"\n", a...)
 		}
 	}
