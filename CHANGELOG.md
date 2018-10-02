@@ -31,6 +31,9 @@
 - [rest](rpc/rest)
   * New security functionality for REST plugin was added. To learn more about it, see the
   [readme](rpc/rest/README.md), part 'Token-based authorization'.  
+- [logging](logging)
+  * API has two new methods, `SetOutput(<io.Writer>)` to set custom logging output 
+  and `SetFormatter(<formatter>)` to set custom formatter before logged to output.   
   
 ## Other
   * Every proto file is generated with the gogo/proto package.  
