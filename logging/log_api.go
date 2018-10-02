@@ -200,6 +200,11 @@ type ParentLogger struct {
 }
 
 // NewLogger returns logger using name prefixed with prefix defined in parent logger.
+// If Factory is nil, DefaultRegistry is used.
 func (p *ParentLogger) NewLogger(name string) Logger {
-	return p.Factory.NewLogger(fmt.Sprintf("%s/%s", p.Prefix, name))
+	factory := p.Factory
+	if factory == nil {
+		factory = DefaultRegistry
+	}
+	return factory.NewLogger(fmt.Sprintf("%s.%s", p.Prefix, name))
 }
