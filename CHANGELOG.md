@@ -4,10 +4,10 @@
 
 **Trace**
 
-  We have introduced a new plugin which replaces stopwatch called tracer. The core functionality
-  remained the same, the plugin still allows to measure time duration between two parts of the code
+  We have introduced a new component which replaces stopwatch called tracer. The core functionality
+  remained the same, it still allows to measure time duration between two parts of the code
   and store it internally. The motive was that the original implementation was somehow cumbersome,
-  and the name did not reflect the main purpose of the plugin.
+  and the name did not reflect the main purpose.
   New tracer object is created via constructor `NewTracer(<name>, <logger>)`. It has very simple 
   API with method `LogTime(<name>, <start_time>)` which adds entry to the internal database 
   and `Get()`, which returns a proto-modelled list of entries. Database can be purged with `Clear()`.
@@ -23,16 +23,16 @@
   
 ## New Features
 - [measure](logging/measure)
-  * New plugin [tracer](logging/measure/tracer.go) was introduced. It server the similar purpose
+  * New component [tracer](logging/measure/tracer.go) was introduced. It server the similar purpose
   as the stopwatch. More details in the [readme](logging/measure/README.md)
-  * Plugin stopwatch was removed
+  * Stopwatch was removed
 - [statuscheck](health/statuscheck)
   * The liveness probe now shows also a state of all registered plugins (not only the overall state)
 - [rest](rpc/rest)
   * New security functionality for REST plugin was added. To learn more about it, see the
-  [readme](rpc/rest/README.md), part 'Token-based authorization'.  
+  [readme](rpc/rest/README.md#token-based-authorization).  
 - [logging](logging)
-  * API has two new methods, `SetOutput(<io.Writer>)` to set custom logging output 
+  * Logger API has two new methods, `SetOutput(<io.Writer>)` to set custom logging output 
   and `SetFormatter(<formatter>)` to set custom formatter before logged to output.   
   
 ## Other
