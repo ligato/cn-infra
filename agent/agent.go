@@ -35,7 +35,7 @@ var agentLogger = logging.DefaultRegistry.NewLogger("agent")
 // Variables set by the compiler using ldflags
 var (
 	// BuildVersion describes version for the build. It is usually set using `git describe --always --tags --dirty`.
-	BuildVersion = "dev"
+	BuildVersion = "v0.0.0-dev"
 	// BuildDate describes time of the build.
 	BuildDate string
 	// CommitHash describes commit hash for the build.
@@ -128,7 +128,7 @@ func (a *agent) starter() error {
 	agentLogger.WithFields(logging.Fields{
 		"CommitHash": CommitHash,
 		"BuildDate":  BuildDate,
-	}).Infof("Starting agent: %v", BuildVersion)
+	}).Infof("Starting agent version: %v", BuildVersion)
 
 	// If we want to properly handle cleanup when a SIG comes in *during*
 	// agent startup (ie, clean up after its finished) we need to register
@@ -164,7 +164,7 @@ func (a *agent) starter() error {
 	close(started)
 
 	agentLogger.Infof("Agent started with %d plugins (took %v)",
-		len(a.opts.Plugins), time.Since(t))
+		len(a.opts.Plugins), time.Since(t).Round(time.Millisecond))
 
 	a.stopCh = make(chan struct{}) // If we are started, we have a stopCh to signal stopping
 
@@ -218,13 +218,13 @@ func (a *agent) start() error {
 				return err
 			}
 		} else {
-			agentLogger.Debugf("-- AfterInit(): %v (skip)", plugin)
+			agentLogger.Debugf("-- AfterInit(): %v (not used)", plugin)
 		}
 
 		a.tracer.LogTime(fmt.Sprintf("%v.AfterInit", plugin), t)
 	}
 
-	if agentLogger.GetLevel() >= logging.DebugLevel {
+	if printPluginStartDurations && infraLogger.GetLevel() >= logging.DebugLevel {
 		var b strings.Builder
 		b.WriteString("plugin start durations:\n")
 		for _, entry := range a.tracer.Get().GetTracedEntries() {
