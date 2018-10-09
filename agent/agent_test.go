@@ -29,12 +29,10 @@ import (
 )
 
 const (
-	stopUnstartedAgentErrorString = "attempted to stop an agent that wasn't Started"
-	waitUnstartedAgentErrorString = "attempted to wait on an agent that wasn't Started"
-	initFailedErrorString         = "Init failed"
-	afterInitFailedErrorString    = "AfterInit failed"
-	closeFailedErrorString        = "Close failed"
-	defaultPluginName             = "testplugin"
+	initFailedErrorString      = "Init failed"
+	afterInitFailedErrorString = "AfterInit failed"
+	closeFailedErrorString     = "Close failed"
+	defaultPluginName          = "testplugin"
 )
 
 func TestEmptyAgent(t *testing.T) {
@@ -56,7 +54,6 @@ func TestStopBeforeStart(t *testing.T) {
 	agent := agent.NewAgent()
 	err := agent.Stop()
 	Expect(err).ToNot(BeNil())
-	Expect(err.Error()).To(Equal(stopUnstartedAgentErrorString))
 	err = agent.Start()
 	Expect(err).To(BeNil())
 }
@@ -67,7 +64,6 @@ func TestWaitBeforeStart(t *testing.T) {
 	agent := agent.NewAgent()
 	err := agent.Wait()
 	Expect(err).ToNot(BeNil())
-	Expect(err.Error()).To(Equal(waitUnstartedAgentErrorString))
 	err = agent.Start()
 	Expect(err).To(BeNil())
 }
@@ -78,7 +74,6 @@ func TestAfterBeforeStart(t *testing.T) {
 	<-agent.After()
 	err := agent.Error()
 	Expect(err).ToNot(BeNil())
-	Expect(err.Error()).To(Equal(stopUnstartedAgentErrorString))
 }
 
 func TestAgentWithPlugin(t *testing.T) {
@@ -117,10 +112,10 @@ func TestAgentWithPluginInitFailed(t *testing.T) {
 	Expect(agent.Options().Plugins[0].(*TestPlugin).Closed()).To(BeFalse())
 
 	err = agent.Stop()
-	Expect(err.Error()).To(Equal(stopUnstartedAgentErrorString))
+	Expect(err).To(HaveOccurred())
 
 	err = agent.Wait()
-	Expect(err.Error()).To(Equal(waitUnstartedAgentErrorString))
+	Expect(err).To(HaveOccurred())
 }
 
 func TestAgentWithPluginAfterInitFailed(t *testing.T) {
@@ -130,17 +125,16 @@ func TestAgentWithPluginAfterInitFailed(t *testing.T) {
 	Expect(agent.Options().Plugins).ToNot(BeNil())
 
 	err := agent.Start()
-	Expect(err).ToNot(BeNil())
-	Expect(err.Error()).To(Equal(afterInitFailedErrorString))
+	Expect(err).To(HaveOccurred())
 	Expect(agent.Options().Plugins[0].(*TestPlugin).Initialized()).To(BeTrue())
 	Expect(agent.Options().Plugins[0].(*TestPlugin).AfterInitialized()).To(BeTrue())
 	Expect(agent.Options().Plugins[0].(*TestPlugin).Closed()).To(BeFalse())
 
 	err = agent.Stop()
-	Expect(err.Error()).To(Equal(stopUnstartedAgentErrorString))
+	Expect(err).To(HaveOccurred())
 
 	err = agent.Wait()
-	Expect(err.Error()).To(Equal(waitUnstartedAgentErrorString))
+	Expect(err).To(HaveOccurred())
 }
 
 func TestAgentWithPluginCloseFailed(t *testing.T) {
@@ -156,7 +150,7 @@ func TestAgentWithPluginCloseFailed(t *testing.T) {
 	Expect(agent.Options().Plugins[0].(*TestPlugin).Closed()).To(BeFalse())
 
 	err = agent.Stop()
-	Expect(err.Error()).To(Equal(closeFailedErrorString))
+	Expect(err).To(HaveOccurred())
 	Expect(agent.Options().Plugins[0].(*TestPlugin).Closed()).To(BeTrue())
 }
 
