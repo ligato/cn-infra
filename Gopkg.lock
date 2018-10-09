@@ -275,11 +275,7 @@
   revision = "153a7286a8d8aae91e5d045d84128d8de0b4eb4c"
 
 [[projects]]
-<<<<<<< HEAD
-  digest = "1:3f7c586d2fd571c4f2e3d313c0638b33b999055de507d5f11fafe27e5adc30db"
-=======
   digest = "1:9b56c3d59d7899c60a02f4d0e8592fe70b19f3b6b47553849b20fe63a62efe66"
->>>>>>> upstream/master
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
@@ -302,17 +298,12 @@
     "proto",
     "protoc-gen-gogo",
     "protoc-gen-gogo/descriptor",
-<<<<<<< HEAD
-    "sortkeys",
-    "types",
-=======
     "protoc-gen-gogo/generator",
     "protoc-gen-gogo/generator/internal/remap",
     "protoc-gen-gogo/grpc",
     "protoc-gen-gogo/plugin",
     "vanity",
     "vanity/command",
->>>>>>> upstream/master
   ]
   pruneopts = "UT"
   revision = "636bf0302bc95575d69441b25a2603156ffdddf1"
@@ -912,11 +903,7 @@
     "github.com/go-redis/redis",
     "github.com/gocql/gocql",
     "github.com/gogo/protobuf/proto",
-<<<<<<< HEAD
-    "github.com/gogo/protobuf/types",
-=======
     "github.com/gogo/protobuf/protoc-gen-gogo",
->>>>>>> upstream/master
     "github.com/gorilla/mux",
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
     "github.com/hashicorp/consul/api",
