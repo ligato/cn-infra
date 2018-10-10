@@ -43,8 +43,8 @@ type FilesSystemDB interface {
 	GetDataForPathAndKey(path, key string) ([]byte, bool)
 }
 
-// Database client
-type dbClient struct {
+// DbClient is database client
+type DbClient struct {
 	sync.Mutex
 	db map[string]map[string]*dbEntry // Path + Key + Value/Rev
 }
@@ -56,13 +56,14 @@ type dbEntry struct {
 }
 
 // NewDbClient returns new database client
-func NewDbClient() *dbClient {
-	return &dbClient{
+func NewDbClient() *DbClient {
+	return &DbClient{
 		db: make(map[string]map[string]*dbEntry),
 	}
 }
 
-func (c *dbClient) Add(path, key string, data []byte) {
+// Add puts new entry to the database, or updates the old one if given key already exists
+func (c *DbClient) Add(path, key string, data []byte) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -85,7 +86,8 @@ func (c *dbClient) Add(path, key string, data []byte) {
 	c.db[path] = fileData
 }
 
-func (c *dbClient) Delete(path, key string) {
+// Delete removes key in given path.
+func (c *DbClient) Delete(path, key string) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -96,14 +98,16 @@ func (c *dbClient) Delete(path, key string) {
 	delete(fileData, key)
 }
 
-func (c *dbClient) DeleteFile(path string) {
+// DeleteFile removes file entry including all keys within
+func (c *DbClient) DeleteFile(path string) {
 	c.Lock()
 	defer c.Unlock()
 
 	delete(c.db, path)
 }
 
-func (c *dbClient) GetKeysForPrefix(prefix string) []string {
+// GetKeysForPrefix returns all keys which match provided prefix
+func (c *DbClient) GetKeysForPrefix(prefix string) []string {
 	c.Lock()
 	defer c.Unlock()
 
@@ -118,7 +122,8 @@ func (c *dbClient) GetKeysForPrefix(prefix string) []string {
 	return keys
 }
 
-func (c *dbClient) GetValuesForPrefix(prefix string) map[string][]byte {
+// GetValuesForPrefix returns all values which match provided prefix
+func (c *DbClient) GetValuesForPrefix(prefix string) map[string][]byte {
 	c.Lock()
 	defer c.Unlock()
 
@@ -133,7 +138,8 @@ func (c *dbClient) GetValuesForPrefix(prefix string) map[string][]byte {
 	return keyValues
 }
 
-func (c *dbClient) GetDataFromFile(path string) map[string][]byte {
+// GetDataFromFile returns a map of key-value entries from given file
+func (c *DbClient) GetDataFromFile(path string) map[string][]byte {
 	c.Lock()
 	defer c.Unlock()
 
@@ -146,7 +152,8 @@ func (c *dbClient) GetDataFromFile(path string) map[string][]byte {
 	return keyValues
 }
 
-func (c *dbClient) GetDataForKey(key string) ([]byte, bool) {
+// GetDataForKey returns data for given key.
+func (c *DbClient) GetDataForKey(key string) ([]byte, bool) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -159,7 +166,8 @@ func (c *dbClient) GetDataForKey(key string) ([]byte, bool) {
 	return nil, false
 }
 
-func (c *dbClient) GetDataForPathAndKey(path, key string) ([]byte, bool) {
+// GetDataForPathAndKey returns data for given path and key
+func (c *DbClient) GetDataForPathAndKey(path, key string) ([]byte, bool) {
 	c.Lock()
 	defer c.Unlock()
 

@@ -7,6 +7,9 @@ to changes.
 All the configuration is resynced in the beginning (as for standard key-value data store). Configuration files
 then can be added, updated, moved, renamed or removed, plugin makes all the necessary changes.
 
+Important note: filesystem as datastore is read-only from the plugin perspective, changes from within the plugin
+are not allowed.
+
 ## Configuration
 
 All files/directories used as a data store must be defined in configuration file. Location of the file

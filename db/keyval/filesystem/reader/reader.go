@@ -42,12 +42,7 @@ type API interface {
 }
 
 // Reader implements file system API
-type reader struct{}
-
-// NewReader returns new instance of file reader
-func NewReader() *reader {
-	return &reader{}
-}
+type Reader struct{}
 
 // File data represents data structure of files used for configuration
 type File struct {
@@ -55,14 +50,14 @@ type File struct {
 	Data []FileEntry `json:"data"`
 }
 
-// File data entry is single record of key-value, where key is defined as string, and value is modelled as raw message
+// FileEntry is data entry - single record of key-value, where key is defined as string, and value is modelled as raw message
 // (rest of the json file under the "value").
 type FileEntry struct {
 	Key   string          `json:"key"`
 	Value json.RawMessage `json:"value"`
 }
 
-// Compares file with key-value set - new, modified and deleted entries. Result is against the parameter.
+// CompareTo compares file with key-value set - new, modified and deleted entries. Result is against the parameter.
 func (f *File) CompareTo(dataSet map[string][]byte) (changed, removed []FileEntry) {
 	for key, value := range dataSet {
 		var found bool
@@ -95,15 +90,16 @@ func (f *File) CompareTo(dataSet map[string][]byte) (changed, removed []FileEntr
 	return
 }
 
-func (r *reader) PathExists(path string) bool {
+// PathExists returns true if provided path exists, false otherwise
+func (r *Reader) PathExists(path string) bool {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return false
 	}
 	return true
 }
 
-// Validates file before reading, whether it is not a temporary file
-func (r *reader) IsValid(ev fsnotify.Event) (bool, error) {
+// IsValid validates file before reading, whether it is not a temporary file
+func (r *Reader) IsValid(ev fsnotify.Event) (bool, error) {
 	// Silently skip empty event
 	if ev.Name == "" {
 		return false, nil
@@ -138,8 +134,8 @@ func (r *reader) IsValid(ev fsnotify.Event) (bool, error) {
 	return true, nil
 }
 
-// Read file from filesystem and un-marshall to required proto structure
-func (r *reader) ProcessFile(path string) (File, error) {
+// ProcessFile reads file from filesystem and un-marshalls it to the required proto structure
+func (r *Reader) ProcessFile(path string) (File, error) {
 	dataSet := File{}
 	fileData, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -155,8 +151,8 @@ func (r *reader) ProcessFile(path string) (File, error) {
 	return dataSet, nil
 }
 
-// Read all file names from directory and process them the ordinary way
-func (r *reader) ProcessFilesInDir(path string) ([]File, error) {
+// ProcessFilesInDir reads all file names from directory and processes them the ordinary way
+func (r *Reader) ProcessFilesInDir(path string) ([]File, error) {
 	fileInfoList, err := ioutil.ReadDir(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read files in directory %s", fileInfoList)
@@ -173,8 +169,8 @@ func (r *reader) ProcessFilesInDir(path string) ([]File, error) {
 	return files, nil
 }
 
-// Check if provided path is file, or directory
-func (r *reader) IsDirectory(path string) (bool, error) {
+// IsDirectory checks if provided path is a file or a directory
+func (r *Reader) IsDirectory(path string) (bool, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return false, fmt.Errorf("failed to open file/directory %s: %v", path, err)
@@ -187,7 +183,7 @@ func (r *reader) IsDirectory(path string) (bool, error) {
 	return fileInfo.IsDir(), nil
 }
 
-func (r *reader) isNumeric(s string) bool {
+func (r *Reader) isNumeric(s string) bool {
 	_, err := strconv.ParseFloat(s, 64)
 	return err == nil
 }

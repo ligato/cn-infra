@@ -77,11 +77,13 @@ func (mock *FileSystemReaderMock) getReturnValues(name string) (response []inter
 	return
 }
 
+// PathExists mocks original method
 func (mock *FileSystemReaderMock) PathExists(path string) bool {
 	items := mock.getReturnValues("PathExists")
 	return items[0].(bool)
 }
 
+// IsDirectory mocks original method
 func (mock *FileSystemReaderMock) IsDirectory(path string) (bool, error) {
 	items := mock.getReturnValues("IsDirectory")
 	if len(items) == 1 {
@@ -97,6 +99,7 @@ func (mock *FileSystemReaderMock) IsDirectory(path string) (bool, error) {
 	return false, nil
 }
 
+// ProcessFile mocks original method
 func (mock *FileSystemReaderMock) ProcessFile(path string) (File, error) {
 	items := mock.getReturnValues("ProcessFile")
 	if len(items) == 1 {
@@ -112,6 +115,7 @@ func (mock *FileSystemReaderMock) ProcessFile(path string) (File, error) {
 	return File{}, nil
 }
 
+// ProcessFilesInDir mocks original method
 func (mock *FileSystemReaderMock) ProcessFilesInDir(path string) ([]File, error) {
 	items := mock.getReturnValues("ProcessFilesInDir")
 	if len(items) == 1 {
@@ -127,6 +131,7 @@ func (mock *FileSystemReaderMock) ProcessFilesInDir(path string) ([]File, error)
 	return []File{}, nil
 }
 
+// IsValid mocks original method
 func (mock *FileSystemReaderMock) IsValid(ev fsnotify.Event) (bool, error) {
 	items := mock.getReturnValues("IsValid")
 	if len(items) == 1 {

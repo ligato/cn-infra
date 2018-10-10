@@ -140,6 +140,7 @@ type BrokerWatcher struct {
 	prefix string
 }
 
+// NewBroker provides BytesBroker object with client and given prefix
 func (c *Client) NewBroker(prefix string) keyval.BytesBroker {
 	return &BrokerWatcher{
 		Client: c,
@@ -147,6 +148,7 @@ func (c *Client) NewBroker(prefix string) keyval.BytesBroker {
 	}
 }
 
+// NewWatcher provides BytesWatcher object with client and given prefix
 func (c *Client) NewWatcher(prefix string) keyval.BytesWatcher {
 	return &BrokerWatcher{
 		Client: c,
@@ -154,23 +156,27 @@ func (c *Client) NewWatcher(prefix string) keyval.BytesWatcher {
 	}
 }
 
+// Put is not supported, filesystem plugin does not allow to do changes to the configuration
 func (c *Client) Put(key string, data []byte, opts ...datasync.PutOption) error {
 	c.log.Warnf("adding configuration to filesystem is currently not allowed")
 	return nil
 }
 
+// NewTxn is not supported, filesystem plugin does not allow to do changes to the configuration
 func (c *Client) NewTxn() keyval.BytesTxn {
 	c.log.Warnf("creating transaction chains in filesystem is currently not allowed")
 	return nil
 }
 
+// GetValue returns a value for given key
 func (c *Client) GetValue(key string) (data []byte, found bool, revision int64, err error) {
-	data, found = c.db.GetDataForKey(key)
+	data, found = c.db.GetDataForKey(c.agentPrefix + key)
 	return
 }
 
+// ListValues returns a list of values for given prefix
 func (c *Client) ListValues(prefix string) (keyval.BytesKeyValIterator, error) {
-	keyValues := c.db.GetValuesForPrefix(prefix)
+	keyValues := c.db.GetValuesForPrefix(c.agentPrefix + prefix)
 	data := make([]*reader.FileEntry, 0)
 	for key, value := range keyValues {
 		data = append(data, &reader.FileEntry{
@@ -181,8 +187,9 @@ func (c *Client) ListValues(prefix string) (keyval.BytesKeyValIterator, error) {
 	return &bytesKeyValIterator{len: len(data), data: data}, nil
 }
 
+// ListKeys returns a set of keys for given prefix
 func (c *Client) ListKeys(prefix string) (keyval.BytesKeyIterator, error) {
-	keys := c.db.GetKeysForPrefix(prefix)
+	keys := c.db.GetKeysForPrefix(c.agentPrefix + prefix)
 	return &bytesKeyIterator{len: len(keys), keys: keys, prefix: prefix}, nil
 }
 
@@ -192,7 +199,7 @@ func (c *Client) Delete(key string, opts ...datasync.DelOption) (existed bool, e
 	return false, nil
 }
 
-// Starts single watcher for every key prefix. Every watcher listens on its own data channel.
+// Watch starts single watcher for every key prefix. Every watcher listens on its own data channel.
 func (c *Client) Watch(resp func(response keyval.BytesWatchResp), closeChan chan string, keys ...string) error {
 	c.Lock()
 	defer c.Unlock()
@@ -235,8 +242,6 @@ func (c *Client) watch(resp func(response keyval.BytesWatchResp), dataChan chan 
 			return nil
 		}
 	}
-
-	return nil
 }
 
 // Processes events from file system. Every event is validated (all temporary or system files are omitted). Data

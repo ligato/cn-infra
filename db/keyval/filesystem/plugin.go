@@ -37,11 +37,13 @@ type Plugin struct {
 	protoWrapper *kvproto.ProtoWrapper
 }
 
+// Deps are filesystem plugin dependencies
 type Deps struct {
 	infra.PluginDeps
 	sv servicelabel.ReaderAPI
 }
 
+// Config is filesystem configuration file structure
 type Config struct {
 	Paths []string `json:"paths"`
 }
@@ -55,7 +57,7 @@ func (p *Plugin) Init() error {
 		return err
 	}
 
-	if p.client, err = NewClient(p.config.Paths, p.sv.GetAgentPrefix(), reader.NewReader(), p.Log); err != nil {
+	if p.client, err = NewClient(p.config.Paths, p.sv.GetAgentPrefix(), &reader.Reader{}, p.Log); err != nil {
 		return err
 	}
 
@@ -71,6 +73,7 @@ func (p *Plugin) AfterInit() error {
 	return nil
 }
 
+// Close client
 func (p *Plugin) Close() error {
 	if p.client != nil {
 		return p.client.Close()
@@ -78,24 +81,29 @@ func (p *Plugin) Close() error {
 	return nil
 }
 
+// Disabled returns flag whether plugin is disabled
 func (p *Plugin) Disabled() bool {
 	return p.disabled
 }
 
+// OnConnect executes datasync callback
 func (p *Plugin) OnConnect(callback func() error) {
 	if err := callback(); err != nil {
 		p.Log.Error(err)
 	}
 }
 
+// String returns string-representation of plugin name
 func (p *Plugin) String() string {
 	return p.PluginName.String()
 }
 
+// NewBroker returns new broker created by proto wrapper
 func (p *Plugin) NewBroker(keyPrefix string) keyval.ProtoBroker {
 	return p.protoWrapper.NewBroker(keyPrefix)
 }
 
+// NewWatcher returns new watcher created by proto wrapper
 func (p *Plugin) NewWatcher(keyPrefix string) keyval.ProtoWatcher {
 	return p.protoWrapper.NewWatcher(keyPrefix)
 }
