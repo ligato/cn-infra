@@ -180,7 +180,7 @@ func (c *Client) ListValues(prefix string) (keyval.BytesKeyValIterator, error) {
 	data := make([]*reader.FileEntry, 0)
 	for key, value := range keyValues {
 		data = append(data, &reader.FileEntry{
-			Key:   key,
+			Key:   c.stripAgentPrefix(key),
 			Value: value,
 		})
 	}
@@ -190,7 +190,11 @@ func (c *Client) ListValues(prefix string) (keyval.BytesKeyValIterator, error) {
 // ListKeys returns a set of keys for given prefix
 func (c *Client) ListKeys(prefix string) (keyval.BytesKeyIterator, error) {
 	keys := c.db.GetKeysForPrefix(c.agentPrefix + prefix)
-	return &bytesKeyIterator{len: len(keys), keys: keys, prefix: prefix}, nil
+	var keysWithoutPrefix []string
+	for _, key := range keys {
+		keysWithoutPrefix = append(keysWithoutPrefix, c.stripAgentPrefix(key))
+	}
+	return &bytesKeyIterator{len: len(keysWithoutPrefix), keys: keysWithoutPrefix, prefix: prefix}, nil
 }
 
 // Delete is not allowed for filesystem, configuration file is read-only
@@ -231,10 +235,10 @@ func (c *Client) watch(resp func(response keyval.BytesWatchResp), dataChan chan 
 			if !ok {
 				return nil
 			}
-			keyedData.key = c.stripAgentPrefix(keyedData.key)
-			if keyedData.op == datasync.Delete {
+			keyedData.Key = c.stripAgentPrefix(keyedData.Key)
+			if keyedData.Op == datasync.Delete {
 				resp(&keyedData.watchResp)
-			} else if bytes.Compare(keyedData.prevValue, keyedData.value) != 0 {
+			} else if bytes.Compare(keyedData.PrevValue, keyedData.Value) != 0 {
 				resp(&keyedData.watchResp)
 			}
 		case <-closeChan:
@@ -273,7 +277,7 @@ func (c *Client) eventWatcher() {
 						// Value from DB does not need to be checked
 						keyed := keyedData{
 							path:      event.Name,
-							watchResp: watchResp{op: datasync.Delete, key: key, value: nil, prevValue: data},
+							watchResp: watchResp{Op: datasync.Delete, Key: key, Value: nil, PrevValue: data},
 						}
 						c.sendToChannel(keyed)
 						c.db.DeleteFile(event.Name)
@@ -296,10 +300,10 @@ func (c *Client) eventWatcher() {
 					if ok := c.checkAgentPrefix(data.Key); ok {
 						keyed := keyedData{
 							path:      dataSet.Path,
-							watchResp: watchResp{op: datasync.Delete, key: data.Key, value: nil, prevValue: data.Value},
+							watchResp: watchResp{Op: datasync.Delete, Key: data.Key, Value: nil, PrevValue: data.Value},
 						}
 						c.sendToChannel(keyed)
-						c.db.Delete(event.Name, keyed.key)
+						c.db.Delete(event.Name, keyed.Key)
 					}
 				}
 				for _, data := range changed {
@@ -308,10 +312,10 @@ func (c *Client) eventWatcher() {
 						prevVal, _ := c.db.GetDataForPathAndKey(event.Name, data.Key)
 						keyed := keyedData{
 							path:      dataSet.Path,
-							watchResp: watchResp{op: datasync.Put, key: data.Key, value: data.Value, prevValue: prevVal},
+							watchResp: watchResp{Op: datasync.Put, Key: data.Key, Value: data.Value, PrevValue: prevVal},
 						}
 						c.sendToChannel(keyed)
-						c.db.Add(event.Name, keyed.key, keyed.value)
+						c.db.Add(event.Name, keyed.Key, keyed.Value)
 					}
 				}
 			case err := <-c.watcher.Errors:
@@ -329,7 +333,7 @@ func (c *Client) sendToChannel(keyed keyedData) {
 	defer c.Unlock()
 
 	for prefix, channel := range c.watchers {
-		prefixedKey := keyed.key
+		prefixedKey := keyed.Key
 		if strings.HasPrefix(c.stripAgentPrefix(prefixedKey), prefix) {
 			channel <- keyed
 			return

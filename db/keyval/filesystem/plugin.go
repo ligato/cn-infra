@@ -68,7 +68,9 @@ func (p *Plugin) Init() error {
 
 // AfterInit starts file system event watcher
 func (p *Plugin) AfterInit() error {
-	go p.client.eventWatcher()
+	if !p.disabled {
+		go p.client.eventWatcher()
+	}
 
 	return nil
 }

@@ -6,28 +6,28 @@ import (
 
 // Implementation of BytesWatchResp (generic response)
 type watchResp struct {
-	op               datasync.Op
-	key              string
-	value, prevValue []byte
-	rev              int64
+	Op               datasync.Op
+	Key              string
+	Value, PrevValue []byte
+	Rev              int64
 }
 
 func (wr *watchResp) GetValue() []byte {
-	return wr.value
+	return wr.Value
 }
 
 func (wr *watchResp) GetPrevValue() []byte {
-	return wr.prevValue
+	return wr.PrevValue
 }
 
 func (wr *watchResp) GetKey() string {
-	return wr.key
+	return wr.Key
 }
 
 func (wr *watchResp) GetChangeType() datasync.Op {
-	return wr.op
+	return wr.Op
 }
 
 func (wr *watchResp) GetRevision() (rev int64) {
-	return wr.rev
+	return wr.Rev
 }
