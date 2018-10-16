@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package filesystem_test
+package filedb_test
 
 import (
 	"github.com/ligato/cn-infra/datasync"
@@ -21,8 +21,8 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/db/keyval/filesystem"
-	"github.com/ligato/cn-infra/db/keyval/filesystem/reader"
+	"github.com/ligato/cn-infra/db/keyval/filedb"
+	"github.com/ligato/cn-infra/db/keyval/filedb/reader"
 	"github.com/ligato/cn-infra/logging/logrus"
 	. "github.com/onsi/gomega"
 )
@@ -33,7 +33,7 @@ func TestNewClient(t *testing.T) {
 	RegisterTestingT(t)
 
 	// Mocks
-	mock := reader.NewFileSystemReaderMock()
+	mock := reader.NewFileDBReaderMock()
 	// Read paths
 	mock.When("IsDirectory").ThenReturn(false)
 	mock.When("IsDirectory").ThenReturn(false)
@@ -96,7 +96,7 @@ func TestNewClient(t *testing.T) {
 	}
 	prefix := "/test-prefix/"
 
-	client, err := filesystem.NewClient(paths, prefix, mock, log)
+	client, err := filedb.NewClient(paths, prefix, mock, log)
 	defer client.Close()
 
 	Expect(err).To(BeNil())
@@ -125,7 +125,7 @@ func TestNewClient(t *testing.T) {
 func TestWatcher(t *testing.T) {
 	RegisterTestingT(t)
 
-	mock := reader.NewFileSystemReaderMock()
+	mock := reader.NewFileDBReaderMock()
 
 	// Client initialization
 	mock.When("IsDirectory").ThenReturn(false)
@@ -185,7 +185,7 @@ func TestWatcher(t *testing.T) {
 	// Init custom client
 	paths := []string{"/path/to/file1.json"}
 	prefix := "/test-prefix"
-	client, err := filesystem.NewClient(paths, prefix, mock, log)
+	client, err := filedb.NewClient(paths, prefix, mock, log)
 	defer client.Close()
 	Expect(err).To(BeNil())
 	Expect(client).ToNot(BeNil())
@@ -232,7 +232,7 @@ func TestWatcher(t *testing.T) {
 	client.Watch(f, closeChan, "/vpp/config/interfaces", "/vpp/config/bds")
 
 	// Manually run event watcher in goroutine and give some time to start
-	filesystem.RunEventWatcher(client)
+	filedb.RunEventWatcher(client)
 	time.Sleep(100 * time.Millisecond)
 
 	// Test first event (create)

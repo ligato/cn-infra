@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package filesystem
+package filedb
 
 import "github.com/ligato/cn-infra/servicelabel"
 
@@ -23,7 +23,7 @@ var DefaultPlugin = *NewPlugin()
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
-	p.PluginName = "filesystem"
+	p.PluginName = "filedb"
 	p.sv = &servicelabel.DefaultPlugin
 
 	for _, o := range opts {

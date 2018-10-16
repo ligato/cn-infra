@@ -12,11 +12,11 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package filesystem
+package filedb
 
 import (
 	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/db/keyval/filesystem/reader"
+	"github.com/ligato/cn-infra/db/keyval/filedb/reader"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/servicelabel"
@@ -26,7 +26,7 @@ import (
 type Plugin struct {
 	Deps
 
-	// Filesystem client
+	// FileDB client
 	client *Client
 
 	// Plugin config
@@ -37,22 +37,22 @@ type Plugin struct {
 	protoWrapper *kvproto.ProtoWrapper
 }
 
-// Deps are filesystem plugin dependencies
+// Deps are fileDB plugin dependencies
 type Deps struct {
 	infra.PluginDeps
 	sv servicelabel.ReaderAPI
 }
 
-// Config is filesystem configuration file structure
+// Config is fileDB configuration file structure
 type Config struct {
 	Paths []string `json:"paths"`
 }
 
 // Init reads file config and creates new client to communicate with file system
 func (p *Plugin) Init() error {
-	// Read filesystem configuration file
+	// Read fileDB configuration file
 	var err error
-	p.config, err = p.getFilesystemConfig()
+	p.config, err = p.getFileDBConfig()
 	if err != nil || p.disabled {
 		return err
 	}
@@ -110,15 +110,15 @@ func (p *Plugin) NewWatcher(keyPrefix string) keyval.ProtoWatcher {
 	return p.protoWrapper.NewWatcher(keyPrefix)
 }
 
-func (p *Plugin) getFilesystemConfig() (*Config, error) {
-	var filesystemCfg Config
-	found, err := p.Cfg.LoadValue(&filesystemCfg)
+func (p *Plugin) getFileDBConfig() (*Config, error) {
+	var fileDbCfg Config
+	found, err := p.Cfg.LoadValue(&fileDbCfg)
 	if err != nil {
 		return nil, err
 	}
 	if !found {
-		p.Log.Warnf("Filesystem config not found, skip loading this plugin")
+		p.Log.Warnf("FileDB config not found, skip loading this plugin")
 		p.disabled = true
 	}
-	return &filesystemCfg, nil
+	return &fileDbCfg, nil
 }

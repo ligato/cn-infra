@@ -1,10 +1,10 @@
-package filesystem
+package filedb
 
 import (
 	"strings"
 
 	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/db/keyval/filesystem/reader"
+	"github.com/ligato/cn-infra/db/keyval/filedb/reader"
 )
 
 // File system DB BytesKeyValIterator implementation

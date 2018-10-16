@@ -17,7 +17,7 @@ package reader_test
 import (
 	"testing"
 
-	"github.com/ligato/cn-infra/db/keyval/filesystem/reader"
+	"github.com/ligato/cn-infra/db/keyval/filedb/reader"
 
 	. "github.com/onsi/gomega"
 )

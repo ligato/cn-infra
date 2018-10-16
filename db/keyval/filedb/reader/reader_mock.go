@@ -18,16 +18,16 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-// FileSystemReaderMock allows to mock filesystem reader
-type FileSystemReaderMock struct {
+// FileDBReaderMock allows to mock filesystem reader
+type FileDBReaderMock struct {
 	responses []*WhenResp
 	respCurr  int
 	respMax   int
 }
 
-// NewFileSystemReaderMock creates new instance of the mock and initializes response list
-func NewFileSystemReaderMock() *FileSystemReaderMock {
-	return &FileSystemReaderMock{
+// NewFileDBReaderMock creates new instance of the mock and initializes response list
+func NewFileDBReaderMock() *FileDBReaderMock {
+	return &FileDBReaderMock{
 		responses: make([]*WhenResp, 0),
 	}
 }
@@ -40,7 +40,7 @@ type WhenResp struct {
 
 // When defines name of the related method. It creates a new instance of WhenResp with provided method name and
 // stores it to the mock.
-func (mock *FileSystemReaderMock) When(methodName string) *WhenResp {
+func (mock *FileDBReaderMock) When(methodName string) *WhenResp {
 	resp := &WhenResp{
 		methodName: methodName,
 	}
@@ -65,7 +65,7 @@ func (when *WhenResp) ThenReturn(item ...interface{}) {
 }
 
 // Auxiliary method returns next return value for provided method as generic type
-func (mock *FileSystemReaderMock) getReturnValues(name string) (response []interface{}) {
+func (mock *FileDBReaderMock) getReturnValues(name string) (response []interface{}) {
 	for i, resp := range mock.responses {
 		if resp.methodName == name {
 			// Remove used response but retain order
@@ -78,13 +78,13 @@ func (mock *FileSystemReaderMock) getReturnValues(name string) (response []inter
 }
 
 // PathExists mocks original method
-func (mock *FileSystemReaderMock) PathExists(path string) bool {
+func (mock *FileDBReaderMock) PathExists(path string) bool {
 	items := mock.getReturnValues("PathExists")
 	return items[0].(bool)
 }
 
 // IsDirectory mocks original method
-func (mock *FileSystemReaderMock) IsDirectory(path string) (bool, error) {
+func (mock *FileDBReaderMock) IsDirectory(path string) (bool, error) {
 	items := mock.getReturnValues("IsDirectory")
 	if len(items) == 1 {
 		switch typed := items[0].(type) {
@@ -100,7 +100,7 @@ func (mock *FileSystemReaderMock) IsDirectory(path string) (bool, error) {
 }
 
 // ProcessFile mocks original method
-func (mock *FileSystemReaderMock) ProcessFile(path string) (File, error) {
+func (mock *FileDBReaderMock) ProcessFile(path string) (File, error) {
 	items := mock.getReturnValues("ProcessFile")
 	if len(items) == 1 {
 		switch typed := items[0].(type) {
@@ -116,7 +116,7 @@ func (mock *FileSystemReaderMock) ProcessFile(path string) (File, error) {
 }
 
 // ProcessFilesInDir mocks original method
-func (mock *FileSystemReaderMock) ProcessFilesInDir(path string) ([]File, error) {
+func (mock *FileDBReaderMock) ProcessFilesInDir(path string) ([]File, error) {
 	items := mock.getReturnValues("ProcessFilesInDir")
 	if len(items) == 1 {
 		switch typed := items[0].(type) {
@@ -132,7 +132,7 @@ func (mock *FileSystemReaderMock) ProcessFilesInDir(path string) ([]File, error)
 }
 
 // IsValid mocks original method
-func (mock *FileSystemReaderMock) IsValid(ev fsnotify.Event) (bool, error) {
+func (mock *FileDBReaderMock) IsValid(ev fsnotify.Event) (bool, error) {
 	items := mock.getReturnValues("IsValid")
 	if len(items) == 1 {
 		switch typed := items[0].(type) {

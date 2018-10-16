@@ -12,12 +12,12 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package filesystem_test
+package filedb_test
 
 import (
 	"testing"
 
-	"github.com/ligato/cn-infra/db/keyval/filesystem"
+	"github.com/ligato/cn-infra/db/keyval/filedb"
 	. "github.com/onsi/gomega"
 )
 
@@ -39,7 +39,7 @@ func TestAddDelEntry(t *testing.T) {
 	RegisterTestingT(t)
 
 	// Test Add
-	db := filesystem.NewDbClient()
+	db := filedb.NewDbClient()
 	db.Add(file1, ifKey1, []byte(ifKey1))
 	db.Add(file1, ifKey2, []byte(ifKey2))
 	db.Add(file2, bdKey1, []byte(bdKey1))
@@ -68,7 +68,7 @@ func TestAddDelEntry(t *testing.T) {
 func TestModifyEntry(t *testing.T) {
 	RegisterTestingT(t)
 
-	db := filesystem.NewDbClient()
+	db := filedb.NewDbClient()
 	db.Add(file1, bdKey1, []byte(bdKey1))
 
 	dataMap := db.GetDataFromFile(file1)
@@ -94,7 +94,7 @@ func TestModifyEntry(t *testing.T) {
 func TestDeleteNonExisting(t *testing.T) {
 	RegisterTestingT(t)
 
-	db := filesystem.NewDbClient()
+	db := filedb.NewDbClient()
 	db.Add(file1, ifKey1, []byte(ifKey1))
 	db.Delete(file1, ifKey2)
 
@@ -116,7 +116,7 @@ func TestDeleteFile(t *testing.T) {
 	RegisterTestingT(t)
 
 	// Test Add
-	db := filesystem.NewDbClient()
+	db := filedb.NewDbClient()
 	db.Add(file1, ifKey1, []byte(ifKey1))
 	db.Add(file1, ifKey2, []byte(ifKey2))
 	db.Add(file3, fibKey1, []byte(fibKey1))
@@ -150,7 +150,7 @@ func TestDeleteFile(t *testing.T) {
 func TestGetKeysFromPrefix(t *testing.T) {
 	RegisterTestingT(t)
 
-	db := filesystem.NewDbClient()
+	db := filedb.NewDbClient()
 	db.Add(file1, ifKey1, []byte(ifKey1))
 	db.Add(file1, ifKey2, []byte(ifKey2))
 	db.Add(file1, fibKey1, []byte(fibKey1))
@@ -170,7 +170,7 @@ func TestGetKeysFromPrefix(t *testing.T) {
 func TestGetValuesFromPrefix(t *testing.T) {
 	RegisterTestingT(t)
 
-	db := filesystem.NewDbClient()
+	db := filedb.NewDbClient()
 	db.Add(file1, ifKey1, []byte(ifKey1))
 	db.Add(file1, ifKey2, []byte(ifKey2))
 	db.Add(file1, fibKey1, []byte(fibKey1))
@@ -190,7 +190,7 @@ func TestGetValuesFromPrefix(t *testing.T) {
 func TestGetDataForKey(t *testing.T) {
 	RegisterTestingT(t)
 
-	db := filesystem.NewDbClient()
+	db := filedb.NewDbClient()
 	db.Add(file1, ifKey1, []byte(ifKey1))
 	db.Add(file1, bdKey1, []byte(bdKey1))
 	db.Add(file1, fibKey1, []byte(fibKey1))
@@ -221,7 +221,7 @@ func TestGetDataForKey(t *testing.T) {
 func TestGetDataForPathAndKey(t *testing.T) {
 	RegisterTestingT(t)
 
-	db := filesystem.NewDbClient()
+	db := filedb.NewDbClient()
 	db.Add(file1, ifKey1, []byte(ifKey1))
 	db.Add(file2, bdKey1, []byte(bdKey1))
 

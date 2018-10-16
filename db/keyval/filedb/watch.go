@@ -1,4 +1,4 @@
-package filesystem
+package filedb
 
 import (
 	"github.com/ligato/cn-infra/datasync"

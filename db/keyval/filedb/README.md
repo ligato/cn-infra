@@ -1,19 +1,19 @@
-# Filesystem configuration reader plugin
+# FileDB - file system configuration reader plugin
 
-The filesystem plugin allows to use the file system of a operating system as a key-value data store. The filesystem
+The fileDB plugin allows to use the file system of a operating system as a key-value data store. The filesystem
 plugin watches for pre-defined files or directories, reads a configuration and sends response events according
 to changes.
 
 All the configuration is resynced in the beginning (as for standard key-value data store). Configuration files
 then can be added, updated, moved, renamed or removed, plugin makes all the necessary changes.
 
-Important note: filesystem as datastore is read-only from the plugin perspective, changes from within the plugin
+Important note: fileDB as datastore is read-only from the plugin perspective, changes from within the plugin
 are not allowed.
 
 ## Configuration
 
 All files/directories used as a data store must be defined in configuration file. Location of the file
-can be defined either by the command line flag `filesystem-config` or set via the `FILESYSTEM_CONFIG`
+can be defined either by the command line flag `filedb-config` or set via the `FILEDB_CONFIG`
 environment variable.
 
 ## Data structure

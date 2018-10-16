@@ -12,11 +12,11 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package filesystem
+package filedb
 
 // Export for testing
 
-// RunEventWatcher allows to run event watcher without filesystem plugin
+// RunEventWatcher allows to run event watcher without fileDB plugin
 func RunEventWatcher(client *Client) {
 	go client.eventWatcher()
 }

@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package filesystem
+package filedb
 
 import (
 	"bytes"
@@ -20,7 +20,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ligato/cn-infra/db/keyval/filesystem/reader"
+	"github.com/ligato/cn-infra/db/keyval/filedb/reader"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/ligato/cn-infra/datasync"
@@ -38,8 +38,10 @@ type Client struct {
 	paths []string
 
 	// Internal database mirrors changes in file system. Since the configuration can be only read, it is up to client
-	// to handle difference between configuration revisions. Evert database entry consists from three values; path
-	// of a file where the configuration is written, data key and data value.
+	// to handle difference between configuration revisions. Every database entry consists from three values:
+	//  - path (where the configuration is written)
+	//  - data key
+	//  - data value
 	// Note: database holds only configuration intended for agent with defined prefix
 	db FilesSystemDB
 
@@ -75,7 +77,9 @@ func NewClient(paths []string, prefix string, rd reader.API, log logging.Logger)
 	// Do the initial read and store everything to internal database
 	for _, path := range paths {
 		// Register to watcher
-		watcher.Add(path)
+		if err := watcher.Add(path); err != nil {
+			return nil, err
+		}
 
 		isDir, err := c.r.IsDirectory(path)
 		if err != nil {
@@ -118,12 +122,12 @@ func (c *Client) GetPrefix() string {
 	return c.agentPrefix
 }
 
-// GetDB returns filesystem database
+// GetDB returns fileDB database
 func (c *Client) GetDB() FilesSystemDB {
 	return c.db
 }
 
-// GetWatcher returns filesystem watcher
+// GetWatcher returns fileDB watcher
 func (c *Client) GetWatcher() *fsnotify.Watcher {
 	return c.watcher
 }
@@ -156,15 +160,15 @@ func (c *Client) NewWatcher(prefix string) keyval.BytesWatcher {
 	}
 }
 
-// Put is not supported, filesystem plugin does not allow to do changes to the configuration
+// Put is not supported, fileDB plugin does not allow to do changes to the configuration
 func (c *Client) Put(key string, data []byte, opts ...datasync.PutOption) error {
-	c.log.Warnf("adding configuration to filesystem is currently not allowed")
+	c.log.Warnf("adding configuration to fileDB is currently not allowed")
 	return nil
 }
 
 // NewTxn is not supported, filesystem plugin does not allow to do changes to the configuration
 func (c *Client) NewTxn() keyval.BytesTxn {
-	c.log.Warnf("creating transaction chains in filesystem is currently not allowed")
+	c.log.Warnf("creating transaction chains in fileDB is currently not allowed")
 	return nil
 }
 
@@ -177,7 +181,7 @@ func (c *Client) GetValue(key string) (data []byte, found bool, revision int64, 
 // ListValues returns a list of values for given prefix
 func (c *Client) ListValues(prefix string) (keyval.BytesKeyValIterator, error) {
 	keyValues := c.db.GetValuesForPrefix(c.agentPrefix + prefix)
-	data := make([]*reader.FileEntry, 0)
+	data := make([]*reader.FileEntry, len(keyValues))
 	for key, value := range keyValues {
 		data = append(data, &reader.FileEntry{
 			Key:   c.stripAgentPrefix(key),
@@ -197,9 +201,9 @@ func (c *Client) ListKeys(prefix string) (keyval.BytesKeyIterator, error) {
 	return &bytesKeyIterator{len: len(keysWithoutPrefix), keys: keysWithoutPrefix, prefix: prefix}, nil
 }
 
-// Delete is not allowed for filesystem, configuration file is read-only
+// Delete is not allowed for fileDB, configuration file is read-only
 func (c *Client) Delete(key string, opts ...datasync.DelOption) (existed bool, err error) {
-	c.log.Warnf("deleting configuration from filesystem is currently not allowed")
+	c.log.Warnf("deleting configuration from fileDB is currently not allowed")
 	return false, nil
 }
 
@@ -228,12 +232,12 @@ func (c *Client) Close() error {
 
 // Awaits changes from data channel, prepares responses and sends them to the response function. Finally removes
 // agent prefix from the key
-func (c *Client) watch(resp func(response keyval.BytesWatchResp), dataChan chan keyedData, closeChan chan string, key string) error {
+func (c *Client) watch(resp func(response keyval.BytesWatchResp), dataChan chan keyedData, closeChan chan string, key string) {
 	for {
 		select {
 		case keyedData, ok := <-dataChan:
 			if !ok {
-				return nil
+				return
 			}
 			keyedData.Key = c.stripAgentPrefix(keyedData.Key)
 			if keyedData.Op == datasync.Delete {
@@ -243,7 +247,7 @@ func (c *Client) watch(resp func(response keyval.BytesWatchResp), dataChan chan 
 			}
 		case <-closeChan:
 			// TODO it seems this channel does not work
-			return nil
+			return
 		}
 	}
 }
@@ -256,7 +260,7 @@ func (c *Client) eventWatcher() {
 			select {
 			case event, ok := <-c.watcher.Events:
 				if !ok {
-					c.log.Debugf("filesystem watcher closed")
+					c.log.Debugf("fileDB watcher closed")
 					for _, channel := range c.watchers {
 						close(channel)
 					}
@@ -320,7 +324,7 @@ func (c *Client) eventWatcher() {
 				}
 			case err := <-c.watcher.Errors:
 				if err != nil {
-					c.log.Errorf("error watching filesystem events: %v", err)
+					c.log.Errorf("error watching fileDB events: %v", err)
 				}
 			}
 		}
