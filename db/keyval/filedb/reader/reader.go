@@ -15,82 +15,50 @@
 package reader
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
-	"regexp"
-	"strconv"
 	"strings"
 
+	"github.com/ghodss/yaml"
+
 	"github.com/fsnotify/fsnotify"
+	"github.com/ligato/cn-infra/logging/logrus"
 )
 
-// API of file system reader
-type API interface {
-	// PathExists returns true if provided file exists, false otherwise
-	PathExists(path string) bool
-	// IsDirectory returns true if path is directory, false if it is a file
-	IsDirectory(path string) (bool, error)
-	// ProcessFile returns File type object. Provided path must be a file
-	ProcessFile(path string) (File, error)
-	// ProcessFilesInDir returns list of File type objects. Provided path must be a directory
-	ProcessFilesInDir(path string) ([]File, error)
-	// IsValid validates interface
-	IsValid(ev fsnotify.Event) (bool, error)
+const (
+	// Reader name
+	jsonYamlReader = "json-yaml-reader"
+	// Supported extensions, other are ignored
+	jsonExt = ".json"
+	yamlExt = ".yaml"
+)
+
+// Reader is basic implementation of reader API, currently supporting JSON and YAML file types
+type Reader struct {
+	// Filesystem notification watcher
+	watcher *fsnotify.Watcher
 }
 
-// Reader implements file system API
-type Reader struct{}
-
-// File data represents data structure of files used for configuration
-type File struct {
-	Path string
-	Data []FileEntry `json:"data"`
+// Represents data structure of json/yaml files used for configuration
+type dataFile struct {
+	Data []dataFileEntry `json:"data"`
 }
 
-// FileEntry is data entry - single record of key-value, where key is defined as string, and value is modelled as raw message
-// (rest of the json file under the "value").
-type FileEntry struct {
+// Single record of key-value, where key is defined as string, and value is modelled as raw message
+// (rest of the json/yaml file under the "value").
+type dataFileEntry struct {
 	Key   string          `json:"key"`
 	Value json.RawMessage `json:"value"`
 }
 
-// CompareTo compares file with key-value set - new, modified and deleted entries. Result is against the parameter.
-func (f *File) CompareTo(dataSet map[string][]byte) (changed, removed []FileEntry) {
-	for key, value := range dataSet {
-		var found bool
-		for _, fData := range f.Data {
-			if fData.Key == key {
-				found = true
-				if bytes.Compare(fData.Value, value) != 0 {
-					changed = append(changed, fData)
-					break
-				}
-			}
-		}
-		if !found {
-			removed = append(removed, FileEntry{key, value})
-		}
-	}
-	for _, fData := range f.Data {
-		var found bool
-		for key := range dataSet {
-			if fData.Key == key {
-				found = true
-				break
-			}
-		}
-		if !found {
-			changed = append(changed, fData)
-		}
-	}
-
-	return
+// IsValid verifies given path and returns true if JsonReader is able to process it
+func (r *Reader) IsValid(path string) bool {
+	return r.isJSON(path) || r.isYAML(path)
 }
 
-// PathExists returns true if provided path exists, false otherwise
+// PathExists returns true if provided path exists within the filesystem, false otherwise
 func (r *Reader) PathExists(path string) bool {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return false
@@ -98,92 +66,122 @@ func (r *Reader) PathExists(path string) bool {
 	return true
 }
 
-// IsValid validates file before reading, whether it is not a temporary file
-func (r *Reader) IsValid(ev fsnotify.Event) (bool, error) {
-	// Silently skip empty event
-	if ev.Name == "" {
-		return false, nil
-	}
-	// Silently skip backup files ("~" at the end)
-	if strings.Compare(ev.Name[len(ev.Name)-1:], "~") == 0 {
-		return false, nil
-	}
-	// Validate file
-	path := strings.Split(ev.Name, "/")
-	if len(path) == 0 {
-		return false, fmt.Errorf("error validating file path: invalid input %s", ev.Name)
-	}
-	fileName := path[len(path)-1]
-	parts := strings.Split(fileName, ".")
-	if len(parts) == 0 {
-		return false, fmt.Errorf("error validating file in path %s: invalid format %s", ev.Name, fileName)
-	}
-	// Silently skip numeric files without extension (temporary files with PID of the editor)
-	if len(parts) == 1 && r.isNumeric(parts[0]) {
-		return false, nil
-	}
-	// Check file extension, skip
-	fileExtension := parts[len(parts)-1]
-	match, err := regexp.MatchString("sw.", fileExtension)
+// ProcessFiles reads all files within path, and un-marshals it to the common data representation.
+func (r *Reader) ProcessFiles(path string) ([]*File, error) {
+	var files []string
+	fileInfo, err := os.Stat(path)
 	if err != nil {
-		return false, fmt.Errorf("error validating file %s: regex error: %v", ev.Name, err)
+		return nil, fmt.Errorf("failed to get file info from %s: %v", path, err)
 	}
-	if match {
-		return false, nil
-	}
-	return true, nil
-}
-
-// ProcessFile reads file from filesystem and un-marshalls it to the required proto structure
-func (r *Reader) ProcessFile(path string) (File, error) {
-	dataSet := File{}
-	fileData, err := ioutil.ReadFile(path)
-	if err != nil {
-		return dataSet, fmt.Errorf("failed to read file from path %s: %v", path, err)
-	}
-
-	err = json.Unmarshal(fileData, &dataSet)
-	if err != nil {
-		return dataSet, fmt.Errorf("failed to unmarshal file %s: %v", path, err)
-	}
-
-	dataSet.Path = path
-	return dataSet, nil
-}
-
-// ProcessFilesInDir reads all file names from directory and processes them the ordinary way
-func (r *Reader) ProcessFilesInDir(path string) ([]File, error) {
-	fileInfoList, err := ioutil.ReadDir(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read files in directory %s", fileInfoList)
-	}
-	var files []File
-	for _, fileInfo := range fileInfoList {
-		file, err := r.ProcessFile(path + fileInfo.Name())
+	if fileInfo.IsDir() {
+		fileInfoList, err := ioutil.ReadDir(path)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to read files in directory %s", fileInfoList)
 		}
-		files = append(files, file)
+		for _, innerFileInfo := range fileInfoList {
+			// Skip inner directories
+			if !innerFileInfo.IsDir() {
+				files = append(files, path+innerFileInfo.Name())
+			}
+		}
+	} else {
+		files = append(files, path)
 	}
-
-	return files, nil
+	// Iterate over files, process all valid
+	var jsonYamlData []*File
+	for _, file := range files {
+		dataSet := dataFile{}
+		fileData, err := ioutil.ReadFile(file)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read file from path %s: %v", file, err)
+		}
+		if r.isJSON(file) {
+			err = json.Unmarshal(fileData, &dataSet)
+			if err != nil {
+				return nil, fmt.Errorf("failed to unmarshal json file %s: %v", file, err)
+			}
+		} else if r.isYAML(file) {
+			err = yaml.Unmarshal(fileData, &dataSet)
+			if err != nil {
+				return nil, fmt.Errorf("failed to unmarshal yaml file %s: %v", file, err)
+			}
+		} else {
+			continue
+		}
+		// Prepare data as byte array
+		var fileDataSet []*DataEntry
+		for _, data := range dataSet.Data {
+			fileDataSet = append(fileDataSet, &DataEntry{
+				Key:   data.Key,
+				Value: data.Value,
+			})
+		}
+		jsonYamlData = append(jsonYamlData, &File{
+			Path: path,
+			Data: fileDataSet,
+		})
+	}
+	return jsonYamlData, nil
 }
 
-// IsDirectory checks if provided path is a file or a directory
-func (r *Reader) IsDirectory(path string) (bool, error) {
-	file, err := os.Open(path)
+// Watch starts new filesystem notification watcher. All events from of json/yaml type files are passed to 'onEvent' function.
+// Function 'onClose' is called when event channel is closed.
+func (r *Reader) Watch(paths []string, onEvent func(event fsnotify.Event, reader API), onClose func()) error {
+	var err error
+	r.watcher, err = fsnotify.NewWatcher()
 	if err != nil {
-		return false, fmt.Errorf("failed to open file/directory %s: %v", path, err)
+		return fmt.Errorf("failed to init json/yaml file watcher: %v", err)
 	}
-	defer file.Close()
-	fileInfo, err := file.Stat()
-	if err != nil {
-		return false, fmt.Errorf("failed to get file info %s, %v", path, err)
+	for _, path := range paths {
+		r.watcher.Add(path)
 	}
-	return fileInfo.IsDir(), nil
+
+	go func() {
+		for {
+			select {
+			case event, ok := <-r.watcher.Events:
+				if !ok {
+					onClose()
+					return
+				}
+				// Run event with proper reader
+				if r.isJSON(event.Name) || r.isYAML(event.Name) {
+					onEvent(event, r)
+				}
+			case err := <-r.watcher.Errors:
+				if err != nil {
+					logrus.DefaultLogger().Errorf("filesystem notification error %v", err)
+				}
+			}
+		}
+	}()
+
+	return nil
 }
 
-func (r *Reader) isNumeric(s string) bool {
-	_, err := strconv.ParseFloat(s, 64)
-	return err == nil
+// ToString returns reader's name
+func (r *Reader) ToString() string {
+	return jsonYamlReader
+}
+
+// Close closes the filesystem event watcher
+func (r *Reader) Close() error {
+	if r.watcher != nil {
+		return r.watcher.Close()
+	}
+	return nil
+}
+
+func (r *Reader) isJSON(path string) bool {
+	if strings.HasSuffix(path, jsonExt) {
+		return true
+	}
+	return false
+}
+
+func (r *Reader) isYAML(path string) bool {
+	if strings.HasSuffix(path, yamlExt) {
+		return true
+	}
+	return false
 }

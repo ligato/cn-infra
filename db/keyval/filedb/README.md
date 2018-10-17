@@ -18,7 +18,7 @@ environment variable.
 
 ## Data structure
 
-Plugin currently supports only json-formatted data. The format of the file is as follows:
+Plugin currently supports only JSON and YAML-formatted data. The format of the file is as follows for JSON:
 
 ```
 {
@@ -40,6 +40,17 @@ Plugin currently supports only json-formatted data. The format of the file is as
 }
 
 ``` 
+
+For YAML:
+
+```
+
+---
+data:
+- key: "<key>"
+  value:
+    <modelled data>
+```
 
 Key has to contain also instance prefix with micro service label, so plugin knows which parts of the configuration 
 are intended for it. All configuration is stored internally in local database. It allows to compare events and 

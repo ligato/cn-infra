@@ -14,21 +14,22 @@
 
 package reader
 
-import (
-	"github.com/fsnotify/fsnotify"
-)
+import "github.com/fsnotify/fsnotify"
 
 // FileDBReaderMock allows to mock filesystem reader
 type FileDBReaderMock struct {
 	responses []*WhenResp
 	respCurr  int
 	respMax   int
+	// Readers used during testing
+	eventChan chan fsnotify.Event
 }
 
 // NewFileDBReaderMock creates new instance of the mock and initializes response list
 func NewFileDBReaderMock() *FileDBReaderMock {
 	return &FileDBReaderMock{
 		responses: make([]*WhenResp, 0),
+		eventChan: make(chan fsnotify.Event),
 	}
 }
 
@@ -77,72 +78,62 @@ func (mock *FileDBReaderMock) getReturnValues(name string) (response []interface
 	return
 }
 
+// IsValid mocks original method
+func (mock *FileDBReaderMock) IsValid(path string) bool {
+	items := mock.getReturnValues("IsValid")
+	return items[0].(bool)
+}
+
 // PathExists mocks original method
 func (mock *FileDBReaderMock) PathExists(path string) bool {
 	items := mock.getReturnValues("PathExists")
 	return items[0].(bool)
 }
 
-// IsDirectory mocks original method
-func (mock *FileDBReaderMock) IsDirectory(path string) (bool, error) {
-	items := mock.getReturnValues("IsDirectory")
+// ProcessFiles mocks original method
+func (mock *FileDBReaderMock) ProcessFiles(path string) ([]*File, error) {
+	items := mock.getReturnValues("ProcessFiles")
 	if len(items) == 1 {
 		switch typed := items[0].(type) {
-		case bool:
+		case []*File:
 			return typed, nil
 		case error:
-			return false, typed
+			return []*File{}, typed
 		}
 	} else if len(items) == 2 {
-		return items[0].(bool), items[1].(error)
+		return items[0].([]*File), items[1].(error)
 	}
-	return false, nil
+	return []*File{}, nil
 }
 
-// ProcessFile mocks original method
-func (mock *FileDBReaderMock) ProcessFile(path string) (File, error) {
-	items := mock.getReturnValues("ProcessFile")
-	if len(items) == 1 {
-		switch typed := items[0].(type) {
-		case File:
-			return typed, nil
-		case error:
-			return File{}, typed
+// Watch starts simulated watcher calling 'onEvent' and 'onClose' on demand
+func (mock *FileDBReaderMock) Watch(paths []string, onEvent func(event fsnotify.Event, reader API), onClose func()) error {
+	go func() {
+		for {
+			event, ok := <-mock.eventChan
+			if !ok {
+				onClose()
+				return
+			}
+			onEvent(event, mock)
 		}
-	} else if len(items) == 2 {
-		return items[0].(File), items[1].(error)
-	}
-	return File{}, nil
+	}()
+	return nil
 }
 
-// ProcessFilesInDir mocks original method
-func (mock *FileDBReaderMock) ProcessFilesInDir(path string) ([]File, error) {
-	items := mock.getReturnValues("ProcessFilesInDir")
-	if len(items) == 1 {
-		switch typed := items[0].(type) {
-		case []File:
-			return typed, nil
-		case error:
-			return []File{}, typed
-		}
-	} else if len(items) == 2 {
-		return items[0].([]File), items[1].(error)
-	}
-	return []File{}, nil
+// ToString always returns empty string
+func (mock *FileDBReaderMock) ToString() string {
+	return ""
 }
 
-// IsValid mocks original method
-func (mock *FileDBReaderMock) IsValid(ev fsnotify.Event) (bool, error) {
-	items := mock.getReturnValues("IsValid")
-	if len(items) == 1 {
-		switch typed := items[0].(type) {
-		case bool:
-			return typed, nil
-		case error:
-			return false, typed
-		}
-	} else if len(items) == 2 {
-		return items[0].(bool), items[1].(error)
-	}
-	return false, nil
+// Close closes event channel
+func (mock *FileDBReaderMock) Close() error {
+	close(mock.eventChan)
+	return nil
+}
+
+// SendEvent simulates event from filesystem. Reader has to be initialized.
+func (mock *FileDBReaderMock) SendEvent(event fsnotify.Event) {
+	mock.eventChan <- event
+	return
 }

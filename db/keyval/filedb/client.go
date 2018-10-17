@@ -20,6 +20,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/ligato/cn-infra/utils/safeclose"
+	"github.com/pkg/errors"
+
 	"github.com/ligato/cn-infra/db/keyval/filedb/reader"
 
 	"github.com/fsnotify/fsnotify"
@@ -33,8 +36,8 @@ type Client struct {
 	sync.Mutex
 	log logging.Logger
 
-	// A list of filesystem paths. It may be specific file, or the whole directory. In case a path is a directory,
-	// all files within are processed.
+	// A list of filesystem paths. It may be a specific file, or the whole directory. In case a path is a directory,
+	// all files within are processed. If there are another directories inside, they are skipped.
 	paths []string
 
 	// Internal database mirrors changes in file system. Since the configuration can be only read, it is up to client
@@ -42,14 +45,14 @@ type Client struct {
 	//  - path (where the configuration is written)
 	//  - data key
 	//  - data value
-	// Note: database holds only configuration intended for agent with defined prefix
+	// Note: database holds only configuration intended for agent with appropriate prefix
 	db FilesSystemDB
 
-	// File system reader, grants access to methods needed for checking/reading of system files
-	r reader.API
+	// File system reader API, grants access to methods needed for checking/reading of system files. Client expects
+	// the reader to process files with specific extension
+	readers []reader.API
 
-	// Watcher watches over events incoming from the registered files.
-	watcher  *fsnotify.Watcher
+	// A set of watchers for every key prefix.
 	watchers map[string]chan keyedData
 
 	// Prefix to recognize configuration for specific agent instance
@@ -57,53 +60,34 @@ type Client struct {
 }
 
 // NewClient initializes file watcher, database and registers paths provided via plugin configuration file
-func NewClient(paths []string, prefix string, rd reader.API, log logging.Logger) (*Client, error) {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return nil, fmt.Errorf("failed to init file watcher: %v", err)
-	}
-
+func NewClient(paths []string, prefix string, rd []reader.API, log logging.Logger) (*Client, error) {
 	// Init client object
 	c := &Client{
 		paths:       paths,
-		watcher:     watcher,
 		watchers:    make(map[string]chan keyedData),
 		db:          NewDbClient(),
-		r:           rd,
+		readers:     rd,
 		agentPrefix: prefix,
 		log:         log,
 	}
 
-	// Do the initial read and store everything to internal database
+	// There can be various types of files, so client tries all available readers to obtain data from them into
+	// a common list of files in paths. Initial read data are stored in internal database.
 	for _, path := range paths {
-		// Register to watcher
-		if err := watcher.Add(path); err != nil {
-			return nil, err
+		var filesInPath []*reader.File
+		for _, r := range c.readers {
+			files, err := r.ProcessFiles(path)
+			if err != nil {
+				return nil, fmt.Errorf("failed to process file/directory %s with %s: %v", path, r.ToString(), err)
+			}
+			filesInPath = append(filesInPath, files...)
 		}
 
-		isDir, err := c.r.IsDirectory(path)
-		if err != nil {
-			return nil, err
-		}
-		// Read file, or all files if path is a directory
-		var filesInPath []reader.File
-		if isDir {
-			filesInPath, err = c.r.ProcessFilesInDir(path)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			fileInPath, err := c.r.ProcessFile(path)
-			if err != nil {
-				return nil, err
-			}
-			filesInPath = []reader.File{fileInPath}
-		}
 		// Find all the configuration for given agent and key and store it in the database
 		for _, file := range filesInPath {
 			for _, fileData := range file.Data {
 				if ok := c.checkAgentPrefix(fileData.Key); ok {
-					c.db.Add(file.Path, fileData.Key, fileData.Value)
+					c.db.Add(file.Path, &reader.DataEntry{Key: fileData.Key, Value: fileData.Value})
 				}
 			}
 		}
@@ -122,14 +106,14 @@ func (c *Client) GetPrefix() string {
 	return c.agentPrefix
 }
 
-// GetDB returns fileDB database
-func (c *Client) GetDB() FilesSystemDB {
-	return c.db
+// GetDataForFile returns data gor given file
+func (c *Client) GetDataForFile(path string) []*reader.DataEntry {
+	return c.db.GetDataForFile(path)
 }
 
-// GetWatcher returns fileDB watcher
-func (c *Client) GetWatcher() *fsnotify.Watcher {
-	return c.watcher
+// GetDataForKey returns data gor given file
+func (c *Client) GetDataForKey(key string) (*reader.DataEntry, bool) {
+	return c.db.GetDataForKey(key)
 }
 
 // Represents data with both identifiers, file path and key.
@@ -174,18 +158,20 @@ func (c *Client) NewTxn() keyval.BytesTxn {
 
 // GetValue returns a value for given key
 func (c *Client) GetValue(key string) (data []byte, found bool, revision int64, err error) {
-	data, found = c.db.GetDataForKey(c.agentPrefix + key)
+	var entry *reader.DataEntry
+	entry, found = c.db.GetDataForKey(c.agentPrefix + key)
+	data = entry.Value
 	return
 }
 
 // ListValues returns a list of values for given prefix
 func (c *Client) ListValues(prefix string) (keyval.BytesKeyValIterator, error) {
-	keyValues := c.db.GetValuesForPrefix(c.agentPrefix + prefix)
-	data := make([]*reader.FileEntry, len(keyValues))
-	for key, value := range keyValues {
-		data = append(data, &reader.FileEntry{
-			Key:   c.stripAgentPrefix(key),
-			Value: value,
+	keyValues := c.db.GetDataForPrefix(c.agentPrefix + prefix)
+	data := make([]*reader.DataEntry, 0, len(keyValues))
+	for _, entry := range keyValues {
+		data = append(data, &reader.DataEntry{
+			Key:   c.stripAgentPrefix(entry.Key),
+			Value: entry.Value,
 		})
 	}
 	return &bytesKeyValIterator{len: len(data), data: data}, nil
@@ -193,10 +179,10 @@ func (c *Client) ListValues(prefix string) (keyval.BytesKeyValIterator, error) {
 
 // ListKeys returns a set of keys for given prefix
 func (c *Client) ListKeys(prefix string) (keyval.BytesKeyIterator, error) {
-	keys := c.db.GetKeysForPrefix(c.agentPrefix + prefix)
+	entries := c.db.GetDataForPrefix(c.agentPrefix + prefix)
 	var keysWithoutPrefix []string
-	for _, key := range keys {
-		keysWithoutPrefix = append(keysWithoutPrefix, c.stripAgentPrefix(key))
+	for _, entry := range entries {
+		keysWithoutPrefix = append(keysWithoutPrefix, c.stripAgentPrefix(entry.Key))
 	}
 	return &bytesKeyIterator{len: len(keysWithoutPrefix), keys: keysWithoutPrefix, prefix: prefix}, nil
 }
@@ -221,12 +207,11 @@ func (c *Client) Watch(resp func(response keyval.BytesWatchResp), closeChan chan
 	return nil
 }
 
-// Close closes the event watcher
+// Close closes all readers
 func (c *Client) Close() error {
-	if c.watcher != nil {
-		return c.watcher.Close()
+	if err := safeclose.Close(c.readers); err != nil {
+		return errors.Errorf("failed to close file readers: %v", err)
 	}
-
 	return nil
 }
 
@@ -254,81 +239,85 @@ func (c *Client) watch(resp func(response keyval.BytesWatchResp), dataChan chan 
 
 // Processes events from file system. Every event is validated (all temporary or system files are omitted). Data
 // is then read from the file as key-value pairs, and send to all data change watchers.
+
+// Event watcher starts file system watcher for every reader available.
 func (c *Client) eventWatcher() {
-	go func() {
-		for {
-			select {
-			case event, ok := <-c.watcher.Events:
-				if !ok {
-					c.log.Debugf("fileDB watcher closed")
-					for _, channel := range c.watchers {
-						close(channel)
-					}
-					return
-				}
-				// Let's validate the event (skip temporary files, etc.)
-				if isValid, err := c.r.IsValid(event); err != nil {
-					c.log.Error(err)
-				} else if !isValid {
-					continue
-				}
-				// If file was removed, delete all configuration associated with it. Do the same action for
-				// rename, following action will be create with the new name which re-applies the configuration
-				// (if new name is in scope of the defined path)
-				if (event.Op == fsnotify.Rename || event.Op == fsnotify.Remove) && !c.r.PathExists(event.Name) {
-					keyValues := c.db.GetDataFromFile(event.Name)
-					for key, data := range keyValues {
-						// Value from DB does not need to be checked
-						keyed := keyedData{
-							path:      event.Name,
-							watchResp: watchResp{Op: datasync.Delete, Key: key, Value: nil, PrevValue: data},
-						}
-						c.sendToChannel(keyed)
-						c.db.DeleteFile(event.Name)
-					}
-					continue
-				}
+	for _, r := range c.readers {
+		r.Watch(c.paths, c.onEvent, c.onClose)
+	}
+}
 
-				// Read data from file
-				dataSet, err := c.r.ProcessFile(event.Name)
-				if err != nil {
-					c.log.Error(err)
-					continue
-				}
+// OnEvent is common method called when new event from file system arrives. Different files may require different
+// reader, but the data processing is the same.
+func (c *Client) onEvent(event fsnotify.Event, r reader.API) {
+	// If file was removed, delete all configuration associated with it. Do the same action for
+	// rename, following action will be create with the new name which re-applies the configuration
+	// (if new name is in scope of the defined path)
+	if (event.Op == fsnotify.Rename || event.Op == fsnotify.Remove) && !r.PathExists(event.Name) {
+		entries := c.db.GetDataForFile(event.Name)
+		for _, entry := range entries {
+			// Value from DB does not need to be checked
+			keyed := keyedData{
+				path:      event.Name,
+				watchResp: watchResp{Op: datasync.Delete, Key: entry.Key, Value: nil, PrevValue: entry.Value},
+			}
+			c.sendToChannel(keyed)
+			c.db.DeleteFile(event.Name)
+		}
+		return
+	}
 
-				// Compare with database, calculate diff
-				latestFile := c.db.GetDataFromFile(event.Name)
-				changed, removed := dataSet.CompareTo(latestFile)
-				// Update database and propagate data to channel
-				for _, data := range removed {
-					if ok := c.checkAgentPrefix(data.Key); ok {
-						keyed := keyedData{
-							path:      dataSet.Path,
-							watchResp: watchResp{Op: datasync.Delete, Key: data.Key, Value: nil, PrevValue: data.Value},
-						}
-						c.sendToChannel(keyed)
-						c.db.Delete(event.Name, keyed.Key)
-					}
+	// Read data from file
+	dataSet, err := r.ProcessFiles(event.Name)
+	if err != nil {
+		c.log.Error(err)
+		return
+	}
+
+	for _, fileData := range dataSet {
+		// Compare with database, calculate diff
+		latestFile := c.db.GetDataForFile(event.Name)
+		changed, removed := fileData.CompareTo(&reader.File{
+			Path: event.Name,
+			Data: latestFile,
+		})
+		// Update database and propagate data to channel
+		for _, data := range removed {
+			if ok := c.checkAgentPrefix(data.Key); ok {
+				keyed := keyedData{
+					path:      fileData.Path,
+					watchResp: watchResp{Op: datasync.Delete, Key: data.Key, Value: nil, PrevValue: data.Value},
 				}
-				for _, data := range changed {
-					if ok := c.checkAgentPrefix(data.Key); ok {
-						// Get last key-val configuration item if exists
-						prevVal, _ := c.db.GetDataForPathAndKey(event.Name, data.Key)
-						keyed := keyedData{
-							path:      dataSet.Path,
-							watchResp: watchResp{Op: datasync.Put, Key: data.Key, Value: data.Value, PrevValue: prevVal},
-						}
-						c.sendToChannel(keyed)
-						c.db.Add(event.Name, keyed.Key, keyed.Value)
-					}
-				}
-			case err := <-c.watcher.Errors:
-				if err != nil {
-					c.log.Errorf("error watching fileDB events: %v", err)
-				}
+				c.sendToChannel(keyed)
+				c.db.Delete(event.Name, keyed.Key)
 			}
 		}
-	}()
+		for _, data := range changed {
+			if ok := c.checkAgentPrefix(data.Key); ok {
+				// Get last key-val configuration item if exists
+				var prevVal []byte
+				if prevValEntry, ok := c.db.GetDataForPathAndKey(event.Name, data.Key); ok {
+					prevVal = prevValEntry.Value
+				}
+				keyed := keyedData{
+					path:      fileData.Path,
+					watchResp: watchResp{Op: datasync.Put, Key: data.Key, Value: data.Value, PrevValue: prevVal},
+				}
+				c.sendToChannel(keyed)
+				c.db.Add(event.Name, &reader.DataEntry{
+					Key:   keyed.Key,
+					Value: keyed.Value,
+				})
+			}
+		}
+	}
+}
+
+// OnClose is called from reader when the file system data channel is closed.
+func (c *Client) onClose() {
+	for _, channel := range c.watchers {
+		close(channel)
+	}
 }
 
 // Send data to correct channel. During the process, agent prefix is removed
@@ -345,7 +334,7 @@ func (c *Client) sendToChannel(keyed keyedData) {
 	}
 }
 
-// Verifies an agent identifier
+// Verifies an agent prefix identifier
 func (c *Client) checkAgentPrefix(key string) bool {
 	if strings.HasPrefix(key, c.agentPrefix) {
 		return true
@@ -353,7 +342,7 @@ func (c *Client) checkAgentPrefix(key string) bool {
 	return false
 }
 
-// Removes an agent prefix from the key
+// Removes an agent prefix identifier from the key
 func (c *Client) stripAgentPrefix(key string) string {
 	return strings.Replace(key, c.agentPrefix, "", 1)
 }

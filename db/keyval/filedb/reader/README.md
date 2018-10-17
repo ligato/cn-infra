@@ -1,12 +1,7 @@
 # Filesystem reader
 
-Reader exposes API to work with OS file system, like file path verification, transforming configuration from files
-or validation.
+Reader exposes API to work with OS file system, like file path verification, transforming configuration from files,
+validation and file system notification event watching.
 
-Package `fsnotify` is used to obtain events. File validator currently checks following:
-
-* ignores empty events (path is an empty string)
-* ignores older revisions (backups) of given file (with '~' at the end of the file name)
-* ignores all temporary files with extension '.sw*'
-* ignores full-numeric file names (created by some editors where the file is opened)
-
+Package `fsnotify` is used to obtain events. The file validator currently supports only files with `.json` or `.yaml`
+extensions. Files with proper data, but without extension are ignored.

@@ -15,11 +15,11 @@
 package filedb_test
 
 import (
-	"github.com/ligato/cn-infra/datasync"
 	"testing"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/filedb"
 	"github.com/ligato/cn-infra/db/keyval/filedb/reader"
@@ -34,39 +34,40 @@ func TestNewClient(t *testing.T) {
 
 	// Mocks
 	mock := reader.NewFileDBReaderMock()
-	// Read paths
-	mock.When("IsDirectory").ThenReturn(false)
-	mock.When("IsDirectory").ThenReturn(false)
-	mock.When("IsDirectory").ThenReturn(true)
+	defer mock.Close()
 	// Process file
-	mock.When("ProcessFile").ThenReturn(reader.File{
-		Path: "path1",
-		Data: []reader.FileEntry{
-			{
-				Key:   "/test-prefix/path1Key1",
-				Value: []byte("path1Key1"),
+	mock.When("ProcessFiles").ThenReturn([]*reader.File{
+		{
+			Path: "path1",
+			Data: []*reader.DataEntry{
+				{
+					Key:   "/test-prefix/path1Key1",
+					Value: []byte("path1Key1"),
+				},
 			},
 		},
 	})
-	mock.When("ProcessFile").ThenReturn(reader.File{
-		Path: "path2",
-		Data: []reader.FileEntry{
-			{
-				Key:   "/test-prefix/path2Key1",
-				Value: []byte("path1Key1"),
-			},
-			{
-				Key:   "/test-prefix/path2Key2",
-				Value: []byte("path1Key2"),
+	mock.When("ProcessFiles").ThenReturn([]*reader.File{
+		{
+			Path: "path2",
+			Data: []*reader.DataEntry{
+				{
+					Key:   "/test-prefix/path2Key1",
+					Value: []byte("path1Key1"),
+				},
+				{
+					Key:   "/test-prefix/path2Key2",
+					Value: []byte("path1Key2"),
+				},
 			},
 		},
 	})
 	// Process directory
-	mock.When("ProcessFilesInDir").ThenReturn([]reader.File{
+	mock.When("ProcessFiles").ThenReturn([]*reader.File{
 		{
 
 			Path: "path3",
-			Data: []reader.FileEntry{
+			Data: []*reader.DataEntry{
 				{
 					Key:   "/test-prefix/path3Key1",
 					Value: []byte("path3Key1"),
@@ -75,7 +76,7 @@ func TestNewClient(t *testing.T) {
 		},
 		{
 			Path: "path4",
-			Data: []reader.FileEntry{
+			Data: []*reader.DataEntry{
 				{
 					Key:   "/test-prefix/path4Key1",
 					Value: []byte("path4Key1"),
@@ -96,7 +97,7 @@ func TestNewClient(t *testing.T) {
 	}
 	prefix := "/test-prefix/"
 
-	client, err := filedb.NewClient(paths, prefix, mock, log)
+	client, err := filedb.NewClient(paths, prefix, []reader.API{mock}, log)
 	defer client.Close()
 
 	Expect(err).To(BeNil())
@@ -104,16 +105,16 @@ func TestNewClient(t *testing.T) {
 	Expect(client.GetPaths()).To(HaveLen(3))
 	Expect(client.GetPrefix()).To(BeEquivalentTo(prefix))
 	// Path1
-	data := client.GetDB().GetDataFromFile("path1")
+	data := client.GetDataForFile("path1")
 	Expect(data).To(HaveLen(1))
 	// Path2
-	data = client.GetDB().GetDataFromFile("path2")
+	data = client.GetDataForFile("path2")
 	Expect(data).To(HaveLen(2))
 	// Path3
-	data = client.GetDB().GetDataFromFile("path3")
+	data = client.GetDataForFile("path3")
 	Expect(data).To(HaveLen(1))
 	// Path4
-	data = client.GetDB().GetDataFromFile("path4")
+	data = client.GetDataForFile("path4")
 	Expect(data).To(HaveLen(1)) // 1 is correct, second path is without prefix
 }
 
@@ -122,70 +123,74 @@ func TestNewClient(t *testing.T) {
 // 	2. Modify one configuration item
 //  3. Delete one configuration item
 //  4. Delete file
-func TestWatcher(t *testing.T) {
+func TestJsonReaderWatcher(t *testing.T) {
 	RegisterTestingT(t)
 
 	mock := reader.NewFileDBReaderMock()
+	defer mock.Close()
 
 	// Client initialization
-	mock.When("IsDirectory").ThenReturn(false)
-	mock.When("ProcessFile").ThenReturn(reader.File{})
+	mock.When("ProcessFiles").ThenReturn([]*reader.File{})
 	// Event 1 (create two items)
-	mock.When("IsValid").ThenReturn(true)
-	mock.When("ProcessFile").ThenReturn(reader.File{
-		Path: "path1",
-		Data: []reader.FileEntry{
-			{
-				Key:   "/test-prefix/vpp/config/interfaces/if1",
-				Value: []byte("if1-created"),
-			},
-			{
-				Key:   "/test-prefix/vpp/config/interfaces/if2",
-				Value: []byte("if2-created"),
+	mock.When("ProcessFiles").ThenReturn([]*reader.File{
+		{
+			Path: "path1",
+			Data: []*reader.DataEntry{
+				{
+					Key:   "/test-prefix/vpp/config/interfaces/if1",
+					Value: []byte("if1-created"),
+				},
+				{
+					Key:   "/test-prefix/vpp/config/interfaces/if2",
+					Value: []byte("if2-created"),
+				},
 			},
 		},
 	})
 	// Event 2 (modify one item)
-	mock.When("IsValid").ThenReturn(true)
-	mock.When("ProcessFile").ThenReturn(reader.File{
-		Path: "path1",
-		Data: []reader.FileEntry{
-			{
-				Key:   "/test-prefix/vpp/config/interfaces/if1",
-				Value: []byte("if1-modified"),
-			},
-			{
-				// This one is still the same
-				Key:   "/test-prefix/vpp/config/interfaces/if2",
-				Value: []byte("if2-created"),
+	mock.When("ProcessFiles").ThenReturn([]*reader.File{
+		{
+			Path: "path1",
+			Data: []*reader.DataEntry{
+				{
+					Key:   "/test-prefix/vpp/config/interfaces/if1",
+					Value: []byte("if1-modified"),
+				},
+				{
+					// This one is still the same
+					Key:   "/test-prefix/vpp/config/interfaces/if2",
+					Value: []byte("if2-created"),
+				},
 			},
 		},
 	})
 	// Event 3 (delete one item)
 	mock.When("PathExists").ThenReturn(true)
-	mock.When("IsValid").ThenReturn(true)
-	mock.When("ProcessFile").ThenReturn(reader.File{
-		Path: "path1",
-		Data: []reader.FileEntry{
-			{
-				// This one is still the same
-				Key:   "/test-prefix/vpp/config/interfaces/if2",
-				Value: []byte("if2-created"),
+	mock.When("ProcessFiles").ThenReturn([]*reader.File{
+		{
+			Path: "path1",
+			Data: []*reader.DataEntry{
+				{
+					// This one is still the same
+					Key:   "/test-prefix/vpp/config/interfaces/if2",
+					Value: []byte("if2-created"),
+				},
 			},
 		},
 	})
 	// Event 4 (delete file - last item)
 	mock.When("PathExists").ThenReturn(false)
-	mock.When("IsValid").ThenReturn(true)
-	mock.When("ProcessFile").ThenReturn(reader.File{
-		Path: "path1",
-		Data: []reader.FileEntry{},
+	mock.When("ProcessFiles").ThenReturn([]*reader.File{
+		{
+			Path: "path1",
+			Data: []*reader.DataEntry{},
+		},
 	})
 
 	// Init custom client
 	paths := []string{"/path/to/file1.json"}
 	prefix := "/test-prefix"
-	client, err := filedb.NewClient(paths, prefix, mock, log)
+	client, err := filedb.NewClient(paths, prefix, []reader.API{mock}, log)
 	defer client.Close()
 	Expect(err).To(BeNil())
 	Expect(client).ToNot(BeNil())
@@ -236,59 +241,59 @@ func TestWatcher(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Test first event (create)
-	client.GetWatcher().Events <- fsnotify.Event{
+	mock.SendEvent(fsnotify.Event{
 		Name: "/path/to/file1.json",
 		Op:   fsnotify.Create,
-	}
+	})
 	Eventually(func() bool {
 		return create1 && create2
-	}, 2).Should(BeTrue())
-	data, ok := client.GetDB().GetDataForKey("/test-prefix/vpp/config/interfaces/if1")
+	}, 200).Should(BeTrue())
+	data, ok := client.GetDataForKey("/test-prefix/vpp/config/interfaces/if1")
 	Expect(ok).To(BeTrue())
-	Expect(data).To(BeEquivalentTo([]byte("if1-created")))
-	data, ok = client.GetDB().GetDataForKey("/test-prefix/vpp/config/interfaces/if2")
+	Expect(data.Value).To(BeEquivalentTo([]byte("if1-created")))
+	data, ok = client.GetDataForKey("/test-prefix/vpp/config/interfaces/if2")
 	Expect(ok).To(BeTrue())
-	Expect(data).To(BeEquivalentTo([]byte("if2-created")))
+	Expect(data.Value).To(BeEquivalentTo([]byte("if2-created")))
 
 	// Test second event (modify)
-	client.GetWatcher().Events <- fsnotify.Event{
+	mock.SendEvent(fsnotify.Event{
 		Name: "/path/to/file1.json",
 		Op:   fsnotify.Create,
-	}
+	})
 	Eventually(func() bool {
 		return update
-	}, 2).Should(BeTrue())
-	data, ok = client.GetDB().GetDataForKey("/test-prefix/vpp/config/interfaces/if1")
+	}, 200).Should(BeTrue())
+	data, ok = client.GetDataForKey("/test-prefix/vpp/config/interfaces/if1")
 	Expect(ok).To(BeTrue())
-	Expect(data).To(BeEquivalentTo([]byte("if1-modified")))
-	data, ok = client.GetDB().GetDataForKey("/test-prefix/vpp/config/interfaces/if2")
+	Expect(data.Value).To(BeEquivalentTo([]byte("if1-modified")))
+	data, ok = client.GetDataForKey("/test-prefix/vpp/config/interfaces/if2")
 	Expect(ok).To(BeTrue())
-	Expect(data).To(BeEquivalentTo([]byte("if2-created")))
+	Expect(data.Value).To(BeEquivalentTo([]byte("if2-created")))
 
 	// Test third event (delete)
-	client.GetWatcher().Events <- fsnotify.Event{
+	mock.SendEvent(fsnotify.Event{
 		Name: "/path/to/file1.json",
 		Op:   fsnotify.Remove,
-	}
+	})
 	Eventually(func() bool {
 		return del
-	}, 2).Should(BeTrue())
-	_, ok = client.GetDB().GetDataForKey("/test-prefix/vpp/config/interfaces/if1")
+	}, 200).Should(BeTrue())
+	_, ok = client.GetDataForKey("/test-prefix/vpp/config/interfaces/if1")
 	Expect(ok).To(BeFalse())
-	data, ok = client.GetDB().GetDataForKey("/test-prefix/vpp/config/interfaces/if2")
+	data, ok = client.GetDataForKey("/test-prefix/vpp/config/interfaces/if2")
 	Expect(ok).To(BeTrue())
-	Expect(data).To(BeEquivalentTo([]byte("if2-created")))
+	Expect(data.Value).To(BeEquivalentTo([]byte("if2-created")))
 
 	// Test last event (file delete)
-	client.GetWatcher().Events <- fsnotify.Event{
+	mock.SendEvent(fsnotify.Event{
 		Name: "/path/to/file1.json",
 		Op:   fsnotify.Remove,
-	}
+	})
 	Eventually(func() bool {
 		return delFile
-	}, 2).Should(BeTrue())
-	_, ok = client.GetDB().GetDataForKey("/test-prefix/vpp/config/interfaces/if1")
+	}, 200).Should(BeTrue())
+	_, ok = client.GetDataForKey("/test-prefix/vpp/config/interfaces/if1")
 	Expect(ok).To(BeFalse())
-	_, ok = client.GetDB().GetDataForKey("/test-prefix/vpp/config/interfaces/if2")
+	_, ok = client.GetDataForKey("/test-prefix/vpp/config/interfaces/if2")
 	Expect(ok).To(BeFalse())
 }

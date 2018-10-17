@@ -57,7 +57,10 @@ func (p *Plugin) Init() error {
 		return err
 	}
 
-	if p.client, err = NewClient(p.config.Paths, p.sv.GetAgentPrefix(), &reader.Reader{}, p.Log); err != nil {
+	var readers []reader.API
+	readers = append(readers, &reader.Reader{})
+
+	if p.client, err = NewClient(p.config.Paths, p.sv.GetAgentPrefix(), readers, p.Log); err != nil {
 		return err
 	}
 
@@ -69,7 +72,7 @@ func (p *Plugin) Init() error {
 // AfterInit starts file system event watcher
 func (p *Plugin) AfterInit() error {
 	if !p.disabled {
-		go p.client.eventWatcher()
+		p.client.eventWatcher()
 	}
 
 	return nil

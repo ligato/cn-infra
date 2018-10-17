@@ -12,7 +12,7 @@ type bytesKeyValIterator struct {
 	index int
 	len   int
 	rev   int
-	data  []*reader.FileEntry
+	data  []*reader.DataEntry
 }
 
 // File system DB BytesKeyIterator implementation

@@ -26,25 +26,46 @@ func TestCompareFiles(t *testing.T) {
 	RegisterTestingT(t)
 
 	// Original data
-	origin := make(map[string][]byte)
-	origin["key1"] = []byte("data1")
-	origin["key2"] = []byte("data2")
-	origin["key3"] = []byte("data3")
-	origin["key4"] = []byte("data4")
-	origin["key5"] = []byte("data5")
-	origin["key6"] = []byte("data6")
+	origin := &reader.File{
+		Data: []*reader.DataEntry{
+			{
+				Key: "key1",
+				Value: []byte("data1"),
+			},
+			{
+				Key: "key2",
+				Value: []byte("data2"),
+			},
+			{
+				Key: "key3",
+				Value: []byte("data3"),
+			},
+			{
+				Key: "key4",
+				Value: []byte("data4"),
+			},
+			{
+				Key: "key5",
+				Value: []byte("data5"),
+			},
+			{
+				Key: "key6",
+				Value: []byte("data6"),
+			},
+		},
+	}
 
 	// New data
-	var change []reader.FileEntry
+	var change []*reader.DataEntry
 	// Unchanged
-	change = append(change, reader.FileEntry{Key: "key1", Value: []byte("data1")})
-	change = append(change, reader.FileEntry{Key: "key2", Value: []byte("data2")})
+	change = append(change, &reader.DataEntry{Key: "key1", Value: []byte("data1")})
+	change = append(change, &reader.DataEntry{Key: "key2", Value: []byte("data2")})
 	// Changed
-	change = append(change, reader.FileEntry{Key: "key3", Value: []byte("changedData1")})
-	change = append(change, reader.FileEntry{Key: "key4", Value: []byte("changedData2")})
+	change = append(change, &reader.DataEntry{Key: "key3", Value: []byte("changedData1")})
+	change = append(change, &reader.DataEntry{Key: "key4", Value: []byte("changedData2")})
 	// Added
-	change = append(change, reader.FileEntry{Key: "key7", Value: []byte("newData1")})
-	change = append(change, reader.FileEntry{Key: "key8", Value: []byte("newData2")})
+	change = append(change, &reader.DataEntry{Key: "key7", Value: []byte("newData1")})
+	change = append(change, &reader.DataEntry{Key: "key8", Value: []byte("newData2")})
 	// key5 and key6 was removed
 
 	changeData := &reader.File{Path: "path1", Data: change}
