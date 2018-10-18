@@ -56,3 +56,11 @@ Key has to contain also instance prefix with micro service label, so plugin know
 are intended for it. All configuration is stored internally in local database. It allows to compare events and 
 respond with correct 'previous' value for a given key. 
 
+## Data state propagation
+
+Data types supporting status propagation (like interfaces or bridge domains) can store the state in filesystem.
+There is a field in configuration file called `status-path` which has to be set in order to store the status.
+Status data will be stored in the same format as for configuration, type is defined by the file extension 
+(JSON or YAML).
+
+Data will not be propagated if target path directory.

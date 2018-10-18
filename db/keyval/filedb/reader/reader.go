@@ -68,60 +68,42 @@ func (r *Reader) PathExists(path string) bool {
 
 // ProcessFiles reads all files within path, and un-marshals it to the common data representation.
 func (r *Reader) ProcessFiles(path string) ([]*File, error) {
-	var files []string
-	fileInfo, err := os.Stat(path)
+	files, err := r.getFilesFromPath(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get file info from %s: %v", path, err)
+		return nil, err
 	}
-	if fileInfo.IsDir() {
-		fileInfoList, err := ioutil.ReadDir(path)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read files in directory %s", fileInfoList)
-		}
-		for _, innerFileInfo := range fileInfoList {
-			// Skip inner directories
-			if !innerFileInfo.IsDir() {
-				files = append(files, path+innerFileInfo.Name())
+	return r.getDataFromFiles(path, files)
+}
+
+// Write data to file
+func (r *Reader) Write(path string, entry *DataEntry) error {
+	files, err := r.getFilesFromPath(path)
+	if err != nil {
+		return err
+	}
+	fileDataSet, err := r.getDataFromFiles(path, files)
+	// Expect empty or single entry
+	file := &File{}
+	if len(fileDataSet) == 1 {
+		file = fileDataSet[0]
+	} else if len(fileDataSet) > 1 {
+		return fmt.Errorf("failed to write status data, unexpected result of target file processing")
+	}
+	// Add/update data
+	var updated bool
+	if len(fileDataSet) > 0 {
+		for _, data := range fileDataSet[0].Data {
+			if data.Key == entry.Key {
+				data.Value = entry.Value
+				updated = true
 			}
 		}
-	} else {
-		files = append(files, path)
 	}
-	// Iterate over files, process all valid
-	var jsonYamlData []*File
-	for _, file := range files {
-		dataSet := dataFile{}
-		fileData, err := ioutil.ReadFile(file)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read file from path %s: %v", file, err)
-		}
-		if r.isJSON(file) {
-			err = json.Unmarshal(fileData, &dataSet)
-			if err != nil {
-				return nil, fmt.Errorf("failed to unmarshal json file %s: %v", file, err)
-			}
-		} else if r.isYAML(file) {
-			err = yaml.Unmarshal(fileData, &dataSet)
-			if err != nil {
-				return nil, fmt.Errorf("failed to unmarshal yaml file %s: %v", file, err)
-			}
-		} else {
-			continue
-		}
-		// Prepare data as byte array
-		var fileDataSet []*DataEntry
-		for _, data := range dataSet.Data {
-			fileDataSet = append(fileDataSet, &DataEntry{
-				Key:   data.Key,
-				Value: data.Value,
-			})
-		}
-		jsonYamlData = append(jsonYamlData, &File{
-			Path: path,
-			Data: fileDataSet,
-		})
+	if !updated {
+		file.Data = append(file.Data, entry)
 	}
-	return jsonYamlData, nil
+
+	return r.writeFile(path, file)
 }
 
 // Watch starts new filesystem notification watcher. All events from of json/yaml type files are passed to 'onEvent' function.
@@ -168,6 +150,107 @@ func (r *Reader) ToString() string {
 func (r *Reader) Close() error {
 	if r.watcher != nil {
 		return r.watcher.Close()
+	}
+	return nil
+}
+
+// Get all files from provided path (single value if path is already a path, or a list of files if it is a directory).
+// TODO nested directories are skipped.
+func (r *Reader) getFilesFromPath(path string) (files []string, err error) {
+	fileInfo, err := os.Stat(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get file info from %s: %v", path, err)
+	}
+	if fileInfo.IsDir() {
+		fileInfoList, err := ioutil.ReadDir(path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read files in directory %s", fileInfoList)
+		}
+		for _, innerFileInfo := range fileInfoList {
+			// Skip inner directories
+			if !innerFileInfo.IsDir() {
+				files = append(files, path+innerFileInfo.Name())
+			}
+		}
+	} else {
+		files = append(files, path)
+	}
+
+	return files, nil
+}
+
+// Reads every provided file a un-marshals it to a common file representation.
+// Supports JSON and YAML
+func (r *Reader) getDataFromFiles(path string, files []string) ([]*File, error) {
+	var jsonYamlData []*File
+	for _, file := range files {
+		dataSet := dataFile{}
+		fileData, err := ioutil.ReadFile(file)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read file from path %s: %v", file, err)
+		}
+		if r.isJSON(file) {
+			err = json.Unmarshal(fileData, &dataSet)
+			if err != nil {
+				return nil, fmt.Errorf("failed to unmarshal json file %s: %v", file, err)
+			}
+		} else if r.isYAML(file) {
+			err = yaml.Unmarshal(fileData, &dataSet)
+			if err != nil {
+				return nil, fmt.Errorf("failed to unmarshal yaml file %s: %v", file, err)
+			}
+		} else {
+			continue
+		}
+		// Prepare data as byte array
+		var fileDataSet []*DataEntry
+		for _, data := range dataSet.Data {
+			fileDataSet = append(fileDataSet, &DataEntry{
+				Key:   data.Key,
+				Value: data.Value,
+			})
+		}
+		jsonYamlData = append(jsonYamlData, &File{
+			Path: path,
+			Data: fileDataSet,
+		})
+	}
+
+	return jsonYamlData, nil
+}
+
+// Transforms data to tagged struct, marshals to JSON/YAML and writes to file
+func (r *Reader) writeFile(path string, content *File) (err error) {
+	var dataEntries []dataFileEntry
+	for _, data := range content.Data {
+		dataEntries = append(dataEntries, dataFileEntry{
+			Key:   data.Key,
+			Value: data.Value,
+		})
+	}
+	data := &dataFile{
+		Data: dataEntries,
+	}
+	var fileData []byte
+	if r.isJSON(path) {
+		if fileData, err = json.Marshal(data); err != nil {
+			return fmt.Errorf("failed to marshall JSON %s: %v", path, err)
+		}
+	} else if r.isYAML(path) {
+		if fileData, err = yaml.Marshal(data); err != nil {
+			return fmt.Errorf("failed to marshall YAML %s: %v", path, err)
+		}
+	} else {
+		return fmt.Errorf("failed to write data to %s with reader %s", path, jsonYamlReader)
+	}
+	file, err := os.OpenFile(path, os.O_TRUNC|os.O_WRONLY, os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("failed to open status file %s for writing: %v", path, err)
+	}
+	defer file.Close()
+
+	if _, err := file.Write(fileData); err != nil {
+		return fmt.Errorf("failed to write status file %s for writing: %v", path, err)
 	}
 	return nil
 }

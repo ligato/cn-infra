@@ -17,6 +17,7 @@ package filedb
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 
@@ -38,7 +39,13 @@ type Client struct {
 
 	// A list of filesystem paths. It may be a specific file, or the whole directory. In case a path is a directory,
 	// all files within are processed. If there are another directories inside, they are skipped.
-	paths []string
+	cfgPaths []string
+
+	// Path where the status will be stored. Status will be stored either as json or yaml, determined by file suffix.
+	// If the field is empty or point to a directory, status is not propagated to any file.
+	stPath string
+	// Status reader is chosen according to status file extension.
+	stReader reader.API
 
 	// Internal database mirrors changes in file system. Since the configuration can be only read, it is up to client
 	// to handle difference between configuration revisions. Every database entry consists from three values:
@@ -60,10 +67,11 @@ type Client struct {
 }
 
 // NewClient initializes file watcher, database and registers paths provided via plugin configuration file
-func NewClient(paths []string, prefix string, rd []reader.API, log logging.Logger) (*Client, error) {
+func NewClient(cfgPaths []string, statusPath, prefix string, rd []reader.API, log logging.Logger) (*Client, error) {
 	// Init client object
 	c := &Client{
-		paths:       paths,
+		cfgPaths:    cfgPaths,
+		stPath:      statusPath,
 		watchers:    make(map[string]chan keyedData),
 		db:          NewDbClient(),
 		readers:     rd,
@@ -73,7 +81,7 @@ func NewClient(paths []string, prefix string, rd []reader.API, log logging.Logge
 
 	// There can be various types of files, so client tries all available readers to obtain data from them into
 	// a common list of files in paths. Initial read data are stored in internal database.
-	for _, path := range paths {
+	for _, path := range cfgPaths {
 		var filesInPath []*reader.File
 		for _, r := range c.readers {
 			files, err := r.ProcessFiles(path)
@@ -93,12 +101,39 @@ func NewClient(paths []string, prefix string, rd []reader.API, log logging.Logge
 		}
 	}
 
+	// Validate and prepare the status file
+	if c.stPath != "" {
+		for _, r := range c.readers {
+			if r.IsValid(c.stPath) {
+				c.stReader = r
+				break
+			}
+		}
+		if c.stReader == nil {
+			// Do not return error here
+			c.log.Errorf("no suitable reader was found for file %s, make sure the file extension is supported",
+				c.stPath)
+		} else {
+			// Prepare status file
+			stPathParts := strings.Split(c.stPath, "/")
+			path := strings.Replace(c.stPath, stPathParts[len(stPathParts)-1], "", 1)
+			if err := os.MkdirAll(path, os.ModePerm); err != nil {
+				return nil, fmt.Errorf("failed to create path %s for status file: %v", path, err)
+			}
+			sf, err := os.Create(c.stPath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create status file %s: %v", c.stPath, err)
+			}
+			return c, sf.Close()
+		}
+	}
+
 	return c, nil
 }
 
 // GetPaths returns client file paths
 func (c *Client) GetPaths() []string {
-	return c.paths
+	return c.cfgPaths
 }
 
 // GetPrefix returns current agent prefix
@@ -146,7 +181,9 @@ func (c *Client) NewWatcher(prefix string) keyval.BytesWatcher {
 
 // Put is not supported, fileDB plugin does not allow to do changes to the configuration
 func (c *Client) Put(key string, data []byte, opts ...datasync.PutOption) error {
-	c.log.Warnf("adding configuration to fileDB is currently not allowed")
+	if err := c.stReader.Write(c.stPath, &reader.DataEntry{Key: key, Value: data}); err != nil {
+		c.log.Errorf("failed to write status data: %v", err)
+	}
 	return nil
 }
 
@@ -237,13 +274,10 @@ func (c *Client) watch(resp func(response keyval.BytesWatchResp), dataChan chan 
 	}
 }
 
-// Processes events from file system. Every event is validated (all temporary or system files are omitted). Data
-// is then read from the file as key-value pairs, and send to all data change watchers.
-
 // Event watcher starts file system watcher for every reader available.
 func (c *Client) eventWatcher() {
 	for _, r := range c.readers {
-		r.Watch(c.paths, c.onEvent, c.onClose)
+		r.Watch(c.cfgPaths, c.onEvent, c.onClose)
 	}
 }
 

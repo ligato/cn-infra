@@ -97,7 +97,7 @@ func TestNewClient(t *testing.T) {
 	}
 	prefix := "/test-prefix/"
 
-	client, err := filedb.NewClient(paths, prefix, []reader.API{mock}, log)
+	client, err := filedb.NewClient(paths, "", prefix, []reader.API{mock}, log)
 	defer client.Close()
 
 	Expect(err).To(BeNil())
@@ -190,7 +190,7 @@ func TestJsonReaderWatcher(t *testing.T) {
 	// Init custom client
 	paths := []string{"/path/to/file1.json"}
 	prefix := "/test-prefix"
-	client, err := filedb.NewClient(paths, prefix, []reader.API{mock}, log)
+	client, err := filedb.NewClient(paths, "", prefix, []reader.API{mock}, log)
 	defer client.Close()
 	Expect(err).To(BeNil())
 	Expect(client).ToNot(BeNil())

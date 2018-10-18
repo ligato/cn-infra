@@ -110,7 +110,7 @@ func (c *DbClient) DeleteFile(path string) {
 	delete(c.db, path)
 }
 
-// GetValuesForPrefix returns all values which match provided prefix
+// GetDataForPrefix returns all values which match provided prefix
 func (c *DbClient) GetDataForPrefix(prefix string) []*reader.DataEntry {
 	c.Lock()
 	defer c.Unlock()
@@ -129,7 +129,7 @@ func (c *DbClient) GetDataForPrefix(prefix string) []*reader.DataEntry {
 	return keyValues
 }
 
-// GetDataFromFile returns a map of key-value entries from given file
+// GetDataForFile returns a map of key-value entries from given file
 func (c *DbClient) GetDataForFile(path string) []*reader.DataEntry {
 	c.Lock()
 	defer c.Unlock()

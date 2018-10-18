@@ -106,6 +106,11 @@ func (mock *FileDBReaderMock) ProcessFiles(path string) ([]*File, error) {
 	return []*File{}, nil
 }
 
+// Write mocks original method
+func (mock *FileDBReaderMock) Write(path string, entry *DataEntry) error {
+	return nil
+}
+
 // Watch starts simulated watcher calling 'onEvent' and 'onClose' on demand
 func (mock *FileDBReaderMock) Watch(paths []string, onEvent func(event fsnotify.Event, reader API), onClose func()) error {
 	go func() {

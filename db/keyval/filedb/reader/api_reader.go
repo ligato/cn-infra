@@ -30,6 +30,8 @@ type API interface {
 	// ProcessFiles reads a file, or all the files if provided path is an directory, and leverages all data from them.
 	// If there are multiple file extensions within the directory, only known files will be processed.
 	ProcessFiles(path string) ([]*File, error)
+	// Write adds data to given file
+	Write(path string, entry *DataEntry) error
 	// Watch creates new file watcher and registers all provided paths. Also methods 'onEvent' and 'onClose' have to
 	// be specified, and they are called with proper event/reader parameter whenever new notification from file system
 	// arrives.

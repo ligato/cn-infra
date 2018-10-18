@@ -45,7 +45,9 @@ type Deps struct {
 
 // Config is fileDB configuration file structure
 type Config struct {
-	Paths []string `json:"paths"`
+	ConfigPaths []string `json:"configuration-paths"`
+	StatusPath  string   `json:"status-path"`
+	// TODO possibly add option to store status to the same file as is the config
 }
 
 // Init reads file config and creates new client to communicate with file system
@@ -60,7 +62,7 @@ func (p *Plugin) Init() error {
 	var readers []reader.API
 	readers = append(readers, &reader.Reader{})
 
-	if p.client, err = NewClient(p.config.Paths, p.sv.GetAgentPrefix(), readers, p.Log); err != nil {
+	if p.client, err = NewClient(p.config.ConfigPaths, p.config.StatusPath, p.sv.GetAgentPrefix(), readers, p.Log); err != nil {
 		return err
 	}
 
