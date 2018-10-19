@@ -12,12 +12,12 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package reader_test
+package decoder_test
 
 import (
 	"testing"
 
-	"github.com/ligato/cn-infra/db/keyval/filedb/reader"
+	"github.com/ligato/cn-infra/db/keyval/filedb/decoder"
 
 	. "github.com/onsi/gomega"
 )
@@ -26,49 +26,50 @@ func TestCompareFiles(t *testing.T) {
 	RegisterTestingT(t)
 
 	// Original data
-	origin := &reader.File{
-		Data: []*reader.DataEntry{
+	origin := &decoder.File{
+		Path: "path1",
+		Data: []*decoder.FileDataEntry{
 			{
-				Key: "key1",
+				Key:   "key1",
 				Value: []byte("data1"),
 			},
 			{
-				Key: "key2",
+				Key:   "key2",
 				Value: []byte("data2"),
 			},
 			{
-				Key: "key3",
+				Key:   "key3",
 				Value: []byte("data3"),
 			},
 			{
-				Key: "key4",
+				Key:   "key4",
 				Value: []byte("data4"),
 			},
 			{
-				Key: "key5",
+				Key:   "key5",
 				Value: []byte("data5"),
 			},
 			{
-				Key: "key6",
+				Key:   "key6",
 				Value: []byte("data6"),
 			},
 		},
 	}
 
 	// New data
-	var change []*reader.DataEntry
+	var change []*decoder.FileDataEntry
 	// Unchanged
-	change = append(change, &reader.DataEntry{Key: "key1", Value: []byte("data1")})
-	change = append(change, &reader.DataEntry{Key: "key2", Value: []byte("data2")})
+	change = append(change, &decoder.FileDataEntry{Key: "key1", Value: []byte("data1")})
+	change = append(change, &decoder.FileDataEntry{Key: "key2", Value: []byte("data2")})
 	// Changed
-	change = append(change, &reader.DataEntry{Key: "key3", Value: []byte("changedData1")})
-	change = append(change, &reader.DataEntry{Key: "key4", Value: []byte("changedData2")})
+	change = append(change, &decoder.FileDataEntry{Key: "key3", Value: []byte("changedData1")})
+	change = append(change, &decoder.FileDataEntry{Key: "key4", Value: []byte("changedData2")})
 	// Added
-	change = append(change, &reader.DataEntry{Key: "key7", Value: []byte("newData1")})
-	change = append(change, &reader.DataEntry{Key: "key8", Value: []byte("newData2")})
+	change = append(change, &decoder.FileDataEntry{Key: "key7", Value: []byte("newData1")})
+	change = append(change, &decoder.FileDataEntry{Key: "key8", Value: []byte("newData2")})
 	// key5 and key6 was removed
 
-	changeData := &reader.File{Path: "path1", Data: change}
+	changeData := &decoder.File{Path: "path1", Data: change}
 
 	changed, removed := changeData.CompareTo(origin)
 	Expect(changed).To(HaveLen(4)) // Changed + Added

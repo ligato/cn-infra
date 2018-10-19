@@ -12,14 +12,14 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package filedb
+package database
 
 import (
 	"bytes"
 	"strings"
 	"sync"
 
-	"github.com/ligato/cn-infra/db/keyval/filedb/reader"
+	"github.com/ligato/cn-infra/db/keyval/filedb/decoder"
 )
 
 const initialRev = 0
@@ -28,19 +28,17 @@ const initialRev = 0
 type FilesSystemDB interface {
 	// Add new key-value data under provided path (path represents file). Newly added data are stored with initial
 	// revision, existing entries are updated
-	Add(path string, entry *reader.DataEntry)
+	Add(path string, entry *decoder.FileDataEntry)
 	// Delete removes key-value data from provided file
 	Delete(path, key string)
 	// Delete file removes file entry from database, together with all underlying key-value data
 	DeleteFile(path string)
 	// GetValuesForPrefix filters the whole database and returns a map of key-value data
-	GetDataForPrefix(prefix string) []*reader.DataEntry
+	GetDataForPrefix(prefix string) []*decoder.FileDataEntry
 	// GetDataFromFile returns all the configuration for specific file
-	GetDataForFile(path string) []*reader.DataEntry
-	// GetDataForKey returns data for key with flag whether the data was found or not // TODO maybe should also return file
-	GetDataForKey(key string) (*reader.DataEntry, bool)
-	// GetDataForPathAndKey returns data for given key, but looks for it only in provided path
-	GetDataForPathAndKey(path, key string) (*reader.DataEntry, bool)
+	GetDataForFile(path string) []*decoder.FileDataEntry
+	// GetDataForKey returns data for key with flag whether the data was found or not
+	GetDataForKey(key string) (*decoder.FileDataEntry, bool)
 }
 
 // DbClient is database client
@@ -63,7 +61,7 @@ func NewDbClient() *DbClient {
 }
 
 // Add puts new entry to the database, or updates the old one if given key already exists
-func (c *DbClient) Add(path string, entry *reader.DataEntry) {
+func (c *DbClient) Add(path string, entry *decoder.FileDataEntry) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -111,15 +109,15 @@ func (c *DbClient) DeleteFile(path string) {
 }
 
 // GetDataForPrefix returns all values which match provided prefix
-func (c *DbClient) GetDataForPrefix(prefix string) []*reader.DataEntry {
+func (c *DbClient) GetDataForPrefix(prefix string) []*decoder.FileDataEntry {
 	c.Lock()
 	defer c.Unlock()
 
-	var keyValues []*reader.DataEntry
+	var keyValues []*decoder.FileDataEntry
 	for _, file := range c.db {
 		for key, value := range file {
 			if strings.HasPrefix(key, prefix) {
-				keyValues = append(keyValues, &reader.DataEntry{
+				keyValues = append(keyValues, &decoder.FileDataEntry{
 					Key:   key,
 					Value: value.data,
 				})
@@ -130,14 +128,14 @@ func (c *DbClient) GetDataForPrefix(prefix string) []*reader.DataEntry {
 }
 
 // GetDataForFile returns a map of key-value entries from given file
-func (c *DbClient) GetDataForFile(path string) []*reader.DataEntry {
+func (c *DbClient) GetDataForFile(path string) []*decoder.FileDataEntry {
 	c.Lock()
 	defer c.Unlock()
 
-	var keyValues []*reader.DataEntry
+	var keyValues []*decoder.FileDataEntry
 	if dbKeyValues, ok := c.db[path]; ok {
 		for key, value := range dbKeyValues {
-			keyValues = append(keyValues, &reader.DataEntry{
+			keyValues = append(keyValues, &decoder.FileDataEntry{
 				Key:   key,
 				Value: value.data,
 			})
@@ -147,37 +145,18 @@ func (c *DbClient) GetDataForFile(path string) []*reader.DataEntry {
 }
 
 // GetDataForKey returns data for given key.
-func (c *DbClient) GetDataForKey(key string) (*reader.DataEntry, bool) {
+func (c *DbClient) GetDataForKey(key string) (*decoder.FileDataEntry, bool) {
 	c.Lock()
 	defer c.Unlock()
 
 	for _, file := range c.db {
 		value, ok := file[key]
 		if ok {
-			return &reader.DataEntry{
+			return &decoder.FileDataEntry{
 				Key:   key,
 				Value: value.data,
 			}, true
 		}
 	}
 	return nil, false
-}
-
-// GetDataForPathAndKey returns data for given path and key
-func (c *DbClient) GetDataForPathAndKey(path, key string) (*reader.DataEntry, bool) {
-	c.Lock()
-	defer c.Unlock()
-
-	fileData, ok := c.db[path]
-	if !ok {
-		return nil, false
-	}
-	value, ok := fileData[key]
-	if !ok {
-		return nil, false
-	}
-	return &reader.DataEntry{
-		Key:   key,
-		Value: value.data,
-	}, true
 }

@@ -16,15 +16,14 @@ package filedb
 
 import (
 	"bytes"
-	"fmt"
-	"os"
 	"strings"
 	"sync"
 
-	"github.com/ligato/cn-infra/utils/safeclose"
-	"github.com/pkg/errors"
+	"github.com/ligato/cn-infra/db/keyval/filedb/database"
+	"github.com/ligato/cn-infra/db/keyval/filedb/decoder"
+	"github.com/ligato/cn-infra/db/keyval/filedb/filesystem"
 
-	"github.com/ligato/cn-infra/db/keyval/filedb/reader"
+	"github.com/pkg/errors"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/ligato/cn-infra/datasync"
@@ -45,7 +44,7 @@ type Client struct {
 	// If the field is empty or point to a directory, status is not propagated to any file.
 	stPath string
 	// Status reader is chosen according to status file extension.
-	stReader reader.API
+	stDc decoder.API
 
 	// Internal database mirrors changes in file system. Since the configuration can be only read, it is up to client
 	// to handle difference between configuration revisions. Every database entry consists from three values:
@@ -53,11 +52,14 @@ type Client struct {
 	//  - data key
 	//  - data value
 	// Note: database holds only configuration intended for agent with appropriate prefix
-	db FilesSystemDB
+	db database.FilesSystemDB
 
-	// File system reader API, grants access to methods needed for checking/reading of system files. Client expects
-	// the reader to process files with specific extension
-	readers []reader.API
+	// Filesystem handler, provides methods to work with files/directories
+	fsh filesystem.API
+
+	// File system decoder API, grants access to methods needed for decoding files. Client expects
+	// the decoder to process files with specific extension
+	decoders []decoder.API
 
 	// A set of watchers for every key prefix.
 	watchers map[string]chan keyedData
@@ -67,64 +69,65 @@ type Client struct {
 }
 
 // NewClient initializes file watcher, database and registers paths provided via plugin configuration file
-func NewClient(cfgPaths []string, statusPath, prefix string, rd []reader.API, log logging.Logger) (*Client, error) {
+func NewClient(cfgPaths []string, statusPath, prefix string, dcs []decoder.API, fsh filesystem.API, log logging.Logger) (*Client, error) {
 	// Init client object
 	c := &Client{
 		cfgPaths:    cfgPaths,
 		stPath:      statusPath,
+		fsh:         fsh,
 		watchers:    make(map[string]chan keyedData),
-		db:          NewDbClient(),
-		readers:     rd,
+		db:          database.NewDbClient(),
+		decoders:    dcs,
 		agentPrefix: prefix,
 		log:         log,
 	}
 
-	// There can be various types of files, so client tries all available readers to obtain data from them into
-	// a common list of files in paths. Initial read data are stored in internal database.
-	for _, path := range cfgPaths {
-		var filesInPath []*reader.File
-		for _, r := range c.readers {
-			files, err := r.ProcessFiles(path)
+	// Init filesystem handler
+	filePaths, err := c.fsh.GetFileNames(c.cfgPaths)
+	if err != nil {
+		return nil, errors.Errorf("failed to read files from provided paths: %v", err)
+	}
+	// Decode initial configuration
+	var files []*decoder.File
+	for _, filePath := range filePaths {
+		if dc := c.getFileDecoder(filePath); dc != nil {
+			byteFile, err := c.fsh.ReadFile(filePath)
 			if err != nil {
-				return nil, fmt.Errorf("failed to process file/directory %s with %s: %v", path, r.ToString(), err)
+				return nil, errors.Errorf("failed to read file %s content: %v", filePath, err)
 			}
-			filesInPath = append(filesInPath, files...)
+			fileEntries, err := dc.Decode(byteFile)
+			file := &decoder.File{Path: filePath, Data: fileEntries}
+			if err != nil {
+				return nil, errors.Errorf("failed to decode file %s: %v", filePath, err)
+			}
+			files = append(files, file)
 		}
-
-		// Find all the configuration for given agent and key and store it in the database
-		for _, file := range filesInPath {
-			for _, fileData := range file.Data {
-				if ok := c.checkAgentPrefix(fileData.Key); ok {
-					c.db.Add(file.Path, &reader.DataEntry{Key: fileData.Key, Value: fileData.Value})
-				}
+	}
+	// Put all the configuration for given agent to the database
+	for _, file := range files {
+		for _, data := range file.Data {
+			if ok := c.checkAgentPrefix(data.Key); ok {
+				c.db.Add(file.Path, &decoder.FileDataEntry{Key: data.Key, Value: data.Value})
 			}
 		}
 	}
-
-	// Validate and prepare the status file
+	// Validate and prepare the status file and decoder
 	if c.stPath != "" {
-		for _, r := range c.readers {
-			if r.IsValid(c.stPath) {
-				c.stReader = r
-				break
-			}
+		c.stDc = c.getFileDecoder(c.stPath)
+		if c.stDc == nil {
+			return nil, errors.Errorf("failed to get decoder for status file (unknown extension) %s: %v", c.stPath, err)
 		}
-		if c.stReader == nil {
-			// Do not return error here
-			c.log.Errorf("no suitable reader was found for file %s, make sure the file extension is supported",
-				c.stPath)
-		} else {
-			// Prepare status file
-			stPathParts := strings.Split(c.stPath, "/")
-			path := strings.Replace(c.stPath, stPathParts[len(stPathParts)-1], "", 1)
-			if err := os.MkdirAll(path, os.ModePerm); err != nil {
-				return nil, fmt.Errorf("failed to create path %s for status file: %v", path, err)
+		filePath, err := c.fsh.GetFileNames([]string{c.stPath})
+		if err != nil {
+			return nil, errors.Errorf("failed to read status file: %v", err)
+		}
+		// Expected is at most single entry
+		if len(filePath) == 0 {
+			if err := c.fsh.CreateFile(c.stPath); err != nil {
+				return nil, errors.Errorf("failed to create status file: %v", err)
 			}
-			sf, err := os.Create(c.stPath)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create status file %s: %v", c.stPath, err)
-			}
-			return c, sf.Close()
+		} else if len(filePath) > 1 {
+			return nil, errors.Errorf("failed to process status file, unexpected processing output: %v", err)
 		}
 	}
 
@@ -142,12 +145,12 @@ func (c *Client) GetPrefix() string {
 }
 
 // GetDataForFile returns data gor given file
-func (c *Client) GetDataForFile(path string) []*reader.DataEntry {
+func (c *Client) GetDataForFile(path string) []*decoder.FileDataEntry {
 	return c.db.GetDataForFile(path)
 }
 
 // GetDataForKey returns data gor given file
-func (c *Client) GetDataForKey(key string) (*reader.DataEntry, bool) {
+func (c *Client) GetDataForKey(key string) (*decoder.FileDataEntry, bool) {
 	return c.db.GetDataForKey(key)
 }
 
@@ -179,10 +182,37 @@ func (c *Client) NewWatcher(prefix string) keyval.BytesWatcher {
 	}
 }
 
-// Put is not supported, fileDB plugin does not allow to do changes to the configuration
+// Put reads status file, add data to it and performs write
 func (c *Client) Put(key string, data []byte, opts ...datasync.PutOption) error {
-	if err := c.stReader.Write(c.stPath, &reader.DataEntry{Key: key, Value: data}); err != nil {
-		c.log.Errorf("failed to write status data: %v", err)
+	// Read and decode status file
+	stFile, err := c.fsh.ReadFile(c.stPath)
+	if err != nil {
+		return errors.Errorf("failed to write status to fileDB: unable to read status file %s: %v", c.stPath, err)
+	}
+	dataEntries, err := c.stDc.Decode(stFile)
+	if err != nil {
+		return errors.Errorf("failed to write status to fileDB: unable to decode status file %s: %v", c.stPath, err)
+	}
+	// Add/update data
+	var updated bool
+	for _, dataEntry := range dataEntries {
+		if dataEntry.Key == key {
+			dataEntry.Value = data
+			updated = true
+			break
+		}
+	}
+	if !updated {
+		dataEntries = append(dataEntries, &decoder.FileDataEntry{Key: key, Value: data})
+	}
+	// Encode and write
+	stFileEntries, err := c.stDc.Encode(dataEntries)
+	if err != nil {
+		return errors.Errorf("failed to write status to fileDB: unable to encode status file %s: %v", c.stPath, err)
+	}
+	err = c.fsh.WriteFile(c.stPath, stFileEntries)
+	if err != nil {
+		return errors.Errorf("failed to write status %s to fileDB: %v", c.stPath, err)
 	}
 	return nil
 }
@@ -195,7 +225,7 @@ func (c *Client) NewTxn() keyval.BytesTxn {
 
 // GetValue returns a value for given key
 func (c *Client) GetValue(key string) (data []byte, found bool, revision int64, err error) {
-	var entry *reader.DataEntry
+	var entry *decoder.FileDataEntry
 	entry, found = c.db.GetDataForKey(c.agentPrefix + key)
 	data = entry.Value
 	return
@@ -204,9 +234,9 @@ func (c *Client) GetValue(key string) (data []byte, found bool, revision int64, 
 // ListValues returns a list of values for given prefix
 func (c *Client) ListValues(prefix string) (keyval.BytesKeyValIterator, error) {
 	keyValues := c.db.GetDataForPrefix(c.agentPrefix + prefix)
-	data := make([]*reader.DataEntry, 0, len(keyValues))
+	data := make([]*decoder.FileDataEntry, 0, len(keyValues))
 	for _, entry := range keyValues {
-		data = append(data, &reader.DataEntry{
+		data = append(data, &decoder.FileDataEntry{
 			Key:   c.stripAgentPrefix(entry.Key),
 			Value: entry.Value,
 		})
@@ -246,8 +276,8 @@ func (c *Client) Watch(resp func(response keyval.BytesWatchResp), closeChan chan
 
 // Close closes all readers
 func (c *Client) Close() error {
-	if err := safeclose.Close(c.readers); err != nil {
-		return errors.Errorf("failed to close file readers: %v", err)
+	if c.fsh != nil {
+		return c.fsh.Close()
 	}
 	return nil
 }
@@ -268,7 +298,6 @@ func (c *Client) watch(resp func(response keyval.BytesWatchResp), dataChan chan 
 				resp(&keyedData.watchResp)
 			}
 		case <-closeChan:
-			// TODO it seems this channel does not work
 			return
 		}
 	}
@@ -276,18 +305,16 @@ func (c *Client) watch(resp func(response keyval.BytesWatchResp), dataChan chan 
 
 // Event watcher starts file system watcher for every reader available.
 func (c *Client) eventWatcher() {
-	for _, r := range c.readers {
-		r.Watch(c.cfgPaths, c.onEvent, c.onClose)
-	}
+	c.fsh.Watch(c.cfgPaths, c.onEvent, c.onClose)
 }
 
 // OnEvent is common method called when new event from file system arrives. Different files may require different
 // reader, but the data processing is the same.
-func (c *Client) onEvent(event fsnotify.Event, r reader.API) {
+func (c *Client) onEvent(event fsnotify.Event) {
 	// If file was removed, delete all configuration associated with it. Do the same action for
 	// rename, following action will be create with the new name which re-applies the configuration
 	// (if new name is in scope of the defined path)
-	if (event.Op == fsnotify.Rename || event.Op == fsnotify.Remove) && !r.PathExists(event.Name) {
+	if (event.Op == fsnotify.Rename || event.Op == fsnotify.Remove) && !c.fsh.FileExists(event.Name) {
 		entries := c.db.GetDataForFile(event.Name)
 		for _, entry := range entries {
 			// Value from DB does not need to be checked
@@ -302,52 +329,55 @@ func (c *Client) onEvent(event fsnotify.Event, r reader.API) {
 	}
 
 	// Read data from file
-	dataSet, err := r.ProcessFiles(event.Name)
+	byteFile, err := c.fsh.ReadFile(event.Name)
 	if err != nil {
-		c.log.Error(err)
+		c.log.Errorf("failed to process filesystem event: file cannot be read %s: %v", event.Name, err)
 		return
 	}
-
-	for _, fileData := range dataSet {
-		// Compare with database, calculate diff
-		latestFile := c.db.GetDataForFile(event.Name)
-		changed, removed := fileData.CompareTo(&reader.File{
-			Path: event.Name,
-			Data: latestFile,
-		})
-		// Update database and propagate data to channel
-		for _, data := range removed {
-			if ok := c.checkAgentPrefix(data.Key); ok {
-				keyed := keyedData{
-					path:      fileData.Path,
-					watchResp: watchResp{Op: datasync.Delete, Key: data.Key, Value: nil, PrevValue: data.Value},
-				}
-				c.sendToChannel(keyed)
-				c.db.Delete(event.Name, keyed.Key)
+	dc := c.getFileDecoder(event.Name)
+	if dc == nil {
+		return
+	}
+	decodedFileEntries, err := dc.Decode(byteFile)
+	if err != nil {
+		c.log.Errorf("failed to process filesystem event: file cannot be decoded %s: %v", event.Name, err)
+		return
+	}
+	file := &decoder.File{Path: event.Name, Data: decodedFileEntries}
+	latestFile := &decoder.File{Path: event.Name, Data: c.db.GetDataForFile(event.Name)}
+	changed, removed := file.CompareTo(latestFile)
+	// Update database and propagate data to channel
+	for _, fileDataEntry := range removed {
+		if ok := c.checkAgentPrefix(fileDataEntry.Key); ok {
+			keyed := keyedData{
+				path:      event.Name,
+				watchResp: watchResp{Op: datasync.Delete, Key: fileDataEntry.Key, Value: nil, PrevValue: fileDataEntry.Value},
 			}
+			c.sendToChannel(keyed)
+			c.db.Delete(event.Name, keyed.Key)
 		}
-		for _, data := range changed {
-			if ok := c.checkAgentPrefix(data.Key); ok {
-				// Get last key-val configuration item if exists
-				var prevVal []byte
-				if prevValEntry, ok := c.db.GetDataForPathAndKey(event.Name, data.Key); ok {
-					prevVal = prevValEntry.Value
-				}
-				keyed := keyedData{
-					path:      fileData.Path,
-					watchResp: watchResp{Op: datasync.Put, Key: data.Key, Value: data.Value, PrevValue: prevVal},
-				}
-				c.sendToChannel(keyed)
-				c.db.Add(event.Name, &reader.DataEntry{
-					Key:   keyed.Key,
-					Value: keyed.Value,
-				})
+	}
+	for _, fileDataEntry := range changed {
+		if ok := c.checkAgentPrefix(fileDataEntry.Key); ok {
+			// Get last key-val configuration item if exists
+			var prevVal []byte
+			if prevValEntry, ok := c.db.GetDataForKey(fileDataEntry.Key); ok {
+				prevVal = prevValEntry.Value
 			}
+			keyed := keyedData{
+				path:      event.Name,
+				watchResp: watchResp{Op: datasync.Put, Key: fileDataEntry.Key, Value: fileDataEntry.Value, PrevValue: prevVal},
+			}
+			c.sendToChannel(keyed)
+			c.db.Add(event.Name, &decoder.FileDataEntry{
+				Key:   keyed.Key,
+				Value: keyed.Value,
+			})
 		}
 	}
 }
 
-// OnClose is called from reader when the file system data channel is closed.
+// OnClose is called from filesystem watcher when the file system data channel is closed.
 func (c *Client) onClose() {
 	for _, channel := range c.watchers {
 		close(channel)
@@ -379,4 +409,14 @@ func (c *Client) checkAgentPrefix(key string) bool {
 // Removes an agent prefix identifier from the key
 func (c *Client) stripAgentPrefix(key string) string {
 	return strings.Replace(key, c.agentPrefix, "", 1)
+}
+
+// Use known decoders to decide whether the file can or cannot be processed. If so, return proper decoder.
+func (c *Client) getFileDecoder(file string) decoder.API {
+	for _, dc := range c.decoders {
+		if dc.IsProcessable(file) {
+			return dc
+		}
+	}
+	return nil
 }

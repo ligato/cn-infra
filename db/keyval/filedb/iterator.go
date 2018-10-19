@@ -3,8 +3,9 @@ package filedb
 import (
 	"strings"
 
+	"github.com/ligato/cn-infra/db/keyval/filedb/decoder"
+
 	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/db/keyval/filedb/reader"
 )
 
 // File system DB BytesKeyValIterator implementation
@@ -12,7 +13,7 @@ type bytesKeyValIterator struct {
 	index int
 	len   int
 	rev   int
-	data  []*reader.DataEntry
+	data  []*decoder.FileDataEntry
 }
 
 // File system DB BytesKeyIterator implementation

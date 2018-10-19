@@ -22,7 +22,8 @@ import (
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/filedb"
-	"github.com/ligato/cn-infra/db/keyval/filedb/reader"
+	"github.com/ligato/cn-infra/db/keyval/filedb/decoder"
+	"github.com/ligato/cn-infra/db/keyval/filedb/filesystem"
 	"github.com/ligato/cn-infra/logging/logrus"
 	. "github.com/onsi/gomega"
 )
@@ -33,59 +34,50 @@ func TestNewClient(t *testing.T) {
 	RegisterTestingT(t)
 
 	// Mocks
-	mock := reader.NewFileDBReaderMock()
-	defer mock.Close()
-	// Process file
-	mock.When("ProcessFiles").ThenReturn([]*reader.File{
+	fsMock := filesystem.NewFileSystemMock()
+	dcMock := decoder.NewDecoderMock()
+	// Get Paths
+	fsMock.When("GetFileNames").ThenReturn([]string{
+		"/path/to/file1.json",
+		"/path/to/file2.json",
+		"/path/to/directory/file3.json",
+		"/path/to/directory/file4.json",
+	})
+	// Decode (let's say there is only JSON decoder)
+	dcMock.When("IsProcessable").ThenReturn(true)
+	dcMock.When("Decode").ThenReturn([]*decoder.FileDataEntry{
 		{
-			Path: "path1",
-			Data: []*reader.DataEntry{
-				{
-					Key:   "/test-prefix/path1Key1",
-					Value: []byte("path1Key1"),
-				},
-			},
+			Key:   "/test-prefix/path1Key1",
+			Value: []byte("path1Key1"),
 		},
 	})
-	mock.When("ProcessFiles").ThenReturn([]*reader.File{
+	dcMock.When("IsProcessable").ThenReturn(true)
+	dcMock.When("Decode").ThenReturn([]*decoder.FileDataEntry{
 		{
-			Path: "path2",
-			Data: []*reader.DataEntry{
-				{
-					Key:   "/test-prefix/path2Key1",
-					Value: []byte("path1Key1"),
-				},
-				{
-					Key:   "/test-prefix/path2Key2",
-					Value: []byte("path1Key2"),
-				},
-			},
+			Key:   "/test-prefix/path2Key1",
+			Value: []byte("path1Key1"),
+		},
+		{
+			Key:   "/test-prefix/path2Key2",
+			Value: []byte("path1Key2"),
 		},
 	})
-	// Process directory
-	mock.When("ProcessFiles").ThenReturn([]*reader.File{
+	dcMock.When("IsProcessable").ThenReturn(true)
+	dcMock.When("Decode").ThenReturn([]*decoder.FileDataEntry{
 		{
-
-			Path: "path3",
-			Data: []*reader.DataEntry{
-				{
-					Key:   "/test-prefix/path3Key1",
-					Value: []byte("path3Key1"),
-				},
-			},
+			Key:   "/test-prefix/path3Key1",
+			Value: []byte("path3Key1"),
+		},
+	})
+	dcMock.When("IsProcessable").ThenReturn(true)
+	dcMock.When("Decode").ThenReturn([]*decoder.FileDataEntry{
+		{
+			Key:   "/test-prefix/path4Key1",
+			Value: []byte("path4Key1"),
 		},
 		{
-			Path: "path4",
-			Data: []*reader.DataEntry{
-				{
-					Key:   "/test-prefix/path4Key1",
-					Value: []byte("path4Key1"),
-				},
-				{
-					Key:   "path4Key2", // these are without prefix
-					Value: []byte("path4Key2"),
-				},
-			},
+			Key:   "path4Key2", // these are without prefix
+			Value: []byte("path4Key2"),
 		},
 	})
 
@@ -97,7 +89,7 @@ func TestNewClient(t *testing.T) {
 	}
 	prefix := "/test-prefix/"
 
-	client, err := filedb.NewClient(paths, "", prefix, []reader.API{mock}, log)
+	client, err := filedb.NewClient(paths, "", prefix, []decoder.API{dcMock}, fsMock, log)
 	defer client.Close()
 
 	Expect(err).To(BeNil())
@@ -105,16 +97,16 @@ func TestNewClient(t *testing.T) {
 	Expect(client.GetPaths()).To(HaveLen(3))
 	Expect(client.GetPrefix()).To(BeEquivalentTo(prefix))
 	// Path1
-	data := client.GetDataForFile("path1")
+	data := client.GetDataForFile("/path/to/file1.json")
 	Expect(data).To(HaveLen(1))
 	// Path2
-	data = client.GetDataForFile("path2")
+	data = client.GetDataForFile("/path/to/file2.json")
 	Expect(data).To(HaveLen(2))
 	// Path3
-	data = client.GetDataForFile("path3")
+	data = client.GetDataForFile("/path/to/directory/file3.json")
 	Expect(data).To(HaveLen(1))
 	// Path4
-	data = client.GetDataForFile("path4")
+	data = client.GetDataForFile("/path/to/directory/file4.json")
 	Expect(data).To(HaveLen(1)) // 1 is correct, second path is without prefix
 }
 
@@ -126,71 +118,55 @@ func TestNewClient(t *testing.T) {
 func TestJsonReaderWatcher(t *testing.T) {
 	RegisterTestingT(t)
 
-	mock := reader.NewFileDBReaderMock()
-	defer mock.Close()
-
+	// Mocks
+	fsMock := filesystem.NewFileSystemMock()
+	dcMock := decoder.NewDecoderMock()
 	// Client initialization
-	mock.When("ProcessFiles").ThenReturn([]*reader.File{})
+	fsMock.When("GetFileNames").ThenReturn([]string{"/path/to/file1.json"})
+	dcMock.When("IsProcessable").ThenReturn(true)
+	dcMock.When("Decode").ThenReturn()
 	// Event 1 (create two items)
-	mock.When("ProcessFiles").ThenReturn([]*reader.File{
+	dcMock.When("IsProcessable").ThenReturn(true)
+	dcMock.When("Decode").ThenReturn([]*decoder.FileDataEntry{
 		{
-			Path: "path1",
-			Data: []*reader.DataEntry{
-				{
-					Key:   "/test-prefix/vpp/config/interfaces/if1",
-					Value: []byte("if1-created"),
-				},
-				{
-					Key:   "/test-prefix/vpp/config/interfaces/if2",
-					Value: []byte("if2-created"),
-				},
-			},
+			Key:   "/test-prefix/vpp/config/interfaces/if1",
+			Value: []byte("if1-created"),
+		},
+		{
+			Key:   "/test-prefix/vpp/config/interfaces/if2",
+			Value: []byte("if2-created"),
 		},
 	})
 	// Event 2 (modify one item)
-	mock.When("ProcessFiles").ThenReturn([]*reader.File{
+	dcMock.When("IsProcessable").ThenReturn(true)
+	dcMock.When("Decode").ThenReturn([]*decoder.FileDataEntry{
 		{
-			Path: "path1",
-			Data: []*reader.DataEntry{
-				{
-					Key:   "/test-prefix/vpp/config/interfaces/if1",
-					Value: []byte("if1-modified"),
-				},
-				{
-					// This one is still the same
-					Key:   "/test-prefix/vpp/config/interfaces/if2",
-					Value: []byte("if2-created"),
-				},
-			},
+			Key:   "/test-prefix/vpp/config/interfaces/if1",
+			Value: []byte("if1-modified"),
+		},
+		{
+			// This one is still the same
+			Key:   "/test-prefix/vpp/config/interfaces/if2",
+			Value: []byte("if2-created"),
 		},
 	})
 	// Event 3 (delete one item)
-	mock.When("PathExists").ThenReturn(true)
-	mock.When("ProcessFiles").ThenReturn([]*reader.File{
+	fsMock.When("FileExists").ThenReturn(true)
+	dcMock.When("IsProcessable").ThenReturn(true)
+	dcMock.When("Decode").ThenReturn([]*decoder.FileDataEntry{
 		{
-			Path: "path1",
-			Data: []*reader.DataEntry{
-				{
-					// This one is still the same
-					Key:   "/test-prefix/vpp/config/interfaces/if2",
-					Value: []byte("if2-created"),
-				},
-			},
+			// This one is still the same
+			Key:   "/test-prefix/vpp/config/interfaces/if2",
+			Value: []byte("if2-created"),
 		},
 	})
 	// Event 4 (delete file - last item)
-	mock.When("PathExists").ThenReturn(false)
-	mock.When("ProcessFiles").ThenReturn([]*reader.File{
-		{
-			Path: "path1",
-			Data: []*reader.DataEntry{},
-		},
-	})
+	fsMock.When("FileExists").ThenReturn(false)
 
 	// Init custom client
 	paths := []string{"/path/to/file1.json"}
 	prefix := "/test-prefix"
-	client, err := filedb.NewClient(paths, "", prefix, []reader.API{mock}, log)
+	client, err := filedb.NewClient(paths, "", prefix, []decoder.API{dcMock}, fsMock, log)
 	defer client.Close()
 	Expect(err).To(BeNil())
 	Expect(client).ToNot(BeNil())
@@ -241,7 +217,7 @@ func TestJsonReaderWatcher(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Test first event (create)
-	mock.SendEvent(fsnotify.Event{
+	fsMock.SendEvent(fsnotify.Event{
 		Name: "/path/to/file1.json",
 		Op:   fsnotify.Create,
 	})
@@ -256,7 +232,7 @@ func TestJsonReaderWatcher(t *testing.T) {
 	Expect(data.Value).To(BeEquivalentTo([]byte("if2-created")))
 
 	// Test second event (modify)
-	mock.SendEvent(fsnotify.Event{
+	fsMock.SendEvent(fsnotify.Event{
 		Name: "/path/to/file1.json",
 		Op:   fsnotify.Create,
 	})
@@ -271,7 +247,7 @@ func TestJsonReaderWatcher(t *testing.T) {
 	Expect(data.Value).To(BeEquivalentTo([]byte("if2-created")))
 
 	// Test third event (delete)
-	mock.SendEvent(fsnotify.Event{
+	fsMock.SendEvent(fsnotify.Event{
 		Name: "/path/to/file1.json",
 		Op:   fsnotify.Remove,
 	})
@@ -285,7 +261,7 @@ func TestJsonReaderWatcher(t *testing.T) {
 	Expect(data.Value).To(BeEquivalentTo([]byte("if2-created")))
 
 	// Test last event (file delete)
-	mock.SendEvent(fsnotify.Event{
+	fsMock.SendEvent(fsnotify.Event{
 		Name: "/path/to/file1.json",
 		Op:   fsnotify.Remove,
 	})

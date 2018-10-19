@@ -16,7 +16,8 @@ package filedb
 
 import (
 	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/db/keyval/filedb/reader"
+	"github.com/ligato/cn-infra/db/keyval/filedb/decoder"
+	"github.com/ligato/cn-infra/db/keyval/filedb/filesystem"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/servicelabel"
@@ -59,10 +60,11 @@ func (p *Plugin) Init() error {
 		return err
 	}
 
-	var readers []reader.API
-	readers = append(readers, &reader.Reader{})
+	// Register decoders
+	var decoders []decoder.API
+	decoders = append(decoders, decoder.NewJSONDecoder(), decoder.NewYAMLDecoder())
 
-	if p.client, err = NewClient(p.config.ConfigPaths, p.config.StatusPath, p.sv.GetAgentPrefix(), readers, p.Log); err != nil {
+	if p.client, err = NewClient(p.config.ConfigPaths, p.config.StatusPath, p.sv.GetAgentPrefix(), decoders, filesystem.NewFsHandler(), p.Log); err != nil {
 		return err
 	}
 
