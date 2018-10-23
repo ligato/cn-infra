@@ -47,9 +47,10 @@ For YAML:
 
 ---
 data:
-- key: "<key>"
-  value:
-    <modelled data>
+    -
+        key: '<key>'
+        value: '<modelled data>'
+
 ```
 
 Key has to contain also instance prefix with micro service label, so plugin knows which parts of the configuration 
