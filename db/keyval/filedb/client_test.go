@@ -47,36 +47,36 @@ func TestNewClient(t *testing.T) {
 	dcMock.When("IsProcessable").ThenReturn(true)
 	dcMock.When("Decode").ThenReturn([]*decoder.FileDataEntry{
 		{
-			Key:   "/test-prefix/path1Key1",
+			Key:   "/test-path/path1Key1",
 			Value: []byte("path1Key1"),
 		},
 	})
 	dcMock.When("IsProcessable").ThenReturn(true)
 	dcMock.When("Decode").ThenReturn([]*decoder.FileDataEntry{
 		{
-			Key:   "/test-prefix/path2Key1",
+			Key:   "/test-path/path2Key1",
 			Value: []byte("path1Key1"),
 		},
 		{
-			Key:   "/test-prefix/path2Key2",
+			Key:   "/test-path/path2Key2",
 			Value: []byte("path1Key2"),
 		},
 	})
 	dcMock.When("IsProcessable").ThenReturn(true)
 	dcMock.When("Decode").ThenReturn([]*decoder.FileDataEntry{
 		{
-			Key:   "/test-prefix/path3Key1",
+			Key:   "/test-path/path3Key1",
 			Value: []byte("path3Key1"),
 		},
 	})
 	dcMock.When("IsProcessable").ThenReturn(true)
 	dcMock.When("Decode").ThenReturn([]*decoder.FileDataEntry{
 		{
-			Key:   "/test-prefix/path4Key1",
+			Key:   "/test-path/path4Key1",
 			Value: []byte("path4Key1"),
 		},
 		{
-			Key:   "path4Key2", // these are without prefix
+			Key:   "/test-path/path4Key2",
 			Value: []byte("path4Key2"),
 		},
 	})
@@ -87,15 +87,13 @@ func TestNewClient(t *testing.T) {
 		"/path/to/file2.json",
 		"/path/to/directory",
 	}
-	prefix := "/test-prefix/"
 
-	client, err := filedb.NewClient(paths, "", prefix, []decoder.API{dcMock}, fsMock, log)
+	client, err := filedb.NewClient(paths, "", []decoder.API{dcMock}, fsMock, log)
 	defer client.Close()
 
 	Expect(err).To(BeNil())
 	Expect(client).ToNot(BeNil())
 	Expect(client.GetPaths()).To(HaveLen(3))
-	Expect(client.GetPrefix()).To(BeEquivalentTo(prefix))
 	// Path1
 	data := client.GetDataForFile("/path/to/file1.json")
 	Expect(data).To(HaveLen(1))
@@ -107,7 +105,7 @@ func TestNewClient(t *testing.T) {
 	Expect(data).To(HaveLen(1))
 	// Path4
 	data = client.GetDataForFile("/path/to/directory/file4.json")
-	Expect(data).To(HaveLen(1)) // 1 is correct, second path is without prefix
+	Expect(data).To(HaveLen(2))
 }
 
 // This test prepares four events:
@@ -129,11 +127,11 @@ func TestJsonReaderWatcher(t *testing.T) {
 	dcMock.When("IsProcessable").ThenReturn(true)
 	dcMock.When("Decode").ThenReturn([]*decoder.FileDataEntry{
 		{
-			Key:   "/test-prefix/vpp/config/interfaces/if1",
+			Key:   "/test-path/vpp/config/interfaces/if1",
 			Value: []byte("if1-created"),
 		},
 		{
-			Key:   "/test-prefix/vpp/config/interfaces/if2",
+			Key:   "/test-path/vpp/config/interfaces/if2",
 			Value: []byte("if2-created"),
 		},
 	})
@@ -141,12 +139,12 @@ func TestJsonReaderWatcher(t *testing.T) {
 	dcMock.When("IsProcessable").ThenReturn(true)
 	dcMock.When("Decode").ThenReturn([]*decoder.FileDataEntry{
 		{
-			Key:   "/test-prefix/vpp/config/interfaces/if1",
+			Key:   "/test-path/vpp/config/interfaces/if1",
 			Value: []byte("if1-modified"),
 		},
 		{
 			// This one is still the same
-			Key:   "/test-prefix/vpp/config/interfaces/if2",
+			Key:   "/test-path/vpp/config/interfaces/if2",
 			Value: []byte("if2-created"),
 		},
 	})
@@ -156,7 +154,7 @@ func TestJsonReaderWatcher(t *testing.T) {
 	dcMock.When("Decode").ThenReturn([]*decoder.FileDataEntry{
 		{
 			// This one is still the same
-			Key:   "/test-prefix/vpp/config/interfaces/if2",
+			Key:   "/test-path/vpp/config/interfaces/if2",
 			Value: []byte("if2-created"),
 		},
 	})
@@ -165,8 +163,7 @@ func TestJsonReaderWatcher(t *testing.T) {
 
 	// Init custom client
 	paths := []string{"/path/to/file1.json"}
-	prefix := "/test-prefix"
-	client, err := filedb.NewClient(paths, "", prefix, []decoder.API{dcMock}, fsMock, log)
+	client, err := filedb.NewClient(paths, "", []decoder.API{dcMock}, fsMock, log)
 	defer client.Close()
 	Expect(err).To(BeNil())
 	Expect(client).ToNot(BeNil())
@@ -177,31 +174,31 @@ func TestJsonReaderWatcher(t *testing.T) {
 		logrus.DefaultLogger().Warnf("resp: %v, %v, %v", resp.GetKey(), resp.GetValue(), resp.GetPrevValue())
 		if !create1 {
 			Expect(resp.GetChangeType()).To(BeEquivalentTo(datasync.Put))
-			Expect(resp.GetKey()).To(BeEquivalentTo("/vpp/config/interfaces/if1"))
+			Expect(resp.GetKey()).To(BeEquivalentTo("/test-path/vpp/config/interfaces/if1"))
 			Expect(resp.GetValue()).To(BeEquivalentTo([]byte("if1-created")))
 			Expect(resp.GetPrevValue()).To(BeNil())
 			create1 = true
 		} else if !create2 {
 			Expect(resp.GetChangeType()).To(BeEquivalentTo(datasync.Put))
-			Expect(resp.GetKey()).To(BeEquivalentTo("/vpp/config/interfaces/if2"))
+			Expect(resp.GetKey()).To(BeEquivalentTo("/test-path/vpp/config/interfaces/if2"))
 			Expect(resp.GetValue()).To(BeEquivalentTo([]byte("if2-created")))
 			Expect(resp.GetPrevValue()).To(BeNil())
 			create2 = true
 		} else if !update {
 			Expect(resp.GetChangeType()).To(BeEquivalentTo(datasync.Put))
-			Expect(resp.GetKey()).To(BeEquivalentTo("/vpp/config/interfaces/if1"))
+			Expect(resp.GetKey()).To(BeEquivalentTo("/test-path/vpp/config/interfaces/if1"))
 			Expect(resp.GetValue()).To(BeEquivalentTo([]byte("if1-modified")))
 			Expect(resp.GetPrevValue()).To(BeEquivalentTo([]byte("if1-created")))
 			update = true
 		} else if !del {
 			Expect(resp.GetChangeType()).To(BeEquivalentTo(datasync.Delete))
-			Expect(resp.GetKey()).To(BeEquivalentTo("/vpp/config/interfaces/if1"))
+			Expect(resp.GetKey()).To(BeEquivalentTo("/test-path/vpp/config/interfaces/if1"))
 			Expect(resp.GetValue()).To(BeNil())
 			Expect(resp.GetPrevValue()).To(BeEquivalentTo([]byte("if1-modified")))
 			del = true
 		} else if !delFile {
 			Expect(resp.GetChangeType()).To(BeEquivalentTo(datasync.Delete))
-			Expect(resp.GetKey()).To(BeEquivalentTo("/vpp/config/interfaces/if2"))
+			Expect(resp.GetKey()).To(BeEquivalentTo("/test-path/vpp/config/interfaces/if2"))
 			Expect(resp.GetValue()).To(BeNil())
 			Expect(resp.GetPrevValue()).To(BeEquivalentTo([]byte("if2-created")))
 			delFile = true
@@ -224,10 +221,10 @@ func TestJsonReaderWatcher(t *testing.T) {
 	Eventually(func() bool {
 		return create1 && create2
 	}, 200).Should(BeTrue())
-	data, ok := client.GetDataForKey("/test-prefix/vpp/config/interfaces/if1")
+	data, ok := client.GetDataForKey("/test-path/vpp/config/interfaces/if1")
 	Expect(ok).To(BeTrue())
 	Expect(data.Value).To(BeEquivalentTo([]byte("if1-created")))
-	data, ok = client.GetDataForKey("/test-prefix/vpp/config/interfaces/if2")
+	data, ok = client.GetDataForKey("/test-path/vpp/config/interfaces/if2")
 	Expect(ok).To(BeTrue())
 	Expect(data.Value).To(BeEquivalentTo([]byte("if2-created")))
 
@@ -239,10 +236,10 @@ func TestJsonReaderWatcher(t *testing.T) {
 	Eventually(func() bool {
 		return update
 	}, 200).Should(BeTrue())
-	data, ok = client.GetDataForKey("/test-prefix/vpp/config/interfaces/if1")
+	data, ok = client.GetDataForKey("/test-path/vpp/config/interfaces/if1")
 	Expect(ok).To(BeTrue())
 	Expect(data.Value).To(BeEquivalentTo([]byte("if1-modified")))
-	data, ok = client.GetDataForKey("/test-prefix/vpp/config/interfaces/if2")
+	data, ok = client.GetDataForKey("/test-path/vpp/config/interfaces/if2")
 	Expect(ok).To(BeTrue())
 	Expect(data.Value).To(BeEquivalentTo([]byte("if2-created")))
 
@@ -254,9 +251,9 @@ func TestJsonReaderWatcher(t *testing.T) {
 	Eventually(func() bool {
 		return del
 	}, 200).Should(BeTrue())
-	_, ok = client.GetDataForKey("/test-prefix/vpp/config/interfaces/if1")
+	_, ok = client.GetDataForKey("/test-path/vpp/config/interfaces/if1")
 	Expect(ok).To(BeFalse())
-	data, ok = client.GetDataForKey("/test-prefix/vpp/config/interfaces/if2")
+	data, ok = client.GetDataForKey("/test-path/vpp/config/interfaces/if2")
 	Expect(ok).To(BeTrue())
 	Expect(data.Value).To(BeEquivalentTo([]byte("if2-created")))
 
@@ -268,8 +265,8 @@ func TestJsonReaderWatcher(t *testing.T) {
 	Eventually(func() bool {
 		return delFile
 	}, 200).Should(BeTrue())
-	_, ok = client.GetDataForKey("/test-prefix/vpp/config/interfaces/if1")
+	_, ok = client.GetDataForKey("/test-path/vpp/config/interfaces/if1")
 	Expect(ok).To(BeFalse())
-	_, ok = client.GetDataForKey("/test-prefix/vpp/config/interfaces/if2")
+	_, ok = client.GetDataForKey("/test-path/vpp/config/interfaces/if2")
 	Expect(ok).To(BeFalse())
 }

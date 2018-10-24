@@ -16,6 +16,11 @@ All files/directories used as a data store must be defined in configuration file
 can be defined either by the command line flag `filedb-config` or set via the `FILEDB_CONFIG`
 environment variable.
 
+## Supported formats
+
+* JSON `(*.json)`
+* YAML `(*.yaml)`
+
 ## Data structure
 
 Plugin currently supports only JSON and YAML-formatted data. The format of the file is as follows for JSON:

@@ -48,7 +48,7 @@ func (f1 *File) CompareTo(f2 *File) (changed, removed []*FileDataEntry) {
 		for _, f1Data := range f1.Data {
 			if f1Data.Key == f2Data.Key {
 				found = true
-				if bytes.Compare(f1Data.Value, f2Data.Value) != 0 {
+				if !bytes.Equal(f1Data.Value, f2Data.Value) {
 					changed = append(changed, f1Data)
 					break
 				}

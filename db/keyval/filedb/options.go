@@ -14,8 +14,6 @@
 
 package filedb
 
-import "github.com/ligato/cn-infra/servicelabel"
-
 // DefaultPlugin is a default instance of Plugin.
 var DefaultPlugin = *NewPlugin()
 
@@ -24,7 +22,6 @@ func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
 	p.PluginName = "filedb"
-	p.sv = &servicelabel.DefaultPlugin
 
 	for _, o := range opts {
 		o(p)

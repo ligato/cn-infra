@@ -17,15 +17,18 @@ package decoder
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ghodss/yaml"
 	"strings"
+
+	"github.com/ghodss/yaml"
 )
 
-// Extension supported by this decoder
-var yamlDcExtensions = []string{".yaml"}
+// Default extension supported by this decoder
+var defaultYAMLExt = ".yaml"
 
 // YAMLDecoder can be used to decode yaml-type files
-type YAMLDecoder struct{}
+type YAMLDecoder struct {
+	extensions []string
+}
 
 // Represents data structure of yaml file used for configuration
 type yamlFile struct {
@@ -40,13 +43,15 @@ type yamlFileEntry struct {
 }
 
 // NewYAMLDecoder creates a new yaml decoder instance
-func NewYAMLDecoder() *YAMLDecoder {
-	return &YAMLDecoder{}
+func NewYAMLDecoder(extensions ...string) *YAMLDecoder {
+	return &YAMLDecoder{
+		extensions: append(extensions, defaultYAMLExt),
+	}
 }
 
 // IsProcessable returns true if decoder is able to decode provided file
 func (yd *YAMLDecoder) IsProcessable(file string) bool {
-	for _, ext := range yamlDcExtensions {
+	for _, ext := range yd.extensions {
 		if strings.HasSuffix(file, ext) {
 			return true
 		}
@@ -71,7 +76,7 @@ func (yd *YAMLDecoder) Encode(data []*FileDataEntry) ([]byte, error) {
 
 // Decode provided YAML file
 func (yd *YAMLDecoder) Decode(byteSet []byte) ([]*FileDataEntry, error) {
-	if byteSet == nil || len(byteSet) == 0 {
+	if len(byteSet) == 0 {
 		return []*FileDataEntry{}, nil
 	}
 	// Decode to type-specific structure

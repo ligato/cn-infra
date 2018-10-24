@@ -20,7 +20,6 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/filedb/filesystem"
 	"github.com/ligato/cn-infra/db/keyval/kvproto"
 	"github.com/ligato/cn-infra/infra"
-	"github.com/ligato/cn-infra/servicelabel"
 )
 
 // Plugin filesystem uses host os file system as database to store configuration.
@@ -41,7 +40,6 @@ type Plugin struct {
 // Deps are fileDB plugin dependencies
 type Deps struct {
 	infra.PluginDeps
-	sv servicelabel.ReaderAPI
 }
 
 // Config is fileDB configuration file structure
@@ -61,10 +59,8 @@ func (p *Plugin) Init() error {
 	}
 
 	// Register decoders
-	var decoders []decoder.API
-	decoders = append(decoders, decoder.NewJSONDecoder(), decoder.NewYAMLDecoder())
-
-	if p.client, err = NewClient(p.config.ConfigPaths, p.config.StatusPath, p.sv.GetAgentPrefix(), decoders, filesystem.NewFsHandler(), p.Log); err != nil {
+	decoders := []decoder.API{decoder.NewJSONDecoder(), decoder.NewYAMLDecoder()}
+	if p.client, err = NewClient(p.config.ConfigPaths, p.config.StatusPath, decoders, filesystem.NewFsHandler(), p.Log); err != nil {
 		return err
 	}
 

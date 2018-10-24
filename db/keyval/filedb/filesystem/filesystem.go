@@ -16,14 +16,12 @@ package filesystem
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strings"
-
 	"github.com/fsnotify/fsnotify"
 	"github.com/ligato/cn-infra/logging"
 	"github.com/pkg/errors"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 )
 
 // API defines filesystem-related method with emphasis on the fileDB needs
@@ -44,26 +42,22 @@ type API interface {
 	Close() error
 }
 
-// FsHandler is helper struct to manipulate with filesystem API
-type FsHandler struct {
+// Handler is helper struct to manipulate with filesystem API
+type Handler struct {
 	log     logging.Logger
 	watcher *fsnotify.Watcher
 }
 
 // NewFsHandler creates a new instance of file system handler
-func NewFsHandler() *FsHandler {
-	return &FsHandler{}
+func NewFsHandler() *Handler {
+	return &Handler{}
 }
 
 // CreateFile is an implementation of the file system API interface
-func (fsh *FsHandler) CreateFile(file string) error {
-	parts := strings.Split(file, "/")
-	if len(parts) == 0 {
-		return errors.Errorf("failed to create file: invalid input %s", file)
-	}
+func (fsh *Handler) CreateFile(file string) error {
+	path, _ := filepath.Split(file)
 	// Create path at first if necessary
-	if len(parts) > 1 {
-		path := strings.Replace(file, parts[len(parts)-1], "", 1)
+	if path != "" {
 		if err := os.MkdirAll(path, os.ModePerm); err != nil {
 			return errors.Errorf("failed to create path for file %s: %v", file, err)
 		}
@@ -76,12 +70,12 @@ func (fsh *FsHandler) CreateFile(file string) error {
 }
 
 // ReadFile is an implementation of the file system API interface
-func (fsh *FsHandler) ReadFile(file string) ([]byte, error) {
+func (fsh *Handler) ReadFile(file string) ([]byte, error) {
 	return ioutil.ReadFile(file)
 }
 
 // WriteFile is an implementation of the file system API interface
-func (fsh *FsHandler) WriteFile(file string, data []byte) error {
+func (fsh *Handler) WriteFile(file string, data []byte) error {
 	fileObj, err := os.OpenFile(file, os.O_TRUNC|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("failed to open status file %s for writing: %v", file, err)
@@ -94,7 +88,7 @@ func (fsh *FsHandler) WriteFile(file string, data []byte) error {
 }
 
 // FileExists is an implementation of the file system API interface
-func (fsh *FsHandler) FileExists(file string) bool {
+func (fsh *Handler) FileExists(file string) bool {
 	if _, err := os.Stat(file); os.IsNotExist(err) {
 		return false
 	}
@@ -102,9 +96,12 @@ func (fsh *FsHandler) FileExists(file string) bool {
 }
 
 // GetFileNames is an implementation of the file system API interface
-func (fsh *FsHandler) GetFileNames(paths []string) (files []string, err error) {
+func (fsh *Handler) GetFileNames(paths []string) (files []string, err error) {
 	for _, path := range paths {
 		err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
 			if info == nil || info.IsDir() {
 				return nil
 			}
@@ -118,9 +115,9 @@ func (fsh *FsHandler) GetFileNames(paths []string) (files []string, err error) {
 	return files, err
 }
 
-// Watch starts new filesystem notification watcher. All events from of json/yaml type files are passed to 'onEvent' function.
+// Watch starts new filesystem notification watcher. All events from files are passed to 'onEvent' function.
 // Function 'onClose' is called when event channel is closed.
-func (fsh *FsHandler) Watch(paths []string, onEvent func(event fsnotify.Event), onClose func()) error {
+func (fsh *Handler) Watch(paths []string, onEvent func(event fsnotify.Event), onClose func()) error {
 	var err error
 	fsh.watcher, err = fsnotify.NewWatcher()
 	if err != nil {
@@ -151,13 +148,13 @@ func (fsh *FsHandler) Watch(paths []string, onEvent func(event fsnotify.Event), 
 }
 
 // Close the file watcher
-func (fsh *FsHandler) Close() error {
+func (fsh *Handler) Close() error {
 	return fsh.watcher.Close()
 }
 
 // Processes given path. If the target is a file, it is stored in the file list. If the target
 // is a directory, function is called recursively on nested paths in order to process the whole tree.
-func (fsh *FsHandler) getFilesInPath(files []string, path string) error {
+func (fsh *Handler) getFilesInPath(files []string, path string) error {
 	pathInfo, err := os.Stat(path)
 	if err != nil {
 		return errors.Errorf("failed to read path %s: %v", path, err)

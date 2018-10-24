@@ -20,11 +20,13 @@ import (
 	"strings"
 )
 
-// Extension supported by this decoder
-var jsonDcExtensions = []string{".json"}
+// Default extension supported by this decoder
+var defaultJSONExt = ".json"
 
 // JSONDecoder can be used to decode json-type files
-type JSONDecoder struct{}
+type JSONDecoder struct {
+	extensions []string
+}
 
 // Represents data structure of json file used for configuration
 type jsonFile struct {
@@ -39,13 +41,15 @@ type jsonFileEntry struct {
 }
 
 // NewJSONDecoder creates a new decoder instance
-func NewJSONDecoder() *JSONDecoder {
-	return &JSONDecoder{}
+func NewJSONDecoder(extensions ...string) *JSONDecoder {
+	return &JSONDecoder{
+		extensions: append(extensions, defaultJSONExt),
+	}
 }
 
 // IsProcessable returns true if decoder is able to decode provided file
 func (jd *JSONDecoder) IsProcessable(file string) bool {
-	for _, ext := range jsonDcExtensions {
+	for _, ext := range jd.extensions {
 		if strings.HasSuffix(file, ext) {
 			return true
 		}
@@ -70,7 +74,7 @@ func (jd *JSONDecoder) Encode(data []*FileDataEntry) ([]byte, error) {
 
 // Decode provided byte set of json file and returns set of file data entries
 func (jd *JSONDecoder) Decode(byteSet []byte) ([]*FileDataEntry, error) {
-	if byteSet == nil || len(byteSet) == 0 {
+	if len(byteSet) == 0 {
 		return []*FileDataEntry{}, nil
 	}
 	// Decode to type-specific structure

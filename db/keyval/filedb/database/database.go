@@ -73,7 +73,7 @@ func (c *DbClient) Add(path string, entry *decoder.FileDataEntry) {
 	if ok {
 		value, ok := fileData[entry.Key]
 		if ok {
-			if bytes.Compare(value.data, entry.Value) != 0 {
+			if !bytes.Equal(value.data, entry.Value) {
 				rev := value.rev + 1
 				fileData[entry.Key] = &dbEntry{entry.Value, rev}
 			}
@@ -81,8 +81,7 @@ func (c *DbClient) Add(path string, entry *decoder.FileDataEntry) {
 			fileData[entry.Key] = &dbEntry{entry.Value, initialRev}
 		}
 	} else {
-		fileData = make(map[string]*dbEntry)
-		fileData[entry.Key] = &dbEntry{entry.Value, initialRev}
+		fileData = map[string]*dbEntry{entry.Key: {entry.Value, initialRev}}
 	}
 
 	c.db[path] = fileData
