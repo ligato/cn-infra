@@ -21,7 +21,7 @@ var DefaultPlugin = *NewPlugin()
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
-	p.PluginName = "pl-manager"
+	p.PluginName = "process-manager"
 
 	for _, o := range opts {
 		o(p)

@@ -27,11 +27,8 @@ import (
 const (
 	running = "running"
 	stopped = "stopped"
-	deleted = "deleted"
 	failed  = "failed"
 )
-
-const pidPath = "/var/run/"
 
 // ProcessStatus is string representation of process status
 type ProcessStatus string

@@ -23,9 +23,9 @@ type API interface {
 	// TODO possibly add flag whether the process should be stopped on plugin close, or persisted
 	// NewProcess creates new process instance with name, command to start and an optional list of arguments. New process is not
 	// immediately started, process instance comprises from a set of methods to manage.
-	NewProcess(name, cmd string, keepOnClose bool, args ...string) ProcessAPI
+	NewProcess(name, cmd string, args ...string) ProcessAPI
 	// GetProcess returns existing process instance and boolean flag whether it was found. Identifier can be process name or command
-	GetProcess(identifier string) (ProcessAPI, bool)
+	GetProcess(identifier string) ProcessAPI
 	// GetAll returns all known processes
 	GetAll() []ProcessAPI
 }
@@ -75,13 +75,13 @@ func (p *Plugin) NewProcess(name, cmd string, args ...string) ProcessAPI {
 
 // GetProcess uses identifier (name or command) to find a desired process. Also returns boolean flag whether
 // the instance was found
-func (p *Plugin) GetProcess(identifier string) (ProcessAPI, bool) {
+func (p *Plugin) GetProcess(identifier string) ProcessAPI {
 	for _, process := range p.processes {
 		if process.name == identifier || process.cmd == identifier {
-			return process, true
+			return process
 		}
 	}
-	return nil, false
+	return nil
 }
 
 // GetAll returns all processes created so far
