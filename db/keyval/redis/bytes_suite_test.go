@@ -273,7 +273,7 @@ func TestGet(t *testing.T) {
 	val, found, _, err = bytesBrokerWatcher.GetValue("nil")
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	gomega.Expect(found).Should(gomega.BeFalse())
-	gomega.Expect(val).Should(gomega.BeNil())
+	gomega.Expect(val).Should(gomega.BeEmpty())
 }
 
 func TestListKeys(t *testing.T) {
@@ -424,7 +424,7 @@ func TestTxn(t *testing.T) {
 	val, found, _, err := bytesBrokerWatcher.GetValue("keyWest")
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	gomega.Expect(found).Should(gomega.BeFalse())
-	gomega.Expect(val).Should(gomega.BeNil())
+	gomega.Expect(val).Should(gomega.BeEmpty())
 
 	val, found, _, err = bytesBrokerWatcher.GetValue("keyMap")
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -489,7 +489,7 @@ func TestGetShouldNotApplyWildcard(t *testing.T) {
 	val, found, _, err := bytesBrokerWatcher.GetValue("key")
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	gomega.Expect(found).Should(gomega.BeFalse())
-	gomega.Expect(val).Should(gomega.BeNil())
+	gomega.Expect(val).Should(gomega.BeEmpty())
 }
 
 /* TODO: How to produce error with miniRedis?
