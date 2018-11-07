@@ -128,9 +128,6 @@ func (p *Process) Kill() error {
 
 // Wait is an implementation of the process API
 func (p *Process) Wait() (*os.ProcessState, error) {
-	p.Lock()
-	defer p.Unlock()
-
 	if p.process == nil {
 		return nil, errors.Errorf("process %s does not exist", p.name)
 	}
