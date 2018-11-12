@@ -32,6 +32,7 @@ const (
 )
 
 // ManagerAPI defines methods to manage a given process
+// TODO update doc
 type ManagerAPI interface {
 	// Start starts the process. Depending on the procedure result, the status is set to 'running' or 'failed'. Start
 	// also stores *os.Process in the instance for future use.
@@ -41,6 +42,9 @@ type ManagerAPI interface {
 	// Stop sends the termination signal to the process. The status is set to 'stopped' (or 'failed' if not successful).
 	// Attempt to stop a non-existing process instance results in error
 	Stop() error
+	// Stop sends the termination signal to the process. The status is set to 'stopped' (or 'failed' if not successful).
+	// Attempt to stop a non-existing process instance results in error
+	StopAndWait() error
 	// Kill immediately terminates the process and releases all resources associated with it. Attempt to kill
 	// a non-existing process instance results in error
 	Kill() error
@@ -51,7 +55,7 @@ type ManagerAPI interface {
 	// IsAlive returns true if process is alive, or false if not or if the inner instance does not exist.
 	IsAlive() bool
 	// GetNotification returns channel to watch process availability/status.
-	GetNotification() <-chan status.ProcessStatus
+	GetNotificationChan() <-chan status.ProcessStatus
 	// GetName returns process name
 	GetName() string
 	// GetPid returns process ID, or zero if process instance does not exist
@@ -72,6 +76,9 @@ type ManagerAPI interface {
 type Process struct {
 	log logging.Logger
 
+	// Process identication name
+	name string
+
 	// Command used to start the process. Field is empty if process was attached.
 	cmd string
 
@@ -86,7 +93,6 @@ type Process struct {
 	process *os.Process
 
 	// Other process-related fields not included in status
-	notifChan  chan status.ProcessStatus
 	cancelChan chan struct{}
 	startTime  time.Time
 }
@@ -130,6 +136,18 @@ func (p *Process) Restart() (err error) {
 func (p *Process) Stop() error {
 	if err := p.stopProcess(); err != nil {
 		return err
+	}
+	p.log.Debugf("Process %s was stopped (last PID: %d)", p.GetName(), p.GetPid())
+	return nil
+}
+
+// Stop sends the SIGTERM signal to stop given process
+func (p *Process) StopAndWait() error {
+	if err := p.stopProcess(); err != nil {
+		return err
+	}
+	if _, err := p.Wait(); err != nil {
+		return errors.Errorf("process exit with error: %v", err)
 	}
 	p.log.Debugf("Process %s was stopped (last PID: %d)", p.GetName(), p.GetPid())
 	return nil
@@ -193,8 +211,11 @@ func (p *Process) UpdateStatus(pid int) (statusFile *status.File, err error) {
 }
 
 // GetNotification returns channel listening on notifications about process status changes
-func (p *Process) GetNotification() <-chan status.ProcessStatus {
-	return p.notifChan
+func (p *Process) GetNotificationChan() <-chan status.ProcessStatus {
+	if p.options != nil && p.options.notifyChan != nil {
+		return p.options.notifyChan
+	}
+	return nil
 }
 
 // GetStartTime returns process start timestamp

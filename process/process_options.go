@@ -14,11 +14,16 @@
 
 package process
 
+import "github.com/ligato/cn-infra/process/status"
+
 // POptions is common object which holds all selected options
 type POptions struct {
-	args []string
-	count int
-	detach bool
+	args         []string
+	restart      int32
+	detach       bool
+	runOnStartup bool
+	template     bool
+	notifyChan   chan status.ProcessStatus
 }
 
 // POption is helper function to set process options
@@ -32,9 +37,9 @@ func Args(args ...string) POption {
 }
 
 // Restarts defines number of automatic restarts of given process
-func Restarts(count int) POption {
+func Restarts(restart int32) POption {
 	return func(p *POptions) {
-		p.count = count
+		p.restart = restart
 	}
 }
 
@@ -42,5 +47,21 @@ func Restarts(count int) POption {
 func Detach() POption {
 	return func(p *POptions) {
 		p.detach = true
+	}
+}
+
+// Template will be created for given process. Process template also requires a flag whether the process
+// should be started automatically with plugin
+func Template(runOnStartup bool) POption {
+	return func(p *POptions) {
+		p.template = true
+		p.runOnStartup = runOnStartup
+	}
+}
+
+// Notify will send process status change notifications to the provided channel
+func Notify(notifyChan chan status.ProcessStatus) POption {
+	return func(p *POptions) {
+		p.notifyChan = notifyChan
 	}
 }

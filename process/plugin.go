@@ -18,6 +18,8 @@ import (
 	"os"
 
 	"github.com/ligato/cn-infra/process/status"
+	"github.com/ligato/cn-infra/process/template"
+	"github.com/ligato/cn-infra/process/template/model/process"
 
 	"github.com/ligato/cn-infra/infra"
 	"github.com/pkg/errors"
@@ -27,23 +29,35 @@ import (
 type API interface {
 	// NewProcess creates new process instance with name, command to start and other options (arguments, policy).
 	// New process is not immediately started, process instance comprises from a set of methods to manage.
-	NewProcess(cmd string, options ...POption) ManagerAPI
+	NewProcess(name, cmd string, options ...POption) ManagerAPI
 	// Starts process from template file
-	NewProcessFromTemplate(path string) error
+	NewProcessFromTemplate(tmp *process.Template) ManagerAPI
 	// Attach to existing process using its process ID. The process is stored under the provided name. Error
 	// is returned if process does not exits
-	AttachProcess(pid int, options ...POption) (ManagerAPI, error)
+	AttachProcess(name string, pid int, options ...POption) (ManagerAPI, error)
 	// GetProcessByName returns existing process instance using name
 	GetProcessByName(name string) ManagerAPI
 	// GetProcessByName returns existing process instance using PID
 	GetProcessByPID(pid int) ManagerAPI
 	// GetAll returns all processes known to plugin
-	GetAll() []ManagerAPI
+	GetAllProcesses() []ManagerAPI
+	// Delete releases all the process resources and removes them from the memory. Note: any process-related templates
+	// are not removed
+	Delete(name string) error
+	// GetTemplate returns process template object with given name fom provided path. Returns nil if does not exists
+	// or error if the reader is not available
+	GetTemplate(name string) (*process.Template, error)
+	// GetAllTemplates returns all templates available from given path. Returns empty list if
+	// the reader is not available
+	GetAllTemplates() ([]*process.Template, error)
 }
 
 // Plugin implements API to manage processes. There are two options to add a process to manage, start it as a new one
 // or attach to an existing process. In both cases, the process is stored internally as known to the plugin.
 type Plugin struct {
+	// Reader handles process templates (optional, can be nil)
+	tReader *template.Reader
+	// All known process instances
 	processes []*Process
 
 	Deps
@@ -54,15 +68,52 @@ type Deps struct {
 	infra.PluginDeps
 }
 
-// Init does nothing for process manager plugin
+// Config contains information about the path where process templates are stored
+type Config struct {
+	TemplatePath string `json:"template-path"`
+}
+
+// Init reads plugin config file for process template path. If exists, plugin initializes template reader, reads
+// all existing templates and initializes them. Those marked as 'run on startup' are immediately started
 func (p *Plugin) Init() error {
 	p.Log.Debugf("Initializing process manager plugin")
+
+	templatePath, err := p.getPMConfig()
+	if err != nil {
+		return err
+	}
+
+	if templatePath != "" {
+		if p.tReader, err = template.NewTemplateReader(templatePath, p.Log); err != nil {
+			return nil
+		}
+		templates, err := p.tReader.GetAllTemplates()
+		if err != nil {
+			return err
+		}
+		for _, tmp := range templates {
+			pr := p.NewProcessFromTemplate(tmp)
+			if pr == nil {
+				continue
+			}
+			if tmp.POptions != nil && tmp.POptions.RunOnStartup {
+				if err = pr.Start(); err != nil {
+					p.Log.Errorf("failed to start template process %s: %v", tmp.Name, err)
+					continue
+				}
+			}
+		}
+	}
 
 	return nil
 }
 
-// Close does nothing for process manager plugin
+// Close stops all process watcher. Processes are either kept running (if detached) or terminated automatically
+// if thay are child processes of the application
 func (p *Plugin) Close() error {
+	for _, pr := range p.processes {
+		close(pr.cancelChan)
+	}
 	return nil
 }
 
@@ -72,16 +123,16 @@ func (p *Plugin) String() string {
 }
 
 // AttachProcess attaches to existing process and reads its status
-func (p *Plugin) AttachProcess(pid int, options ...POption) (ManagerAPI, error) {
-	process, err := os.FindProcess(pid)
+func (p *Plugin) AttachProcess(name string, pid int, options ...POption) (ManagerAPI, error) {
+	pr, err := os.FindProcess(pid)
 	if err != nil {
 		return nil, errors.Errorf("cannot attach to process with PID %d: %v", pid, err)
 	}
 	attachedPr := &Process{
 		log:        p.Log,
-		process:    process,
+		name:       name,
+		process:    pr,
 		sh:         &status.Reader{Log: p.Log},
-		notifChan:  make(chan status.ProcessStatus),
 		cancelChan: make(chan struct{}),
 	}
 	for _, option := range options {
@@ -99,15 +150,15 @@ func (p *Plugin) AttachProcess(pid int, options ...POption) (ManagerAPI, error) 
 	return attachedPr, nil
 }
 
-// NewProcess creates new process
-func (p *Plugin) NewProcess(cmd string, options ...POption) ManagerAPI {
+// NewProcess creates a new process and saves its template if required
+func (p *Plugin) NewProcess(name, cmd string, options ...POption) ManagerAPI {
 	newPr := &Process{
 		log:        p.Log,
+		name:       name,
 		cmd:        cmd,
 		options:    &POptions{},
 		sh:         &status.Reader{Log: p.Log},
 		status:     &status.File{},
-		notifChan:  make(chan status.ProcessStatus),
 		cancelChan: make(chan struct{}),
 	}
 	for _, option := range options {
@@ -117,18 +168,32 @@ func (p *Plugin) NewProcess(cmd string, options ...POption) ManagerAPI {
 
 	go newPr.watch()
 
+	if newPr.options.template {
+		p.writeAsTemplate(newPr)
+	}
+
 	return newPr
 }
 
-func (p *Plugin) NewProcessFromTemplate(path string) error {
-	return nil
+// NewProcessFromTemplate creates a new process from template file
+func (p *Plugin) NewProcessFromTemplate(tmp *process.Template) ManagerAPI {
+	newTmpPr, err := p.templateToProcess(tmp)
+	if err != nil {
+		p.Log.Errorf("cannot create a process from template: %v", err)
+		return nil
+	}
+	p.processes = append(p.processes, newTmpPr)
+
+	go newTmpPr.watch()
+
+	return newTmpPr
 }
 
 // GetProcess uses process name to find a desired instance
 func (p *Plugin) GetProcessByName(name string) ManagerAPI {
-	for _, process := range p.processes {
-		if process.status.Name == name {
-			return process
+	for _, pr := range p.processes {
+		if pr.name == name {
+			return pr
 		}
 	}
 	return nil
@@ -136,19 +201,156 @@ func (p *Plugin) GetProcessByName(name string) ManagerAPI {
 
 // GetProcess uses process ID to find a desired instance
 func (p *Plugin) GetProcessByPID(pid int) ManagerAPI {
-	for _, process := range p.processes {
-		if process.status.Pid == pid {
-			return process
+	for _, pr := range p.processes {
+		if pr.status.Pid == pid {
+			return pr
 		}
 	}
 	return nil
 }
 
 // GetAll returns all processes known to plugin
-func (p *Plugin) GetAll() []ManagerAPI {
+func (p *Plugin) GetAllProcesses() []ManagerAPI {
 	var processes []ManagerAPI
-	for _, process := range p.processes {
-		processes = append(processes, process)
+	for _, pr := range p.processes {
+		processes = append(processes, pr)
 	}
 	return processes
+}
+
+// Delete releases the process resources and removes it from the plugin cache
+func (p *Plugin) Delete(name string) error {
+	var updated []*Process
+	for _, pr := range p.processes {
+		if pr.name == name {
+			if err := pr.delete(); err != nil {
+				return err
+			}
+		} else {
+			updated = append(updated, pr)
+		}
+	}
+
+	p.processes = updated
+
+	return nil
+}
+
+// GetTemplate returns template with given name
+func (p *Plugin) GetTemplate(name string) (*process.Template, error) {
+	if p.tReader == nil {
+		return nil, errors.Errorf("cannot read process template %s: reader is nil (no path was defined)", name)
+	}
+	templates, err := p.tReader.GetAllTemplates()
+	if err != nil {
+		return nil, err
+	}
+	for _, tmp := range templates {
+		if tmp.Name == name {
+			return tmp, nil
+		}
+	}
+	return nil, nil
+}
+
+// GetAllTemplates returns all templates
+func (p *Plugin) GetAllTemplates() ([]*process.Template, error) {
+	if p.tReader == nil {
+		return nil, errors.Errorf("cannot read process templates: reader is nil (no path was defined)")
+	}
+	return p.tReader.GetAllTemplates()
+}
+
+// Reads plugin config file
+func (p *Plugin) getPMConfig() (path string, err error) {
+	var pmConfig Config
+	found, err := p.Cfg.LoadValue(&pmConfig)
+	if err != nil {
+		return path, errors.Errorf("failed to read process manager config file: %v", err)
+	}
+	if found {
+		return pmConfig.TemplatePath, nil
+	}
+	return path, nil
+}
+
+// Writes process as template to the filesystem. Errors are logged but not returned
+func (p *Plugin) writeAsTemplate(pr *Process) {
+	tmp, err := p.processToTemplate(pr)
+	if err != nil {
+		p.Log.Errorf("cannot create a template from process: %v", err)
+		return
+	}
+	if p.tReader == nil {
+		p.Log.Warnf("process %s should write a new template, but reader (template path) is not defined",
+			pr.name)
+		return
+	}
+	if err = p.tReader.WriteTemplate(tmp, template.DefaultMode); err != nil {
+		p.Log.Warnf("failed to write template %s: %v", tmp.Name, err)
+		return
+	}
+}
+
+// Create a template object from process. A name and a command are mandatory
+func (p *Plugin) processToTemplate(pr *Process) (*process.Template, error) {
+	if pr.name == "" {
+		return nil, errors.Errorf("cannot create template from process, missing name")
+	}
+	if pr.cmd == "" {
+		return nil, errors.Errorf("cannot create template from process, missing command")
+	}
+
+	pOptions := &process.TemplatePOptions{
+		Args:         pr.options.args,
+		Restart:      pr.options.restart,
+		Detach:       pr.options.detach,
+		RunOnStartup: pr.options.runOnStartup,
+		Notify: func(notifyChan chan status.ProcessStatus) bool {
+			if notifyChan == nil {
+				return false
+			}
+			return true
+		}(pr.options.notifyChan),
+	}
+
+	return &process.Template{
+		Name:     pr.name,
+		Cmd:      pr.cmd,
+		POptions: pOptions,
+	}, nil
+}
+
+// Create a process object from template. A name and a command are mandatory
+func (p *Plugin) templateToProcess(tmp *process.Template) (*Process, error) {
+	if tmp.Name == "" {
+		return nil, errors.Errorf("cannot create process from template, missing name")
+	}
+	if tmp.Cmd == "" {
+		return nil, errors.Errorf("cannot create process from template, missing command")
+	}
+
+	pOptions := &POptions{}
+	if tmp.POptions != nil {
+		pOptions.args = tmp.POptions.Args
+		pOptions.detach = tmp.POptions.Detach
+		pOptions.restart = tmp.POptions.Restart
+		pOptions.runOnStartup = tmp.POptions.RunOnStartup
+		pOptions.notifyChan = func(notify bool) chan status.ProcessStatus {
+			if notify {
+				return make(chan status.ProcessStatus)
+			}
+			return nil
+		}(tmp.POptions.Notify)
+	}
+
+	return &Process{
+		log:        p.Log,
+		name:       tmp.Name,
+		cmd:        tmp.Cmd,
+		options:    pOptions,
+		sh:         &status.Reader{Log: p.Log},
+		status:     &status.File{},
+		cancelChan: make(chan struct{}),
+	}, nil
 }
