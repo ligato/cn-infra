@@ -29,7 +29,7 @@ import (
 
 // Plugin states which require special handling
 const (
-	Zombie      = "zombie" // If child process is terminated with parent still running. Needs to be cleaned up.
+	Zombie = "zombie" // If child process is terminated with parent still running. Needs to be cleaned up.
 	// Plugin-defined process statuses (as addition to other process statuses)
 	Unavailable = "unavailable" // If process status cannot be obtained
 	Terminated  = "terminated"  // If process is not running (while tested by zero signal)
@@ -41,10 +41,7 @@ type ProcessStatus string
 // Reader provides safe process status manipulation
 type Reader struct {
 	sync.Mutex
-
 	Log logging.Logger
-
-	status ProcessStatus
 }
 
 // File mirrors process status file
@@ -58,29 +55,29 @@ type File struct {
 	Pid                      int           // Process id
 	PPid                     int           // Process id of the parent process
 	TracerPid                int           // PID of process tracing this process
-	Uid                      *GUID         // Set of UIDs
-	Gid                      *GUID         // Set of GIDs
+	UID                      *GUID         // Set of UIDs
+	GID                      *GUID         // Set of GIDs
 	FDSize                   int           // Number of file descriptor slots currently allocated
 	Groups                   int           // Supplementary group list
 	NStgid                   int           // Descendant namespace thread group ID hierarchy
 	NSpid                    int           // Descendant namespace process ID hierarchy
 	NSpgid                   int           // Descendant namespace process group ID hierarchy
 	NSsid                    int           // Descendant namespace session ID hierarchy
-	VmPeak                   string        // Peak virtual memory size
-	VmSize                   string        // Total program size
-	VmLck                    string        // Locked memory size
-	VmPin                    string        // Pinned memory size
-	VmHWM                    string        // Peak resident set size
-	VmRSS                    string        // Size of memory portions (RssAnon + RssFile + RssShmem)
+	VMPeak                   string        // Peak virtual memory size
+	VMSize                   string        // Total program size
+	VMLck                    string        // Locked memory size
+	VMPin                    string        // Pinned memory size
+	VMHWM                    string        // Peak resident set size
+	VMRSS                    string        // Size of memory portions (RssAnon + RssFile + RssShmem)
 	RssAnon                  string        // Size of resident anonymous memory
 	RssFile                  string        // Size of resident file mappings
 	RssShmem                 string        // Size of resident shmem memory
-	VmData                   string        // Size of private data segments
-	VmStk                    string        // Size of stack segments
-	VmExe                    string        // Size of text segment
-	VmLib                    string        // Size of shared library code
-	VmPTE                    string        // Size of page table entries
-	VmSwap                   string        // Amount of swap used by anonymous private data
+	VMData                   string        // Size of private data segments
+	VMStk                    string        // Size of stack segments
+	VMExe                    string        // Size of text segment
+	VMLib                    string        // Size of shared library code
+	VMPTE                    string        // Size of page table entries
+	VMSwap                   string        // Amount of swap used by anonymous private data
 	HugetlbPages             string        // Size of hugetlb memory portions
 	CoreDumping              int           // Process's memory is currently being dumped
 	Threads                  int           // Number of threads
@@ -104,15 +101,15 @@ type File struct {
 
 // GUID helper struct for process UID and GID
 type GUID struct {
-	real       int
-	effective  int
-	savedSet   int
-	fileSystem int
+	Real       int
+	Effective  int
+	SavedSet   int
+	FileSystem int
 }
 
-// ReadStatus returns status file object. Data are read from /proc and process ID of existing process is required.
+// ReadStatusFromPID returns status file object. Data are read from /proc and process ID of existing process is required.
 // Error is returned if file (process) does not exist
-func (r *Reader) ReadStatus(pid int) (*File, error) {
+func (r *Reader) ReadStatusFromPID(pid int) (*File, error) {
 	r.Lock()
 	defer r.Unlock()
 
@@ -123,6 +120,11 @@ func (r *Reader) ReadStatus(pid int) (*File, error) {
 	defer file.Close()
 
 	return r.parse(file), nil
+}
+
+// ReadStatusFromFile allows to eventually read status from custom location and parse it directly
+func (r *Reader) ReadStatusFromFile(file *os.File) *File {
+	return r.parse(file)
 }
 
 // Parser scans process status file and creates a structure with all available values representing process
@@ -164,9 +166,9 @@ func (r *Reader) parse(file *os.File) *File {
 		case "TracerPid":
 			status.TracerPid = r.toInt(parts[1])
 		case "Uid":
-			status.Uid = r.guid(parts[1])
+			status.UID = r.guid(parts[1])
 		case "Gid":
-			status.Gid = r.guid(parts[1])
+			status.GID = r.guid(parts[1])
 		case "FDSize":
 			status.FDSize = r.toInt(parts[1])
 		case "Groups":
@@ -180,17 +182,17 @@ func (r *Reader) parse(file *os.File) *File {
 		case "NSsid":
 			status.NSsid = r.toInt(parts[1])
 		case "VmPeak":
-			status.VmPeak = prune(parts[1])
+			status.VMPeak = prune(parts[1])
 		case "VmSize":
-			status.VmSize = prune(parts[1])
+			status.VMSize = prune(parts[1])
 		case "VmLck":
-			status.VmLck = prune(parts[1])
+			status.VMLck = prune(parts[1])
 		case "VmPin":
-			status.VmPin = prune(parts[1])
+			status.VMPin = prune(parts[1])
 		case "VmHWM":
-			status.VmHWM = prune(parts[1])
+			status.VMHWM = prune(parts[1])
 		case "VmRSS":
-			status.VmRSS = prune(parts[1])
+			status.VMRSS = prune(parts[1])
 		case "RssAnon":
 			status.RssAnon = prune(parts[1])
 		case "RssFile":
@@ -198,17 +200,17 @@ func (r *Reader) parse(file *os.File) *File {
 		case "RssShmem":
 			status.RssShmem = prune(parts[1])
 		case "VmData":
-			status.VmData = prune(parts[1])
+			status.VMData = prune(parts[1])
 		case "VmStk":
-			status.VmStk = prune(parts[1])
+			status.VMStk = prune(parts[1])
 		case "VmExe":
-			status.VmExe = prune(parts[1])
+			status.VMExe = prune(parts[1])
 		case "VmLib":
-			status.VmLib = prune(parts[1])
+			status.VMLib = prune(parts[1])
 		case "VmPTE":
-			status.VmPTE = prune(parts[1])
+			status.VMPTE = prune(parts[1])
 		case "VmSwap":
-			status.VmSwap = prune(parts[1])
+			status.VMSwap = prune(parts[1])
 		case "HugetlbPages":
 			status.HugetlbPages = prune(parts[1])
 		case "CoreDumping":

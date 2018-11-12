@@ -140,7 +140,7 @@ func (p *Plugin) AttachProcess(name string, pid int, options ...POption) (Manage
 	}
 	p.processes = append(p.processes, attachedPr)
 
-	attachedPr.status, err = attachedPr.sh.ReadStatus(attachedPr.GetPid())
+	attachedPr.status, err = attachedPr.sh.ReadStatusFromPID(attachedPr.GetPid())
 	if err != nil {
 		p.Log.Warnf("failed to read process (PID %d) status: %v", pid, err)
 	}
@@ -189,7 +189,7 @@ func (p *Plugin) NewProcessFromTemplate(tmp *process.Template) ManagerAPI {
 	return newTmpPr
 }
 
-// GetProcess uses process name to find a desired instance
+// GetProcessByName uses process name to find a desired instance
 func (p *Plugin) GetProcessByName(name string) ManagerAPI {
 	for _, pr := range p.processes {
 		if pr.name == name {
@@ -199,7 +199,7 @@ func (p *Plugin) GetProcessByName(name string) ManagerAPI {
 	return nil
 }
 
-// GetProcess uses process ID to find a desired instance
+// GetProcessByPID uses process ID to find a desired instance
 func (p *Plugin) GetProcessByPID(pid int) ManagerAPI {
 	for _, pr := range p.processes {
 		if pr.status.Pid == pid {
@@ -209,7 +209,7 @@ func (p *Plugin) GetProcessByPID(pid int) ManagerAPI {
 	return nil
 }
 
-// GetAll returns all processes known to plugin
+// GetAllProcesses returns all processes known to plugin
 func (p *Plugin) GetAllProcesses() []ManagerAPI {
 	var processes []ManagerAPI
 	for _, pr := range p.processes {

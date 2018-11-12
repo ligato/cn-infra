@@ -52,7 +52,7 @@ func (p *Process) startProcess() (*os.Process, error) {
 	}
 	p.startTime = time.Now()
 
-	p.sh.ReadStatus(process.Pid)
+	p.sh.ReadStatusFromPID(process.Pid)
 
 	return process, nil
 }
@@ -104,6 +104,9 @@ func (p *Process) isAlive() bool {
 
 // Delete stops the process and internal watcher
 func (p *Process) delete() error {
+	if p.process == nil {
+		return nil
+	}
 	if err := p.stopProcess(); err != nil {
 		p.log.Warnf("cannot stop process %s, trying force stop (err: %v)", p.name, err)
 		if err = p.forceStopProcess(); err != nil {
@@ -157,7 +160,7 @@ func (p *Process) watch() {
 			}
 
 			if current != last {
-				if p.GetNotification() != nil {
+				if p.GetNotificationChan() != nil {
 					p.options.notifyChan <- current
 				}
 				if current == status.Terminated {
@@ -183,7 +186,7 @@ func (p *Process) watch() {
 			last = current
 		case <-p.cancelChan:
 			ticker.Stop()
-			if p.GetNotification() != nil {
+			if p.GetNotificationChan() != nil {
 				close(p.options.notifyChan)
 			}
 

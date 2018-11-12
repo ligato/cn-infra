@@ -44,7 +44,7 @@ type ManagerAPI interface {
 	Stop() error
 	// Stop sends the termination signal to the process. The status is set to 'stopped' (or 'failed' if not successful).
 	// Attempt to stop a non-existing process instance results in error
-	StopAndWait() error
+	StopAndWait() (*os.ProcessState, error)
 	// Kill immediately terminates the process and releases all resources associated with it. Attempt to kill
 	// a non-existing process instance results in error
 	Kill() error
@@ -58,6 +58,8 @@ type ManagerAPI interface {
 	GetNotificationChan() <-chan status.ProcessStatus
 	// GetName returns process name
 	GetName() string
+	// GetInstanceName returns process name from status
+	GetInstanceName() string
 	// GetPid returns process ID, or zero if process instance does not exist
 	GetPid() int
 	// UpdateStatus updates and returns all current plugin-defined process state data
@@ -141,16 +143,17 @@ func (p *Process) Stop() error {
 	return nil
 }
 
-// Stop sends the SIGTERM signal to stop given process
-func (p *Process) StopAndWait() error {
+// StopAndWait sends the SIGTERM signal to stop given process and waits until it is completed
+func (p *Process) StopAndWait() (*os.ProcessState, error) {
 	if err := p.stopProcess(); err != nil {
-		return err
+		return nil, err
 	}
-	if _, err := p.Wait(); err != nil {
-		return errors.Errorf("process exit with error: %v", err)
+	state, err := p.Wait()
+	if err != nil {
+		return nil, errors.Errorf("process exit with error: %v", err)
 	}
 	p.log.Debugf("Process %s was stopped (last PID: %d)", p.GetName(), p.GetPid())
-	return nil
+	return state, nil
 }
 
 // Kill sends the SIGKILL signal to force stop given process
@@ -177,6 +180,11 @@ func (p *Process) Signal(signal os.Signal) {
 
 // GetName returns plugin-wide process name
 func (p *Process) GetName() string {
+	return p.name
+}
+
+// GetInstanceName returns process name of the instance
+func (p *Process) GetInstanceName() string {
 	return p.status.Name
 }
 
@@ -201,16 +209,16 @@ func (p *Process) GetArguments() []string {
 	return p.options.args
 }
 
-// GetState updates actual process status and returns status file
+// UpdateStatus updates actual process status and returns status file
 func (p *Process) UpdateStatus(pid int) (statusFile *status.File, err error) {
-	p.status, err = p.sh.ReadStatus(pid)
+	p.status, err = p.sh.ReadStatusFromPID(pid)
 	if err != nil {
 		return &status.File{}, errors.Errorf("failed to read status file for process ID %d: %v", pid, err)
 	}
 	return p.status, nil
 }
 
-// GetNotification returns channel listening on notifications about process status changes
+// GetNotificationChan returns channel listening on notifications about process status changes
 func (p *Process) GetNotificationChan() <-chan status.ProcessStatus {
 	if p.options != nil && p.options.notifyChan != nil {
 		return p.options.notifyChan
@@ -223,7 +231,7 @@ func (p *Process) GetStartTime() int {
 	return p.startTime.Nanosecond()
 }
 
-// GetStartTime returns process start timestamp
+// GetUpTime returns process uptime since the last start
 func (p *Process) GetUpTime() int64 {
 	if p.startTime.Nanosecond() == 0 {
 		return 0
