@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:generate protoc --proto_path=model/process --gogo_out=model/process model/process/process.proto
+
 package template
 
 import (
@@ -29,7 +31,7 @@ import (
 const JSONExt = ".json"
 
 // DefaultMode defines default permission bits for template file
-const DefaultMode = os.FileMode(int(0777))
+const DefaultMode = os.FileMode(0777)
 
 // Reader reads/writes process templates to path
 type Reader struct {

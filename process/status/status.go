@@ -29,7 +29,11 @@ import (
 
 // Plugin states which require special handling
 const (
-	Zombie = "zombie" // If child process is terminated with parent still running. Needs to be cleaned up.
+	// Those are common process statuses, defined as reference
+	Sleeping = "sleeping"
+	Running  = "running"
+	Idle     = "idle"
+	Zombie   = "zombie" // If child process is terminated with parent still running. Needs to be cleaned up.
 	// Plugin-defined process statuses (as addition to other process statuses)
 	Unavailable = "unavailable" // If process status cannot be obtained
 	Terminated  = "terminated"  // If process is not running (while tested by zero signal)
@@ -58,7 +62,7 @@ type File struct {
 	UID                      *GUID         // Set of UIDs
 	GID                      *GUID         // Set of GIDs
 	FDSize                   int           // Number of file descriptor slots currently allocated
-	Groups                   int           // Supplementary group list
+	Groups                   []int         // Supplementary group list
 	NStgid                   int           // Descendant namespace thread group ID hierarchy
 	NSpid                    int           // Descendant namespace process ID hierarchy
 	NSpgid                   int           // Descendant namespace process group ID hierarchy
@@ -172,7 +176,18 @@ func (r *Reader) parse(file *os.File) *File {
 		case "FDSize":
 			status.FDSize = r.toInt(parts[1])
 		case "Groups":
-			status.Groups = r.toInt(parts[1])
+			groups := strings.Split(parts[1], " ")
+			if len(groups) == 0 {
+				status.Groups = []int{0}
+			} else {
+				for _, group := range groups {
+					if group == "" {
+						continue
+					}
+					groupIdx := r.toInt(group)
+					status.Groups = append(status.Groups, groupIdx)
+				}
+			}
 		case "NStgid":
 			status.NStgid = r.toInt(parts[1])
 		case "NSpid":

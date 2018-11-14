@@ -58,7 +58,7 @@ func TestParseStatusFile(t *testing.T) {
 	Expect(statusFile.GID.SavedSet).To(BeZero())
 	Expect(statusFile.GID.FileSystem).To(Equal(997))
 	Expect(statusFile.FDSize).To(Equal(64))
-	Expect(statusFile.Groups).To(Equal(0))
+	Expect(statusFile.Groups).To(HaveLen(1))
 	Expect(statusFile.NStgid).To(Equal(23986))
 	Expect(statusFile.NSpid).To(Equal(23986))
 	Expect(statusFile.NSpgid).To(Equal(23984))

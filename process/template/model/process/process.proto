@@ -14,6 +14,8 @@ message Template {                  /* Template is process definition which can 
         bool run_on_startup = 4;    /* Set to true if process is expected to start right after plugin initialization */
         bool notify = 5;            /* Create a notification channel (can be obtained via `GetNotification`) where
                                        all status change events can be watched*/
+        bool auto_terminate = 6;    /* This option ensures that every process which turns zombie/dead is automatically
+                                       released */
     }
     pOptions p_options = 3;
 }

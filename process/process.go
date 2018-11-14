@@ -62,23 +62,23 @@ type ManagerAPI interface {
 	GetInstanceName() string
 	// GetPid returns process ID, or zero if process instance does not exist
 	GetPid() int
-	// UpdateStatus updates and returns all current plugin-defined process state data
-	UpdateStatus(pid int) (*status.File, error)
+	// ReadStatus reads and returns all current plugin-defined process state data
+	ReadStatus(pid int) (*status.File, error)
 	// GetCommand returns process command
 	GetCommand() string
 	// GetArguments returns process arguments if set
 	GetArguments() []string
 	// GetStartTime returns time when the process was started
-	GetStartTime() int
-	// GetUpTime returns time elapsed since the process started
-	GetUpTime() int64
+	GetStartTime() time.Time
+	// GetUptime returns time elapsed since the process started
+	GetUptime() time.Duration
 }
 
 // Process is wrapper around the os.Process
 type Process struct {
 	log logging.Logger
 
-	// Process identication name
+	// Process identification name
 	name string
 
 	// Command used to start the process. Field is empty if process was attached.
@@ -122,7 +122,7 @@ func (p *Process) Restart() (err error) {
 		return err
 	}
 	if p.isAlive() {
-		if err = p.stopProcess(); err != nil {
+		if _, err = p.StopAndWait(); err != nil {
 			p.log.Warnf("Cannot stop process %s due to error, trying force stop... (err: %v)", p.GetName(), err)
 			if err = p.forceStopProcess(); err != nil {
 				return err
@@ -196,12 +196,12 @@ func (p *Process) GetPid() int {
 	return p.status.Pid
 }
 
-// GetCommand returns command used to start process. Empty for attached processes
+// GetCommand returns command used to start process. May be empty for attached processes
 func (p *Process) GetCommand() string {
 	return p.cmd
 }
 
-// GetArguments returns arguments process was started with, if any. Empty also for attached processes
+// GetArguments returns arguments process was started with, if any. May be empty also for attached processes
 func (p *Process) GetArguments() []string {
 	if p.options.args == nil {
 		return []string{}
@@ -209,8 +209,8 @@ func (p *Process) GetArguments() []string {
 	return p.options.args
 }
 
-// UpdateStatus updates actual process status and returns status file
-func (p *Process) UpdateStatus(pid int) (statusFile *status.File, err error) {
+// ReadStatus updates actual process status and returns status file
+func (p *Process) ReadStatus(pid int) (statusFile *status.File, err error) {
 	p.status, err = p.sh.ReadStatusFromPID(pid)
 	if err != nil {
 		return &status.File{}, errors.Errorf("failed to read status file for process ID %d: %v", pid, err)
@@ -227,14 +227,14 @@ func (p *Process) GetNotificationChan() <-chan status.ProcessStatus {
 }
 
 // GetStartTime returns process start timestamp
-func (p *Process) GetStartTime() int {
-	return p.startTime.Nanosecond()
+func (p *Process) GetStartTime() time.Time {
+	return p.startTime
 }
 
-// GetUpTime returns process uptime since the last start
-func (p *Process) GetUpTime() int64 {
+// GetUptime returns process uptime since the last start
+func (p *Process) GetUptime() time.Duration {
 	if p.startTime.Nanosecond() == 0 {
 		return 0
 	}
-	return time.Since(p.startTime).Nanoseconds()
+	return time.Since(p.startTime)
 }

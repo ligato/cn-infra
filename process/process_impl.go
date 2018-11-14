@@ -62,7 +62,7 @@ func (p *Process) stopProcess() (err error) {
 		return errors.Errorf("asked to stop non-existing process instance")
 	}
 
-	if err = p.process.Signal(syscall.SIGTERM); err != nil {
+	if err = p.process.Signal(syscall.SIGTERM); err != nil && !strings.Contains(err.Error(), alreadyFinished) {
 		return errors.Errorf("process termination unsuccessful: %v", err)
 	}
 
@@ -75,7 +75,7 @@ func (p *Process) forceStopProcess() (err error) {
 		return errors.Errorf("asked to force-stop non-existing process instance")
 	}
 
-	if err = p.process.Signal(syscall.SIGKILL); err != nil {
+	if err = p.process.Signal(syscall.SIGKILL); err != nil && !strings.Contains(err.Error(), alreadyFinished) {
 		return errors.Errorf("process forced termination unsuccessful: %v", err)
 	}
 	if err = p.process.Release(); err != nil {
@@ -107,16 +107,6 @@ func (p *Process) delete() error {
 	if p.process == nil {
 		return nil
 	}
-	if err := p.stopProcess(); err != nil {
-		p.log.Warnf("cannot stop process %s, trying force stop (err: %v)", p.name, err)
-		if err = p.forceStopProcess(); err != nil {
-			return errors.Errorf("failed to force-stop process %s: %v", p.name, err)
-		}
-	} else {
-		if _, err := p.Wait(); err != nil {
-			return errors.Errorf("error while waiting on process %s to complete: %v", p.name, err)
-		}
-	}
 
 	// Close the process watcher
 	if p.cancelChan != nil {
@@ -137,8 +127,10 @@ func (p *Process) watch() {
 
 	var last status.ProcessStatus
 	var numRestarts int32
+	var autoTerm bool
 	if p.options != nil {
 		numRestarts = p.options.restart
+		autoTerm = p.options.autoTerm
 	}
 
 	for {
@@ -148,7 +140,7 @@ func (p *Process) watch() {
 			if !p.isAlive() {
 				current = status.Terminated
 			} else {
-				pStatus, err := p.UpdateStatus(p.GetPid())
+				pStatus, err := p.ReadStatus(p.GetPid())
 				if err != nil {
 					p.log.Warn(err)
 				}
@@ -176,7 +168,7 @@ func (p *Process) watch() {
 						p.log.Debugf("no more attempts to restart process %s", p.name)
 					}
 				}
-				if current == status.Zombie {
+				if current == status.Zombie && autoTerm {
 					p.log.Debugf("Terminating zombie process %d", p.GetPid())
 					if _, err := p.Wait(); err != nil {
 						p.log.Warnf("failed to terminate dead process: %s", p.GetPid(), err)

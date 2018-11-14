@@ -34,15 +34,15 @@ type API interface {
 	NewProcessFromTemplate(tmp *process.Template) ManagerAPI
 	// Attach to existing process using its process ID. The process is stored under the provided name. Error
 	// is returned if process does not exits
-	AttachProcess(name string, pid int, options ...POption) (ManagerAPI, error)
+	AttachProcess(name, cmd string, pid int, options ...POption) (ManagerAPI, error)
 	// GetProcessByName returns existing process instance using name
 	GetProcessByName(name string) ManagerAPI
 	// GetProcessByName returns existing process instance using PID
 	GetProcessByPID(pid int) ManagerAPI
 	// GetAll returns all processes known to plugin
 	GetAllProcesses() []ManagerAPI
-	// Delete releases all the process resources and removes them from the memory. Note: any process-related templates
-	// are not removed
+	// Delete removes process from the memory. Delete cancels process watcher, but does not stop the running instance
+	// (possible to attach later). Note: no process-related templates are removed
 	Delete(name string) error
 	// GetTemplate returns process template object with given name fom provided path. Returns nil if does not exists
 	// or error if the reader is not available
@@ -123,7 +123,7 @@ func (p *Plugin) String() string {
 }
 
 // AttachProcess attaches to existing process and reads its status
-func (p *Plugin) AttachProcess(name string, pid int, options ...POption) (ManagerAPI, error) {
+func (p *Plugin) AttachProcess(name string, cmd string, pid int, options ...POption) (ManagerAPI, error) {
 	pr, err := os.FindProcess(pid)
 	if err != nil {
 		return nil, errors.Errorf("cannot attach to process with PID %d: %v", pid, err)
@@ -131,6 +131,8 @@ func (p *Plugin) AttachProcess(name string, pid int, options ...POption) (Manage
 	attachedPr := &Process{
 		log:        p.Log,
 		name:       name,
+		cmd:        cmd,
+		options:    &POptions{},
 		process:    pr,
 		sh:         &status.Reader{Log: p.Log},
 		cancelChan: make(chan struct{}),
@@ -146,6 +148,10 @@ func (p *Plugin) AttachProcess(name string, pid int, options ...POption) (Manage
 	}
 
 	go attachedPr.watch()
+
+	if attachedPr.options.template {
+		p.writeAsTemplate(attachedPr)
+	}
 
 	return attachedPr, nil
 }
@@ -312,6 +318,7 @@ func (p *Plugin) processToTemplate(pr *Process) (*process.Template, error) {
 			}
 			return true
 		}(pr.options.notifyChan),
+		AutoTerminate: pr.options.autoTerm,
 	}
 
 	return &process.Template{
@@ -342,6 +349,7 @@ func (p *Plugin) templateToProcess(tmp *process.Template) (*Process, error) {
 			}
 			return nil
 		}(tmp.POptions.Notify)
+		pOptions.autoTerm = tmp.POptions.AutoTerminate
 	}
 
 	return &Process{

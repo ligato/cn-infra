@@ -14,7 +14,9 @@
 
 package process
 
-import "github.com/ligato/cn-infra/process/status"
+import (
+	"github.com/ligato/cn-infra/process/status"
+)
 
 // POptions is common object which holds all selected options
 type POptions struct {
@@ -24,6 +26,7 @@ type POptions struct {
 	runOnStartup bool
 	template     bool
 	notifyChan   chan status.ProcessStatus
+	autoTerm     bool
 }
 
 // POption is helper function to set process options
@@ -60,8 +63,16 @@ func Template(runOnStartup bool) POption {
 }
 
 // Notify will send process status change notifications to the provided channel
+// Note: caller should not close the channel, since plugin is a sender, it handles the close
 func Notify(notifyChan chan status.ProcessStatus) POption {
 	return func(p *POptions) {
 		p.notifyChan = notifyChan
+	}
+}
+
+// AutoTerminate causes that zombie processes are automatically terminated
+func AutoTerminate() POption {
+	return func(p *POptions) {
+		p.autoTerm = true
 	}
 }
