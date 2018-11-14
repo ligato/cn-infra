@@ -70,7 +70,13 @@ The template path has to be set in the plugin.
 ## Templates
 
 The template is a file which defines process configuration for plugin manager. All templates should be stored 
-in the path defined in the plugin config file. The template can be either written by hand using 
+in the path defined in the plugin config file. Example can be found [here](pm.conf).
+
+```
+./process-manager-plugin -process-manager-config=<path-to-file>
+```
+
+The template can be either written by hand using 
 [proto model](template/model/process/process.proto), or generated with the *Template* option while creating a new 
 process. 
 
