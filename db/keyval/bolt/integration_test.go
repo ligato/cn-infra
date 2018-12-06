@@ -302,7 +302,7 @@ func TestWatchPut(t *testing.T) {
 	ctx := setupTest(t, true)
 	defer ctx.teardownTest()
 
-	const watchPrefix = "key/"
+	const watchPrefix = "/key/"
 	const watchKey = watchPrefix + "val1"
 
 	closeCh := make(chan string)
@@ -325,7 +325,7 @@ func TestWatchDel(t *testing.T) {
 	ctx := setupTest(t, true)
 	defer ctx.teardownTest()
 
-	const watchPrefix = "key/"
+	const watchPrefix = "/key/"
 	const watchKey = watchPrefix + "val1"
 
 	ctx.client.Put("/something/else/val1", []byte{0, 0, 7})
@@ -345,4 +345,31 @@ func TestWatchDel(t *testing.T) {
 	Expect(resp.GetValue()).Should(BeNil())
 	Expect(resp.GetPrevValue()).Should(Equal([]byte{1, 2, 3}))
 	Expect(resp.GetChangeType()).Should(Equal(datasync.Delete))
+}
+
+func TestWatchPutBroker(t *testing.T) {
+	ctx := setupTest(t, true)
+	defer ctx.teardownTest()
+
+	const brokerPrefix = "/my/prefix/"
+	const watchPrefix = "key/"
+	const watchKey = watchPrefix + "val1"
+
+	broker := ctx.client.NewWatcher(brokerPrefix)
+
+	closeCh := make(chan string)
+	watchCh := make(chan keyval.BytesWatchResp)
+
+	err := broker.Watch(keyval.ToChan(watchCh), closeCh, watchPrefix)
+	Expect(err).To(BeNil())
+
+	ctx.client.Put(brokerPrefix+"something/else/val1", []byte{0, 0, 7})
+	ctx.client.Put(brokerPrefix+watchKey, []byte{1, 2, 3})
+
+	var resp keyval.BytesWatchResp
+	Eventually(watchCh).Should(Receive(&resp))
+	Expect(resp.GetKey()).Should(Equal(watchKey))
+	Expect(resp.GetValue()).Should(Equal([]byte{1, 2, 3}))
+	Expect(resp.GetPrevValue()).Should(BeNil())
+	Expect(resp.GetChangeType()).Should(Equal(datasync.Put))
 }
