@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package process
+package processmanager
 
 import (
-	"github.com/ligato/cn-infra/process/status"
+	"github.com/ligato/cn-infra/processmanager/status"
 )
 
 // POptions is common object which holds all selected options

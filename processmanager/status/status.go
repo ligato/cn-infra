@@ -276,7 +276,7 @@ func (r *Reader) parse(file *os.File) *File {
 func (r *Reader) toInt(input string) int {
 	result, err := strconv.Atoi(prune(input))
 	if err != nil {
-		r.Log.Warnf("error parsing process status value %s to int: %v", prune(input), err)
+		return -1
 	}
 	return result
 }
@@ -286,7 +286,6 @@ func (r *Reader) toInt(input string) int {
 func (r *Reader) toHex(input string) []byte {
 	result, err := hex.DecodeString(prune(input))
 	if err != nil {
-		r.Log.Warnf("error parsing process status value %s to hex: %v", prune(input), err)
 		return []byte{}
 	}
 	return result

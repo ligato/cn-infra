@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package process
+package processmanager
 
 import (
 	"os"
 	"time"
 
-	"github.com/ligato/cn-infra/process/status"
+	"github.com/ligato/cn-infra/processmanager/status"
 
 	"github.com/ligato/cn-infra/logging"
 
@@ -31,9 +31,9 @@ const (
 	alreadyFinished = "process already finished"
 )
 
-// ManagerAPI defines methods to manage a given process
+// ProcessInstance defines methods to manage a given process
 // TODO update doc
-type ManagerAPI interface {
+type ProcessInstance interface {
 	// Start starts the process. Depending on the procedure result, the status is set to 'running' or 'failed'. Start
 	// also stores *os.Process in the instance for future use.
 	Start() error

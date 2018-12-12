@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package process
+package processmanager
 
 import (
 	"os"
@@ -20,7 +20,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ligato/cn-infra/process/status"
+	"github.com/ligato/cn-infra/processmanager/status"
 	"github.com/pkg/errors"
 )
 
@@ -44,7 +44,8 @@ func (p *Process) startProcess() (*os.Process, error) {
 			Pgid:    0,
 		}
 	} else {
-		// Otherwise set death signal to SIGKILL, so parent ruthlessly kills child process to prevent it hang as zombie
+		// Otherwise set death signal to SIGKILL, so parent ruthlessly kills all child process
+		// to prevent it to hang as zombie
 		attr.Sys = &syscall.SysProcAttr{
 			Pdeathsig: syscall.SIGKILL,
 		}

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package process_test
+package processmanager_test
 
 import (
 	"testing"
@@ -26,7 +26,7 @@ import (
 func TestNewProcess(t *testing.T) {
 	RegisterTestingT(t)
 
-	plugin := process.Plugin{}
+	plugin := processmanager.Plugin{}
 	plugin.PluginName = "test-pm"
 	plugin.PluginDeps.Setup()
 	defer plugin.Close()
@@ -51,13 +51,13 @@ func TestNewProcess(t *testing.T) {
 func TestNewProcessWithOptions(t *testing.T) {
 	RegisterTestingT(t)
 
-	plugin := process.Plugin{}
+	plugin := processmanager.Plugin{}
 	plugin.PluginName = "test-pm"
 	plugin.PluginDeps.Setup()
 	defer plugin.Close()
 
-	pr := plugin.NewProcess("name", "command", process.Args("arg1", "arg2"),
-		process.Notify(make(chan status.ProcessStatus)))
+	pr := plugin.NewProcess("name", "command", processmanager.Args("arg1", "arg2"),
+		processmanager.Notify(make(chan status.ProcessStatus)))
 
 	Expect(pr).ToNot(BeNil())
 	Expect(pr.GetArguments()).To(Equal([]string{"arg1", "arg2"}))
@@ -67,7 +67,7 @@ func TestNewProcessWithOptions(t *testing.T) {
 func TestNewProcessFromTemplate(t *testing.T) {
 	RegisterTestingT(t)
 
-	plugin := process.Plugin{}
+	plugin := processmanager.Plugin{}
 	plugin.PluginName = "test-pm"
 	plugin.PluginDeps.Setup()
 	defer plugin.Close()

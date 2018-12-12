@@ -12,35 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package process
+package processmanager
 
 import (
 	"os"
 
-	"github.com/ligato/cn-infra/process/status"
-	"github.com/ligato/cn-infra/process/template"
-	"github.com/ligato/cn-infra/process/template/model/process"
+	"github.com/ligato/cn-infra/processmanager/status"
+	"github.com/ligato/cn-infra/processmanager/template"
+	"github.com/ligato/cn-infra/processmanager/template/model/process"
 
 	"github.com/ligato/cn-infra/infra"
 	"github.com/pkg/errors"
 )
 
-// API defines methods to create, delete or manage processes
-type API interface {
+// ProcessManager defines methods to create, delete or manage processes
+type ProcessManager interface {
 	// NewProcess creates new process instance with name, command to start and other options (arguments, policy).
 	// New process is not immediately started, process instance comprises from a set of methods to manage.
-	NewProcess(name, cmd string, options ...POption) ManagerAPI
+	NewProcess(name, cmd string, options ...POption) ProcessInstance
 	// Starts process from template file
-	NewProcessFromTemplate(tmp *process.Template) ManagerAPI
+	NewProcessFromTemplate(tmp *process.Template) ProcessInstance
 	// Attach to existing process using its process ID. The process is stored under the provided name. Error
 	// is returned if process does not exits
-	AttachProcess(name, cmd string, pid int, options ...POption) (ManagerAPI, error)
+	AttachProcess(name, cmd string, pid int, options ...POption) (ProcessInstance, error)
 	// GetProcessByName returns existing process instance using name
-	GetProcessByName(name string) ManagerAPI
+	GetProcessByName(name string) ProcessInstance
 	// GetProcessByName returns existing process instance using PID
-	GetProcessByPID(pid int) ManagerAPI
+	GetProcessByPID(pid int) ProcessInstance
 	// GetAll returns all processes known to plugin
-	GetAllProcesses() []ManagerAPI
+	GetAllProcesses() []ProcessInstance
 	// Delete removes process from the memory. Delete cancels process watcher, but does not stop the running instance
 	// (possible to attach later). Note: no process-related templates are removed
 	Delete(name string) error
@@ -123,7 +123,7 @@ func (p *Plugin) String() string {
 }
 
 // AttachProcess attaches to existing process and reads its status
-func (p *Plugin) AttachProcess(name string, cmd string, pid int, options ...POption) (ManagerAPI, error) {
+func (p *Plugin) AttachProcess(name string, cmd string, pid int, options ...POption) (ProcessInstance, error) {
 	pr, err := os.FindProcess(pid)
 	if err != nil {
 		return nil, errors.Errorf("cannot attach to process with PID %d: %v", pid, err)
@@ -157,7 +157,7 @@ func (p *Plugin) AttachProcess(name string, cmd string, pid int, options ...POpt
 }
 
 // NewProcess creates a new process and saves its template if required
-func (p *Plugin) NewProcess(name, cmd string, options ...POption) ManagerAPI {
+func (p *Plugin) NewProcess(name, cmd string, options ...POption) ProcessInstance {
 	newPr := &Process{
 		log:        p.Log,
 		name:       name,
@@ -182,7 +182,7 @@ func (p *Plugin) NewProcess(name, cmd string, options ...POption) ManagerAPI {
 }
 
 // NewProcessFromTemplate creates a new process from template file
-func (p *Plugin) NewProcessFromTemplate(tmp *process.Template) ManagerAPI {
+func (p *Plugin) NewProcessFromTemplate(tmp *process.Template) ProcessInstance {
 	newTmpPr, err := p.templateToProcess(tmp)
 	if err != nil {
 		p.Log.Errorf("cannot create a process from template: %v", err)
@@ -196,7 +196,7 @@ func (p *Plugin) NewProcessFromTemplate(tmp *process.Template) ManagerAPI {
 }
 
 // GetProcessByName uses process name to find a desired instance
-func (p *Plugin) GetProcessByName(name string) ManagerAPI {
+func (p *Plugin) GetProcessByName(name string) ProcessInstance {
 	for _, pr := range p.processes {
 		if pr.name == name {
 			return pr
@@ -206,7 +206,7 @@ func (p *Plugin) GetProcessByName(name string) ManagerAPI {
 }
 
 // GetProcessByPID uses process ID to find a desired instance
-func (p *Plugin) GetProcessByPID(pid int) ManagerAPI {
+func (p *Plugin) GetProcessByPID(pid int) ProcessInstance {
 	for _, pr := range p.processes {
 		if pr.status.Pid == pid {
 			return pr
@@ -216,8 +216,8 @@ func (p *Plugin) GetProcessByPID(pid int) ManagerAPI {
 }
 
 // GetAllProcesses returns all processes known to plugin
-func (p *Plugin) GetAllProcesses() []ManagerAPI {
-	var processes []ManagerAPI
+func (p *Plugin) GetAllProcesses() []ProcessInstance {
+	var processes []ProcessInstance
 	for _, pr := range p.processes {
 		processes = append(processes, pr)
 	}
