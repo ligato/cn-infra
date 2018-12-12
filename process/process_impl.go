@@ -37,11 +37,16 @@ func (p *Process) startProcess() (*os.Process, error) {
 		Env:   os.Environ(),
 		Files: []*os.File{os.Stdin, nil, nil},
 	}
-	// Syscall if process should be detached from parent
+	// If process should be detached from parent, set process group ID
 	if p.options != nil && p.options.detach {
 		attr.Sys = &syscall.SysProcAttr{
 			Setpgid: true,
 			Pgid:    0,
+		}
+	} else {
+		// Otherwise set death signal to SIGKILL, so parent ruthlessly kills child process to prevent it hang as zombie
+		attr.Sys = &syscall.SysProcAttr{
+			Pdeathsig: syscall.SIGKILL,
 		}
 	}
 	// The actual command should be also as a first argument
@@ -52,9 +57,9 @@ func (p *Process) startProcess() (*os.Process, error) {
 	}
 	p.startTime = time.Now()
 
-	p.sh.ReadStatusFromPID(process.Pid)
+	_, err = p.sh.ReadStatusFromPID(process.Pid)
 
-	return process, nil
+	return process, err
 }
 
 func (p *Process) stopProcess() (err error) {
