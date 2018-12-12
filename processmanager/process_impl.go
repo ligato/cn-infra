@@ -146,7 +146,7 @@ func (p *Process) watch() {
 			if !p.isAlive() {
 				current = status.Terminated
 			} else {
-				pStatus, err := p.ReadStatus(p.GetPid())
+				pStatus, err := p.GetStatus(p.GetPid())
 				if err != nil {
 					p.log.Warn(err)
 				}

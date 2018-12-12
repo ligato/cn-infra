@@ -51,7 +51,7 @@ type ProcessInstance interface {
 	// Wait for process to exit and return its process state describing its status and error (if any)
 	Wait() (*os.ProcessState, error)
 	// Signal allows user to send a user-defined signal
-	Signal(signal os.Signal)
+	Signal(signal os.Signal) error
 	// IsAlive returns true if process is alive, or false if not or if the inner instance does not exist.
 	IsAlive() bool
 	// GetNotification returns channel to watch process availability/status.
@@ -62,8 +62,8 @@ type ProcessInstance interface {
 	GetInstanceName() string
 	// GetPid returns process ID, or zero if process instance does not exist
 	GetPid() int
-	// ReadStatus reads and returns all current plugin-defined process state data
-	ReadStatus(pid int) (*status.File, error)
+	// GetStatus reads and returns all current plugin-defined process state data
+	GetStatus(pid int) (*status.File, error)
 	// GetCommand returns process command
 	GetCommand() string
 	// GetArguments returns process arguments if set
@@ -174,8 +174,8 @@ func (p *Process) Wait() (*os.ProcessState, error) {
 }
 
 // Signal sends custom signal to the process
-func (p *Process) Signal(signal os.Signal) {
-	p.process.Signal(signal)
+func (p *Process) Signal(signal os.Signal) error {
+	return p.process.Signal(signal)
 }
 
 // GetName returns plugin-wide process name
@@ -209,8 +209,8 @@ func (p *Process) GetArguments() []string {
 	return p.options.args
 }
 
-// ReadStatus updates actual process status and returns status file
-func (p *Process) ReadStatus(pid int) (statusFile *status.File, err error) {
+// GetStatus updates actual process status and returns status file
+func (p *Process) GetStatus(pid int) (statusFile *status.File, err error) {
 	p.status, err = p.sh.ReadStatusFromPID(pid)
 	if err != nil {
 		return &status.File{}, errors.Errorf("failed to read status file for process ID %d: %v", pid, err)

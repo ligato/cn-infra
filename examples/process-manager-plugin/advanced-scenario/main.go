@@ -174,7 +174,7 @@ func (p *PMExample) advancedExample() error {
 	// Every process creates a status file within /proc/<pid>/status with a plenty of information about the process
 	// state, CPU or memory usage, etc. The process watcher periodically reads the status data for current state to
 	// propagate changes. To read status, use ReadStatus().
-	prStatus, err := pr.ReadStatus(pr.GetPid())
+	prStatus, err := pr.GetStatus(pr.GetPid())
 	if err != nil {
 		return err
 	}
