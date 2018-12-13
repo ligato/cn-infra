@@ -17,9 +17,9 @@ package processmanager_test
 import (
 	"testing"
 
-	"github.com/ligato/cn-infra/process"
-	"github.com/ligato/cn-infra/process/status"
-	tmpModel "github.com/ligato/cn-infra/process/template/model/process"
+	"github.com/ligato/cn-infra/processmanager"
+	"github.com/ligato/cn-infra/processmanager/status"
+	tmpModel "github.com/ligato/cn-infra/processmanager/template/model/process"
 	. "github.com/onsi/gomega"
 )
 
@@ -29,7 +29,10 @@ func TestNewProcess(t *testing.T) {
 	plugin := processmanager.Plugin{}
 	plugin.PluginName = "test-pm"
 	plugin.PluginDeps.Setup()
-	defer plugin.Close()
+	defer func() {
+		err := plugin.Close()
+		Expect(err).To(BeNil())
+	}()
 
 	pr := plugin.NewProcess("name", "command")
 
@@ -54,7 +57,10 @@ func TestNewProcessWithOptions(t *testing.T) {
 	plugin := processmanager.Plugin{}
 	plugin.PluginName = "test-pm"
 	plugin.PluginDeps.Setup()
-	defer plugin.Close()
+	defer func() {
+		err := plugin.Close()
+		Expect(err).To(BeNil())
+	}()
 
 	pr := plugin.NewProcess("name", "command", processmanager.Args("arg1", "arg2"),
 		processmanager.Notify(make(chan status.ProcessStatus)))
@@ -70,7 +76,10 @@ func TestNewProcessFromTemplate(t *testing.T) {
 	plugin := processmanager.Plugin{}
 	plugin.PluginName = "test-pm"
 	plugin.PluginDeps.Setup()
-	defer plugin.Close()
+	defer func() {
+		err := plugin.Close()
+		Expect(err).To(BeNil())
+	}()
 
 	tmp := &tmpModel.Template{
 		Name: "name",

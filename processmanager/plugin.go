@@ -112,7 +112,9 @@ func (p *Plugin) Init() error {
 // if thay are child processes of the application
 func (p *Plugin) Close() error {
 	for _, pr := range p.processes {
-		close(pr.cancelChan)
+		if pr.cancelChan != nil {
+			close(pr.cancelChan)
+		}
 	}
 	return nil
 }
@@ -122,7 +124,7 @@ func (p *Plugin) String() string {
 	return p.PluginName.String()
 }
 
-// AttachProcess attaches to existing process and reads its status
+// AttachProcess attaches to existing process, reads its status and starts process status watcher
 func (p *Plugin) AttachProcess(name string, cmd string, pid int, options ...POption) (ProcessInstance, error) {
 	pr, err := os.FindProcess(pid)
 	if err != nil {
@@ -164,15 +166,15 @@ func (p *Plugin) NewProcess(name, cmd string, options ...POption) ProcessInstanc
 		cmd:        cmd,
 		options:    &POptions{},
 		sh:         &status.Reader{Log: p.Log},
-		status:     &status.File{},
+		status:     &status.File{
+			State: status.Initial,
+		},
 		cancelChan: make(chan struct{}),
 	}
 	for _, option := range options {
 		option(newPr.options)
 	}
 	p.processes = append(p.processes, newPr)
-
-	go newPr.watch()
 
 	if newPr.options.template {
 		p.writeAsTemplate(newPr)
@@ -358,7 +360,9 @@ func (p *Plugin) templateToProcess(tmp *process.Template) (*Process, error) {
 		cmd:        tmp.Cmd,
 		options:    pOptions,
 		sh:         &status.Reader{Log: p.Log},
-		status:     &status.File{},
+		status:     &status.File{
+			State: status.Initial,
+		},
 		cancelChan: make(chan struct{}),
 	}, nil
 }

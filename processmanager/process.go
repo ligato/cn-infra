@@ -94,6 +94,9 @@ type Process struct {
 	// OS process instance, created on startup or obtained from running process
 	process *os.Process
 
+	// Prevents to start multiple watchers for one process
+	isWatched bool
+
 	// Other process-related fields not included in status
 	cancelChan chan struct{}
 	startTime  time.Time

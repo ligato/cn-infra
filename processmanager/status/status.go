@@ -34,10 +34,11 @@ const (
 	Running  = "running"
 	Idle     = "idle"
 	Zombie   = "zombie" // If child process is terminated with parent still running. Needs to be cleaned up.
+
 	// Plugin-defined process statuses (as addition to other process statuses)
-	Initial     = "initial"     // Only for newly created/attached processes. Without watcher, this status won't change.
+	Initial = "initial" // Only for newly created/attached processes
 	Unavailable = "unavailable" // If process status cannot be obtained
-	Terminated  = "terminated"  // If process is not running (while tested by zero signal)
+	Terminated = "terminated" // If process is not running (while tested by zero signal)
 )
 
 // ProcessStatus is string representation of process status

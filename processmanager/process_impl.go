@@ -37,26 +37,31 @@ func (p *Process) startProcess() (*os.Process, error) {
 		Env:   os.Environ(),
 		Files: []*os.File{os.Stdin, nil, nil},
 	}
-	// If process should be detached from parent, set process group ID
+	// if process should be detached from parent, set process group ID
 	if p.options != nil && p.options.detach {
 		attr.Sys = &syscall.SysProcAttr{
 			Setpgid: true,
 			Pgid:    0,
 		}
 	} else {
-		// Otherwise set death signal to SIGKILL, so parent ruthlessly kills all child process
+		// otherwise set death signal to SIGKILL, so parent ruthlessly kills all child process
 		// to prevent it to hang as zombie
 		attr.Sys = &syscall.SysProcAttr{
 			Pdeathsig: syscall.SIGKILL,
 		}
 	}
-	// The actual command should be also as a first argument
+	// the actual command should be also as a first argument
 	pArgs := append([]string{p.cmd}, p.options.args...)
 	process, err := os.StartProcess(p.cmd, pArgs, &attr)
 	if err != nil {
 		return nil, errors.Errorf("failed to start new process (cmd: %s): %v", p.cmd, err)
 	}
 	p.startTime = time.Now()
+
+	// now the process is running, start the status watcher
+	if !p.isWatched {
+		go p.watch()
+	}
 
 	_, err = p.sh.ReadStatusFromPID(process.Pid)
 
@@ -127,8 +132,13 @@ func (p *Process) delete() error {
 // status is updated. If process status was changed, notification is sent. In addition, terminated processes are
 // restarted if allowed by policy, and dead processes are cleaned up.
 func (p *Process) watch() {
+	if p.isWatched {
+		p.log.Warnf("Process watcher already running")
+		return
+	}
+
 	p.log.Debugf("Process %s watcher started", p.name)
-	// TODO make it configurable
+	p.isWatched = true
 	ticker := time.NewTicker(1 * time.Second)
 
 	var last status.ProcessStatus
@@ -143,6 +153,10 @@ func (p *Process) watch() {
 		select {
 		case <-ticker.C:
 			var current status.ProcessStatus
+			// skip initial status since the process is not running yet
+			if current == status.Initial {
+				continue
+			}
 			if !p.isAlive() {
 				current = status.Terminated
 			} else {
@@ -156,11 +170,12 @@ func (p *Process) watch() {
 					current = pStatus.State
 				}
 			}
-
+			// identify status change
 			if current != last {
 				if p.GetNotificationChan() != nil {
 					p.options.notifyChan <- current
 				}
+				// handle automatic process restarts
 				if current == status.Terminated {
 					if numRestarts > 0 || numRestarts == infiniteRestarts {
 						go func() {
@@ -174,6 +189,7 @@ func (p *Process) watch() {
 						p.log.Debugf("no more attempts to restart process %s", p.name)
 					}
 				}
+				// handle automatic zombie process cleanup
 				if current == status.Zombie && autoTerm {
 					p.log.Debugf("Terminating zombie process %d", p.GetPid())
 					if _, err := p.Wait(); err != nil {
@@ -187,6 +203,8 @@ func (p *Process) watch() {
 			if p.GetNotificationChan() != nil {
 				close(p.options.notifyChan)
 			}
+
+			p.isWatched = false
 
 			p.log.Debugf("Process %s watcher stopped", p.name)
 
