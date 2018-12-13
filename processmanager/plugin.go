@@ -15,6 +15,7 @@
 package processmanager
 
 import (
+	"io"
 	"os"
 	"os/exec"
 
@@ -162,12 +163,12 @@ func (p *Plugin) AttachProcess(name string, cmd string, pid int, options ...POpt
 // NewProcess creates a new process and saves its template if required
 func (p *Plugin) NewProcess(name, cmd string, options ...POption) ProcessInstance {
 	newPr := &Process{
-		log:        p.Log,
-		name:       name,
-		cmd:        cmd,
-		options:    &POptions{},
-		sh:         &status.Reader{Log: p.Log},
-		status:     &status.File{
+		log:     p.Log,
+		name:    name,
+		cmd:     cmd,
+		options: &POptions{},
+		sh:      &status.Reader{Log: p.Log},
+		status: &status.File{
 			State: status.Initial,
 		},
 		cancelChan: make(chan struct{}),
@@ -311,8 +312,14 @@ func (p *Plugin) processToTemplate(pr *Process) (*process.Template, error) {
 	}
 
 	pOptions := &process.TemplatePOptions{
-		Args:         pr.options.args,
-		Restart:      pr.options.restart,
+		Args:    pr.options.args,
+		Restart: pr.options.restart,
+		OutWriter: func(w io.Writer) bool {
+			return w != nil
+		}(pr.options.outWriter),
+		ErrWriter: func(w io.Writer) bool {
+			return w != nil
+		}(pr.options.errWriter),
 		Detach:       pr.options.detach,
 		RunOnStartup: pr.options.runOnStartup,
 		Notify: func(notifyChan chan status.ProcessStatus) bool {
@@ -343,6 +350,18 @@ func (p *Plugin) templateToProcess(tmp *process.Template) (*Process, error) {
 	pOptions := &POptions{}
 	if tmp.POptions != nil {
 		pOptions.args = tmp.POptions.Args
+		pOptions.outWriter = func(isSet bool) io.Writer {
+			if isSet {
+				return os.Stdout
+			}
+			return nil
+		}(tmp.POptions.OutWriter)
+		pOptions.errWriter = func(isSet bool) io.Writer {
+			if isSet {
+				return os.Stderr
+			}
+			return nil
+		}(tmp.POptions.ErrWriter)
 		pOptions.detach = tmp.POptions.Detach
 		pOptions.restart = tmp.POptions.Restart
 		pOptions.runOnStartup = tmp.POptions.RunOnStartup
@@ -356,12 +375,12 @@ func (p *Plugin) templateToProcess(tmp *process.Template) (*Process, error) {
 	}
 
 	return &Process{
-		log:        p.Log,
-		name:       tmp.Name,
-		cmd:        tmp.Cmd,
-		options:    pOptions,
-		sh:         &status.Reader{Log: p.Log},
-		status:     &status.File{
+		log:     p.Log,
+		name:    tmp.Name,
+		cmd:     tmp.Cmd,
+		options: pOptions,
+		sh:      &status.Reader{Log: p.Log},
+		status: &status.File{
 			State: status.Initial,
 		},
 		cancelChan: make(chan struct{}),

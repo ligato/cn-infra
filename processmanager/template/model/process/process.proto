@@ -9,12 +9,14 @@ message Template {                  /* Template is process definition which can 
     string cmd = 2;                 /* Process command */
     message pOptions {
         repeated string args = 1;   /* Arguments process will be started with */
-        int32 restart = 2;          /* Number of automatic restarts, <0> means no restart, <-1> always restart */
-        bool detach = 3;            /* Set to true if process should be detached from parent application on startup */
-        bool run_on_startup = 4;    /* Set to true if process is expected to start right after plugin initialization */
-        bool notify = 5;            /* Create a notification channel (can be obtained via `GetNotification`) where
+        bool out_writer = 2;        /* Use output writer. Note: only os.StdOut can be used this way */
+        bool err_writer = 3;        /* Use error writer. Note: only os.StdErr can be used this way */
+        int32 restart = 4;          /* Number of automatic restarts, <0> means no restart, <-1> always restart */
+        bool detach = 5;            /* Set to true if process should be detached from parent application on startup */
+        bool run_on_startup = 6;    /* Set to true if process is expected to start right after plugin initialization */
+        bool notify = 7;            /* Create a notification channel (can be obtained via `GetNotification`) where
                                        all status change events can be watched*/
-        bool auto_terminate = 6;    /* This option ensures that every process which turns zombie/dead is automatically
+        bool auto_terminate = 8;    /* This option ensures that every process which turns zombie/dead is automatically
                                        released */
     }
     pOptions p_options = 3;

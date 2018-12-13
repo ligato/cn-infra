@@ -20,6 +20,7 @@ package main
 
 import (
 	"log"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -91,10 +92,11 @@ func (p *PMExample) advancedExample() error {
 	// process will be automatically terminated together with the parent. Option 'Detach' allows to detach
 	// the process from parent and keeps is running.
 	// Option 'Restarts' defines a number of automatic restarts if given process is terminated.
+	// 'Writer' sets standard output/error, so the process log will be visible in the example log
 	cmd := filepath.Join("../", "test-process", "test-process")
 	notifyChan := make(chan status.ProcessStatus)
 	pr := p.PM.NewProcess("test-pr", cmd, pm.Args("-max-uptime=60"), pm.Notify(notifyChan),
-		pm.Detach(), pm.Restarts(1))
+		pm.Detach(), pm.Restarts(1), pm.Writer(os.Stdout, os.Stderr))
 
 	// Start the watcher as before and ensure the process is running
 	var state status.ProcessStatus
@@ -143,7 +145,7 @@ func (p *PMExample) advancedExample() error {
 	notifyChan = make(chan status.ProcessStatus)
 	go p.runWatcher("watcher-new", &state, notifyChan)
 	if pr, err = p.PM.AttachProcess("test-pr-attached", cmd, pid, pm.Args("-max-uptime=60"), pm.Notify(notifyChan),
-		pm.Detach(), pm.Restarts(1)); err != nil {
+		pm.Detach(), pm.Restarts(1), pm.Writer(nil, nil)); err != nil {
 		return err
 	}
 	time.Sleep(2 * time.Second)

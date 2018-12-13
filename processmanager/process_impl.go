@@ -15,6 +15,7 @@
 package processmanager
 
 import (
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -28,33 +29,53 @@ import (
 // Marked defines that the process should be always restarted
 const infiniteRestarts = -1
 
-func (p *Process) startProcess() (*exec.Cmd, error) {
-	wd, err := os.Getwd()
+func (p *Process) startProcess() (cmd *exec.Cmd, err error) {
+	// set directory
+	cmd = &exec.Cmd{Path: p.cmd}
+	cmd.Dir, err = os.Getwd()
 	if err != nil {
 		return nil, errors.Errorf("failed to get rooted path name for: %v", err)
 	}
-	var attr = os.ProcAttr{
-		Dir:   wd,
-		Env:   os.Environ(),
-		Files: []*os.File{os.Stdin, nil, nil},
-	}
-	// if process should be detached from parent, set process group ID
-	if p.options != nil && p.options.detach {
-		attr.Sys = &syscall.SysProcAttr{
-			Setpgid: true,
-			Pgid:    0,
-		}
-	} else {
-		// otherwise set death signal to SIGKILL, so parent ruthlessly kills all child process
-		// to prevent it to hang as zombie
-		attr.Sys = &syscall.SysProcAttr{
+
+	// if options are set, adjust command attributes, otherwise set last required fields to prepare the command
+	if p.options == nil {
+		cmd.Args = append([]string{p.cmd})
+		cmd.Env = os.Environ()
+		cmd.SysProcAttr = &syscall.SysProcAttr{
 			Pdeathsig: syscall.SIGKILL,
 		}
+	} else {
+		// args
+		cmd.Args = append([]string{p.cmd}, p.options.args...)
+		// writer
+		if p.options.outWriter != nil {
+			stdout, err := cmd.StdoutPipe()
+			if err != nil {
+				p.log.Errorf("failed to get stdout pipe: %v", err)
+			}
+			p.watchOutput(p.options.outWriter, stdout)
+		}
+		if p.options.errWriter != nil {
+			errOut, err := cmd.StderrPipe()
+			if err != nil {
+				p.log.Errorf("failed to get stderr pipe: %v", err)
+			}
+			p.watchOutput(p.options.errWriter, errOut)
+		}
+		// detach
+		if p.options.detach {
+			cmd.SysProcAttr = &syscall.SysProcAttr{
+				Setpgid: true,
+				Pgid:    0,
+			}
+		}
+		// environment variables
+		if p.options.environ != nil {
+			cmd.Env = p.options.environ
+		}
 	}
-	// the actual command should be also as a first argument
-	pArgs := append([]string{p.cmd}, p.options.args...)
-	command := &exec.Cmd{Path: p.cmd, Args: pArgs, SysProcAttr: attr.Sys}
-	err = command.Start()
+
+	err = cmd.Start()
 	if err != nil {
 		return nil, errors.Errorf("failed to start new process (cmd: %s): %v", p.cmd, err)
 	}
@@ -65,15 +86,15 @@ func (p *Process) startProcess() (*exec.Cmd, error) {
 		go p.watch()
 	}
 
-	if command.Process != nil {
-		_, err = p.sh.ReadStatusFromPID(command.Process.Pid)
+	if cmd.Process != nil {
+		_, err = p.sh.ReadStatusFromPID(cmd.Process.Pid)
 	}
 
-	return command, err
+	return cmd, err
 }
 
 func (p *Process) stopProcess() (err error) {
-	if p.command == nil || p.command.Process == nil{
+	if p.command == nil || p.command.Process == nil {
 		return errors.Errorf("asked to stop non-existing process instance")
 	}
 
@@ -86,7 +107,7 @@ func (p *Process) stopProcess() (err error) {
 }
 
 func (p *Process) forceStopProcess() (err error) {
-	if p.command == nil || p.command.Process == nil{
+	if p.command == nil || p.command.Process == nil {
 		return errors.Errorf("asked to force-stop non-existing process instance")
 	}
 
@@ -102,7 +123,7 @@ func (p *Process) forceStopProcess() (err error) {
 }
 
 func (p *Process) isAlive() bool {
-	if p.command == nil || p.command.Process == nil{
+	if p.command == nil || p.command.Process == nil {
 		return false
 	}
 	osProcess, err := os.FindProcess(p.command.Process.Pid)
@@ -119,7 +140,7 @@ func (p *Process) isAlive() bool {
 
 // WaitOnCommand waits until the command completes
 func (p *Process) waitOnProcess() (*os.ProcessState, error) {
-	if p.command == nil || p.command.Process == nil{
+	if p.command == nil || p.command.Process == nil {
 		return &os.ProcessState{}, nil
 	}
 
@@ -128,7 +149,7 @@ func (p *Process) waitOnProcess() (*os.ProcessState, error) {
 
 // Delete stops the process and internal watcher
 func (p *Process) deleteProcess() error {
-	if p.command == nil || p.command.Process == nil{
+	if p.command == nil || p.command.Process == nil {
 		return nil
 	}
 
@@ -233,4 +254,13 @@ func (p *Process) watch() {
 			return
 		}
 	}
+}
+
+// Watch output (either standard or custom). Terminates with process, since io.Copy reaches EOF.
+func (p *Process) watchOutput(w io.Writer, r io.Reader) {
+	go func() {
+		if _, err := io.Copy(w, r); err != nil {
+			p.log.Errorf("Output watcher error: %v", err)
+		}
+	}()
 }

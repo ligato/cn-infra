@@ -15,18 +15,38 @@
 package processmanager
 
 import (
+	"io"
+
 	"github.com/ligato/cn-infra/processmanager/status"
 )
 
 // POptions is common object which holds all selected options
 type POptions struct {
-	args         []string
-	restart      int32
-	detach       bool
-	runOnStartup bool
+	// args
+	args []string
+
+	// restarts
+	restart int32
+
+	// writer
+	outWriter io.Writer
+	errWriter io.Writer
+
+	// detach
+	detach bool
+
+	// environment variables
+	environ []string
+
+	// template
 	template     bool
-	notifyChan   chan status.ProcessStatus
-	autoTerm     bool
+	runOnStartup bool
+
+	// notify
+	notifyChan chan status.ProcessStatus
+
+	// auto-terminate
+	autoTerm bool
 }
 
 // POption is helper function to set process options
@@ -46,10 +66,25 @@ func Restarts(restart int32) POption {
 	}
 }
 
+// Writer allows to use custom writer instance. Can be defined with nil parameters, in such a case
+// standard output will be used
+func Writer(outW, errW io.Writer) POption {
+	return func(p *POptions) {
+		p.outWriter, p.errWriter = outW, errW
+	}
+}
+
 // Detach process from parent after start, so it can survive after parent process is terminated
 func Detach() POption {
 	return func(p *POptions) {
 		p.detach = true
+	}
+}
+
+// EnvVar allows to set custom environment variables. If not set, os.Environ is used instead
+func EnvVar(env []string) POption {
+	return func(p *POptions) {
+		p.environ = env
 	}
 }
 
