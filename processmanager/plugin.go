@@ -16,6 +16,7 @@ package processmanager
 
 import (
 	"os"
+	"os/exec"
 
 	"github.com/ligato/cn-infra/processmanager/status"
 	"github.com/ligato/cn-infra/processmanager/template"
@@ -135,7 +136,7 @@ func (p *Plugin) AttachProcess(name string, cmd string, pid int, options ...POpt
 		name:       name,
 		cmd:        cmd,
 		options:    &POptions{},
-		process:    pr,
+		command:    &exec.Cmd{Process: pr},
 		sh:         &status.Reader{Log: p.Log},
 		cancelChan: make(chan struct{}),
 	}
@@ -231,7 +232,7 @@ func (p *Plugin) Delete(name string) error {
 	var updated []*Process
 	for _, pr := range p.processes {
 		if pr.name == name {
-			if err := pr.delete(); err != nil {
+			if err := pr.deleteProcess(); err != nil {
 				return err
 			}
 		} else {

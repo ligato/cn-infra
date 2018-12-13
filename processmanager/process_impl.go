@@ -16,6 +16,7 @@ package processmanager
 
 import (
 	"os"
+	"os/exec"
 	"strings"
 	"syscall"
 	"time"
@@ -27,7 +28,7 @@ import (
 // Marked defines that the process should be always restarted
 const infiniteRestarts = -1
 
-func (p *Process) startProcess() (*os.Process, error) {
+func (p *Process) startProcess() (*exec.Cmd, error) {
 	wd, err := os.Getwd()
 	if err != nil {
 		return nil, errors.Errorf("failed to get rooted path name for: %v", err)
@@ -52,7 +53,8 @@ func (p *Process) startProcess() (*os.Process, error) {
 	}
 	// the actual command should be also as a first argument
 	pArgs := append([]string{p.cmd}, p.options.args...)
-	process, err := os.StartProcess(p.cmd, pArgs, &attr)
+	command := &exec.Cmd{Path: p.cmd, Args: pArgs, SysProcAttr: attr.Sys}
+	err = command.Start()
 	if err != nil {
 		return nil, errors.Errorf("failed to start new process (cmd: %s): %v", p.cmd, err)
 	}
@@ -63,17 +65,19 @@ func (p *Process) startProcess() (*os.Process, error) {
 		go p.watch()
 	}
 
-	_, err = p.sh.ReadStatusFromPID(process.Pid)
+	if command.Process != nil {
+		_, err = p.sh.ReadStatusFromPID(command.Process.Pid)
+	}
 
-	return process, err
+	return command, err
 }
 
 func (p *Process) stopProcess() (err error) {
-	if p.process == nil {
+	if p.command == nil || p.command.Process == nil{
 		return errors.Errorf("asked to stop non-existing process instance")
 	}
 
-	if err = p.process.Signal(syscall.SIGTERM); err != nil && !strings.Contains(err.Error(), alreadyFinished) {
+	if err = p.command.Process.Signal(syscall.SIGTERM); err != nil && !strings.Contains(err.Error(), alreadyFinished) {
 		return errors.Errorf("process termination unsuccessful: %v", err)
 	}
 
@@ -82,14 +86,14 @@ func (p *Process) stopProcess() (err error) {
 }
 
 func (p *Process) forceStopProcess() (err error) {
-	if p.process != nil {
+	if p.command == nil || p.command.Process == nil{
 		return errors.Errorf("asked to force-stop non-existing process instance")
 	}
 
-	if err = p.process.Signal(syscall.SIGKILL); err != nil && !strings.Contains(err.Error(), alreadyFinished) {
+	if err = p.command.Process.Signal(syscall.SIGKILL); err != nil && !strings.Contains(err.Error(), alreadyFinished) {
 		return errors.Errorf("process forced termination unsuccessful: %v", err)
 	}
-	if err = p.process.Release(); err != nil {
+	if err = p.command.Process.Release(); err != nil {
 		return errors.Errorf("resource release failed: %v", err)
 	}
 
@@ -98,10 +102,10 @@ func (p *Process) forceStopProcess() (err error) {
 }
 
 func (p *Process) isAlive() bool {
-	if p.process == nil {
+	if p.command == nil || p.command.Process == nil{
 		return false
 	}
-	osProcess, err := os.FindProcess(p.process.Pid)
+	osProcess, err := os.FindProcess(p.command.Process.Pid)
 	if err != nil {
 		return false
 	}
@@ -113,9 +117,18 @@ func (p *Process) isAlive() bool {
 	return true
 }
 
+// WaitOnCommand waits until the command completes
+func (p *Process) waitOnProcess() (*os.ProcessState, error) {
+	if p.command == nil || p.command.Process == nil{
+		return &os.ProcessState{}, nil
+	}
+
+	return p.command.Process.Wait()
+}
+
 // Delete stops the process and internal watcher
-func (p *Process) delete() error {
-	if p.process == nil {
+func (p *Process) deleteProcess() error {
+	if p.command == nil || p.command.Process == nil{
 		return nil
 	}
 
@@ -126,6 +139,15 @@ func (p *Process) delete() error {
 
 	p.log.Debugf("Process %s deleted", p.name)
 	return nil
+}
+
+// WaitOnCommand waits until the command completes
+func (p *Process) signalToProcess(signal os.Signal) error {
+	if p.command == nil || p.command.Process == nil {
+		p.log.Warn("Attempt to send signal to non-running process")
+	}
+
+	return p.command.Process.Signal(signal)
 }
 
 // Periodically tries to 'ping' process. If the process is unresponsive, marks it as terminated. Otherwise the process
@@ -180,7 +202,7 @@ func (p *Process) watch() {
 					if numRestarts > 0 || numRestarts == infiniteRestarts {
 						go func() {
 							var err error
-							if p.process, err = p.startProcess(); err != nil {
+							if p.command, err = p.startProcess(); err != nil {
 								p.log.Error("attempt to restart process %s failed: %v", p.name, err)
 							}
 						}()
