@@ -33,7 +33,6 @@ const (
 )
 
 // ProcessInstance defines methods to manage a given process
-// TODO update doc
 type ProcessInstance interface {
 	// Start starts the process. Depending on the procedure result, the status is set to 'running' or 'failed'. Start
 	// also stores *os.Process in the instance for future use.

@@ -40,7 +40,6 @@ func (p *Process) startProcess() (cmd *exec.Cmd, err error) {
 	// if options are set, adjust command attributes, otherwise set last required fields to prepare the command
 	if p.options == nil {
 		cmd.Args = append([]string{p.cmd})
-		cmd.Env = os.Environ()
 		cmd.SysProcAttr = &syscall.SysProcAttr{
 			Pdeathsig: syscall.SIGKILL,
 		}
