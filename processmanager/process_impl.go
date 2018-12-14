@@ -67,6 +67,10 @@ func (p *Process) startProcess() (cmd *exec.Cmd, err error) {
 				Setpgid: true,
 				Pgid:    0,
 			}
+		} else {
+			cmd.SysProcAttr = &syscall.SysProcAttr{
+				Pdeathsig: syscall.SIGKILL,
+			}
 		}
 		// environment variables
 		if p.options.environ != nil {
