@@ -29,23 +29,19 @@ import (
 // Marked defines that the process should be always restarted
 const infiniteRestarts = -1
 
+// DefaultPDeathSignal is default signal used for parent death process attribute
+var DefaultPDeathSignal = syscall.SIGKILL
+
 func (p *Process) startProcess() (cmd *exec.Cmd, err error) {
-	// set directory
-	cmd = &exec.Cmd{Path: p.cmd}
-	cmd.Dir, err = os.Getwd()
+	cmd, err = defaultProcessAttrs(p.cmd)
 	if err != nil {
-		return nil, errors.Errorf("failed to get rooted path name for: %v", err)
+		return nil, err
 	}
 
 	// if options are set, adjust command attributes, otherwise set last required fields to prepare the command
-	if p.options == nil {
-		cmd.Args = append([]string{p.cmd})
-		cmd.SysProcAttr = &syscall.SysProcAttr{
-			Pdeathsig: syscall.SIGKILL,
-		}
-	} else {
+	if p.options != nil {
 		// args
-		cmd.Args = append([]string{p.cmd}, p.options.args...)
+		cmd.Args = append(cmd.Args, p.options.args...)
 		// writer
 		if p.options.outWriter != nil {
 			stdout, err := cmd.StdoutPipe()
@@ -61,15 +57,11 @@ func (p *Process) startProcess() (cmd *exec.Cmd, err error) {
 			}
 			p.watchOutput(p.options.errWriter, errOut)
 		}
-		// detach
+		// detach (replace default)
 		if p.options.detach {
 			cmd.SysProcAttr = &syscall.SysProcAttr{
 				Setpgid: true,
 				Pgid:    0,
-			}
-		} else {
-			cmd.SysProcAttr = &syscall.SysProcAttr{
-				Pdeathsig: syscall.SIGKILL,
 			}
 		}
 		// environment variables
@@ -94,6 +86,22 @@ func (p *Process) startProcess() (cmd *exec.Cmd, err error) {
 	}
 
 	return cmd, err
+}
+
+func defaultProcessAttrs(cmd string) (*exec.Cmd, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return nil, errors.Errorf("failed to get rooted path name for: %v", err)
+	}
+
+	return &exec.Cmd{
+		Path: cmd,
+		Args: append([]string{cmd}),
+		Dir:  dir,
+		SysProcAttr: &syscall.SysProcAttr{
+			Pdeathsig: DefaultPDeathSignal,
+		},
+	}, nil
 }
 
 func (p *Process) stopProcess() (err error) {
