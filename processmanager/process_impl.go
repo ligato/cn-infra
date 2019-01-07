@@ -12,57 +12,104 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package process
+package processmanager
 
 import (
+	"io"
 	"os"
+	"os/exec"
 	"strings"
 	"syscall"
 	"time"
 
-	"github.com/ligato/cn-infra/process/status"
+	"github.com/ligato/cn-infra/processmanager/status"
 	"github.com/pkg/errors"
 )
 
 // Marked defines that the process should be always restarted
 const infiniteRestarts = -1
 
-func (p *Process) startProcess() (*os.Process, error) {
-	wd, err := os.Getwd()
+// DefaultPDeathSignal is default signal used for parent death process attribute
+var DefaultPDeathSignal = syscall.SIGKILL
+
+func (p *Process) startProcess() (cmd *exec.Cmd, err error) {
+	cmd, err = defaultProcessAttrs(p.cmd)
 	if err != nil {
-		return nil, errors.Errorf("failed to get rooted path name for: %v", err)
+		return nil, err
 	}
-	var attr = os.ProcAttr{
-		Dir:   wd,
-		Env:   os.Environ(),
-		Files: []*os.File{os.Stdin, nil, nil},
-	}
-	// Syscall if process should be detached from parent
-	if p.options != nil && p.options.detach {
-		attr.Sys = &syscall.SysProcAttr{
-			Setpgid: true,
-			Pgid:    0,
+
+	// if options are set, adjust command attributes, otherwise set last required fields to prepare the command
+	if p.options != nil {
+		// args
+		cmd.Args = append(cmd.Args, p.options.args...)
+		// writer
+		if p.options.outWriter != nil {
+			stdout, err := cmd.StdoutPipe()
+			if err != nil {
+				p.log.Errorf("failed to get stdout pipe: %v", err)
+			}
+			p.watchOutput(p.options.outWriter, stdout)
+		}
+		if p.options.errWriter != nil {
+			errOut, err := cmd.StderrPipe()
+			if err != nil {
+				p.log.Errorf("failed to get stderr pipe: %v", err)
+			}
+			p.watchOutput(p.options.errWriter, errOut)
+		}
+		// detach (replace default)
+		if p.options.detach {
+			cmd.SysProcAttr = &syscall.SysProcAttr{
+				Setpgid: true,
+				Pgid:    0,
+			}
+		}
+		// environment variables
+		if p.options.environ != nil {
+			cmd.Env = p.options.environ
 		}
 	}
-	// The actual command should be also as a first argument
-	pArgs := append([]string{p.cmd}, p.options.args...)
-	process, err := os.StartProcess(p.cmd, pArgs, &attr)
+
+	err = cmd.Start()
 	if err != nil {
 		return nil, errors.Errorf("failed to start new process (cmd: %s): %v", p.cmd, err)
 	}
 	p.startTime = time.Now()
 
-	p.sh.ReadStatusFromPID(process.Pid)
+	// now the process is running, start the status watcher
+	if !p.isWatched {
+		go p.watch()
+	}
 
-	return process, nil
+	if cmd.Process != nil {
+		_, err = p.sh.ReadStatusFromPID(cmd.Process.Pid)
+	}
+
+	return cmd, err
+}
+
+func defaultProcessAttrs(cmd string) (*exec.Cmd, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return nil, errors.Errorf("failed to get rooted path name for: %v", err)
+	}
+
+	return &exec.Cmd{
+		Path: cmd,
+		Args: append([]string{cmd}),
+		Dir:  dir,
+		SysProcAttr: &syscall.SysProcAttr{
+			Pdeathsig: DefaultPDeathSignal,
+		},
+	}, nil
 }
 
 func (p *Process) stopProcess() (err error) {
-	if p.process == nil {
+	if p.command == nil || p.command.Process == nil {
 		return errors.Errorf("asked to stop non-existing process instance")
 	}
 
-	if err = p.process.Signal(syscall.SIGTERM); err != nil && !strings.Contains(err.Error(), alreadyFinished) {
+	if err = p.command.Process.Signal(syscall.SIGTERM); err != nil && !strings.Contains(err.Error(), alreadyFinished) {
 		return errors.Errorf("process termination unsuccessful: %v", err)
 	}
 
@@ -71,14 +118,14 @@ func (p *Process) stopProcess() (err error) {
 }
 
 func (p *Process) forceStopProcess() (err error) {
-	if p.process != nil {
+	if p.command == nil || p.command.Process == nil {
 		return errors.Errorf("asked to force-stop non-existing process instance")
 	}
 
-	if err = p.process.Signal(syscall.SIGKILL); err != nil && !strings.Contains(err.Error(), alreadyFinished) {
+	if err = p.command.Process.Signal(syscall.SIGKILL); err != nil && !strings.Contains(err.Error(), alreadyFinished) {
 		return errors.Errorf("process forced termination unsuccessful: %v", err)
 	}
-	if err = p.process.Release(); err != nil {
+	if err = p.command.Process.Release(); err != nil {
 		return errors.Errorf("resource release failed: %v", err)
 	}
 
@@ -87,10 +134,10 @@ func (p *Process) forceStopProcess() (err error) {
 }
 
 func (p *Process) isAlive() bool {
-	if p.process == nil {
+	if p.command == nil || p.command.Process == nil {
 		return false
 	}
-	osProcess, err := os.FindProcess(p.process.Pid)
+	osProcess, err := os.FindProcess(p.command.Process.Pid)
 	if err != nil {
 		return false
 	}
@@ -102,9 +149,18 @@ func (p *Process) isAlive() bool {
 	return true
 }
 
+// WaitOnCommand waits until the command completes
+func (p *Process) waitOnProcess() (*os.ProcessState, error) {
+	if p.command == nil || p.command.Process == nil {
+		return &os.ProcessState{}, nil
+	}
+
+	return p.command.Process.Wait()
+}
+
 // Delete stops the process and internal watcher
-func (p *Process) delete() error {
-	if p.process == nil {
+func (p *Process) deleteProcess() error {
+	if p.command == nil || p.command.Process == nil {
 		return nil
 	}
 
@@ -117,12 +173,26 @@ func (p *Process) delete() error {
 	return nil
 }
 
+// WaitOnCommand waits until the command completes
+func (p *Process) signalToProcess(signal os.Signal) error {
+	if p.command == nil || p.command.Process == nil {
+		p.log.Warn("Attempt to send signal to non-running process")
+	}
+
+	return p.command.Process.Signal(signal)
+}
+
 // Periodically tries to 'ping' process. If the process is unresponsive, marks it as terminated. Otherwise the process
 // status is updated. If process status was changed, notification is sent. In addition, terminated processes are
 // restarted if allowed by policy, and dead processes are cleaned up.
 func (p *Process) watch() {
+	if p.isWatched {
+		p.log.Warnf("Process watcher already running")
+		return
+	}
+
 	p.log.Debugf("Process %s watcher started", p.name)
-	// TODO make it configurable
+	p.isWatched = true
 	ticker := time.NewTicker(1 * time.Second)
 
 	var last status.ProcessStatus
@@ -137,10 +207,14 @@ func (p *Process) watch() {
 		select {
 		case <-ticker.C:
 			var current status.ProcessStatus
+			// skip initial status since the process is not running yet
+			if current == status.Initial {
+				continue
+			}
 			if !p.isAlive() {
 				current = status.Terminated
 			} else {
-				pStatus, err := p.ReadStatus(p.GetPid())
+				pStatus, err := p.GetStatus(p.GetPid())
 				if err != nil {
 					p.log.Warn(err)
 				}
@@ -150,16 +224,17 @@ func (p *Process) watch() {
 					current = pStatus.State
 				}
 			}
-
+			// identify status change
 			if current != last {
 				if p.GetNotificationChan() != nil {
 					p.options.notifyChan <- current
 				}
+				// handle automatic process restarts
 				if current == status.Terminated {
 					if numRestarts > 0 || numRestarts == infiniteRestarts {
 						go func() {
 							var err error
-							if p.process, err = p.startProcess(); err != nil {
+							if p.command, err = p.startProcess(); err != nil {
 								p.log.Error("attempt to restart process %s failed: %v", p.name, err)
 							}
 						}()
@@ -168,6 +243,7 @@ func (p *Process) watch() {
 						p.log.Debugf("no more attempts to restart process %s", p.name)
 					}
 				}
+				// handle automatic zombie process cleanup
 				if current == status.Zombie && autoTerm {
 					p.log.Debugf("Terminating zombie process %d", p.GetPid())
 					if _, err := p.Wait(); err != nil {
@@ -182,9 +258,20 @@ func (p *Process) watch() {
 				close(p.options.notifyChan)
 			}
 
+			p.isWatched = false
+
 			p.log.Debugf("Process %s watcher stopped", p.name)
 
 			return
 		}
 	}
+}
+
+// Watch output (either standard or custom). Terminates with process, since io.Copy reaches EOF.
+func (p *Process) watchOutput(w io.Writer, r io.Reader) {
+	go func() {
+		if _, err := io.Copy(w, r); err != nil {
+			p.log.Errorf("Output watcher error: %v", err)
+		}
+	}()
 }

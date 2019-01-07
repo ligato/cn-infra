@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package process
+package processmanager
 
 import (
 	"os"
+	"os/exec"
 	"time"
 
-	"github.com/ligato/cn-infra/process/status"
+	"github.com/ligato/cn-infra/processmanager/status"
 
 	"github.com/ligato/cn-infra/logging"
 
@@ -31,9 +32,8 @@ const (
 	alreadyFinished = "process already finished"
 )
 
-// ManagerAPI defines methods to manage a given process
-// TODO update doc
-type ManagerAPI interface {
+// ProcessInstance defines methods to manage a given process
+type ProcessInstance interface {
 	// Start starts the process. Depending on the procedure result, the status is set to 'running' or 'failed'. Start
 	// also stores *os.Process in the instance for future use.
 	Start() error
@@ -51,7 +51,7 @@ type ManagerAPI interface {
 	// Wait for process to exit and return its process state describing its status and error (if any)
 	Wait() (*os.ProcessState, error)
 	// Signal allows user to send a user-defined signal
-	Signal(signal os.Signal)
+	Signal(signal os.Signal) error
 	// IsAlive returns true if process is alive, or false if not or if the inner instance does not exist.
 	IsAlive() bool
 	// GetNotification returns channel to watch process availability/status.
@@ -62,8 +62,8 @@ type ManagerAPI interface {
 	GetInstanceName() string
 	// GetPid returns process ID, or zero if process instance does not exist
 	GetPid() int
-	// ReadStatus reads and returns all current plugin-defined process state data
-	ReadStatus(pid int) (*status.File, error)
+	// GetStatus reads and returns all current plugin-defined process state data
+	GetStatus(pid int) (*status.File, error)
 	// GetCommand returns process command
 	GetCommand() string
 	// GetArguments returns process arguments if set
@@ -91,8 +91,11 @@ type Process struct {
 	sh     *status.Reader
 	status *status.File
 
-	// OS process instance, created on startup or obtained from running process
-	process *os.Process
+	// OS command instance, created on startup or obtained from running process
+	command *exec.Cmd
+
+	// Prevents to start multiple watchers for one process
+	isWatched bool
 
 	// Other process-related fields not included in status
 	cancelChan chan struct{}
@@ -101,7 +104,7 @@ type Process struct {
 
 // Start a process with defined arguments. Every process is watched for liveness and status changes
 func (p *Process) Start() (err error) {
-	if p.process, err = p.startProcess(); err != nil {
+	if p.command, err = p.startProcess(); err != nil {
 		return err
 	}
 	p.log.Debugf("New process %s was started (PID: %d)", p.GetName(), p.GetPid())
@@ -116,11 +119,6 @@ func (p *Process) IsAlive() bool {
 
 // Restart the process, or start it if it is not running
 func (p *Process) Restart() (err error) {
-	if p.process == nil {
-		p.log.Warn("Attempt to restart non-running process, starting it")
-		p.process, err = p.startProcess()
-		return err
-	}
 	if p.isAlive() {
 		if _, err = p.StopAndWait(); err != nil {
 			p.log.Warnf("Cannot stop process %s due to error, trying force stop... (err: %v)", p.GetName(), err)
@@ -129,7 +127,7 @@ func (p *Process) Restart() (err error) {
 			}
 		}
 	}
-	p.process, err = p.startProcess()
+	p.command, err = p.startProcess()
 	p.log.Debugf("Process %s was restarted (PID: %d)", p.GetName(), p.GetPid())
 	return err
 }
@@ -148,7 +146,7 @@ func (p *Process) StopAndWait() (*os.ProcessState, error) {
 	if err := p.stopProcess(); err != nil {
 		return nil, err
 	}
-	state, err := p.Wait()
+	state, err := p.waitOnProcess()
 	if err != nil {
 		return nil, errors.Errorf("process exit with error: %v", err)
 	}
@@ -167,15 +165,12 @@ func (p *Process) Kill() error {
 
 // Wait for the process to exit, and then returns its state.
 func (p *Process) Wait() (*os.ProcessState, error) {
-	if p.process == nil {
-		return nil, errors.Errorf("process %s was not started yet", p.GetName())
-	}
-	return p.process.Wait()
+	return p.waitOnProcess()
 }
 
 // Signal sends custom signal to the process
-func (p *Process) Signal(signal os.Signal) {
-	p.process.Signal(signal)
+func (p *Process) Signal(signal os.Signal) error {
+	return p.signalToProcess(signal)
 }
 
 // GetName returns plugin-wide process name
@@ -190,8 +185,8 @@ func (p *Process) GetInstanceName() string {
 
 // GetPid returns process ID
 func (p *Process) GetPid() int {
-	if p.process != nil {
-		return p.process.Pid
+	if p.command != nil && p.command.Process != nil {
+		return p.command.Process.Pid
 	}
 	return p.status.Pid
 }
@@ -209,8 +204,8 @@ func (p *Process) GetArguments() []string {
 	return p.options.args
 }
 
-// ReadStatus updates actual process status and returns status file
-func (p *Process) ReadStatus(pid int) (statusFile *status.File, err error) {
+// GetStatus updates actual process status and returns status file
+func (p *Process) GetStatus(pid int) (statusFile *status.File, err error) {
 	p.status, err = p.sh.ReadStatusFromPID(pid)
 	if err != nil {
 		return &status.File{}, errors.Errorf("failed to read status file for process ID %d: %v", pid, err)

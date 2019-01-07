@@ -34,9 +34,11 @@ const (
 	Running  = "running"
 	Idle     = "idle"
 	Zombie   = "zombie" // If child process is terminated with parent still running. Needs to be cleaned up.
+
 	// Plugin-defined process statuses (as addition to other process statuses)
+	Initial = "initial" // Only for newly created/attached processes
 	Unavailable = "unavailable" // If process status cannot be obtained
-	Terminated  = "terminated"  // If process is not running (while tested by zero signal)
+	Terminated = "terminated" // If process is not running (while tested by zero signal)
 )
 
 // ProcessStatus is string representation of process status
@@ -121,7 +123,11 @@ func (r *Reader) ReadStatusFromPID(pid int) (*File, error) {
 	if err != nil {
 		return &File{}, errors.Errorf("failed to read process %d status file: %v", pid, err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			r.Log.Errorf("failed to close status file for pid %d: %v", pid, err)
+		}
+	}()
 
 	return r.parse(file), nil
 }
@@ -276,7 +282,7 @@ func (r *Reader) parse(file *os.File) *File {
 func (r *Reader) toInt(input string) int {
 	result, err := strconv.Atoi(prune(input))
 	if err != nil {
-		r.Log.Warnf("error parsing process status value %s to int: %v", prune(input), err)
+		return -1
 	}
 	return result
 }
@@ -286,7 +292,6 @@ func (r *Reader) toInt(input string) int {
 func (r *Reader) toHex(input string) []byte {
 	result, err := hex.DecodeString(prune(input))
 	if err != nil {
-		r.Log.Warnf("error parsing process status value %s to hex: %v", prune(input), err)
 		return []byte{}
 	}
 	return result

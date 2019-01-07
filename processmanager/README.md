@@ -1,9 +1,9 @@
 # Process manager
 
-The process manager plugin provides a set of methods to create a plugin-defined process instance implementing a set
-of methods to manage and monitor it. 
+The process manager plugin provides a set of methods to create a plugin-defined processes instance implementing a set
+of methods to manage and monitor them. 
 
-There are several ways how to obtain a process instance.
+There are several ways how to obtain a process instance via `ProcessManager` API:
 
 **New process with options:** using method `NewProcess(<cmd>, <options>...)` which requires a command 
 and a set of optional parameters. 
@@ -25,15 +25,13 @@ child processes (not detached) may end up as defunct if stopped this way.
 * `StopAndWait()` stops the instance using SIGTERM signal and waits until the process completes. 
 * `Kill()` force-stops the process using SIGKILL signal and releases all the resources used.
 * `Wait()` waits until the process completes.
-* `Delete()` releases all process resources (stops the instance and all internal channels) and removes it.
-Template won't be affected.
 * `Signal()` allows user to send custom signal to a process. Note that some signals may cause unexpected 
 behavior in process handling.
 
 Process monitor methods:
 
 * `IsAlive()` returns true if process is running
-* `GetNotificationChan()` returns channel where process status notifications will be sent. Useful only when process
+* `GetNotificationChan()` returns channel where process status notifications will be sent. Useful when a process
 is created via template with 'notify' field set to true. In other cases, the channel is provided by user.
 * `GetName` returns process name as defined in status file
 * `GetPid()` returns process ID
@@ -48,6 +46,7 @@ is created via template with 'notify' field set to true. In other cases, the cha
 Every process is watched for status changes (it does not matter which way it was crated) despite the process
 is running or not. The watcher uses standard statuses (running, sleeping, idle, etc.). The state is read 
 from process status file and every change is reported. The plugin also defines two plugin-wide statues:
+* **Initial** - only for newly created processes, means that the process command was defined but not started yet
 * **Terminated** - if the process is not running or does not respond
 * **Unavailable** - if the process is running but the status cannot be obtained
 The process status is periodically polled and notifications can be sent to the user defined channel. In case 
@@ -58,11 +57,13 @@ process was crated via template, channel was initialized in the plugin and can b
 Following options are available for processes. All options can be defined in the API method as well as in the template.
 All of them are optional.
 
-**Arguments:** takes string array as parameter, process will be started with given arguments. 
+**Args:** takes string array as parameter, process will be started with given arguments. 
 **Restarts:** takes a number as a parameter, defines count of automatic restarts when the process 
 state becomes terminated.
+**Writer** allows to define custom `stdOut` and `stdErr` values. Note: usability is limited when defined via template (only standard `os.stdout` and `os.stderr` can be used)
 **Detach:** no parameters, started process detaches from the parent application and will be given to current user.
-This setting allows the process to run even after the parent was terminated.   
+This setting allows the process to run even after the parent was terminated.
+**EnvVar** can be used to define environment variables (for example `os.Environ` for all)
 **Template:** requires name, and run-on-startup flag. This setup creates a template on process creation.
 The template path has to be set in the plugin.
 **Notify:** allows user to provide a notification channel for status changes.
