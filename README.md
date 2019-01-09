@@ -115,7 +115,7 @@ in one of the following functional areas:
 The following code shows the initialization/start of a simple agent 
 application built on the CN-Infra platform. The code for this example
 can be found [here](examples/simple-agent/agent.go).
-```
+```go
 func main() {
 	flavor := &rpc.FlavorRPC{}
 	agent := core.NewAgent(flavor)
