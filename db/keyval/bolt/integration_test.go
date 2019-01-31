@@ -310,8 +310,8 @@ func TestWatchPut(t *testing.T) {
 	err := ctx.client.Watch(keyval.ToChan(watchCh), closeCh, watchPrefix)
 	Expect(err).To(BeNil())
 
-	ctx.client.Put("/something/else/val1", []byte{0, 0, 7})
-	ctx.client.Put(watchKey, []byte{1, 2, 3})
+	Expect(ctx.client.Put("/something/else/val1", []byte{0, 0, 7})).To(Succeed())
+	Expect(ctx.client.Put(watchKey, []byte{1, 2, 3})).To(Succeed())
 
 	var resp keyval.BytesWatchResp
 	Eventually(watchCh).Should(Receive(&resp))
@@ -328,16 +328,16 @@ func TestWatchDel(t *testing.T) {
 	const watchPrefix = "/key/"
 	const watchKey = watchPrefix + "val1"
 
-	ctx.client.Put("/something/else/val1", []byte{0, 0, 7})
-	ctx.client.Put(watchKey, []byte{1, 2, 3})
+	Expect(ctx.client.Put("/something/else/val1", []byte{0, 0, 7})).To(Succeed())
+	Expect(ctx.client.Put(watchKey, []byte{1, 2, 3})).To(Succeed())
 
 	closeCh := make(chan string)
 	watchCh := make(chan keyval.BytesWatchResp)
 	err := ctx.client.Watch(keyval.ToChan(watchCh), closeCh, watchKey)
 	Expect(err).To(BeNil())
 
-	ctx.client.Delete("/something/else/val1")
-	ctx.client.Delete(watchKey)
+	Expect(ctx.client.Delete("/something/else/val1")).To(BeTrue())
+	Expect(ctx.client.Delete(watchKey)).To(BeTrue())
 
 	var resp keyval.BytesWatchResp
 	Eventually(watchCh).Should(Receive(&resp))
@@ -363,8 +363,8 @@ func TestWatchPutBroker(t *testing.T) {
 	err := broker.Watch(keyval.ToChan(watchCh), closeCh, watchPrefix)
 	Expect(err).To(BeNil())
 
-	ctx.client.Put(brokerPrefix+"something/else/val1", []byte{0, 0, 7})
-	ctx.client.Put(brokerPrefix+watchKey, []byte{1, 2, 3})
+	Expect(ctx.client.Put(brokerPrefix+"something/else/val1", []byte{0, 0, 7})).To(Succeed())
+	Expect(ctx.client.Put(brokerPrefix+watchKey, []byte{1, 2, 3})).To(Succeed())
 
 	var resp keyval.BytesWatchResp
 	Eventually(watchCh).Should(Receive(&resp))
