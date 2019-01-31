@@ -49,11 +49,15 @@ type PluginDeps struct {
 	Cfg config.PluginConfig
 }
 
-// Setup sets nil dependencies to default instance using plugin's name.
-func (d *PluginDeps) Setup() {
+func (d *PluginDeps) SetupLog() {
 	if d.Log == nil {
 		d.Log = logging.ForPlugin(d.String())
 	}
+}
+
+// Setup sets nil dependencies to default instance using plugin's name.
+func (d *PluginDeps) Setup() {
+	d.SetupLog()
 	if d.Cfg == nil {
 		d.Cfg = config.ForPlugin(d.String())
 	}
