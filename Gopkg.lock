@@ -396,9 +396,13 @@
   version = "v1.4.0"
 
 [[projects]]
-  digest = "1:1168584a5881d371e96cb0e66ef6db71d7cef0856cc7f311490bc856627f8328"
+  digest = "1:a93a4de7b00fb9cc952bc0483e9a32cd273adbbd7f3282bfe89656b2f88fb08c"
   name = "github.com/grpc-ecosystem/go-grpc-middleware"
-  packages = ["."]
+  packages = [
+    ".",
+    "auth",
+    "util/metautils",
+  ]
   pruneopts = "UT"
   revision = "c250d6563d4d4c20252cd865923440e829844f4e"
   version = "v1.0.0"
@@ -973,6 +977,7 @@
     "github.com/gogo/protobuf/proto",
     "github.com/gogo/protobuf/protoc-gen-gogo",
     "github.com/gorilla/mux",
+    "github.com/grpc-ecosystem/go-grpc-middleware/auth",
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
     "github.com/hashicorp/consul/api",
     "github.com/hashicorp/consul/testutil",
@@ -992,7 +997,6 @@
     "golang.org/x/net/context",
     "google.golang.org/grpc",
     "google.golang.org/grpc/examples/helloworld/helloworld",
-    "google.golang.org/grpc/grpclog",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
