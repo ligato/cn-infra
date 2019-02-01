@@ -49,13 +49,14 @@ type PluginDeps struct {
 	Cfg config.PluginConfig
 }
 
+// SetupLog sets up default instance for plugin log dep.
 func (d *PluginDeps) SetupLog() {
 	if d.Log == nil {
 		d.Log = logging.ForPlugin(d.String())
 	}
 }
 
-// Setup sets nil dependencies to default instance using plugin's name.
+// Setup sets up default instances for plugin deps.
 func (d *PluginDeps) Setup() {
 	d.SetupLog()
 	if d.Cfg == nil {

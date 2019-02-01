@@ -30,13 +30,28 @@ var (
 	DefaultRegistry Registry
 )
 
-func Debug(args ...interface{})                 { DefaultLogger.Debug(args...) }
+// Debug is for logging with default logger.
+func Debug(args ...interface{}) { DefaultLogger.Debug(args...) }
+
+// Debugf is for logging with default logger.
 func Debugf(format string, args ...interface{}) { DefaultLogger.Debugf(format, args...) }
-func Info(args ...interface{})                  { DefaultLogger.Info(args...) }
-func Infof(format string, args ...interface{})  { DefaultLogger.Infof(format, args...) }
-func Warn(args ...interface{})                  { DefaultLogger.Warn(args...) }
-func Warnf(format string, args ...interface{})  { DefaultLogger.Warnf(format, args...) }
-func Error(args ...interface{})                 { DefaultLogger.Error(args...) }
+
+// Info is for logging with default logger.
+func Info(args ...interface{}) { DefaultLogger.Info(args...) }
+
+// Infof is for logging with default logger.
+func Infof(format string, args ...interface{}) { DefaultLogger.Infof(format, args...) }
+
+// Warn is for logging with default logger.
+func Warn(args ...interface{}) { DefaultLogger.Warn(args...) }
+
+// Warnf is for logging with default logger.
+func Warnf(format string, args ...interface{}) { DefaultLogger.Warnf(format, args...) }
+
+// Error is for logging with default logger.
+func Error(args ...interface{}) { DefaultLogger.Error(args...) }
+
+// Errorf is for logging with default logger.
 func Errorf(format string, args ...interface{}) { DefaultLogger.Errorf(format, args...) }
 
 // LogWithLevel allows to log with different log levels
