@@ -12,6 +12,14 @@ development/implementation of custom management/control plane agents
 for [cloud-native Virtual Network Functions][4] (VNFs), it can be used to
 develop any microservice. 
 
+### Releases
+
+|Release|Version|Date|
+|---|---|---|
+|Latest stable release|[![Latest release](https://img.shields.io/github/release/ligato/cn-infra.svg)](https://github.com/ligato/cn-infra/releases/latest)|![Development release](https://img.shields.io/github/release-date/ligato/cn-infra.svg?style=flat)|
+
+Please checkout [CHANGELOG](CHANGELOG.md) for a full list of changes on every every release.
+
 ## Architecture
 
 Each management/control plane app built on top of the CN-Infra platform is 
