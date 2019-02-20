@@ -37,6 +37,7 @@ import (
 	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/onsi/gomega"
+	"context"
 )
 
 var miniRedis *miniredis.Miniredis
@@ -418,7 +419,7 @@ func TestTxn(t *testing.T) {
 	txn := bytesBrokerWatcher.NewTxn()
 	txn.Put("keyWest", []byte(keyValues["keyWest"])).Put("keyMap", []byte(keyValues["keyMap"]))
 	txn.Delete("keyWest")
-	err := txn.Commit()
+	err := txn.Commit(context.Background())
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	val, found, _, err := bytesBrokerWatcher.GetValue("keyWest")
@@ -526,7 +527,7 @@ func TestBrokerClosed(t *testing.T) {
 
 	txn.Put("keyWest", []byte(keyValues["keyWest"])).Put("keyMap", []byte(keyValues["keyMap"]))
 	txn.Delete("keyWest")
-	err = txn.Commit()
+	err = txn.Commit(context.Background())
 	gomega.Expect(err).Should(gomega.HaveOccurred())
 
 	txn = bytesConn.NewTxn()
@@ -548,7 +549,7 @@ func TestBrokerClosed(t *testing.T) {
 
 	txn2.Put("keyWest", []byte(keyValues["keyWest"])).Put("keyMap", []byte(keyValues["keyMap"]))
 	txn2.Delete("keyWest")
-	err = txn2.Commit()
+	err = txn2.Commit(context.Background())
 	gomega.Expect(err).Should(gomega.HaveOccurred())
 
 	txn2 = bytesBrokerWatcher.NewTxn()
