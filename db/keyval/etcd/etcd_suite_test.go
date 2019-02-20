@@ -325,7 +325,7 @@ func TestTxnPut(t *testing.T) {
 	Expect(txn).NotTo(BeNil())
 	txn = txn.Put("key", []byte("data"))
 	Expect(txn).NotTo(BeNil())
-	err := txn.Commit()
+	err := txn.Commit(context.Background())
 	Expect(err).ToNot(HaveOccurred())
 }
 
@@ -337,6 +337,6 @@ func TestTxnDelete(t *testing.T) {
 	Expect(txn).NotTo(BeNil())
 	txn = txn.Delete("key")
 	Expect(txn).NotTo(BeNil())
-	err := txn.Commit()
+	err := txn.Commit(context.Background())
 	Expect(err).ToNot(HaveOccurred())
 }
