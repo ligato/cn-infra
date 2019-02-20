@@ -65,7 +65,7 @@ func TestDeleteNonExisting(t *testing.T) {
 	// put should be propagated
 	changesToBePropagated[subPrefix+"new"] = NewChange(subPrefix+"new", nil, 0, datasync.Put)
 
-	err = reg.PropagateChanges(changesToBePropagated)
+	err = reg.PropagateChanges(context.Background(), changesToBePropagated)
 	Expect(err).To(BeNil())
 
 	Expect(len(changes)).To(BeEquivalentTo(1))
@@ -79,7 +79,7 @@ func TestDeleteNonExisting(t *testing.T) {
 	deleteItemThatExists := make(map[string]datasync.ChangeValue)
 	deleteItemThatExists[subPrefix+"new"] = NewChange(subPrefix+"new", nil, 0, datasync.Delete)
 
-	err = reg.PropagateChanges(deleteItemThatExists)
+	err = reg.PropagateChanges(context.Background(), deleteItemThatExists)
 	Expect(err).To(BeNil())
 
 	Expect(len(changes)).To(BeEquivalentTo(1))
@@ -145,7 +145,7 @@ func TestRuntimeResync(t *testing.T) {
 
 	changesToBePropagated[subPrefix+"A"] = NewChange(subPrefix+"A", createData("A"), 0, datasync.Put)
 
-	err = reg.PropagateChanges(changesToBePropagated)
+	err = reg.PropagateChanges(context.Background(), changesToBePropagated)
 	Expect(err).To(BeNil())
 
 	Expect(len(changes)).To(BeEquivalentTo(1))
@@ -167,7 +167,7 @@ func TestRuntimeResync(t *testing.T) {
 	resyncToBePropagated[subPrefix+"X"] = NewChange(subPrefix+"X", createData("X"), 0, datasync.Put)
 	resyncToBePropagated[subPrefix+"Y"] = NewChange(subPrefix+"Y", createData("Y"), 0, datasync.Put)
 
-	err = reg.PropagateResync(resyncToBePropagated)
+	err = reg.PropagateResync(context.Background(), resyncToBePropagated)
 	Expect(err).To(BeNil())
 
 	// Since propagateResync doesn't wait for acknowledge whereas propagateChanges does 'Eventually' must be used.
@@ -181,7 +181,7 @@ func TestRuntimeResync(t *testing.T) {
 
 	// 3. put a key that is supposed to be removed by resync, verify that prev value does not exist
 	changesToBePropagated[subPrefix+"A"] = NewChange(subPrefix+"A", createData("abc"), 1, datasync.Put)
-	err = reg.PropagateChanges(changesToBePropagated)
+	err = reg.PropagateChanges(context.Background(), changesToBePropagated)
 	Expect(err).To(BeNil())
 
 	Expect(len(changes)).To(BeEquivalentTo(1))
@@ -206,7 +206,7 @@ func TestRuntimeResync(t *testing.T) {
 
 	changesToBePropagated[subPrefix+"A"] = NewChange(subPrefix+"A", createData("A"), 0, datasync.Put)
 
-	err = reg.PropagateChanges(changesToBePropagated)
+	err = reg.PropagateChanges(context.Background(), changesToBePropagated)
 	Expect(err).To(BeNil())
 
 	Expect(len(changes)).To(BeEquivalentTo(1))

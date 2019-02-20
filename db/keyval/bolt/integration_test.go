@@ -25,6 +25,7 @@ import (
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logrus"
 	. "github.com/onsi/gomega"
+	"context"
 )
 
 func init() {
@@ -268,7 +269,7 @@ func TestPutInTxn(t *testing.T) {
 	txn.Put(key1, val1).
 		Put(key2, val2).
 		Put(key3, val3)
-	Expect(txn.Commit()).To(Succeed())
+	Expect(txn.Commit(context.Background())).To(Succeed())
 	Expect(tc.isInDB(key1, val1)).To(BeTrue())
 	Expect(tc.isInDB(key2, val2)).To(BeTrue())
 	Expect(tc.isInDB(key3, val3)).To(BeTrue())
@@ -292,7 +293,7 @@ func TestDeleteInTxn(t *testing.T) {
 		Put(key2, val2).
 		Put(key3, val3).
 		Delete(key2)
-	Expect(txn.Commit()).To(Succeed())
+	Expect(txn.Commit(context.Background())).To(Succeed())
 	Expect(tc.isInDB(key1, val1)).To(BeTrue())
 	Expect(tc.isInDB(key2, val2)).To(BeFalse())
 	Expect(tc.isInDB(key3, val3)).To(BeTrue())
