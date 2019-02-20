@@ -25,12 +25,12 @@ import (
 func TestDescendantPluginsNoDep(t *testing.T) {
 	RegisterTestingT(t)
 	plugin := &PluginNoDeps{}
-	agent := agent.NewAgent(agent.AllPlugins(plugin))
-	Expect(agent).ToNot(BeNil())
-	Expect(agent.Options()).ToNot(BeNil())
-	Expect(agent.Options().Plugins).ToNot(BeNil())
-	Expect(len(agent.Options().Plugins)).To(Equal(1))
-	Expect(agent.Options().Plugins[0]).To(Equal(plugin))
+	a := agent.NewAgent(agent.AllPlugins(plugin))
+	Expect(a).ToNot(BeNil())
+	Expect(a.Options()).ToNot(BeNil())
+	Expect(a.Options().Plugins).ToNot(BeNil())
+	Expect(len(a.Options().Plugins)).To(Equal(1))
+	Expect(a.Options().Plugins[0]).To(Equal(plugin))
 }
 
 func TestDescendantPluginsOneLevelDep(t *testing.T) {
@@ -38,13 +38,13 @@ func TestDescendantPluginsOneLevelDep(t *testing.T) {
 
 	plugin := &PluginOneDep{}
 	plugin.SetName("OneDep")
-	agent := agent.NewAgent(agent.AllPlugins(plugin))
-	Expect(agent).ToNot(BeNil())
-	Expect(agent.Options()).ToNot(BeNil())
-	Expect(agent.Options().Plugins).ToNot(BeNil())
-	Expect(len(agent.Options().Plugins)).To(Equal(2))
-	Expect(agent.Options().Plugins[0]).To(Equal(&plugin.Plugin2))
-	Expect(agent.Options().Plugins[1]).To(Equal(plugin))
+	a := agent.NewAgent(agent.AllPlugins(plugin))
+	Expect(a).ToNot(BeNil())
+	Expect(a.Options()).ToNot(BeNil())
+	Expect(a.Options().Plugins).ToNot(BeNil())
+	Expect(len(a.Options().Plugins)).To(Equal(2))
+	Expect(a.Options().Plugins[0]).To(Equal(&plugin.Plugin2))
+	Expect(a.Options().Plugins[1]).To(Equal(plugin))
 }
 
 func TestDescendantPluginsTwoLevelsDeep(t *testing.T) {
@@ -53,15 +53,39 @@ func TestDescendantPluginsTwoLevelsDeep(t *testing.T) {
 	plugin.SetName("TwoDep")
 	plugin.PluginTwoLevelDep1.SetName("Dep1")
 	plugin.PluginTwoLevelDep2.SetName("Dep2")
-	agent := agent.NewAgent(agent.AllPlugins(plugin))
-	Expect(agent).ToNot(BeNil())
-	Expect(agent.Options()).ToNot(BeNil())
-	Expect(agent.Options().Plugins).ToNot(BeNil())
-	Expect(len(agent.Options().Plugins)).To(Equal(4))
-	Expect(agent.Options().Plugins[0]).To(Equal(&plugin.PluginTwoLevelDep1.Plugin2))
-	Expect(agent.Options().Plugins[1]).To(Equal(&plugin.PluginTwoLevelDep1))
-	Expect(agent.Options().Plugins[2]).To(Equal(&plugin.PluginTwoLevelDep2))
-	Expect(agent.Options().Plugins[3]).To(Equal(plugin))
+	a := agent.NewAgent(agent.AllPlugins(plugin))
+	Expect(a).ToNot(BeNil())
+	Expect(a.Options()).ToNot(BeNil())
+	Expect(a.Options().Plugins).ToNot(BeNil())
+	Expect(len(a.Options().Plugins)).To(Equal(4))
+	Expect(a.Options().Plugins[0]).To(Equal(&plugin.PluginTwoLevelDep1.Plugin2))
+	Expect(a.Options().Plugins[1]).To(Equal(&plugin.PluginTwoLevelDep1))
+	Expect(a.Options().Plugins[2]).To(Equal(&plugin.PluginTwoLevelDep2))
+	Expect(a.Options().Plugins[3]).To(Equal(plugin))
+
+}
+
+func TestDescendantPluginsList(t *testing.T) {
+	RegisterTestingT(t)
+	plugin := &PluginListDeps{}
+	plugin.SetName("ListDep")
+	entry1, entry2, entry3 := TestPlugin{}, PluginNoDeps{}, PluginOneDep{}
+	entry1.SetName("Dep1")
+	entry2.SetName("Dep2")
+	entry3.SetName("Dep3")
+	entry3.Plugin2.SetName("Dep31")
+	plugin.PluginList = append(plugin.PluginList, &entry1, &entry2, &entry3)
+
+	a := agent.NewAgent(agent.AllPlugins(plugin))
+	Expect(a).ToNot(BeNil())
+	Expect(a.Options()).ToNot(BeNil())
+	Expect(a.Options().Plugins).ToNot(BeNil())
+	Expect(len(a.Options().Plugins)).To(Equal(5))
+	Expect(a.Options().Plugins[0]).To(Equal(&entry1))
+	Expect(a.Options().Plugins[1]).To(Equal(&entry2))
+	Expect(a.Options().Plugins[2]).To(Equal(&entry3.Plugin2))
+	Expect(a.Options().Plugins[3]).To(Equal(&entry3))
+	Expect(a.Options().Plugins[4]).To(Equal(plugin))
 
 }
 
@@ -97,6 +121,16 @@ type PluginTwoLevelDeps struct {
 
 func (p *PluginTwoLevelDeps) Init() error  { return nil }
 func (p *PluginTwoLevelDeps) Close() error { return nil }
+
+type TestPlugins = []infra.Plugin
+
+type PluginListDeps struct {
+	infra.PluginName
+	PluginList TestPlugins
+}
+
+func (p *PluginListDeps) Init() error  { return nil }
+func (p *PluginListDeps) Close() error { return nil }
 
 // MissignCloseMethod implements only Init() but not Close() method.
 type MissignCloseMethod struct {
