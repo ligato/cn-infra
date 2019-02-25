@@ -116,7 +116,7 @@ if err != nil {
 
 The channel `cancelWatch` can be used to cancel watching.
 
-Complete working example can be found at [examples/tutorials/04_kv-store](/examples/tutorials/04_kv-store).
+Complete working example can be found at [examples/tutorials/04_kv-store](https://github.com/ligato/cn-infra/blob/master/examples/tutorials/04_kv-store).
 
 [1]: https://github.com/ligato/cn-infra/tree/master/db/keyval/etcd
 [2]: https://github.com/ligato/cn-infra/tree/master/db/keyval/consul

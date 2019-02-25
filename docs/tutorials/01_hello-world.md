@@ -73,4 +73,4 @@ if err := a.Run(); err != nil {
 }
 ```
 
-Complete working example can be found at [examples/tutorials/01_hello-world](/examples/tutorials/01_hello-world).
+Complete working example can be found at [examples/tutorials/01_hello-world](https://github.com/ligato/cn-infra/blob/master/examples/tutorials/01_hello-world).

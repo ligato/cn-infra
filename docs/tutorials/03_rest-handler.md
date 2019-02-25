@@ -67,4 +67,4 @@ curl -X POST -d 'John' -H "Content-Type: application/json" http://localhost:9191
 // outputs: Hello John
 ```
 
-Complete working example can be found at [examples/tutorials/03_rest-handler](/examples/tutorials/03_rest-handler).
+Complete working example can be found at [examples/tutorials/03_rest-handler](https://github.com/ligato/cn-infra/blob/master/examples/tutorials/03_rest-handler).

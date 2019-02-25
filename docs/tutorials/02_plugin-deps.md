@@ -78,4 +78,4 @@ func (p *HelloWorld) Init() error {
 If the config file is not found, the `LoadValue` will return false. 
 On parsing issues it will return an error.
 
-Complete working example can be found at [examples/tutorials/02_plugin-deps](/examples/tutorials/02_plugin-deps).
+Complete working example can be found at [examples/tutorials/02_plugin-deps](https://github.com/ligato/cn-infra/blob/master/examples/tutorials/02_plugin-deps).
