@@ -94,7 +94,7 @@ watcher := p.KVStore.NewWatcher("/myplugin/")
 Then we need to define our callback function that will process the changes.
 
 ```go
-onChange := func(resp datasync.ProtoWatchResp) {
+onChange := func(resp keyval.ProtoWatchResp) {
 	key := resp.GetKey()
 	value := new(model.Greetings)
 	if err := resp.GetValue(value); err != nil {

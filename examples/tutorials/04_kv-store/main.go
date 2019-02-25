@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/ligato/cn-infra/agent"
-	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/db/keyval"
 	"github.com/ligato/cn-infra/db/keyval/etcd"
 	"github.com/ligato/cn-infra/examples/tutorials/04_kv-store/model"
@@ -39,7 +38,7 @@ func main() {
 	// Run starts the agent with plugins, wait until shutdown
 	// and then stops the agent and its plugins.
 	if err := a.Run(); err != nil {
-		logging.Error(err)
+		logging.DefaultLogger.Error(err)
 	}
 }
 
@@ -81,13 +80,13 @@ func (p *MyPlugin) Init() error {
 	return nil
 }
 
-// Init is executed after agent initialization.
+// AfterInit is executed after agent initialization.
 func (p *MyPlugin) AfterInit() error {
 	go p.updater()
 	return nil
 }
 
-func (p *MyPlugin) onChange(resp datasync.ProtoWatchResp) {
+func (p *MyPlugin) onChange(resp keyval.ProtoWatchResp) {
 	value := new(model.Greetings)
 	// Deserialize data
 	if err := resp.GetValue(value); err != nil {
