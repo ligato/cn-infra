@@ -1,4 +1,9 @@
-# Tutorial: Plugin Deps
+# Tutorial: Adding Dependencies to Your Plugin
+
+Your control plane agent will typically consist of one or more plugins that
+contain the application logic and a bunch of Ligato plugins that will 
+provide services to your application plugins, such as KV- Data Store adapters, 
+message bus adapters, loggers or health monitors.
 
 In this tutorial we will learn how to add plugin dependencies to our plugins.
 
