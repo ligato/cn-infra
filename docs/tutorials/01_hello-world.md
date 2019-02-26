@@ -1,9 +1,10 @@
 # Tutorial: Hello World
 
-In this tutorial we will learn how to create simple plugin that prints "Hello World".
+In this tutorial we will create a simple Ligato control plane agent that 
+contains a single `Helloworld` plugin that prints "Hello World" to the log.
 
-The plugin interface is defined as:
-
+We start with the plugin. Every plugin must implement the `Plugin` interface
+defined in the `github.com/cn-infra/infra` package:
 ```go
 type Plugin interface {
 	// Init is called in the agent`s startup phase.
@@ -15,8 +16,7 @@ type Plugin interface {
 }
 ```
 
-So first we create define our plugin and the methods required to implement 
-the `Plugin` interface from infra package:
+Let's define the above methods for our `HelloWorld` plugin:
 
 ```go
 type HelloWorld struct{}
@@ -35,11 +35,16 @@ func (p *HelloWorld) Close() error {
 	return nil
 }
 ```
+Note that the `HelloWorld` struct is empty - our simple plugin does not 
+have any data, so we just need an empty structure that satisfies the 
+`Plugin` interface.
 
-Optionally, we could define `AfterInit` method which is executed after 
-initialization of all other plugins.
-
-The `AfterInit` method comes from `PostInit` interface defined in infra package as:
+Some plugins may require additional initialization that can only be
+performed after the base system is up (for example, ...). If your plugin
+needs this, you can optionally define the `AfterInit` method for your
+plugin. It will be executed after the `Init` method has been called for
+all plugins. The `AfterInit` method comes from the `PostInit` interface
+defined in the `github.com/cn-infra/infra` package as:
 
 ```go
 type PostInit interface {
@@ -48,8 +53,8 @@ type PostInit interface {
 }
 ```
 
-Now, in our main function we can initialize an instance of our plugin 
-and create new agent that adds the instance to the list of agent plugins.
+Next, in our main function we create an instance of the `HelloWorld` plugin. Then we 
+create a new agent and tell it about the `HelloWorld` plugin:
 
 ```go
 func main() {
@@ -59,7 +64,7 @@ func main() {
 }
 ```
 
-The plugins are added to the agent using agent options. The option `agent.Plugins` 
+We use agent options tell the agent about its plugin(s). The option `agent.Plugins` 
 adds single plugin instance to the list of plugins and the option `agent.AllPlugins` 
 adds plugin instance along with all of its dependencies.
 
