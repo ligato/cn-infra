@@ -11,82 +11,7 @@ control plane agents for [cloud-native Virtual Network Functions][4] It is
 basically a collection of components/libraries used in most control plane 
 agents tied together with a common life-cycle management mechanism.
 
-## Quickstart
-
-You can run this example code by using pre-build Docker images:
-
-For quick start with the VPP Agent, you can use pre-build Docker images with the Agent and VPP
-on [Dockerhub](https://hub.docker.com/r/ligato/dev-cn-infra/).
-
-1. Run ETCD and Kafka on your host (e.g. in Docker 
-  [using this procedure](examples/simple-agent/README.md)).
-
-2. Run cn-infra example [simple-agent](examples/simple-agent/agent.go).
-```
-docker pull ligato/dev-cn-infra
-docker run -it --name dev-cn-infra --rm ligato/dev-cn-infra
-```
-
-The simplest control plane agent built with the CN-Infra framework is as follows:
-
-```
-func main() {
-	flavor := &rpc.FlavorRPC{}
-	agent := core.NewAgent(flavor)
-
-	err := core.EventLoopWithInterrupt(agent, nil)
-	if err != nil {
-		os.Exit(1)
-	}
-}
-```
-The above code can be found [here](examples/simple-agent/agent.go).
-
-## Documentation
-
-Detailed documentation (including tutorials) can be found [here](https://ligato.io/vpp-agent).
-GoDoc can be browsed [online](https://godoc.org/github.com/ligato/cn-infra).
-
-## Architecture
-
-Each management/control plane app built on top of the CN-Infra framework is 
-basically a set of modules called "plugins" in CN-Infra lingo, where each 
-plugin provides a very specific/focused functionality. Some plugins are 
-provided by the CN-Infra framework itself, some are written by the app's 
-implementors. In other words, the CN-Infra framework itself is implemented
-as a set of plugins that together provide the framework's functionality, 
-such as logging, health checks, messaging (e.g. Kafka), a common front-end
-API and back-end connectivity to various KV data stores (Etcd, Cassandra, 
-Redis, ...), and REST and gRPC APIs. 
-
-The architecture of the CN-Infra framework is shown in the following figure.
-
-![arch](docs/imgs/high_level_arch_cninfra.png "High Level Architecture of cn-infra")
-
-The CN-Infra framework consists of a **[Agent](agent)** that provides plugin
-lifecycle management (initialization and graceful shutdown of plugins) 
-and a set of framework plugins. Note that the figure shows not only 
-CN-Infra plugins that are a part of the CN-Infra framework, but also 
-app plugins that use the framework. CN-Infra framework plugins provide 
-APIs that are consumed by app plugins. App plugins themselves may 
-provide their own APIs consumed by external clients.
-
-The framework is modular and extensible. Plugins supporting new functionality
-(e.g. another KV store or another message bus) can be easily added to the
-existing set of CN-Infra framework plugins. Moreover, CN-Infra based apps
-can be built in layers: a set of app plugins together with CN-Infra plugins
-can form a new framework providing APIs/services to higher layer apps. 
-This approach was used in the [VPP Agent][3] - a management/control agent
-for [VPP][2] based software data planes.,
-
-Extending the code base does not mean that all plugins end up in all 
-apps - app writers can pick and choose only those framework plugins that 
-are required by their app; for example, if an app does not need a KV 
-store, the CN-Infra framework KV data store plugins would not be included
-in the app. All plugins used in an app are statically linked into the 
-app.
-
-## Available CN-Infra Plugins
+#### Available CN-Infra Plugins:
 
 A CN-Infra plugin is typically implemented as a library providing the 
 plugin's functionality/APIs wrapped in a plugin wrapper. A CN-Infra 
@@ -144,6 +69,86 @@ the following functional areas:
       a unique identifier so that it can differentiated from other instances 
       of the same app or from other apps (e.g. to have its own space in a kv 
       data store).
+
+
+## Quickstart
+
+You can run this example code by using pre-build Docker images:
+
+For quick start with the VPP Agent, you can use pre-build Docker images with the Agent and VPP
+on [Dockerhub](https://hub.docker.com/r/ligato/dev-cn-infra/).
+
+1. Run ETCD and Kafka on your host (e.g. in Docker 
+  [using this procedure](examples/simple-agent/README.md)).
+
+2. Run cn-infra example [simple-agent](examples/simple-agent/agent.go).
+```
+docker pull ligato/dev-cn-infra
+docker run -it --name dev-cn-infra --rm ligato/dev-cn-infra
+```
+
+A very simple example of a control plane agent that uses Etcd as its configuration data store 
+is as follows:
+```
+func main() {
+
+	// Create agent with connector plugins
+	a := agent.NewAgent(agent.AllPlugins(
+		&etcd.DefaultPlugin,
+		&resync.DefaultPlugin,
+	))
+
+	if err := a.Run(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+You can find the above example [here](examples/simple-agent/agent.go), from where it can be 
+compiled and run in your favorite environment.
+
+## Documentation
+
+Detailed documentation (including tutorials) can be found [here](https://ligato.io/vpp-agent).
+GoDoc can be browsed [online](https://godoc.org/github.com/ligato/cn-infra).
+
+## Architecture
+
+Each management/control plane app built on top of the CN-Infra framework is 
+basically a set of modules called "plugins" in CN-Infra lingo, where each 
+plugin provides a very specific/focused functionality. Some plugins are 
+provided by the CN-Infra framework itself, some are written by the app's 
+implementors. In other words, the CN-Infra framework itself is implemented
+as a set of plugins that together provide the framework's functionality, 
+such as logging, health checks, messaging (e.g. Kafka), a common front-end
+API and back-end connectivity to various KV data stores (Etcd, Cassandra, 
+Redis, ...), and REST and gRPC APIs. 
+
+The architecture of the CN-Infra framework is shown in the following figure.
+
+![arch](docs/imgs/high_level_arch_cninfra.png "High Level Architecture of cn-infra")
+
+The CN-Infra framework consists of a **[Agent](agent)** that provides plugin
+lifecycle management (initialization and graceful shutdown of plugins) 
+and a set of framework plugins. Note that the figure shows not only 
+CN-Infra plugins that are a part of the CN-Infra framework, but also 
+app plugins that use the framework. CN-Infra framework plugins provide 
+APIs that are consumed by app plugins. App plugins themselves may 
+provide their own APIs consumed by external clients.
+
+The framework is modular and extensible. Plugins supporting new functionality
+(e.g. another KV store or another message bus) can be easily added to the
+existing set of CN-Infra framework plugins. Moreover, CN-Infra based apps
+can be built in layers: a set of app plugins together with CN-Infra plugins
+can form a new framework providing APIs/services to higher layer apps. 
+This approach was used in the [VPP Agent][3] - a management/control agent
+for [VPP][2] based software data planes.,
+
+Extending the code base does not mean that all plugins end up in all 
+apps - app writers can pick and choose only those framework plugins that 
+are required by their app; for example, if an app does not need a KV 
+store, the CN-Infra framework KV data store plugins would not be included
+in the app. All plugins used in an app are statically linked into the 
+app.
    
 ## Contributing
 
