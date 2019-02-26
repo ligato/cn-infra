@@ -16,7 +16,7 @@ type Plugin interface {
 }
 ```
 
-Let's define the above methods for our `HelloWorld` plugin:
+Let's implement the `Plugin` interface methods for our `HelloWorld` plugin:
 
 ```go
 type HelloWorld struct{}
@@ -64,18 +64,23 @@ func main() {
 }
 ```
 
-We use agent options tell the agent about its plugin(s). The option `agent.Plugins` 
-adds single plugin instance to the list of plugins and the option `agent.AllPlugins` 
-adds plugin instance along with all of its dependencies.
+We use agent options to add the list of plugins to the agent at the agent's creation
+time. In our example we use the option `agent.Plugins` to add the newly created 
+`HelloWorld` instance to the agent. Alternatively, we could use the option 
+`agent.AllPlugins`, which would add our `HelloWorld` plugin instance to the agent,
+along with all of its dependencies (i.e. all plugins it depends on). Since our 
+simple plugin has no dependencies, the simpler `agent.Plugins` option will suffice.
 
-Now we can start the agent using `Run()` method which will initialize all of its
-plugins by calling their `Init` and `AfterInit` methods, then wait until interrupt
-and then stops all of this plugins by calling their `Close` methods.
+Finally, we can start the agent using its `Run()` method, which will initialize
+all agent's plugins by calling their `Init` and `AfterInit` methods and then wait
+for an interrupt from the user.
 
 ```go
 if err := a.Run(); err != nil {
 	log.Fatalln(err)
 }
 ```
+When the interccupt comes from the user (e.g. by hitting `ctrl-c` on the keyboard), 
+the `Close` methods will be called on all agent's plugins and the agent will exit.
 
-Complete working example can be found at [examples/tutorials/01_hello-world](https://github.com/ligato/cn-infra/blob/master/examples/tutorials/01_hello-world).
+The complete working example can be found at [examples/tutorials/01_hello-world](https://github.com/ligato/cn-infra/blob/master/examples/tutorials/01_hello-world).
