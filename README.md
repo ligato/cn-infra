@@ -110,7 +110,8 @@ compiled and run in your favorite environment.
 ## Documentation
 
 Detailed documentation (including tutorials) can be found [here](https://ligato.io/vpp-agent).
-GoDoc can be browsed [online](https://godoc.org/github.com/ligato/cn-infra).
+
+GoDocs can be browsed [online](https://godoc.org/github.com/ligato/cn-infra).
 
 ## Architecture
 
