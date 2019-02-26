@@ -80,7 +80,7 @@ if err := a.Run(); err != nil {
 	log.Fatalln(err)
 }
 ```
-When the interccupt comes from the user (e.g. by hitting `ctrl-c` on the keyboard), 
+When the interrupt comes from the user (for example. when the user hits `ctrl-c`), 
 the `Close` methods will be called on all agent's plugins and the agent will exit.
 
 The complete working example can be found at [examples/tutorials/01_hello-world](https://github.com/ligato/cn-infra/blob/master/examples/tutorials/01_hello-world).
