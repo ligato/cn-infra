@@ -32,13 +32,14 @@ the following functional areas:
         
 * **Data Stores** - provides a common data store API for app plugins (the 
     Data Broker) and back-end clients. The data store related plugins are:
-  - [Consul](db/keyval/consul) - implements key-value plugin providing access to Consul
-  - [Etcd](db/keyval/etcd) - implements key-value plugin providing access to Etcd
-  - [Redis](db/keyval/redis) - implements key-value plugin providing access to Redis
-  - [Casssandra](db/sql/cassandra) - implements sql plugin providing access to Cassandra
+  - [Consul](db/keyval/consul) - key-value data store adpater for Consul
+  - [Etcd](db/keyval/etcd) - key-value data store adpater for Etcd
+  - [Redis](db/keyval/redis) - key-value data store adpater for Redis
+  - [Casssandra](db/sql/cassandra) - key-value data store adpater for Cassandra
     
 * **Messaging** - provides a common API and connectivity to message buses:
-  - [Kafka](messaging/kafka) - provides access to a Kafka broker (Sarama)
+  - [Kafka](messaging/kafka) - adapter for the Kafka message bus (built on top of
+    [Sarama](5))
     
 * **Logging**:
   - [Logrus wrapper](logging/logrus) - implements logging skeleton 
@@ -158,3 +159,4 @@ If you are interested in contributing, please see the [contribution guidelines](
 [2]: https://fd.io
 [3]: https://github.com/ligato/vpp-agent
 [4]: docs/readmes/cn_virtual_function.md
+[5]: https://github.com/Shopify/sarama
