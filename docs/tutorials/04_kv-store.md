@@ -1,11 +1,17 @@
 # Tutorial: KV Store
 
-In this tutorial we will learn how to use key-value store to update data and watch for changes.
+In this tutorial we will learn how to use an external key-value (KV) data store.
+The tutorial shows how to read and write data to/from the data store and how to 
+watch for changes. We assume that you completed (or understand) the 
+['Hello World Agent'](01_hello-world.md) and the ['Plugin Dependencies'](02_plugin-deps.md)
+tutorials.
 
-We will be using [Etcd][1] in this tutorial, but there are several other 
-implementations of key-value store available: [Consul][2], [BoltDB][3], [FileDB][4], [Redis][5].
+We will be using [Etcd][1] as the KV data store, but the Ligato infrastructure 
+support several other key-value data stores: [Consul][2], [BoltDB][3], [FileDB][4], 
+[Redis][5].
 
-The common interface for all key-value store implementations is `KvProtoPlugin`, defined as:
+The common interface for all key-value store implementations is `KvProtoPlugin`, 
+defined in [`cn-infra/db/keyval/plugin_api_keyval.go`][7]:
 
 ```go
 type KvProtoPlugin interface {
@@ -33,7 +39,8 @@ func NewMyPlugin() *MyPlugin {
 }
 ```
 
-First, we need to create a new broker. The broker needs to be initialized with
+First, we need to create a new broker. The broker is an entity (a facade) through
+which we communicate with the data store. The broker needs to be initialized with
 a key prefix and for this example, we are going to use `/myplugin/` as a key prefix.
 The broker uses this key prefix for all of its operations (Get, List, Put, Delete).
 
@@ -124,3 +131,4 @@ Complete working example can be found at [examples/tutorials/04_kv-store](https:
 [4]: https://github.com/ligato/cn-infra/tree/master/db/keyval/filedb
 [5]: https://github.com/ligato/cn-infra/tree/master/db/keyval/redis
 [6]: /examples/tutorials/04_kv-store/model/model.proto
+[7]: https://github.com/ligato/cn-infra/blob/master/db/keyval/plugin_api_keyval.go
