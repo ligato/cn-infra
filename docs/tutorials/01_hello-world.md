@@ -4,7 +4,7 @@ In this tutorial we will create a simple Ligato control plane agent that
 contains a single `Helloworld` plugin that prints "Hello World" to the log.
 
 We start with the plugin. Every plugin must implement the `Plugin` interface
-defined in the `github.com/cn-infra/infra` package:
+defined in the `github.com/ligato/cn-infra/infra` package:
 ```go
 type Plugin interface {
 	// Init is called in the agent`s startup phase.
@@ -44,7 +44,7 @@ performed after the base system is up (for example, ...). If your plugin
 needs this, you can optionally define the `AfterInit` method for your
 plugin. It will be executed after the `Init` method has been called for
 all plugins. The `AfterInit` method comes from the `PostInit` interface
-defined in the `github.com/cn-infra/infra` package as:
+defined in the `github.com/ligato/cn-infra/infra` package as:
 
 ```go
 type PostInit interface {
