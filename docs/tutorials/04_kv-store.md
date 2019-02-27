@@ -79,15 +79,29 @@ Note: it is a good practice to put all Protobuf definitions for a plugin in a
 `model` directory.
 
 Next, we need to generate Go code from our model. We will use the generated Go 
-structures as parameters in calls to the broker. The code generation is done using
-the `go:generate` directive; since we only have one go file in this tutorial, we
-put the directive there:
+structures as parameters in calls to the broker. The code generation is conftrolled
+from the `go:generate` directive; since we only have one go file in this tutorial,
+we put the directive there:
 
 ```go
 //go:generate protoc --proto_path=model --gogo_out=model ./model/model.proto
 ```
+Note that the above directove assumes that we use the gogo protbuf generator,
+the source protobuf files can be found in the model directory and the
+generated files will also be put into the model directory. Note also that to
+use the gogo protobuf generator, you must install it on your machine as 
+described, for example, [here](https://github.com/gogo/protobuf).
 
-To update some value in a KV store we will use broker's `Put` method.
+We use the go compiler to generate Go files from the model. In the tutorial Type:
+```
+go generate
+``` 
+Go generate must be run explicitly. It scans go files in the current path for
+the `generate` directives and then invokes the protobuf compiler. In our 
+tutorial, `go generate` will create the file `model.pb.go`.
+
+Now we can finally use the generated Go structures to update a value in the 
+KV data store. We will use the broker's `Put` method:
 
 ```go
 value := &model.Greetings{
@@ -101,7 +115,7 @@ if err != nil {
 
 The value above will be updated for key `/myplugin/greetings/hello`.
 
-To retrieve some value from a KV store we will use broker's `GetValue` method.
+To retrieve a value from a KV store we will use broker's `GetValue` method:
 
 ```go
 value := new(model.Greetings)
@@ -113,13 +127,13 @@ if err != nil {
 }
 ```
 
-To watch for changes in the KV store we need to initialize a watcher.
+To watch for changes in the KV store we need to initialize a watcher:
 
 ```go
 watcher := p.KVStore.NewWatcher("/myplugin/")
 ```
 
-Then we need to define our callback function that will process the changes.
+Then we need to define our callback function that will process the changes:
 
 ```go
 onChange := func(resp keyval.ProtoWatchResp) {
@@ -132,7 +146,7 @@ onChange := func(resp keyval.ProtoWatchResp) {
 }
 ```
 
-Now we can start watching for a key prefix(es).
+Now we can start watching for a key prefix(es):
 
 ```go
 cancelWatch := make(chan string)
