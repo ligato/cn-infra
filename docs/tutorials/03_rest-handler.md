@@ -1,6 +1,8 @@
 # Tutorial: Adding a REST API to your Plugin
 
-In this tutorial we will learn how to add a REST API to your plugin.
+In this tutorial we will learn how to add a REST API to your plugin. We assume
+that you completed (or understand) the ['Hello World Agent'](01_hello-world.md)
+and the ['Plugin Dependencies'](02_plugin-deps.md) tutorials.
 
 The Ligato infrastructure provides an HTTP server that is used by all plugins
 that wish to expose a REST API to external clients. The HTTP Server is provided
