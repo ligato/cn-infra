@@ -4,7 +4,7 @@ In this tutorial we will learn how to add a REST API to your plugin.
 
 The Ligato infrastructure provides an HTTP server that is used by all plugins
 that wish to expose a REST API to external clients. The HTTP Server is provided
-by the [REST plugin](https://github.com/ligato/blob/master/cn-infra/rpc/rest).
+by the [REST plugin](https://github.com/ligato/cn-infra/tree/master/rpc/rest).
 
 Each plugin that wants to provide a REST api will register its own custom
 handler with the REST plugin using the registration API:
@@ -28,7 +28,7 @@ type MyPlugin struct {
 ```
 Note that the dependency is defined as an `interface`, therefore it can be
 satisfied by any object that implements the interface methods. The `rest.HTTPHandlers`
-interface is defined in `https://github.com/ligato/cn-infra/rpc/rest/plugin_api_rest.go`.
+interface is defined in [`cn-infra/rpc/rest/plugin_api_rest.go`](https://github.com/ligato/cn-infra/blob/master/rpc/rest/plugin_impl_rest.go).
 
 Then, we can "wire" the dependency (i.e. set the instance) in the plugin's 
 constructor. Note that we use the default REST plugin provided by the Ligato
