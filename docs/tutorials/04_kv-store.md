@@ -59,18 +59,29 @@ broker := p.KVStore.NewBroker("/myplugin/")
 Note: The Etcd plugin must be configured with the address of the Etcd server. This
 is typically done through the etcd config file. In most cases, the etcd config 
 file must be in the same folder where the agent executable is started. If the etcd
-config file is not found, the Etcd plugin will shut down.
+config file is not found, the Etcd plugin will be disabled, and you will see 
+and error log like this:
+```
+level=error msg="KV store is disabled" loc="04_kv-store/main.go(41)" logger=defaultLogger
+```
 
-Since the broker accepts `proto.Message` in its methods, we are going to use
-our Protobuf model `Greetings` defined in [`model.proto`][6] file.
+The broker accepts `proto.Message` parameters in its methods, therefore we need to
+define a Protobuf model for data that we want to put in and read from the data store.
+For this tutorial we define a very simple model - `Greetings`. You can find it in
+the [`model.proto`][6] file.
 
 ```proto
 message Greetings {
     string greeting = 1;
 }
 ```
+Note: it is a good practice to put all Protobuf definitions for a plugin in a 
+`model` directory.
 
-The Go code was generated using `go:generate` directive from the example.
+Next, we need to generate Go code from our model. We will use the generated Go 
+structures as parameters in calls to the broker. The code generation is done using
+the `go:generate` directive; since we only have one go file in this tutorial, we
+put the directive there:
 
 ```go
 //go:generate protoc --proto_path=model --gogo_out=model ./model/model.proto
