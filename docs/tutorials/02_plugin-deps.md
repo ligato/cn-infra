@@ -71,9 +71,11 @@ func (p *HelloWorld) Init() error {
 }
 ```
 
-Let's load configuration from a file. By default, the name of the config file will be
-derived from the plugin name with extension `.conf`. In our case, the configuration 
-file name will be `helloworld.conf`.
+For more details on the Log API see [infra/logging/log_api.go](https://github.com/ligato/cn-infra/blob/master/logging/log_api.go).
+
+Now, let's load configuration from a file. By default, the name of the config file
+will be derived from the plugin name with extension `.conf`. In our case, the 
+configuration file name will be `helloworld.conf`.
 
 ```go
 type Config struct {
