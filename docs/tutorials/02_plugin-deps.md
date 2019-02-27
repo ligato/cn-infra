@@ -3,12 +3,19 @@
 Your control plane agent will typically consist of one or more plugins that
 contain the application logic and a bunch of Ligato plugins that will 
 provide services to your application plugins, such as KV- Data Store adapters, 
-message bus adapters, loggers or health monitors.
+message bus adapters, loggers or health monitors. This tutorial shows how to
+add plugin dependencies to your plugins. 
 
-In this tutorial we will learn how to add plugin dependencies to our plugins.
+The Ligato infrastructure uses the **dependency injection** design pattern to
+manage plugin dependencies. In other words, dependencies on other plugins are
+injected into your plugin when it's initialized. You should dependency injection
+to manage other non-plugin dependencies as well - it is critical for creation
+of mocks in unit tests. Without dependency injection it is almost impossible to
+achieve good unit test coverage.
 
-The infra package contains `PluginDeps` struct for easy embedding into plugins 
-which provides essentials for plugins: plugin name, logging and config. 
+The 'github.com/ligato/cn-infra/infra` package contains the `PluginDeps` struct
+for easy embedding into plugins which provides essentials for plugins: plugin name,
+logging and config. 
 
 It is defined as:
 
