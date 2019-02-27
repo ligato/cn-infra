@@ -1,4 +1,4 @@
-# Tutorial: KV Store
+# Tutorial: Working with KV Data Stores
 
 In this tutorial we will learn how to use an external key-value (KV) data store.
 The tutorial shows how to read and write data to/from the data store and how to 
@@ -23,8 +23,10 @@ type KvProtoPlugin interface {
 }
 ```
 
-To use the KV store plugin we simply define field for it in our plugin and 
-set the instance in our constructor to default Etcd plugin.
+To use the KV data store plugin we simply define field for it in our plugin
+and set the instance in our constructor to default Etcd plugin. In other words,
+we create a dependency on the KV data store of our choice in our plugin and
+satisfy it with the Etcd KV data store implementation:
 
 ```go
 type MyPlugin struct {
@@ -39,10 +41,13 @@ func NewMyPlugin() *MyPlugin {
 }
 ```
 
-First, we need to create a new broker. The broker is an entity (a facade) through
-which we communicate with the data store. The broker needs to be initialized with
-a key prefix and for this example, we are going to use `/myplugin/` as a key prefix.
-The broker uses this key prefix for all of its operations (Get, List, Put, Delete).
+Once we have the appropriate KV data store plugin, we can create a broker which
+will be the facade (mediator) through which we will communicate with the data 
+store. It abstract teh complexity of interacting with the different data stores
+and provides us with a simple read/write API. The broker must be initialized 
+with a key prefix and for this example, we are going to use `/myplugin/` as the
+key prefix. The broker uses this key prefix for all of its operations (Get, 
+List, Put, Delete).
 
 ```go
 broker := p.KVStore.NewBroker("/myplugin/")
