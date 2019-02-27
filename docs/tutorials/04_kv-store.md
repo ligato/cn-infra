@@ -23,10 +23,12 @@ type KvProtoPlugin interface {
 }
 ```
 
-To use the KV data store plugin we simply define field for it in our plugin
-and set the instance in our constructor to default Etcd plugin. In other words,
-we create a dependency on the KV data store of our choice in our plugin and
-satisfy it with the Etcd KV data store implementation:
+To use Etcd as our KV data store plugin we simply define a field for the 
+`KvProtoPlugin` interface in our plugin and initialize it with an Etcd plugin 
+instance in our plugin's constructor. Note that we use the default Etcd plugin
+(`etcd.DefaultPlugin`). In other words, we basically create a dependency on
+the KV data store in our plugin and satisfy it with the default Etcd KV data
+store implementation:
 
 ```go
 type MyPlugin struct {
@@ -43,20 +45,23 @@ func NewMyPlugin() *MyPlugin {
 
 Once we have the appropriate KV data store plugin, we can create a broker which
 will be the facade (mediator) through which we will communicate with the data 
-store. It abstract teh complexity of interacting with the different data stores
-and provides us with a simple read/write API. The broker must be initialized 
-with a key prefix and for this example, we are going to use `/myplugin/` as the
-key prefix. The broker uses this key prefix for all of its operations (Get, 
-List, Put, Delete).
+store. The broker hides the complexity of interacting with the different data 
+stores and gives us a simple read/write API. 
+
+The broker must be initialized with a key prefix that becomes the root for the
+kv tree that the broker will operate on. The broker uses the key prefix for all
+of  its operations (Get, List, Put, Delete).In this example will use `/myplugin/`.
 
 ```go
 broker := p.KVStore.NewBroker("/myplugin/")
 ```
 
-Note: The KV store might be disabled, which usually happens if its config file 
-is not found. In our case the `etcd.conf` file needs to be in the same folder.
+Note: The Etcd plugin must be configured with the address of the Etcd server. This
+is typically done through the etcd config file. In most cases, the etcd config 
+file must be in the same folder where the agent executable is started. If the etcd
+config file is not found, the Etcd plugin will shut down.
 
-Since, the broker accepts `proto.Message` in its methods, we are going to use
+Since the broker accepts `proto.Message` in its methods, we are going to use
 our Protobuf model `Greetings` defined in [`model.proto`][6] file.
 
 ```proto
