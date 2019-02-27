@@ -4,7 +4,8 @@ Your control plane agent will typically consist of one or more plugins that
 contain the application logic and a bunch of Ligato plugins tand other components
 that will provide services to your application plugins, such as KV- Data Store
 adapters, message bus adapters, loggers or health monitors. This tutorial shows
-how to add dependencies to your plugins. 
+how to add dependencies to your plugins. This tutorial assumes that you completed
+(or understand) the ['Hello World' tutorial](01_hello-world.md).
 
 The Ligato infrastructure uses the **dependency injection** design pattern to
 manage dependencies. In other words, dependencies on other plugins are injected
