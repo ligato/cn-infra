@@ -1,9 +1,13 @@
-# Tutorial: REST handler
+# Tutorial: Adding a REST API to your Plugin
 
-In this tutorial we will learn how to add custom handler to REST plugin.
+In this tutorial we will learn how to add a REST API to your plugin.
 
-The REST plugin provides methods for registering custom HTTP handlers. The REST
-plugin API is defined as:
+The Ligato infrastructure provides an HTTP server that is used by all plugins
+that wish to expose a REST API to external clients. The HTTP Server is provided
+by the [REST plugin](https://github.com/ligato/cn-infra/rpc/rest).
+
+Each plugin that wants to provide a REST api will register its own custom
+handler with the REST plugin using the registration API:
 
 ```go
 type HandlerProvider func(formatter *render.Render) http.HandlerFunc
@@ -14,7 +18,7 @@ type HTTPHandlers interface {
 }
 ```
 
-To use the REST plugin we simply define field for it in our plugin.
+To use the REST plugin we first define it as a dependency in our plugin:
 
 ```go
 type MyPlugin struct {
@@ -22,9 +26,14 @@ type MyPlugin struct {
 	REST rest.HTTPHandlers
 }
 ```
+Note that the dependency is defined as an `interface`, therefore it can be
+satisfied by any object that implements the interface methods. The `rest.HTTPHandlers`
+interface is defined in `https://github.com/ligato/cn-infra/rpc/rest/plugin_api_rest.go`.
 
-And now we can set the instance in our constructor. Most of plugins have 
-default plugin instance define as a global variable that can be used.
+Then, we can "wire" the dependency (i.e. set the instance) in the plugin's 
+constructor. Note that we use the default REST plugin provided by the Ligato
+infrastructure (`rest.DefaultPlugin`). Most Ligato insfrastructure plugins
+have a default plugin instance defined as a global variable that can be used.
 
 ```go
 func NewMyPlugin() *MyPlugin {
@@ -33,8 +42,11 @@ func NewMyPlugin() *MyPlugin {
 	return p
 }
 ```
+Note also that instead of using the default Ligato REST plugin we could implement
+our own (custom) HTTP handler and make our plugin dependent 
 
-Now we define our handler.
+
+Now we define our handler:
 
 ```go
 func (p *MyPlugin) fooHandler(formatter *render.Render) http.HandlerFunc {
@@ -50,7 +62,8 @@ func (p *MyPlugin) fooHandler(formatter *render.Render) http.HandlerFunc {
 }
 ```
 
-And register it to the REST plugin in the Init method.
+Finally, we register our handler with the REST plugin. This is done our plugin's 
+`Init` method:
 
 ```go
 func (p *MyPlugin) Init() error {
