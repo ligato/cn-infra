@@ -1,4 +1,4 @@
-# Tutorial: Hello World
+# Getting Started: The 'Hello World' Agent
 
 In this tutorial we will create a simple Ligato control plane agent that 
 contains a single `Helloworld` plugin that prints "Hello World" to the log.
