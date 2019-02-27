@@ -44,9 +44,6 @@ func NewMyPlugin() *MyPlugin {
 	return p
 }
 ```
-Note also that instead of using the default Ligato REST plugin we could implement
-our own (custom) HTTP handler and make our plugin dependent 
-
 
 Now we define our handler:
 
