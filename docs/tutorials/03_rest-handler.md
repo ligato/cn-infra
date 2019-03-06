@@ -1,12 +1,13 @@
 # Tutorial: Adding a REST API to your Plugin
 
-In this tutorial we will learn how to add a REST API to your plugin. We assume
-that you completed (or understand) the ['Hello World Agent'](01_hello-world.md)
-and the ['Plugin Dependencies'](02_plugin-deps.md) tutorials.
-
+In this tutorial we will learn how to add a REST API to your plugin. 
 The Ligato infrastructure provides an HTTP server that is used by all plugins
 that wish to expose a REST API to external clients. The HTTP Server is provided
 by the [REST plugin](https://github.com/ligato/cn-infra/tree/master/rpc/rest).
+
+Requirements:
+* Complete and understand the ['Hello World Agent'](01_hello-world.md) tutorial
+* Complete and understand the ['Plugin Dependencies'](02_plugin-deps.md) tutorial
 
 Each plugin that wants to provide a REST api will register its own custom
 handler with the REST plugin using the registration API:
@@ -34,7 +35,7 @@ interface is defined in [`cn-infra/rpc/rest/plugin_api_rest.go`](https://github.
 
 Then, we can "wire" the dependency (i.e. set the instance) in the plugin's 
 constructor. Note that we use the default REST plugin provided by the Ligato
-infrastructure (`rest.DefaultPlugin`). Most Ligato insfrastructure plugins
+infrastructure (`rest.DefaultPlugin`). Most Ligato infrastructure plugins
 have a default plugin instance defined as a global variable that can be used.
 
 ```go
@@ -61,7 +62,7 @@ func (p *MyPlugin) fooHandler(formatter *render.Render) http.HandlerFunc {
 }
 ```
 
-Finally, we register our handler with the REST plugin. This is done our plugin's 
+Finally, we register our handler with the REST plugin. This is done in our plugin's 
 `Init` method:
 
 ```go
