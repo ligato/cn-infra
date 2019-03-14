@@ -32,7 +32,7 @@ func (p *HelloWorld) Close() error {
 	return nil
 }
 
-// Exported, allows other plugins to set some internal parameters
+// SetPlace is an exported method that allows other plugins to set some internal parameters
 func (p *HelloWorld) SetPlace(world, place string) {
 	log.Printf("%s was placed %s", world, place)
 }

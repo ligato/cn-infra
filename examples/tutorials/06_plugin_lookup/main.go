@@ -30,25 +30,28 @@ func main() {
 	}
 }
 
-// A top-level plugin used as starter for other plugins
+// Agent is a top-level plugin used as starter for other plugins
 type Agent struct {
 	Hw *HelloWorld
 	Hu *HelloUniverse
 }
 
+// Init is an implementation of the plugin interface
 func (p *Agent) Init() error {
 	return nil
 }
 
+// Close is an implementation of the plugin interface
 func (p *Agent) Close() error {
 	return nil
 }
 
+// String is an implementation of the plugin interface
 func (p *Agent) String() string {
 	return "AgentPlugin"
 }
 
-// Returns top-level plugin object with defined plugins and their dependencies
+// New returns top-level plugin object with defined plugins and their dependencies
 func New() *Agent {
 	hw := &HelloWorld{}
 	hu := &HelloUniverse{}
