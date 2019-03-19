@@ -15,6 +15,7 @@
 package resync
 
 import (
+	"strings"
 	"sync"
 	"time"
 
@@ -97,7 +98,9 @@ func (p *Plugin) startResync() {
 		p.Log.Warnf("No registrations, skipping resync")
 		return
 	}
-	p.Log.Infof("Starting resync for: %+v", p.regOrder)
+
+	subs := strings.Join(p.regOrder, ", ")
+	p.Log.Infof("Resync starting for %d registrations (%v)", len(p.regOrder), subs)
 
 	resyncStart := time.Now()
 
