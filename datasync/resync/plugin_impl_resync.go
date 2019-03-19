@@ -23,8 +23,10 @@ import (
 )
 
 var (
-	SingleResyncAcceptTimeout = time.Second
-	SingleResyncAckTimeout    = time.Second * 10
+	// SingleResyncAcceptTimeout defines timeout for accepting resync start.
+	SingleResyncAcceptTimeout = time.Second * 1
+	// SingleResyncAckTimeout defines timeout for resync ack.
+	SingleResyncAckTimeout = time.Second * 10
 )
 
 // Plugin implements Plugin interface, therefore it can be loaded with other plugins.
