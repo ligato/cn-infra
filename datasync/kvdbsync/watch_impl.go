@@ -30,7 +30,7 @@ var (
 	// ResyncAcceptTimeout defines timeout used for
 	// sending resync event to registered watchers.
 	ResyncAcceptTimeout = time.Second * 1
-	// ResyncTimeout defines timeout used during
+	// ResyncDoneTimeout defines timeout used during
 	// resync after which resync will return an error.
 	ResyncDoneTimeout = time.Second * 5
 )
@@ -147,7 +147,7 @@ func (keys *watchBrokerKeys) resync() error {
 		// ok
 	case <-time.After(ResyncAcceptTimeout):
 		logrus.DefaultLogger().Warn("Timeout of resync send!")
-		return
+		return errors.New("resync not accepted in time")
 	}
 
 	select {
