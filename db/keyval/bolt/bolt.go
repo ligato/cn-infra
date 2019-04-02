@@ -15,6 +15,7 @@
 package bolt
 
 import (
+	"context"
 	"bytes"
 	"fmt"
 	"os"
@@ -26,6 +27,7 @@ import (
 	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logrus"
 )
+
 
 var boltLogger = logrus.NewLogger("bolt")
 
@@ -144,7 +146,6 @@ func (c *Client) Delete(key string, opts ...datasync.DelOption) (existed bool, e
 	}
 	existed = prevVal != nil
 
-	fmt.Printf("del: %v, %q\n", key, prevVal)
 	c.bumpWatchers(&watchEvent{
 		Key:       key,
 		PrevValue: prevVal,
@@ -251,7 +252,7 @@ func (t *txn) Delete(key string) keyval.BytesTxn {
 // Commit commits all operations in a transaction to the data store.
 // Commit is atomic - either all operations in the transaction are
 // committed to the data store, or none of them.
-func (t *txn) Commit() error {
+func (t *txn) Commit(ctx context.Context) error {
 	_, err := t.c.safeUpdate(t.updates...)
 	return err
 }

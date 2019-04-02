@@ -15,6 +15,7 @@
 package msg
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/gogo/protobuf/proto"
@@ -25,14 +26,44 @@ import (
 //go:generate protoc --proto_path=. --gogo_out=plugins=grpc:. datamsg.proto
 
 // NewChangeWatchResp is a constructor.
-func NewChangeWatchResp(message *DataChangeRequest, callback func(error)) *ChangeWatchResp {
-	return &ChangeWatchResp{message: message, callback: callback}
+func NewChangeWatchResp(ctx context.Context, message *DataChangeRequest, callback func(error)) *ChangeEvent {
+	return &ChangeEvent{
+		ctx:     ctx,
+		changes: []datasync.ProtoWatchResp{
+			&ChangeWatchResp{message: message},
+		},
+		callback: callback,
+	}
+}
+
+// ChangeEvent represents change event with changes.
+type ChangeEvent struct {
+	ctx      context.Context
+	changes  []datasync.ProtoWatchResp
+	callback func(error)
+}
+
+// GetContext returns the context associated with the event.
+func (ev *ChangeEvent) GetContext() context.Context {
+	return ev.ctx
+}
+
+// GetChanges returns list of changes for the change event.
+func (ev *ChangeEvent) GetChanges() []datasync.ProtoWatchResp {
+	return ev.changes
+}
+
+// Done does nothing yet.
+func (ev *ChangeEvent) Done(err error) {
+	//TODO publish response to the topic
+	if err != nil {
+		logrus.DefaultLogger().Error(err)
+	}
 }
 
 // ChangeWatchResp adapts Datamessage to interface datasync.ChangeEvent.
 type ChangeWatchResp struct {
-	message  *DataChangeRequest
-	callback func(error)
+	message *DataChangeRequest
 }
 
 // GetChangeType - see the comment in implemented interface datasync.ChangeEvent.
@@ -66,12 +97,4 @@ func (ev *ChangeWatchResp) GetPrevValue(prevVal proto.Message) (prevExists bool,
 	}
 
 	return false, err //TODO prev value
-}
-
-// Done does nothing yet.
-func (ev *ChangeWatchResp) Done(err error) {
-	//TODO publish response to the topic
-	if err != nil {
-		logrus.DefaultLogger().Error(err)
-	}
 }

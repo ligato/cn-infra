@@ -16,8 +16,10 @@ package bolt
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/boltdb/bolt"
 	"github.com/ligato/cn-infra/datasync"
@@ -268,7 +270,7 @@ func TestPutInTxn(t *testing.T) {
 	txn.Put(key1, val1).
 		Put(key2, val2).
 		Put(key3, val3)
-	Expect(txn.Commit()).To(Succeed())
+	Expect(txn.Commit(context.Background())).To(Succeed())
 	Expect(tc.isInDB(key1, val1)).To(BeTrue())
 	Expect(tc.isInDB(key2, val2)).To(BeTrue())
 	Expect(tc.isInDB(key3, val3)).To(BeTrue())
@@ -292,7 +294,7 @@ func TestDeleteInTxn(t *testing.T) {
 		Put(key2, val2).
 		Put(key3, val3).
 		Delete(key2)
-	Expect(txn.Commit()).To(Succeed())
+	Expect(txn.Commit(context.Background())).To(Succeed())
 	Expect(tc.isInDB(key1, val1)).To(BeTrue())
 	Expect(tc.isInDB(key2, val2)).To(BeFalse())
 	Expect(tc.isInDB(key3, val3)).To(BeTrue())
@@ -372,4 +374,53 @@ func TestWatchPutBroker(t *testing.T) {
 	Expect(resp.GetValue()).Should(Equal([]byte{1, 2, 3}))
 	Expect(resp.GetPrevValue()).Should(BeNil())
 	Expect(resp.GetChangeType()).Should(Equal(datasync.Put))
+}
+
+func TestFilterDupNotifs(t *testing.T) {
+	ctx := setupTest(t, true)
+	ctx.client.cfg.FilterDupNotifs = true
+	defer ctx.teardownTest()
+
+	const brokerPrefix = "/my/prefix/"
+	const watchPrefix = "key/"
+	const watchKey = watchPrefix + "val1"
+
+	broker := ctx.client.NewWatcher(brokerPrefix)
+
+	closeCh := make(chan string)
+	watchCh := make(chan keyval.BytesWatchResp, 5)
+
+	err := broker.Watch(keyval.ToChan(watchCh), closeCh, watchPrefix)
+	Expect(err).To(BeNil())
+
+	for i := 0; i < 10; i++ {
+		Expect(ctx.client.Put(brokerPrefix+watchKey, []byte{1, 2, 3})).To(Succeed())
+	}
+
+	var resp keyval.BytesWatchResp
+	Eventually(watchCh).Should(Receive(&resp))
+	Expect(resp.GetKey()).Should(Equal(watchKey))
+	Expect(resp.GetValue()).Should(Equal([]byte{1, 2, 3}))
+	Expect(resp.GetPrevValue()).Should(BeNil())
+	Expect(resp.GetChangeType()).Should(Equal(datasync.Put))
+	Consistently(watchCh, time.Second).ShouldNot(Receive()) // filter duplicate notifications
+
+	// put different data
+	Expect(ctx.client.Put(brokerPrefix+watchKey, []byte{1, 2, 3, 4})).To(Succeed())
+	Eventually(watchCh).Should(Receive(&resp))
+	Expect(resp.GetKey()).Should(Equal(watchKey))
+	Expect(resp.GetValue()).Should(Equal([]byte{1, 2, 3, 4}))
+	Expect(resp.GetPrevValue()).Should(Equal([]byte{1, 2, 3}))
+	Expect(resp.GetChangeType()).Should(Equal(datasync.Put))
+
+	// delete "twice"
+	Expect(ctx.client.Delete(brokerPrefix + watchKey)).To(BeTrue())
+	existed, _ := ctx.client.Delete(brokerPrefix + watchKey)
+	Expect(existed).To(BeFalse())
+	Eventually(watchCh).Should(Receive(&resp))
+	Expect(resp.GetKey()).Should(Equal(watchKey))
+	Expect(resp.GetValue()).Should(BeNil())
+	Expect(resp.GetPrevValue()).Should(Equal([]byte{1, 2, 3, 4}))
+	Expect(resp.GetChangeType()).Should(Equal(datasync.Delete))
+	Consistently(watchCh, time.Second).ShouldNot(Receive()) // filter duplicate notifications
 }

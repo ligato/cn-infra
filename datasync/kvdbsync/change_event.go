@@ -15,32 +15,53 @@
 package kvdbsync
 
 import (
+	"context"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/syncbase"
-	"github.com/ligato/cn-infra/db/keyval"
 )
 
 // ChangeWatchResp is a structure that adapts the BytesWatchResp to the
 // datasync api.
 type ChangeWatchResp struct {
-	keyval.ProtoWatchResp
-	prev datasync.LazyValue
+	ctx     context.Context
+	changes []datasync.ProtoWatchResp
 	*syncbase.DoneChannel
 }
 
 // NewChangeWatchResp creates a new instance of ChangeWatchResp.
-func NewChangeWatchResp(delegate keyval.ProtoWatchResp, prevVal datasync.LazyValue) *ChangeWatchResp {
+func NewChangeWatchResp(ctx context.Context, delegate datasync.ProtoWatchResp, prevVal datasync.LazyValue) *ChangeWatchResp {
 	return &ChangeWatchResp{
-		ProtoWatchResp: delegate,
-		prev:           prevVal,
-		DoneChannel:    &syncbase.DoneChannel{DoneChan: nil},
+		ctx: ctx,
+		changes: []datasync.ProtoWatchResp{
+			&changePrev{
+				ProtoWatchResp: delegate,
+				prev:           prevVal,
+			},
+		},
+		DoneChannel: &syncbase.DoneChannel{DoneChan: nil},
 	}
+}
+
+// GetContext returns the context associated with the event.
+func (ev *ChangeWatchResp) GetContext() context.Context {
+	return ev.ctx
+}
+
+// GetChanges returns list of changes for the change event.
+func (ev *ChangeWatchResp) GetChanges() []datasync.ProtoWatchResp {
+	return ev.changes
+}
+
+type changePrev struct {
+	datasync.ProtoWatchResp
+	prev datasync.LazyValue
 }
 
 // GetValue returns previous value associated with a change. For description of parameter and output
 // values, see the comment in implemented interface datasync.ChangeEvent.
-func (ev *ChangeWatchResp) GetValue(val proto.Message) (err error) {
+func (ev *changePrev) GetValue(val proto.Message) (err error) {
 	if ev.ProtoWatchResp.GetChangeType() != datasync.Delete {
 		return ev.ProtoWatchResp.GetValue(val)
 	}
@@ -49,7 +70,7 @@ func (ev *ChangeWatchResp) GetValue(val proto.Message) (err error) {
 
 // GetPrevValue returns previous value associated with a change. For description of parameter and output
 // values, see the comment in implemented interface datasync.ChangeEvent.
-func (ev *ChangeWatchResp) GetPrevValue(prevVal proto.Message) (exists bool, err error) {
+func (ev *changePrev) GetPrevValue(prevVal proto.Message) (exists bool, err error) {
 	if ev.prev != nil {
 		return true, ev.prev.GetValue(prevVal)
 	}

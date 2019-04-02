@@ -26,6 +26,7 @@ import (
 
 	"github.com/coreos/etcd/etcdserver/api/v3client"
 	. "github.com/onsi/gomega"
+	"context"
 )
 
 const (
@@ -150,7 +151,7 @@ func testPrefixedTxn(t *testing.T) {
 	tx.Put("b/val1", []byte{0, 1})
 	tx.Put("b/val2", []byte{0, 1})
 	tx.Put("b/val3", []byte{0, 1})
-	tx.Commit()
+	tx.Commit(context.Background())
 
 	kvi, err := broker.ListValues(prefix + "b")
 	Expect(err).To(BeNil())

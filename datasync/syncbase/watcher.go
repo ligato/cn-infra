@@ -20,14 +20,17 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"context"
 
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/ligato/cn-infra/utils/safeclose"
 )
 
-const (
-	propagateChangesTimeout = time.Second * 20
+var (
+	// PropagateChangesTimeout defines timeout used during
+	// change propagation after which it will return an error.
+	PropagateChangesTimeout = time.Second * 20
 )
 
 // Registry of subscriptions and latest revisions.
@@ -58,7 +61,6 @@ type WatchDataReg struct {
 func NewRegistry() *Registry {
 	return &Registry{
 		subscriptions: map[string]*Subscription{},
-		access:        sync.Mutex{},
 		lastRev:       NewLatestRev(),
 	}
 }
@@ -96,43 +98,54 @@ func (adapter *Registry) Watch(resyncName string, changeChan chan datasync.Chang
 }
 
 // PropagateChanges fills registered channels with the data.
-func (adapter *Registry) PropagateChanges(txData map[string]datasync.ChangeValue) error {
+func (adapter *Registry) PropagateChanges(ctx context.Context, txData map[string]datasync.ChangeValue) error {
 	var events []func(done chan error)
 
 	for _, sub := range adapter.subscriptions {
+		var changes []datasync.ProtoWatchResp
+
 		for _, prefix := range sub.KeyPrefixes {
 			for key, val := range txData {
+				if !strings.HasPrefix(key, prefix) {
+					continue
+				}
+
 				var (
-					prev   datasync.LazyValueWithRev
+					prev   datasync.KeyVal
 					curRev int64
 				)
 
-				if strings.HasPrefix(key, prefix) {
-					if val.GetChangeType() == datasync.Delete {
-						if _, prev = adapter.lastRev.Del(key); prev != nil {
-							curRev = prev.GetRevision() + 1
-						} else {
-							continue
-						}
+				if val.GetChangeType() == datasync.Delete {
+					if _, prev = adapter.lastRev.Del(key); prev != nil {
+						curRev = prev.GetRevision() + 1
 					} else {
-						_, prev, curRev = adapter.lastRev.Put(key, val)
+						continue
 					}
+				} else {
+					_, prev, curRev = adapter.lastRev.Put(key, val)
+				}
 
-					sendTo := func(sub *Subscription, key string, val datasync.ChangeValue) func(done chan error) {
-						return func(done chan error) {
-							sub.ChangeChan <- &ChangeEvent{
-								Key:        key,
-								ChangeType: val.GetChangeType(),
-								CurrVal:    val,
-								CurrRev:    curRev,
-								PrevVal:    prev,
-								delegate:   NewDoneChannel(done),
-							}
-						}
+				changes = append(changes, &ChangeResp{
+					Key:        key,
+					ChangeType: val.GetChangeType(),
+					CurrVal:    val,
+					CurrRev:    curRev,
+					PrevVal:    prev,
+				})
+			}
+		}
+
+		if len(changes) > 0 {
+			sendTo := func(sub *Subscription) func(done chan error) {
+				return func(done chan error) {
+					sub.ChangeChan <- &ChangeEvent{
+						ctx:      ctx,
+						Changes:  changes,
+						delegate: &DoneChannel{done},
 					}
-					events = append(events, sendTo(sub, key, val))
 				}
 			}
+			events = append(events, sendTo(sub))
 		}
 	}
 
@@ -144,25 +157,30 @@ func (adapter *Registry) PropagateChanges(txData map[string]datasync.ChangeValue
 		if err != nil {
 			return err
 		}
-	case <-time.After(propagateChangesTimeout):
-		logrus.DefaultLogger().Warn("Timeout of aggregated change callback")
+	case <-time.After(PropagateChangesTimeout):
+		logrus.DefaultLogger().Warnf("Timeout of aggregated data-change callbacks (%v)",
+			PropagateChangesTimeout)
 	}
 
 	return nil
 }
 
 // PropagateResync fills registered channels with the data.
-func (adapter *Registry) PropagateResync(txData map[string]datasync.ChangeValue) error {
+func (adapter *Registry) PropagateResync(ctx context.Context, txData map[string]datasync.ChangeValue) error {
+	var events []func(done chan error)
 	adapter.lastRev.Cleanup()
+
 	for _, sub := range adapter.subscriptions {
-		resyncEv := NewResyncEventDB(map[string]datasync.KeyValIterator{})
+		items := map[string]datasync.KeyValIterator{}
 
 		for _, prefix := range sub.KeyPrefixes {
 			var kvs []datasync.KeyVal
 
 			for key, val := range txData {
 				if strings.HasPrefix(key, prefix) {
+					// TODO: call Put only once for each key (different subscriptions)
 					adapter.lastRev.PutWithRevision(key, val)
+
 					kvs = append(kvs, &KeyVal{
 						key:       key,
 						LazyValue: val,
@@ -170,10 +188,34 @@ func (adapter *Registry) PropagateResync(txData map[string]datasync.ChangeValue)
 					})
 				}
 			}
-
-			resyncEv.its[prefix] = NewKVIterator(kvs)
+			items[prefix] = NewKVIterator(kvs)
 		}
-		sub.ResyncChan <- resyncEv //TODO default and/or timeout
+
+		sendTo := func(sub *Subscription) func(done chan error) {
+			return func(done chan error) {
+				sub.ResyncChan <- &ResyncEventDB{
+					ctx:         ctx,
+					its:         items,
+					DoneChannel: NewDoneChannel(done),
+				}
+			}
+		}
+		events = append(events, sendTo(sub))
+	}
+
+	done := make(chan error, 1)
+	go AggregateDone(events, done)
+
+	select {
+	case err := <-done:
+		if err != nil {
+			return err
+		}
+
+	// TODO: maybe higher timeout for resync event?
+	case <-time.After(PropagateChangesTimeout):
+		logrus.DefaultLogger().Warnf("Timeout of aggregated resync callbacks (%v)",
+			PropagateChangesTimeout)
 	}
 
 	return nil
