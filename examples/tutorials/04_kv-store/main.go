@@ -16,6 +16,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/ligato/cn-infra/datasync"
 	"time"
 
 	"github.com/ligato/cn-infra/agent"
@@ -86,7 +87,7 @@ func (p *MyPlugin) AfterInit() error {
 	return nil
 }
 
-func (p *MyPlugin) onChange(resp keyval.ProtoWatchResp) {
+func (p *MyPlugin) onChange(resp datasync.ProtoWatchResp) {
 	value := new(model.Greetings)
 	// Deserialize data
 	if err := resp.GetValue(value); err != nil {
