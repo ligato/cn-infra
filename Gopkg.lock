@@ -962,6 +962,7 @@
     "github.com/bshuster-repo/logrus-logstash-hook",
     "github.com/bsm/sarama-cluster",
     "github.com/coreos/etcd/clientv3",
+    "github.com/coreos/etcd/clientv3/concurrency",
     "github.com/coreos/etcd/clientv3/namespace",
     "github.com/coreos/etcd/embed",
     "github.com/coreos/etcd/etcdserver/api/v3client",
