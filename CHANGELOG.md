@@ -1,3 +1,19 @@
+# Release v2.1 (2019-05-09)
+
+## Improvements
+* [Datasync][datasync-plugin]
+  - Added new option `WithClientLifetimeTTL`. This option defines `put` operation for the lifetime of a client (the TTL is not renewed if the client is closed).
+* [ETCD][etcd-plugin]
+  - Support for election mechanism, which determines leader instance for given prefix. Multiple ETCD instances can now compete for leadership. 
+* [Bolt][bolt-plugin]
+  - Some improvements to Bolt watchers were done in order to reduce a number of active go routines
+  
+## Fixed Bugs
+* BoltDB watcher: keys sent to the close channel are now properly prefixed and delivered to the correct go routine so they will not be ignored     
+
+## Documentation
+* Majority of `README.md` files were removed. The content was updated, extended and moved to [Ligato documentation site][ligato-docs].
+
 # Release v2.0 (2019-04-02)
 
 ## Breaking Changes
@@ -454,6 +470,7 @@ different flavors (removed in v1.5) (reusable collection of plugins):
 [index-map]: idxmap
 [kafka-plugin]: messaging/kafka
 [keyval-api]: db/keyval
+[ligato-docs]: https://docs.ligato.io/en/latest/
 [log-registry]: logging
 [logmanager-plugin]: logging/logmanager
 [logrus]: logging/logrus
