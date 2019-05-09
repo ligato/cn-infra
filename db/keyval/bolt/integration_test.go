@@ -424,3 +424,111 @@ func TestFilterDupNotifs(t *testing.T) {
 	Expect(resp.GetChangeType()).Should(Equal(datasync.Delete))
 	Consistently(watchCh, time.Second).ShouldNot(Receive()) // filter duplicate notifications
 }
+
+func TestClosedWatch(t *testing.T) {
+	ctx := setupTest(t, true)
+	defer ctx.teardownTest()
+
+	const watchPrefix = "/prefix/"
+	const watchKey1 = "key1"
+	const watchKey2 = "key2"
+
+	closeCh := make(chan string)
+	watchCh := make(chan keyval.BytesWatchResp)
+	broker := ctx.client.NewBroker(watchPrefix)
+	watcher := ctx.client.NewWatcher(watchPrefix)
+	err := watcher.Watch(keyval.ToChan(watchCh), closeCh, watchKey1, watchKey2)
+	Expect(err).To(BeNil())
+
+	var resp keyval.BytesWatchResp
+	Expect(broker.Put(watchKey1, []byte{1, 2, 3})).To(Succeed())
+	Eventually(watchCh).Should(Receive(&resp))
+	Expect(resp.GetKey()).Should(Equal(watchKey1))
+	Expect(resp.GetValue()).Should(Equal([]byte{1, 2, 3}))
+	Expect(resp.GetPrevValue()).Should(BeNil())
+	Expect(resp.GetChangeType()).Should(Equal(datasync.Put))
+
+	// close watch for watchKey1 but not for watchKey2 yet
+	closeCh <- watchKey1
+	time.Sleep(time.Second)
+	Expect(broker.Put(watchKey1, []byte{4, 5, 6})).To(Succeed())
+	Consistently(watchCh).ShouldNot(Receive())
+
+	Expect(broker.Put(watchKey2, []byte{1, 2, 3})).To(Succeed())
+	Eventually(watchCh).Should(Receive(&resp))
+	Expect(resp.GetKey()).Should(Equal(watchKey2))
+	Expect(resp.GetValue()).Should(Equal([]byte{1, 2, 3}))
+	Expect(resp.GetPrevValue()).Should(BeNil())
+	Expect(resp.GetChangeType()).Should(Equal(datasync.Put))
+
+	// close watching completely
+	close(closeCh)
+	time.Sleep(time.Second)
+	Expect(broker.Put(watchKey1, []byte{4, 5, 6})).To(Succeed())
+	Consistently(watchCh).ShouldNot(Receive())
+	Expect(broker.Put(watchKey2, []byte{4, 5, 6})).To(Succeed())
+	Consistently(watchCh).ShouldNot(Receive())
+}
+
+func TestReuseCloseChannel(t *testing.T) {
+	ctx := setupTest(t, true)
+	defer ctx.teardownTest()
+
+	const watchPrefix = "/prefix/"
+	const watchKey1 = "key1"
+	const watchKey2 = "key2"
+
+	closeCh := make(chan string)
+	watchCh := make(chan keyval.BytesWatchResp)
+	broker := ctx.client.NewBroker(watchPrefix)
+	watcher := ctx.client.NewWatcher(watchPrefix)
+	err := watcher.Watch(keyval.ToChan(watchCh), closeCh, watchKey1)
+	Expect(err).To(BeNil())
+
+	var resp keyval.BytesWatchResp
+	Expect(broker.Put(watchKey1, []byte{1, 2, 3})).To(Succeed())
+	Eventually(watchCh).Should(Receive(&resp))
+	Expect(resp.GetKey()).Should(Equal(watchKey1))
+	Expect(resp.GetValue()).Should(Equal([]byte{1, 2, 3}))
+	Expect(resp.GetPrevValue()).Should(BeNil())
+	Expect(resp.GetChangeType()).Should(Equal(datasync.Put))
+
+	// watchKey2 is not watched yet
+	Expect(broker.Put(watchKey2, []byte{1, 2, 3})).To(Succeed())
+	Consistently(watchCh).ShouldNot(Receive())
+
+	// add watchPrefix to the list of watched key prefixes
+	err = watcher.Watch(keyval.ToChan(watchCh), closeCh, "")
+	Expect(err).To(BeNil())
+	time.Sleep(time.Second)
+
+	// change both keys - watch callbacks are called one after another from one
+	// common go routine
+	Expect(broker.Put(watchKey2, []byte{4, 5, 6})).To(Succeed())
+	Expect(broker.Put(watchKey1, []byte{4, 5, 6})).To(Succeed())
+
+	Eventually(watchCh).Should(Receive(&resp))
+	Expect(resp.GetKey()).Should(Equal(watchKey2))
+	Expect(resp.GetValue()).Should(Equal([]byte{4, 5, 6}))
+	Expect(resp.GetPrevValue()).Should(Equal([]byte{1, 2, 3}))
+	Expect(resp.GetChangeType()).Should(Equal(datasync.Put))
+
+	Eventually(watchCh).Should(Receive(&resp))
+	Expect(resp.GetKey()).Should(Equal(watchKey1))
+	Expect(resp.GetValue()).Should(Equal([]byte{4, 5, 6}))
+	Expect(resp.GetPrevValue()).Should(Equal([]byte{1, 2, 3}))
+	Expect(resp.GetChangeType()).Should(Equal(datasync.Put))
+
+	// close watch for previously added watchPrefix
+	closeCh <- "" // watcher is prefixed, therefore empty string translates to watchPrefix
+	Expect(broker.Put(watchKey2, []byte{7, 8, 9})).To(Succeed())
+	Expect(broker.Put(watchKey1, []byte{7, 8, 9})).To(Succeed())
+
+	Eventually(watchCh).Should(Receive(&resp))
+	Expect(resp.GetKey()).Should(Equal(watchKey1))
+	Expect(resp.GetValue()).Should(Equal([]byte{7, 8, 9}))
+	Expect(resp.GetPrevValue()).Should(Equal([]byte{4, 5, 6}))
+	Expect(resp.GetChangeType()).Should(Equal(datasync.Put))
+
+	Consistently(watchCh).ShouldNot(Receive())
+}
