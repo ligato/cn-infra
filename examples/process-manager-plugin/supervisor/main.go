@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ligato/cn-infra/agent"
+
 	bs "github.com/ligato/cn-infra/exec/supervisor"
 	"github.com/ligato/cn-infra/logging"
 )
@@ -35,10 +36,10 @@ func main() {
 				BinaryPath:  "../test-process/test-process",
 			},
 			{
-				Name:           "p3",
-				LogFilePath:    "example.log",
-				BinaryPath:     "../test-process/test-process",
-				TriggerStopFor: []string{"p2"},
+				Name:        "p3",
+				LogFilePath: "example.log",
+				BinaryPath:  "../test-process/test-process",
+				Required:    true,
 			},
 		},
 	}

@@ -36,9 +36,22 @@ type Process struct {
 	// A list of arguments the process will be started with
 	Args []string `json:"args"`
 
-	// This parameter allows to define another processes, which will be stopped
-	// when the current instance is terminated (processes are defined by name).
-	TriggerStopFor []string `json:"trigger-stop-for"`
+	// Marks process as required. A required process triggers termination
+	// or all other processes known to supervisor
+	Required bool `json:"required"`
+
+	// Hooks allow to run custom commands/events at process termination
+	Hooks []Hook `json:"hooks"`
+}
+
+// Hook defines commands or events executed at process termination
+type Hook struct {
+	// External command (script) can be executed using this field
+	Command string `json:"command"`
+	// Arguments for external command
+	CmdArgs []string `json:"cmd-args"`
+
+	// TODO events
 }
 
 // NewConf prepares a new empty configuration

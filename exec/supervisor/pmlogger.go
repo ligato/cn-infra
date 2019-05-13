@@ -29,14 +29,16 @@ import (
 const (
 	defaultLogfilePath = "/var/log/"
 
-	fileSuffix = "-file"
+	logfileSuffix = "-file"
 )
 
+// pmLoggerManager holds information about process loggers
 type pmLoggerManager struct {
 	pathToFile map[string]*os.File
 	pathToChan map[string]chan []byte
 }
 
+// Close all log channels which closes respective files
 func (lm *pmLoggerManager) Close() error {
 	for _, channel := range lm.pathToChan {
 		close(channel)
@@ -52,7 +54,7 @@ func (lm *pmLoggerManager) newPmLogger(name, logfilePath string) (pml *pmLogger,
 
 	// standard output logger
 	logStdOut := logrus.NewLogger(name)
-	logFile := logrus.NewLogger(name + fileSuffix)
+	logFile := logrus.NewLogger(name + logfileSuffix)
 
 	var fileChan chan []byte
 	file, ok := lm.pathToFile[logfilePath]

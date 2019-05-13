@@ -15,6 +15,7 @@
 package supervisor
 
 import (
+	"os/exec"
 	"sync"
 
 	pm "github.com/ligato/cn-infra/exec/processmanager"
@@ -122,8 +123,11 @@ func (p *Plugin) start(processes []Process) error {
 			inError = append(inError, process.Name)
 			continue
 		}
-		instance := p.pm.NewProcess(process.Name, process.BinaryPath, pm.Args(process.Args...),
-			pm.Writer(pLogger, pLogger), pm.Notify(processStat), pm.AutoTerminate())
+		instance := p.pm.NewProcess(process.Name, process.BinaryPath,
+			pm.Args(process.Args...),
+			pm.Writer(pLogger, pLogger),
+			pm.Notify(processStat),
+			pm.AutoTerminate())
 		if err := instance.Start(); err != nil {
 			p.Log.Errorf("error starting process %s: %v", process.Name, err)
 			inError = append(inError, process.Name)
@@ -191,21 +195,28 @@ func (p *Plugin) handleTerminated(name string, instance pm.ProcessInstance) {
 			break
 		}
 	}
-	for _, toStop := range process.TriggerStopFor {
-		toStopInstance, ok := p.instances[toStop]
-		if !ok {
-			continue
-		}
-		if toStopInstance.IsAlive() {
-			if _, err := toStopInstance.StopAndWait(); err != nil {
-				p.Log.Errorf("Attempt to stop %s failed: %v", toStop, err)
+
+	// execute hooks
+	for _, hook := range process.Hooks {
+		if hook.Command != "" {
+			if _, err := exec.Command(hook.Command, hook.CmdArgs...).Output(); err != nil {
+				p.Log.Errorf("Failed to exec command %s, args %s: %v", hook.Command, hook.CmdArgs, err)
 			}
-		} else {
-			p.Log.Info("Process %s is no longer running", toStop)
 		}
 	}
-	delete(p.instances, name)
-	if len(p.instances) == 0 {
-		p.Log.Info("No more processes are running")
+
+	// stop all other processes if defined
+	if process.Required {
+		for name, instance := range p.instances {
+			if instance.IsAlive() {
+				if _, err := instance.StopAndWait(); err != nil {
+					p.Log.Errorf("Attempt to stop %s failed: %v", name, err)
+				}
+			} else {
+				p.Log.Debugf("Process %s is no longer running", name)
+			}
+		}
 	}
+
+	delete(p.instances, name)
 }
