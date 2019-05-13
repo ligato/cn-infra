@@ -19,9 +19,9 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/ligato/cn-infra/processmanager/status"
-	"github.com/ligato/cn-infra/processmanager/template"
-	"github.com/ligato/cn-infra/processmanager/template/model/process"
+	"github.com/ligato/cn-infra/processes/processmanager/status"
+	"github.com/ligato/cn-infra/processes/processmanager/template"
+	"github.com/ligato/cn-infra/processes/processmanager/template/model/process"
 
 	"github.com/ligato/cn-infra/infra"
 	"github.com/pkg/errors"

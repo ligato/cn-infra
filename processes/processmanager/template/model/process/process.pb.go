@@ -25,7 +25,7 @@ const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 type Template struct {
 	Name                 string            `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Cmd                  string            `protobuf:"bytes,2,opt,name=cmd,proto3" json:"cmd,omitempty"`
-	POptions             *TemplatePOptions `protobuf:"bytes,3,opt,name=p_options,json=pOptions" json:"p_options,omitempty"`
+	POptions             *TemplatePOptions `protobuf:"bytes,3,opt,name=p_options,json=pOptions,proto3" json:"p_options,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
 	XXX_unrecognized     []byte            `json:"-"`
 	XXX_sizecache        int32             `json:"-"`
@@ -35,7 +35,7 @@ func (m *Template) Reset()         { *m = Template{} }
 func (m *Template) String() string { return proto.CompactTextString(m) }
 func (*Template) ProtoMessage()    {}
 func (*Template) Descriptor() ([]byte, []int) {
-	return fileDescriptor_process_f7292dc5e8e4e9ed, []int{0}
+	return fileDescriptor_process_a5ef00fc8e3b8fe3, []int{0}
 }
 func (m *Template) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Template.Unmarshal(m, b)
@@ -77,7 +77,7 @@ func (m *Template) GetPOptions() *TemplatePOptions {
 }
 
 type TemplatePOptions struct {
-	Args                 []string `protobuf:"bytes,1,rep,name=args" json:"args,omitempty"`
+	Args                 []string `protobuf:"bytes,1,rep,name=args,proto3" json:"args,omitempty"`
 	OutWriter            bool     `protobuf:"varint,2,opt,name=out_writer,json=outWriter,proto3" json:"out_writer,omitempty"`
 	ErrWriter            bool     `protobuf:"varint,3,opt,name=err_writer,json=errWriter,proto3" json:"err_writer,omitempty"`
 	Restart              int32    `protobuf:"varint,4,opt,name=restart,proto3" json:"restart,omitempty"`
@@ -94,7 +94,7 @@ func (m *TemplatePOptions) Reset()         { *m = TemplatePOptions{} }
 func (m *TemplatePOptions) String() string { return proto.CompactTextString(m) }
 func (*TemplatePOptions) ProtoMessage()    {}
 func (*TemplatePOptions) Descriptor() ([]byte, []int) {
-	return fileDescriptor_process_f7292dc5e8e4e9ed, []int{0, 0}
+	return fileDescriptor_process_a5ef00fc8e3b8fe3, []int{0, 0}
 }
 func (m *TemplatePOptions) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TemplatePOptions.Unmarshal(m, b)
@@ -175,9 +175,9 @@ func init() {
 	proto.RegisterType((*TemplatePOptions)(nil), "process.Template.pOptions")
 }
 
-func init() { proto.RegisterFile("process.proto", fileDescriptor_process_f7292dc5e8e4e9ed) }
+func init() { proto.RegisterFile("process.proto", fileDescriptor_process_a5ef00fc8e3b8fe3) }
 
-var fileDescriptor_process_f7292dc5e8e4e9ed = []byte{
+var fileDescriptor_process_a5ef00fc8e3b8fe3 = []byte{
 	// 265 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x3c, 0x90, 0x41, 0x4b, 0xc4, 0x30,
 	0x10, 0x85, 0xc9, 0x76, 0x77, 0xdb, 0x8e, 0xee, 0x22, 0x39, 0x48, 0x58, 0x10, 0x8a, 0x28, 0xf4,

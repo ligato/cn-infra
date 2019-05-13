@@ -26,8 +26,8 @@ import (
 
 	"github.com/ligato/cn-infra/agent"
 	"github.com/ligato/cn-infra/logging"
-	pm "github.com/ligato/cn-infra/processmanager"
-	"github.com/ligato/cn-infra/processmanager/status"
+	pm "github.com/ligato/cn-infra/processes/processmanager"
+	"github.com/ligato/cn-infra/processes/processmanager/status"
 	"github.com/pkg/errors"
 )
 

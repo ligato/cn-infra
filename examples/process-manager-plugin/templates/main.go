@@ -23,11 +23,11 @@ import (
 	"path/filepath"
 	"time"
 
-	pm "github.com/ligato/cn-infra/processmanager"
+	pm "github.com/ligato/cn-infra/processes/processmanager"
 
 	"github.com/ligato/cn-infra/agent"
 	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/processmanager/status"
+	"github.com/ligato/cn-infra/processes/processmanager/status"
 	"github.com/pkg/errors"
 )
 

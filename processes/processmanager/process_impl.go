@@ -22,7 +22,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ligato/cn-infra/processmanager/status"
+	"github.com/ligato/cn-infra/processes/processmanager/status"
 	"github.com/pkg/errors"
 )
 
@@ -247,7 +247,7 @@ func (p *Process) watch() {
 				if current == status.Zombie && autoTerm {
 					p.log.Debugf("Terminating zombie process %d", p.GetPid())
 					if _, err := p.Wait(); err != nil {
-						p.log.Warnf("failed to terminate dead process: %s", p.GetPid(), err)
+						p.log.Warnf("failed to terminate dead process: %s: %v", p.GetPid(), err)
 					}
 				}
 			}

@@ -17,9 +17,9 @@ package processmanager_test
 import (
 	"testing"
 
-	"github.com/ligato/cn-infra/processmanager"
-	"github.com/ligato/cn-infra/processmanager/status"
-	tmpModel "github.com/ligato/cn-infra/processmanager/template/model/process"
+	"github.com/ligato/cn-infra/processes/processmanager"
+	"github.com/ligato/cn-infra/processes/processmanager/status"
+	tmpModel "github.com/ligato/cn-infra/processes/processmanager/template/model/process"
 	. "github.com/onsi/gomega"
 )
 
