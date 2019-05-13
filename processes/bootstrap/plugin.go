@@ -23,8 +23,11 @@ import (
 	"sync"
 )
 
+// Bootstrap defines methods to obtain information about running instances
 type Bootstrap interface {
+	// GetProcessNames returns names of all running process instances
 	GetProcessNames() []string
+	// GetProcessByName returns an instance of given process
 	GetProcessByName(name string) pm.ProcessInstance
 }
 
@@ -80,6 +83,7 @@ func (p *Plugin) String() string {
 	return p.PluginName.String()
 }
 
+// GetProcessNames returns names of all running process instances
 func (p *Plugin) GetProcessNames() (names []string) {
 	for name := range p.instances {
 		names = append(names, name)
@@ -87,6 +91,7 @@ func (p *Plugin) GetProcessNames() (names []string) {
 	return names
 }
 
+// GetProcessByName returns an instance of given process
 func (p *Plugin) GetProcessByName(reqName string) pm.ProcessInstance {
 	for name, instance := range p.instances {
 		if name == reqName {
@@ -120,10 +125,10 @@ func (p *Plugin) validate(process *Process) error {
 		return errors.Errorf("name not defined")
 	}
 	if _, ok := p.instances[process.Name]; ok {
-		return errors.Errorf("name already exists", process.Name)
+		return errors.Errorf("name %s already exists", process.Name)
 	}
 	if process.BinaryPath == "" {
-		return errors.Errorf("binary path not defined", process.Name)
+		return errors.Errorf("binary %s path not defined", process.Name)
 	}
 	return nil
 }
