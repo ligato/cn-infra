@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package bootstrap
+package supervisor
 
-import pm "github.com/ligato/cn-infra/processes/processmanager"
+import pm "github.com/ligato/cn-infra/exec/processmanager"
 
 // DefaultPlugin is a default instance of Plugin.
 var DefaultPlugin = *NewPlugin()
@@ -23,7 +23,7 @@ var DefaultPlugin = *NewPlugin()
 func NewPlugin(opts ...Option) *Plugin {
 	p := &Plugin{}
 
-	p.PluginName = "process-bootstrap"
+	p.PluginName = "supervisor"
 	p.pm = &pm.DefaultPlugin
 
 	for _, o := range opts {

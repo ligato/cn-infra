@@ -18,8 +18,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/ligato/cn-infra/exec/processmanager/status"
 	"github.com/ligato/cn-infra/logging/logrus"
-	"github.com/ligato/cn-infra/processes/processmanager/status"
 	. "github.com/onsi/gomega"
 )
 

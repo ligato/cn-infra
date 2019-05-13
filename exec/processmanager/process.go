@@ -19,7 +19,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/ligato/cn-infra/processes/processmanager/status"
+	"github.com/ligato/cn-infra/exec/processmanager/status"
 
 	"github.com/ligato/cn-infra/logging"
 

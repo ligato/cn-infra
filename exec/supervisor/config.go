@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package bootstrap
+package supervisor
 
 import "github.com/pkg/errors"
 
-// Config represents configuration file for the bootstrap procedure
+// Config represents configuration file for the supervisor procedure
 type Config struct {
 	// The configuration file consists from a list of processes
 	Processes []Process `json:"processes"`
 }
 
-// Process is a single process instance started by the bootstrap
+// Process is a single process instance started by the supervisor
 type Process struct {
 	// Unique name of the process
 	Name string `json:"name"`

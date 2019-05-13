@@ -12,37 +12,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package bootstrap
+package supervisor
 
 import (
-	"github.com/ligato/cn-infra/infra"
-	pm "github.com/ligato/cn-infra/processes/processmanager"
-	"github.com/ligato/cn-infra/processes/processmanager/status"
-	"github.com/pkg/errors"
-	"os"
 	"sync"
+
+	pm "github.com/ligato/cn-infra/exec/processmanager"
+	"github.com/ligato/cn-infra/exec/processmanager/status"
+	"github.com/ligato/cn-infra/infra"
+	"github.com/pkg/errors"
 )
 
-// Bootstrap defines methods to obtain information about running instances
-type Bootstrap interface {
+const unnamedProcess = "<unnamed>"
+
+// Supervisor defines methods to obtain information about running instances
+type Supervisor interface {
 	// GetProcessNames returns names of all running process instances
 	GetProcessNames() []string
 	// GetProcessByName returns an instance of given process
 	GetProcessByName(name string) pm.ProcessInstance
 }
 
-// Plugin is a bootstrap plugin structure
+// Plugin is a supervisor plugin structure
 type Plugin struct {
-	mx sync.Mutex
-
 	// a list of active process instances
+	mx        sync.Mutex
 	instances map[string]pm.ProcessInstance
 
 	config *Config
 	Deps
 }
 
-// Deps are bootstrap dependencies (standard infra plugins + process manager)
+// Deps are supervisor dependencies (standard infra plugins + process manager)
 type Deps struct {
 	pm pm.ProcessManager
 	infra.PluginDeps
@@ -56,10 +57,12 @@ func (p *Plugin) Init() error {
 		return err
 	}
 
-	p.start(p.config.Processes)
+	// run watchers even if there are failed processes. They will be handled
+	// as terminated and exit immediately
+	err := p.start(p.config.Processes)
 	p.watch()
 
-	return nil
+	return err
 }
 
 // Close stops all remaining processes
@@ -71,20 +74,18 @@ func (p *Plugin) Close() error {
 
 	for name, instance := range p.instances {
 		if _, err := instance.StopAndWait(); err != nil {
-			p.Log.Errorf("bootstrap close error: failed to stop process %s: %v", name, err)
+			p.Log.Errorf("supervisor close error: failed to stop process %s: %v", name, err)
 		}
 	}
 
 	return nil
 }
 
-// String is a plugin name
-func (p *Plugin) String() string {
-	return p.PluginName.String()
-}
-
 // GetProcessNames returns names of all running process instances
 func (p *Plugin) GetProcessNames() (names []string) {
+	p.mx.Lock()
+	defer p.mx.Unlock()
+
 	for name := range p.instances {
 		names = append(names, name)
 	}
@@ -93,6 +94,9 @@ func (p *Plugin) GetProcessNames() (names []string) {
 
 // GetProcessByName returns an instance of given process
 func (p *Plugin) GetProcessByName(reqName string) pm.ProcessInstance {
+	p.mx.Lock()
+	defer p.mx.Unlock()
+
 	for name, instance := range p.instances {
 		if name == reqName {
 			return instance
@@ -101,27 +105,44 @@ func (p *Plugin) GetProcessByName(reqName string) pm.ProcessInstance {
 	return nil
 }
 
-func (p *Plugin) start(processes []Process) {
+func (p *Plugin) start(processes []Process) error {
+	pmLogManager := newPmLoggerManager()
+
+	var inError []string
 	for _, process := range processes {
 		if err := p.validate(&process); err != nil {
 			p.Log.Errorf("unable to start process %s: %v", process.Name, err)
+			inError = append(inError, process.Name)
 			continue
 		}
 		processStat := make(chan status.ProcessStatus)
-		pLogger := newPmLogger(process.Name, process.LogFilePath)
+		pLogger, err := pmLogManager.newPmLogger(process.Name, process.LogFilePath)
+		if err != nil {
+			p.Log.Errorf("error preparing process logger %s: %v", process.Name, err)
+			inError = append(inError, process.Name)
+			continue
+		}
 		instance := p.pm.NewProcess(process.Name, process.BinaryPath, pm.Args(process.Args...),
 			pm.Writer(pLogger, pLogger), pm.Notify(processStat), pm.AutoTerminate())
 		if err := instance.Start(); err != nil {
-			p.Log.Errorf("Error starting process %s: %v", process.Name, err)
-			os.Exit(-1)
+			p.Log.Errorf("error starting process %s: %v", process.Name, err)
+			inError = append(inError, process.Name)
+			continue
 		}
 		p.instances[process.Name] = instance
 		p.Log.Debugf("process %s started", process.Name)
 	}
+
+	if len(inError) != 0 {
+		return errors.Errorf("following processes end up with error: %v", inError)
+	}
+	return nil
 }
 
 func (p *Plugin) validate(process *Process) error {
 	if process.Name == "" {
+		// so it will not be logged as empty space
+		process.Name = unnamedProcess
 		return errors.Errorf("name not defined")
 	}
 	if _, ok := p.instances[process.Name]; ok {
@@ -173,7 +194,6 @@ func (p *Plugin) handleTerminated(name string, instance pm.ProcessInstance) {
 	for _, toStop := range process.TriggerStopFor {
 		toStopInstance, ok := p.instances[toStop]
 		if !ok {
-			p.Log.Warnf("Non-existing process %s requested to stop", toStop)
 			continue
 		}
 		if toStopInstance.IsAlive() {
@@ -186,39 +206,6 @@ func (p *Plugin) handleTerminated(name string, instance pm.ProcessInstance) {
 	}
 	delete(p.instances, name)
 	if len(p.instances) == 0 {
-		p.Log.Info("No more processes are running, exiting")
-		os.Exit(0)
+		p.Log.Info("No more processes are running")
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -28,7 +28,7 @@ examples/logs-plugin/logs-plugin
 examples/process-manager-plugin/basic-scenario/basic-scenario
 examples/process-manager-plugin/advanced-scenario/advanced-scenario
 examples/process-manager-plugin/templates/templates
-examples/process-manager-plugin/bootstrap/bootstrap
+examples/process-manager-plugin/supervisor/supervisor
 examples/process-manager-plugin/test-process/test-process
 examples/redis-lib/airport/airport-linux
 examples/redis-lib/simple/simple-linux

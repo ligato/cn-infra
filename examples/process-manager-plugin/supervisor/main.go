@@ -5,23 +5,23 @@ import (
 	"time"
 
 	"github.com/ligato/cn-infra/agent"
+	bs "github.com/ligato/cn-infra/exec/supervisor"
 	"github.com/ligato/cn-infra/logging"
-	bs "github.com/ligato/cn-infra/processes/bootstrap"
 )
 
 func main() {
-	// The bootstrap plugin defines a configuration file allowing to easily manage processes using process
+	// The supervisor plugin defines a configuration file allowing to easily manage processes using process
 	// manager plugin.
 	//
-	// The config file can be put to the bootstrap either via flag "-process-bootstrap-config="
-	// or define its path in the environment variable "PROCESS-BOOTSTRAP_CONFIG". Another option is
+	// The config file can be put to the supervisor either via flag "-supervisor-config="
+	// or define its path in the environment variable "SUPERVISOR_CONFIG". Another option is
 	// to define config directly with "UseConf()" - this option will be shown in the example. A sample of
-	// YAML config file can be found in the processes/bootstrap folder.
+	// YAML config file can be found in the processes/supervisor folder.
 
 	log := logging.DefaultLogger
 
 	// Define three processes p1-p3 where the third process is set to terminate p2 if stopped
-	conf := &bs.Config{
+	conf := bs.Config{
 		Processes: []bs.Process{
 			{
 				Name:        "p1",
@@ -44,11 +44,14 @@ func main() {
 	}
 
 	// start plugin
-	bsp := bs.NewPlugin(bs.UseConf(*conf))
+	bsp := bs.NewPlugin(bs.UseConf(conf))
 
-	go func() {
-		a := agent.NewAgent(agent.AllPlugins(bsp))
-		if err := a.Run(); err != nil {
+	a := agent.NewAgent(agent.AllPlugins(bsp))
+	if err := a.Start(); err != nil {
+		panic(err)
+	}
+	defer func() {
+		if err := a.Stop(); err != nil {
 			panic(err)
 		}
 	}()
@@ -74,7 +77,7 @@ func main() {
 	stopProcess("p3", bsp, log)
 }
 
-func checkRunning(name string, bsp bs.Bootstrap, log logging.Logger) {
+func checkRunning(name string, bsp bs.Supervisor, log logging.Logger) {
 	p1 := bsp.GetProcessByName(name)
 	if p1 == nil {
 		panic(fmt.Sprintf("expected running process %s", name))
@@ -82,7 +85,7 @@ func checkRunning(name string, bsp bs.Bootstrap, log logging.Logger) {
 	log.Infof("process %s is running", name)
 }
 
-func checkStopped(name string, bsp bs.Bootstrap, log logging.Logger) {
+func checkStopped(name string, bsp bs.Supervisor, log logging.Logger) {
 	p1 := bsp.GetProcessByName(name)
 	if p1 != nil {
 		panic(fmt.Sprintf("expected stopped process %s", name))
@@ -90,7 +93,7 @@ func checkStopped(name string, bsp bs.Bootstrap, log logging.Logger) {
 	log.Infof("process %s is stopped", name)
 }
 
-func stopProcess(name string, bsp bs.Bootstrap, log logging.Logger) {
+func stopProcess(name string, bsp bs.Supervisor, log logging.Logger) {
 	p1 := bsp.GetProcessByName(name)
 	if p1 == nil {
 		panic(fmt.Sprintf("expected running process %s", name))
