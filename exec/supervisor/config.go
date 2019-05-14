@@ -16,6 +16,16 @@ package supervisor
 
 import "github.com/pkg/errors"
 
+// Event types
+const (
+	ProcessStatus EventType = 1
+
+	// add more when needed
+)
+
+// EventType represents type of the given event
+type EventType int
+
 // Config represents supervision setup where programs will be started at the beginning
 // and hooks are special commands which are executed when certain event related to
 // one of the processes occurs
@@ -47,13 +57,6 @@ type Program struct {
 
 // Hook is a procedure called when a program gets into certain state.
 type Hook struct {
-	// Name of the program
-	ProgramName string `json:"program-name"`
-
-	// Type of the event when the hook should be executed (see definition of states in
-	// process manager plugin)
-	EventType string `json:"event-type"`
-
 	// Command which will be executed
 	Cmd string `json:"cmd"`
 

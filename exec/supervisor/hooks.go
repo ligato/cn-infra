@@ -18,24 +18,34 @@ import (
 	"os/exec"
 )
 
+// Environment variables set for executed hook command
+const (
+	svProcessName  = "SUPERVISOR_PROCESS_NAME="
+	svProcessState = "SUPERVISOR_PROCESS_STATE="
+	seEventType    = "SUPERVISOR_EVENT_TYPE="
+)
+
 func (p *Plugin) watchEvents() {
 	for {
-		processInfo, ok :=<-p.hookChan
+		processInfo, ok := <-p.hookChan
 		if !ok {
 			return
 		}
 
-		// find and execute related hooks
+		// execute all hooks with env vars set
 		for _, hook := range p.config.Hooks {
-			if hook.ProgramName == processInfo.name && hook.EventType == string(processInfo.state) {
-				p.Log.Debugf("executing hook for %s, state %s", hook.ProgramName, hook.EventType)
-				out, err := exec.Command(hook.Cmd, hook.CmdArgs...).CombinedOutput()
-				if err != nil {
-					p.Log.Errorf("%v", err)
-				}
-				if len(out) > 0 {
-					p.Log.Debugf("%s", out)
-				}
+			cmd := exec.Command(hook.Cmd, hook.CmdArgs...)
+
+			cmd.Env = append(cmd.Env, svProcessName+processInfo.name)
+			cmd.Env = append(cmd.Env, svProcessState+string(processInfo.state))
+			cmd.Env = append(cmd.Env, seEventType+string(processInfo.eventType))
+
+			out, err := cmd.CombinedOutput()
+			if err != nil {
+				p.Log.Errorf("%v", err)
+			}
+			if len(out) > 0 {
+				p.Log.Debugf("%s", out)
 			}
 		}
 	}

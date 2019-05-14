@@ -15,7 +15,7 @@
 package supervisor
 
 import (
-	"strings"
+	"path/filepath"
 	"sync"
 
 	"github.com/ligato/cn-infra/logging"
@@ -43,7 +43,7 @@ type Plugin struct {
 	programs map[string]*processWithStateChan
 
 	// common channel where all executed programs send their process state
-	hookChan chan *processInfo
+	hookChan chan *processEvent
 
 	// supervisor configuration
 	config *Config
@@ -65,11 +65,12 @@ type processWithStateChan struct {
 	svLogger  *SvLogger
 }
 
-// helper structure with program name and status. The object is passed to the hook
+// helper structure with program name, status and event type. The object is passed to the hook
 // resolver by every process watcher
-type processInfo struct {
-	name  string
-	state status.ProcessStatus
+type processEvent struct {
+	name      string
+	state     status.ProcessStatus
+	eventType EventType
 }
 
 // Init supervisor config file, start event watcher and programs
@@ -84,7 +85,7 @@ func (p *Plugin) Init() error {
 		return errors.Errorf("supervisor config file not defined or does not contain any program")
 	}
 	p.programs = make(map[string]*processWithStateChan)
-	p.hookChan = make(chan *processInfo)
+	p.hookChan = make(chan *processEvent)
 
 	go p.watchEvents()
 	// start programs in another go routine (do not block init since it may take a while)
@@ -191,9 +192,10 @@ func (p *Plugin) watch(stateChan chan status.ProcessStatus, name string) {
 			return
 		}
 		// forward info to the hook
-		p.hookChan <- &processInfo{
-			name:  name,
-			state: state,
+		p.hookChan <- &processEvent{
+			name:      name,
+			state:     state,
+			eventType: ProcessStatus,
 		}
 	}
 }
@@ -203,10 +205,8 @@ func validate(program *Program) error {
 		return errors.Errorf("invalid program configuration: neither program name nor binary is defined")
 	}
 	if program.Name == "" {
-		execPathParts := strings.Split(program.ExecutablePath, "/")
-		execSuffixed := execPathParts[len(execPathParts)-1]
-		execSuffixedParts := strings.Split(execSuffixed, ".")
-		program.Name = execSuffixedParts[0]
+		fileName := filepath.Base(program.ExecutablePath)
+		program.Name = fileName[0 : len(fileName)-len(filepath.Ext(fileName))]
 	}
 	if program.ExecutablePath == "" {
 		return errors.Errorf("invalid program configuration: executable is not defined")
