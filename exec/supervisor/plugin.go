@@ -18,6 +18,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/ligato/cn-infra/logging"
+
 	"github.com/ligato/cn-infra/exec/processmanager/status"
 
 	pm "github.com/ligato/cn-infra/exec/processmanager"
@@ -56,10 +58,11 @@ type Deps struct {
 }
 
 // helper structure which holds process instance and channel to access its state.
-// Together with name is stored as internal plugin cache
+// Together with name and logger, it is stored as internal plugin cache
 type processWithStateChan struct {
 	process   pm.ProcessInstance
 	stateChan chan status.ProcessStatus
+	svLogger  *SvLogger
 }
 
 // helper structure with program name and status. The object is passed to the hook
@@ -71,6 +74,8 @@ type processInfo struct {
 
 // Init supervisor config file, start event watcher and programs
 func (p *Plugin) Init() error {
+	p.Log.SetLevel(logging.DebugLevel)
+
 	// retrieve configuration file
 	if err := p.getConfig(); err != nil {
 		return errors.Errorf("failed to retrieve supervisor config file: %v", err)
@@ -90,6 +95,11 @@ func (p *Plugin) Init() error {
 
 // Close local resources
 func (p *Plugin) Close() error {
+	for _, program := range p.programs {
+		if err := program.svLogger.Close(); err != nil {
+			p.Log.Errorf("failed to close logger: %v", err)
+		}
+	}
 	close(p.hookChan)
 	return nil
 }
@@ -136,7 +146,7 @@ func (p *Plugin) execute(program *Program) error {
 		return errors.Errorf("process with name %s already exists", program.Name)
 	}
 
-	svLogger, err := NewSvLogger(program.Name, program.LogfilePath, p.Log)
+	svLogger, err := NewSvLogger(program.LogfilePath)
 	if err != nil {
 		return errors.Errorf("error creating logger: %v", err)
 	}
@@ -168,6 +178,7 @@ func (p *Plugin) execute(program *Program) error {
 	p.programs[program.Name] = &processWithStateChan{
 		process:   process,
 		stateChan: stateChan,
+		svLogger:  svLogger,
 	}
 
 	return nil

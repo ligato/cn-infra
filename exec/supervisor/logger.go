@@ -15,62 +15,49 @@
 package supervisor
 
 import (
-	"io"
+	"bufio"
+	"log"
 	"os"
-
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
 
 	"github.com/pkg/errors"
 )
 
-// SvLogger is a logger object compatible with the process manager
+// SvLogger is a logger object compatible with the process manager. It uses
+// writer to print log to stdout or a file
 type SvLogger struct {
+	writer *bufio.Writer
 
-	// standard I/O logger
-	logStdio logging.Logger
-
-	// log to file (optional)
-	logFile logging.Logger
-
-	// file reference
 	file *os.File
 }
 
 // NewSvLogger prepares new supervisor logger for given process.
-func NewSvLogger(name, logfilePath string, log logging.Logger) (svLogger *SvLogger, err error) {
+func NewSvLogger(logfilePath string) (svLogger *SvLogger, err error) {
 	var file *os.File
-	var logFile, logStdio logging.Logger
 
+	writer := bufio.NewWriterSize(os.Stdout, 1)
 	if logfilePath != "" {
 		if file, err = os.OpenFile(logfilePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666); err != nil {
 			return nil, errors.Errorf("failed to open log file %s: %v", logfilePath, err)
 		}
-		logFile = logrus.NewLogger(name)
-		logFile.SetOutput(io.Writer(file))
+		writer = bufio.NewWriter(file)
 	}
 
-	logStdio = log
-	logStdio.SetLevel(logging.DebugLevel)
-
 	return &SvLogger{
-		logStdio: log,
-		logFile:  logFile,
-		file:     file,
+		writer: writer,
+		file:   file,
 	}, nil
 }
 
-// Write message to the standard output and to a file if exists
-func (l SvLogger) Write(p []byte) (n int, err error) {
-	l.logStdio.Debugf("%s", p)
-	if l.file != nil {
-		l.logFile.Printf("%s\n", p)
-	}
-	return len(p), nil
+// Write message to the file or stdout
+func (l *SvLogger) Write(p []byte) (n int, err error) {
+	return l.writer.Write(p)
 }
 
 // Close the file if necessary
-func (l SvLogger) Close() error {
+func (l *SvLogger) Close() error {
+	if err := l.writer.Flush(); err != nil {
+		log.Printf("error writing buffer to file: %v", err)
+	}
 	if l.file != nil {
 		return l.file.Close()
 	}
