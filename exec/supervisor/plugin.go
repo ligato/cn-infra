@@ -42,8 +42,9 @@ type Plugin struct {
 	mx       sync.Mutex
 	programs map[string]*processWithStateChan
 
-	// common channel where all executed programs send their process state
-	hookChan chan *processEvent
+	// hook channel where all executed programs send their process state
+	hookEventChan chan *processEvent
+	hookDoneChan  chan struct{}
 
 	// supervisor configuration
 	config *Config
@@ -88,7 +89,8 @@ func (p *Plugin) Init() error {
 		return errors.Errorf("supervisor config file not defined or does not contain any program")
 	}
 	p.programs = make(map[string]*processWithStateChan)
-	p.hookChan = make(chan *processEvent)
+	p.hookEventChan = make(chan *processEvent)
+	p.hookDoneChan = make(chan struct{})
 
 	go p.watchEvents()
 	// start programs in another go routine (do not block init since it may take a while)
@@ -114,7 +116,10 @@ func (p *Plugin) Close() error {
 
 	// close hook watcher when all programs are terminated
 	p.wg.Wait()
-	close(p.hookChan)
+	close(p.hookEventChan)
+
+	// wait for hook watcher to finish
+	<-p.hookDoneChan
 
 	return nil
 }
@@ -168,6 +173,8 @@ func (p *Plugin) execute(program *Program) error {
 
 	stateChan := make(chan status.ProcessStatus)
 	doneChan := make(chan struct{})
+
+	p.wg.Add(1)
 	go p.watch(stateChan, doneChan, program.Name)
 
 	var process pm.ProcessInstance
@@ -202,7 +209,6 @@ func (p *Plugin) execute(program *Program) error {
 }
 
 func (p *Plugin) watch(stateChan chan status.ProcessStatus, doneChan chan struct{}, name string) {
-	p.wg.Add(1)
 	defer p.wg.Done()
 
 	for {
@@ -213,7 +219,7 @@ func (p *Plugin) watch(stateChan chan status.ProcessStatus, doneChan chan struct
 			}
 
 			// forward info to the hook
-			p.hookChan <- &processEvent{
+			p.hookEventChan <- &processEvent{
 				name:      name,
 				state:     state,
 				eventType: ProcessStatus,
