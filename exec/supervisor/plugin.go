@@ -48,6 +48,8 @@ type Plugin struct {
 	// supervisor configuration
 	config *Config
 
+	wg sync.WaitGroup
+
 	Deps
 }
 
@@ -62,6 +64,7 @@ type Deps struct {
 type processWithStateChan struct {
 	process   pm.ProcessInstance
 	stateChan chan status.ProcessStatus
+	doneChan  chan struct{}
 	svLogger  *SvLogger
 }
 
@@ -97,11 +100,22 @@ func (p *Plugin) Init() error {
 // Close local resources
 func (p *Plugin) Close() error {
 	for _, program := range p.programs {
+		if program.process.IsAlive() {
+			if _, err := program.process.StopAndWait(); err != nil {
+				p.Log.Errorf("failed to stop program %s: %v", program.process.GetName(), err)
+			}
+		}
 		if err := program.svLogger.Close(); err != nil {
 			p.Log.Errorf("failed to close logger: %v", err)
 		}
+		// terminate watcher for given supervisor process
+		close(program.doneChan)
 	}
+
+	// close hook watcher when all programs are terminated
+	p.wg.Wait()
 	close(p.hookChan)
+
 	return nil
 }
 
@@ -153,7 +167,8 @@ func (p *Plugin) execute(program *Program) error {
 	}
 
 	stateChan := make(chan status.ProcessStatus)
-	go p.watch(stateChan, program.Name)
+	doneChan := make(chan struct{})
+	go p.watch(stateChan, doneChan, program.Name)
 
 	var process pm.ProcessInstance
 	if program.Restarts > 0 {
@@ -179,23 +194,32 @@ func (p *Plugin) execute(program *Program) error {
 	p.programs[program.Name] = &processWithStateChan{
 		process:   process,
 		stateChan: stateChan,
+		doneChan:  doneChan,
 		svLogger:  svLogger,
 	}
 
 	return nil
 }
 
-func (p *Plugin) watch(stateChan chan status.ProcessStatus, name string) {
+func (p *Plugin) watch(stateChan chan status.ProcessStatus, doneChan chan struct{}, name string) {
+	p.wg.Add(1)
+	defer p.wg.Done()
+
 	for {
-		state, ok := <-stateChan
-		if !ok {
+		select {
+		case state, ok := <-stateChan:
+			if !ok {
+				return
+			}
+
+			// forward info to the hook
+			p.hookChan <- &processEvent{
+				name:      name,
+				state:     state,
+				eventType: ProcessStatus,
+			}
+		case <-doneChan:
 			return
-		}
-		// forward info to the hook
-		p.hookChan <- &processEvent{
-			name:      name,
-			state:     state,
-			eventType: ProcessStatus,
 		}
 	}
 }
