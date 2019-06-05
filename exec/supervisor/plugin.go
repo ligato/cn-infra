@@ -18,8 +18,6 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/ligato/cn-infra/logging"
-
 	"github.com/ligato/cn-infra/exec/processmanager/status"
 
 	pm "github.com/ligato/cn-infra/exec/processmanager"
@@ -79,8 +77,6 @@ type processEvent struct {
 
 // Init supervisor config file, start event watcher and programs
 func (p *Plugin) Init() error {
-	p.Log.SetLevel(logging.DebugLevel)
-
 	// retrieve configuration file
 	if err := p.getConfig(); err != nil {
 		return errors.Errorf("failed to retrieve supervisor config file: %v", err)
@@ -101,6 +97,7 @@ func (p *Plugin) Init() error {
 
 // Close local resources
 func (p *Plugin) Close() error {
+	p.Log.Info("stopping programs")
 	for _, program := range p.programs {
 		if program.process.IsAlive() {
 			if _, err := program.process.StopAndWait(); err != nil {
@@ -156,8 +153,9 @@ func (p *Plugin) startPrograms() {
 		}
 		if err := p.execute(&program); err != nil {
 			p.Log.Errorf("failed to start program %s: %v", program.Name, err)
+			continue
 		}
-		p.Log.Debugf("%s started", program.Name)
+		p.Log.Debugf("program %s started", program.Name)
 	}
 }
 
