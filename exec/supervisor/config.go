@@ -14,17 +14,30 @@
 
 package supervisor
 
-import "github.com/pkg/errors"
+import (
+	"fmt"
 
-// Event types
+	"github.com/pkg/errors"
+)
+
+// EventType represents type of the given event
+type EventType int
+
 const (
+	// ProcessStatus represents events about process status
 	ProcessStatus EventType = 1
 
 	// add more when needed
 )
 
-// EventType represents type of the given event
-type EventType int
+func (e EventType) String() string {
+	switch e {
+	case ProcessStatus:
+		return "ProcessStatus"
+	default:
+		return fmt.Sprintf("EventType(%d)", e)
+	}
+}
 
 // Config represents supervision setup where programs will be started at the beginning
 // and hooks are special commands which are executed when certain event related to

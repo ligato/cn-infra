@@ -78,8 +78,6 @@ type Config struct {
 // Init reads plugin config file for process template path. If exists, plugin initializes template reader, reads
 // all existing templates and initializes them. Those marked as 'run on startup' are immediately started
 func (p *Plugin) Init() error {
-	p.Log.Debugf("Initializing process manager plugin")
-
 	templatePath, err := p.getPMConfig()
 	if err != nil {
 		return err
