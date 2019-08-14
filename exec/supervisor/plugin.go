@@ -15,7 +15,10 @@
 package supervisor
 
 import (
+	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
 	"sync"
 
 	"github.com/ligato/cn-infra/exec/processmanager/status"
@@ -87,6 +90,10 @@ func (p *Plugin) Init() error {
 	p.programs = make(map[string]*processWithStateChan)
 	p.hookEventChan = make(chan *processEvent)
 	p.hookDoneChan = make(chan struct{})
+
+	if p.config.SvCPUAffinityMask != "" {
+		p.setSupervisorCPUAffinity(os.Getpid(), p.config.SvCPUAffinityMask)
+	}
 
 	go p.watchEvents()
 	// start programs in another go routine (do not block init since it may take a while)
@@ -183,6 +190,7 @@ func (p *Plugin) execute(program *Program) error {
 			pm.Notify(stateChan),
 			pm.Restarts(int32(program.Restarts)),
 			pm.AutoTerminate(),
+			pm.CPUAffinityMask(program.CPUAffinityMask, program.CPUAffinitySetupDelay),
 		)
 	} else {
 		process = p.PM.NewProcess(program.Name, program.ExecutablePath,
@@ -190,6 +198,7 @@ func (p *Plugin) execute(program *Program) error {
 			pm.Writer(svLogger, svLogger),
 			pm.Notify(stateChan),
 			pm.AutoTerminate(),
+			pm.CPUAffinityMask(program.CPUAffinityMask, program.CPUAffinitySetupDelay),
 		)
 	}
 	if err := process.Start(); err != nil {
@@ -226,6 +235,18 @@ func (p *Plugin) watch(stateChan chan status.ProcessStatus, doneChan chan struct
 			return
 		}
 	}
+}
+
+func (p *Plugin) setSupervisorCPUAffinity(pid int, affinity string) {
+	if _, err := strconv.ParseUint(affinity, 16, 64); err != nil {
+		p.Log.Errorf("Provided CPU affinity value %s for supervisor is not valid (error: %v)", affinity, err)
+		return
+	}
+	if _, err := exec.Command("taskset", "-p", affinity, strconv.Itoa(pid)).Output(); err != nil {
+		p.Log.Errorf("Failed to assign CPU affinity %s to supervisor (PID: %d): %v", affinity, pid, err)
+		return
+	}
+	p.Log.Debugf("CPU affinity of the supervisor changed to %s", affinity)
 }
 
 func validate(program *Program) error {
