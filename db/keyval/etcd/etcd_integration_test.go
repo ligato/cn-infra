@@ -59,6 +59,10 @@ func TestDataBroker(t *testing.T) {
 	embd.CleanDs()
 	t.Run("testPutIfNotExist", testPutIfNotExists)
 	embd.CleanDs()
+	t.Run("testCompareAndSwap", testCompareAndSwap)
+	embd.CleanDs()
+	t.Run("testCompareAndDelete", testCompareAndDelete)
+	embd.CleanDs()
 	t.Run("compact", testCompact)
 }
 
@@ -290,6 +294,106 @@ func testPutIfNotExists(t *testing.T) {
 	Expect(found).To(BeTrue())
 	Expect(string(data)).To(BeEquivalentTo(string(changedValue)))
 
+}
+
+func testCompareAndSwap(t *testing.T) {
+	RegisterTestingT(t)
+
+	conn, err := NewEtcdConnectionUsingClient(v3client.New(embd.ETCD.Server), logrus.DefaultLogger())
+
+	Expect(err).To(BeNil())
+	Expect(conn).NotTo(BeNil())
+
+	const key = "myKey"
+	var (
+		value1  = []byte("abcd")
+		value2 = []byte("efgh")
+		value3 = []byte("ijkl")
+	)
+
+	_, found, _, err := conn.GetValue(key)
+	Expect(err).To(BeNil())
+	Expect(found).To(BeFalse())
+
+	err = conn.Put(key, value1)
+	Expect(err).To(BeNil())
+
+	swapped, err := conn.CompareAndSwap(key, value1, value2)
+	Expect(err).To(BeNil())
+	Expect(swapped).To(BeTrue())
+
+	data, found, _, err := conn.GetValue(key)
+	Expect(err).To(BeNil())
+	Expect(found).To(BeTrue())
+	Expect(string(data)).To(BeEquivalentTo(string(value2)))
+
+	swapped, err = conn.CompareAndSwap(key, value1, value3)
+	Expect(err).To(BeNil())
+	Expect(swapped).To(BeFalse())
+
+	data, found, _, err = conn.GetValue(key)
+	Expect(err).To(BeNil())
+	Expect(found).To(BeTrue())
+	Expect(string(data)).To(BeEquivalentTo(string(value2)))
+
+	swapped, err = conn.CompareAndSwap(key, value2, value3)
+	Expect(err).To(BeNil())
+	Expect(swapped).To(BeTrue())
+
+	data, found, _, err = conn.GetValue(key)
+	Expect(err).To(BeNil())
+	Expect(found).To(BeTrue())
+	Expect(string(data)).To(BeEquivalentTo(string(value3)))
+}
+
+func testCompareAndDelete(t *testing.T) {
+	RegisterTestingT(t)
+
+	conn, err := NewEtcdConnectionUsingClient(v3client.New(embd.ETCD.Server), logrus.DefaultLogger())
+
+	Expect(err).To(BeNil())
+	Expect(conn).NotTo(BeNil())
+
+	const key = "myKey"
+	var (
+		value1  = []byte("abcd")
+		value2 = []byte("efgh")
+	)
+
+	_, found, _, err := conn.GetValue(key)
+	Expect(err).To(BeNil())
+	Expect(found).To(BeFalse())
+
+	err = conn.Put(key, value1)
+	Expect(err).To(BeNil())
+
+	deleted, err := conn.CompareAndDelete(key, value1)
+	Expect(err).To(BeNil())
+	Expect(deleted).To(BeTrue())
+
+	data, found, _, err := conn.GetValue(key)
+	Expect(err).To(BeNil())
+	Expect(found).To(BeFalse())
+
+	err = conn.Put(key, value2)
+	Expect(err).To(BeNil())
+
+	deleted, err = conn.CompareAndDelete(key, value1)
+	Expect(err).To(BeNil())
+	Expect(deleted).To(BeFalse())
+
+	data, found, _, err = conn.GetValue(key)
+	Expect(err).To(BeNil())
+	Expect(found).To(BeTrue())
+	Expect(string(data)).To(BeEquivalentTo(string(value2)))
+
+	deleted, err = conn.CompareAndDelete(key, value2)
+	Expect(err).To(BeNil())
+	Expect(deleted).To(BeTrue())
+
+	data, found, _, err = conn.GetValue(key)
+	Expect(err).To(BeNil())
+	Expect(found).To(BeFalse())
 }
 
 func testCompact(t *testing.T) {
