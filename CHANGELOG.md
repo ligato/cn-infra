@@ -1,3 +1,7 @@
+# Release v2.2 (2019-08-XX)
+
+> TBD
+
 # Release v2.1 (2019-05-09)
 
 ## Improvements
