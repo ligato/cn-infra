@@ -17,6 +17,7 @@ package config_test
 import (
 	"testing"
 
+	"github.com/ghodss/yaml"
 	"github.com/ligato/cn-infra/config"
 	. "github.com/onsi/gomega"
 )
@@ -57,4 +58,35 @@ func TestForPluginWithSpecifiedConfigFile(t *testing.T) {
 	config.DefineFlagsFor(pluginName)
 	configName := pluginConfig.GetConfigName()
 	Expect(configName).Should(BeEquivalentTo(configFileName))
+}
+
+func TestDurationField(t *testing.T) {
+	RegisterTestingT(t)
+
+	type Config struct {
+		Timeout config.Duration `json:"timeout"`
+	}
+
+	// 5 000 000 000 nanoseconds is 5 seconds
+	oldConfig := []byte("timeout: 5000000000")
+	newConfig := []byte("timeout: 5s")
+	bad1Config := []byte("timeout: b1a2d")
+	bad2Config := []byte("timeout: true")
+
+	oldCfg := &Config{}
+	newCfg := &Config{}
+
+	Expect(yaml.Unmarshal(oldConfig, oldCfg)).To(Succeed())
+	Expect(yaml.Unmarshal(newConfig, newCfg)).To(Succeed())
+	Expect(yaml.Unmarshal(bad1Config, &Config{})).ToNot(Succeed())
+	Expect(yaml.Unmarshal(bad2Config, &Config{})).ToNot(Succeed())
+
+	Expect(oldCfg.Timeout).To(Equal(newCfg.Timeout))
+
+	oldBytes, err := yaml.Marshal(oldCfg)
+	Expect(err).ToNot(HaveOccurred())
+	newBytes, err := yaml.Marshal(newCfg)
+	Expect(err).ToNot(HaveOccurred())
+
+	Expect(oldBytes).To(Equal(newBytes))
 }
