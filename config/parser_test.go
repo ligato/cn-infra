@@ -10,11 +10,14 @@ import (
 func TestParseConfigFromYamlBytes(t *testing.T) {
 	RegisterTestingT(t)
 
+	type Duration string
+
 	type BigConfig struct {
-		Simple    string
-		Str       string `json:"name"`
-		Integer16 int16
-		Timeout   time.Duration
+		Simple     string
+		Str        string `json:"name"`
+		Integer16  int16
+		Timeout    time.Duration
+		NotTimeout Duration
 	}
 
 	var testData = map[string]struct {
@@ -29,6 +32,7 @@ func TestParseConfigFromYamlBytes(t *testing.T) {
 		"duration number": {"timeout: 5000000000", BigConfig{Timeout: 5 * time.Second}, false},
 		"duration string": {"timeout: 5s", BigConfig{Timeout: 5 * time.Second}, false},
 		"bad duration":    {"timeout: s5s", BigConfig{}, true},
+		"not duration":    {"nottimeout: 30SecToAgent", BigConfig{NotTimeout: "30SecToAgent"}, false},
 	}
 
 	for name, tt := range testData {

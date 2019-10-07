@@ -49,7 +49,7 @@ func parseConfigFromYamlBytes(b []byte, cfg interface{}) error {
 	dc := &mapstructure.DecoderConfig{
 		DecodeHook: func(in, out reflect.Type, data interface{}) (interface{}, error) {
 			// Only intended to help with cases when string must be set to `time.Duration`
-			if in.Kind() != reflect.String || out.Name() != "Duration" {
+			if in.Kind() != reflect.String || out != reflect.TypeOf(time.Duration(0)) {
 				return data, nil
 			}
 
