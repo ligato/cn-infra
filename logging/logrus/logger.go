@@ -58,6 +58,7 @@ func DefaultLogger() *Logger {
 type Logger struct {
 	name         string
 	std          *lg.Logger
+	verbosity    int
 	depth        int
 	tagMap       sync.Map
 	staticFields sync.Map
@@ -259,6 +260,14 @@ func (logger *Logger) GetLevel() logging.LogLevel {
 	}
 }
 
+// SetVerbosity allows to set a logger verbosity. The verbosity can be used
+// in custom loggers passed to external libraries (like GRPC) and may not
+// correspond with the Logger plugin log levels. See the documentation of the
+// given library to learn about supported verbosity levels.
+func (logger *Logger) SetVerbosity(v int) {
+	logger.verbosity = v
+}
+
 // AddHook adds a hook to the standard logger hooks.
 func (logger *Logger) AddHook(hook lg.Hook) {
 	mux := &sync.Mutex{}
@@ -320,6 +329,11 @@ func (logger *Logger) withFields(fields logging.Fields, depth int) *Entry {
 	}
 }
 
+// V reports whether verbosity level is at least at the requested level
+func (logger *Logger) V(l int) bool {
+	return l <= logger.verbosity
+}
+
 func (logger *Logger) header(depth int) *Entry {
 	return logger.withFields(nil, 2)
 }
@@ -347,7 +361,7 @@ func (logger *Logger) Info(args ...interface{}) {
 	}
 }
 
-// Warn logs a message at level Warn on the standard logger.
+// Warn logs a message at level Warning on the standard logger.
 func (logger *Logger) Warn(args ...interface{}) {
 	if logger.std.Level >= lg.WarnLevel {
 		logger.header(1).Warn(args...)
@@ -368,18 +382,16 @@ func (logger *Logger) Error(args ...interface{}) {
 	}
 }
 
-// Panic logs a message at level Panic on the standard logger.
-func (logger *Logger) Panic(args ...interface{}) {
-	if logger.std.Level >= lg.PanicLevel {
-		logger.header(1).Panic(args...)
-	}
-}
-
 // Fatal logs a message at level Fatal on the standard logger.
 func (logger *Logger) Fatal(args ...interface{}) {
 	if logger.std.Level >= lg.FatalLevel {
 		logger.header(1).Fatal(args...)
 	}
+}
+
+// Panic logs a message at level Panic on the standard logger.
+func (logger *Logger) Panic(args ...interface{}) {
+	logger.header(1).Panic(args...)
 }
 
 // Debugf logs a message at level Debug on the standard logger.
@@ -422,18 +434,16 @@ func (logger *Logger) Errorf(format string, args ...interface{}) {
 	}
 }
 
-// Panicf logs a message at level Panic on the standard logger.
-func (logger *Logger) Panicf(format string, args ...interface{}) {
-	if logger.std.Level >= lg.PanicLevel {
-		logger.header(1).Panicf(format, args...)
-	}
-}
-
 // Fatalf logs a message at level Fatal on the standard logger.
 func (logger *Logger) Fatalf(format string, args ...interface{}) {
 	if logger.std.Level >= lg.FatalLevel {
 		logger.header(1).Fatalf(format, args...)
 	}
+}
+
+// Panicf logs a message at level Panic on the standard logger.
+func (logger *Logger) Panicf(format string, args ...interface{}) {
+	logger.header(1).Panicf(format, args...)
 }
 
 // Debugln logs a message at level Debug on the standard logger.
@@ -455,13 +465,6 @@ func (logger *Logger) Infoln(args ...interface{}) {
 	}
 }
 
-// Warnln logs a message at level Warn on the standard logger.
-func (logger *Logger) Warnln(args ...interface{}) {
-	if logger.std.Level >= lg.WarnLevel {
-		logger.header(1).Warnln(args...)
-	}
-}
-
 // Warningln logs a message at level Warn on the standard logger.
 func (logger *Logger) Warningln(args ...interface{}) {
 	if logger.std.Level >= lg.WarnLevel {
@@ -478,9 +481,7 @@ func (logger *Logger) Errorln(args ...interface{}) {
 
 // Panicln logs a message at level Panic on the standard logger.
 func (logger *Logger) Panicln(args ...interface{}) {
-	if logger.std.Level >= lg.PanicLevel {
-		logger.header(1).Panicln(args...)
-	}
+	logger.header(1).Panicln(args...)
 }
 
 // Fatalln logs a message at level Fatal on the standard logger.
@@ -541,7 +542,7 @@ func (logger *Logger) parseUintBytes(s []byte, base int, bitSize int) (n uint64,
 	var cutoff, maxVal uint64
 
 	if bitSize == 0 {
-		bitSize = int(strconv.IntSize)
+		bitSize = strconv.IntSize
 	}
 
 	s0 := s

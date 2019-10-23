@@ -48,6 +48,12 @@ func Warn(args ...interface{}) { DefaultLogger.Warn(args...) }
 // Warnf is for logging with default logger.
 func Warnf(format string, args ...interface{}) { DefaultLogger.Warnf(format, args...) }
 
+// Warning is for logging with default logger.
+func Warning(args ...interface{}) { DefaultLogger.Warning(args...) }
+
+// Warningf is for logging with default logger.
+func Warningf(format string, args ...interface{}) { DefaultLogger.Warningf(format, args...) }
+
 // Error is for logging with default logger.
 func Error(args ...interface{}) { DefaultLogger.Error(args...) }
 
@@ -59,12 +65,16 @@ type LogWithLevel interface {
 	Debug(args ...interface{})
 	Debugf(format string, args ...interface{})
 	Info(args ...interface{})
+	Infoln(args ...interface{})
 	Infof(format string, args ...interface{})
 	Warn(args ...interface{})
 	Warnf(format string, args ...interface{})
+	Warning(args ...interface{})
+	Warningln(args ...interface{})
+	Warningf(format string, args ...interface{})
 	Error(args ...interface{})
+	Errorln(args ...interface{})
 	Errorf(format string, args ...interface{})
-
 	Fatal(args ...interface{})
 	Fatalf(format string, args ...interface{})
 	Fatalln(args ...interface{})
@@ -83,6 +93,8 @@ type Logger interface {
 	SetLevel(level LogLevel)
 	// GetLevel returns currently set log level
 	GetLevel() LogLevel
+	// SetVerbosity sets logger verbosity
+	SetVerbosity(v int)
 	// WithField creates one structured field
 	WithField(key string, value interface{}) LogWithLevel
 	// WithFields creates multiple structured fields
@@ -93,6 +105,8 @@ type Logger interface {
 	SetOutput(out io.Writer)
 	// SetFormatter sets custom formatter
 	SetFormatter(formatter logrus.Formatter)
+	// V reports whether verbosity level is at least at the requested level
+	V(l int) bool
 
 	LogWithLevel
 }
