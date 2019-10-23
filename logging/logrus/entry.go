@@ -16,6 +16,7 @@ package logrus
 
 import (
 	"fmt"
+
 	lg "github.com/sirupsen/logrus"
 )
 
@@ -95,16 +96,18 @@ func (entry *Entry) Info(args ...interface{}) {
 	}
 }
 
-// Warn logs a message at level Warn on the standard logger.
+// Warn logs a message at level Warning on the standard logger.
 func (entry *Entry) Warn(args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lg.WarnLevel {
 		entry.lgEntry.WithFields(entry.fields).Warn(args...)
 	}
 }
 
-// Warning logs a message at level Warn on the standard logger.
+// Warning logs a message at level Warning on the standard logger.
 func (entry *Entry) Warning(args ...interface{}) {
-	entry.Warn(args...)
+	if entry.lgEntry.Logger.Level >= lg.WarnLevel {
+		entry.lgEntry.WithFields(entry.fields).Warning(args...)
+	}
 }
 
 // Error logs a message at level Error on the standard logger.
@@ -123,9 +126,7 @@ func (entry *Entry) Fatal(args ...interface{}) {
 
 // Panic logs a message at level Panic on the standard logger.
 func (entry *Entry) Panic(args ...interface{}) {
-	if entry.lgEntry.Logger.Level >= lg.PanicLevel {
-		entry.lgEntry.WithFields(entry.fields).Panic(args...)
-	}
+	entry.lgEntry.WithFields(entry.fields).Panic(args...)
 }
 
 // Debugf logs a message at level Debug on the standard logger.
@@ -179,9 +180,7 @@ func (entry *Entry) Fatalf(format string, args ...interface{}) {
 
 // Panicf logs a message at level Panic on the standard logger.
 func (entry *Entry) Panicf(format string, args ...interface{}) {
-	if entry.lgEntry.Logger.Level >= lg.PanicLevel {
-		entry.lgEntry.WithFields(entry.fields).Panicf(format, args...)
-	}
+	entry.lgEntry.WithFields(entry.fields).Panicf(format, args...)
 }
 
 // Debugln logs a message at level Debug on the standard logger.
@@ -202,13 +201,6 @@ func (entry *Entry) Infoln(args ...interface{}) {
 func (entry *Entry) Println(args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lg.InfoLevel {
 		entry.lgEntry.WithFields(entry.fields).Println(entry.sprintlnn(args...))
-	}
-}
-
-// Warnln logs a message at level Warn on the standard logger.
-func (entry *Entry) Warnln(args ...interface{}) {
-	if entry.lgEntry.Logger.Level >= lg.WarnLevel {
-		entry.lgEntry.WithFields(entry.fields).Warnln(entry.sprintlnn(args...))
 	}
 }
 
@@ -235,9 +227,7 @@ func (entry *Entry) Fatalln(args ...interface{}) {
 
 // Panicln logs a message at level Panic on the standard logger.
 func (entry *Entry) Panicln(args ...interface{}) {
-	if entry.lgEntry.Logger.Level >= lg.PanicLevel {
-		entry.lgEntry.WithFields(entry.fields).Panicln(entry.sprintlnn(args...))
-	}
+	entry.lgEntry.WithFields(entry.fields).Panicln(entry.sprintlnn(args...))
 }
 
 // Remove spaces, which are added between operands, regardless of their type
