@@ -15,6 +15,10 @@
 package grpc
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
+	"io/ioutil"
 	"strconv"
 	"strings"
 
@@ -48,10 +52,16 @@ type Config struct {
 	// of concurrent streams to each ServerTransport.
 	MaxConcurrentStreams uint32 `json:"max-concurrent-streams"`
 
+	// TLS info:
+	InsecureTransport     bool   `json:"insecure-transport"`
+	InsecureSkipTLSVerify bool   `json:"insecure-skip-tls-verify"`
+	Certfile              string `json:"cert-file"`
+	Keyfile               string `json:"key-file"`
+	CAfile                string `json:"ca-file"`
+
 	// Compression for inbound/outbound messages.
 	// Supported only gzip.
 	//TODO Compression string
-	//TODO TLS/credentials
 }
 
 func (cfg *Config) getGrpcOptions() (opts []grpc.ServerOption) {
@@ -62,6 +72,47 @@ func (cfg *Config) getGrpcOptions() (opts []grpc.ServerOption) {
 		opts = append(opts, grpc.MaxMsgSize(cfg.MaxMsgSize))
 	}
 	return
+}
+
+func (cfg *Config) getTLS() (*tls.Config, error) {
+	// Check if explicitly disabled.
+	if cfg.InsecureTransport {
+		return nil, nil
+	}
+	// Minimal requirement is to get cert and key for enabling TLS.
+	if cfg.Certfile == "" && cfg.Keyfile == "" {
+		return nil, nil
+	}
+
+	cert, err := tls.LoadX509KeyPair(cfg.Certfile, cfg.Keyfile)
+	if err != nil {
+		return nil, err
+	}
+	tc := &tls.Config{
+		MinVersion:   tls.VersionTLS12,
+		Certificates: []tls.Certificate{cert},
+	}
+
+	// Check if we want verify client's certificate
+	if cfg.InsecureSkipTLSVerify {
+		tc.InsecureSkipVerify = true
+	}
+
+	// Check if we want verify client's certificate against custom CA
+	if !cfg.InsecureSkipTLSVerify && cfg.CAfile != "" {
+		cert, err := ioutil.ReadFile(cfg.CAfile)
+		if err != nil {
+			return nil, err
+		}
+
+		tc.RootCAs = x509.NewCertPool()
+		ok := tc.RootCAs.AppendCertsFromPEM(cert)
+		if !ok {
+			return nil, fmt.Errorf("unable to add CA from '%s' file", cfg.CAfile)
+		}
+	}
+
+	return tc, nil
 }
 
 func (cfg *Config) getSocketType() string {
