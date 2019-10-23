@@ -20,6 +20,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"google.golang.org/grpc/grpclog"
+
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"github.com/ligato/cn-infra/infra"
 	"github.com/ligato/cn-infra/rpc/rest"
@@ -27,6 +29,10 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
+
+// set according to google.golang.org/grpc/internal/transport/log.go
+// transport package only logs to verbose level 2 by default
+const logLevel = 2
 
 // Plugin maintains the GRPC netListener (see Init, AfterInit, Close methods)
 type Plugin struct {
@@ -85,9 +91,14 @@ func (p *Plugin) Init() (err error) {
 			opts = append(opts, grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(p.auther.Authenticate)))
 		}
 		p.grpcServer = grpc.NewServer(opts...)
-
-		//grpclog.SetLogger(p.Log.NewLogger("grpc-server"))
 	}
+
+	grpcLogger := p.Log.NewLogger("grpc-server")
+	if p.Config != nil && p.Config.ExtendedLogging {
+		p.Log.Info("GRPC transport logging enabled")
+		grpcLogger.SetVerbosity(logLevel)
+	}
+	grpclog.SetLoggerV2(grpcLogger)
 
 	return nil
 }

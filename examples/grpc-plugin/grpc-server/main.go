@@ -25,9 +25,6 @@ const PluginName = "myPlugin"
 func main() {
 	grpcPlug := grpc.NewPlugin(
 		grpc.UseHTTP(&rest.DefaultPlugin),
-		grpc.UseConf(grpc.Config{
-			Endpoint: "localhost:9111",
-		}),
 		grpc.UseAuth(&grpc.Authenticator{
 			Username: "testuser",
 			Password: "testpwd",

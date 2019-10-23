@@ -58,6 +58,9 @@ type Config struct {
 	Keyfile           string   `json:"key-file"`
 	CAfiles           []string `json:"ca-files"`
 
+	// ExtendedLogging enables detailed GRPC logging
+	ExtendedLogging bool `json:"extended-logging"`
+
 	// Compression for inbound/outbound messages.
 	// Supported only gzip.
 	//TODO Compression string
