@@ -64,9 +64,21 @@ func (p *Plugin) Init() (err error) {
 	// Prepare GRPC server
 	if p.grpcServer == nil {
 		opts := p.Config.getGrpcOptions()
+
+		// If config for TLS was not provided with the `UseTLS` option, check config file.
+		if p.tlsConfig == nil {
+			tc, err := p.Config.getTLS()
+			if err != nil {
+				return err
+			}
+			p.tlsConfig = tc
+		}
+
 		if p.tlsConfig != nil {
+			p.Log.Info("Secure connection for gRPC enabled")
 			opts = append(opts, grpc.Creds(credentials.NewTLS(p.tlsConfig)))
 		}
+
 		if p.auther != nil {
 			p.Log.Info("Token authentication for gRPC enabled")
 			opts = append(opts, grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(p.auther.Authenticate)))
