@@ -75,6 +75,7 @@ func (p *Plugin) Init() (err error) {
 		}
 
 		if p.tlsConfig != nil {
+			p.Log.Info("Secure connection for gRPC enabled")
 			opts = append(opts, grpc.Creds(credentials.NewTLS(p.tlsConfig)))
 		}
 
