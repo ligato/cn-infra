@@ -53,11 +53,10 @@ type Config struct {
 	MaxConcurrentStreams uint32 `json:"max-concurrent-streams"`
 
 	// TLS info:
-	InsecureTransport     bool   `json:"insecure-transport"`
-	InsecureSkipTLSVerify bool   `json:"insecure-skip-tls-verify"`
-	Certfile              string `json:"cert-file"`
-	Keyfile               string `json:"key-file"`
-	CAfile                string `json:"ca-file"`
+	InsecureTransport bool     `json:"insecure-transport"`
+	Certfile          string   `json:"cert-file"`
+	Keyfile           string   `json:"key-file"`
+	CAfiles           []string `json:"ca-files"`
 
 	// Compression for inbound/outbound messages.
 	// Supported only gzip.
@@ -93,23 +92,22 @@ func (cfg *Config) getTLS() (*tls.Config, error) {
 		Certificates: []tls.Certificate{cert},
 	}
 
-	// Check if we want verify client's certificate
-	if cfg.InsecureSkipTLSVerify {
-		tc.InsecureSkipVerify = true
-	}
-
 	// Check if we want verify client's certificate against custom CA
-	if !cfg.InsecureSkipTLSVerify && cfg.CAfile != "" {
-		cert, err := ioutil.ReadFile(cfg.CAfile)
-		if err != nil {
-			return nil, err
-		}
+	if len(cfg.CAfiles) > 0 {
+		caCertPool := x509.NewCertPool()
+		for _, c := range cfg.CAfiles {
+			cert, err := ioutil.ReadFile(c)
+			if err != nil {
+				return nil, err
+			}
 
-		tc.RootCAs = x509.NewCertPool()
-		ok := tc.RootCAs.AppendCertsFromPEM(cert)
-		if !ok {
-			return nil, fmt.Errorf("unable to add CA from '%s' file", cfg.CAfile)
+			ok := caCertPool.AppendCertsFromPEM(cert)
+			if !ok {
+				return nil, fmt.Errorf("unable to add CA from '%s' file", c)
+			}
 		}
+		tc.ClientCAs = caCertPool
+		tc.ClientAuth = tls.RequireAndVerifyClientCert
 	}
 
 	return tc, nil
