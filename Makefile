@@ -1,3 +1,5 @@
+SHELL := /usr/bin/env bash -o pipefail
+
 VERSION	:= $(shell git describe --always --tags --dirty)
 COMMIT	:= $(shell git rev-parse HEAD)
 DATE	:= $(shell date +'%Y-%m-%dT%H:%M%:z')
@@ -12,11 +14,13 @@ ifeq ($(V),1)
 GO_BUILD_ARGS += -v
 endif
 
+GOPATH := $(shell go env GOPATH)
+
 COVER_DIR ?= /tmp
 
 help:
 	@echo "List of make targets:"
-	grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 .DEFAULT = help
 
@@ -148,17 +152,19 @@ dep-check:
 #  Linters
 # -------------------------------
 
-LINTER := $(shell command -v gometalinter 2> /dev/null)
+GOLANGCI_LINT_VERSION ?= v1.21.0
 
-get-linters:
+LINTER := $(shell command -v golangci-lint 2> /dev/null)
+
+get-linter:
 ifndef LINTER
-	@echo "# installing linters"
-	go get -v github.com/alecthomas/gometalinter
-	gometalinter --install
+	@echo "# installing GolangCI-Lint"
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin $(GOLANGCI_LINT_VERSION)
+	@golangci-lint --version
 endif
 
-lint: get-linters
-	@echo "# running code analysis"
+lint: get-linter
+	@echo "# running linter"
 	./scripts/static_analysis.sh golint vet
 
 format:
@@ -192,6 +198,6 @@ yamllint: get-yamllint
 	test test-examples get-testtools get-consul \
 	test-cover test-cover-html test-cover-xml \
 	dep-install dep-update \
-	get-linters lint format \
+	get-linter lint format \
 	get-linkcheck check-links \
 	get-yamllint yamllint
