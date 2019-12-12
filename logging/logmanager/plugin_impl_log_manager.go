@@ -20,11 +20,11 @@ import (
 	"os"
 
 	"github.com/gorilla/mux"
-	"github.com/ligato/cn-infra/infra"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/rpc/rest"
-	"github.com/ligato/cn-infra/servicelabel"
 	"github.com/unrolled/render"
+	"go.ligato.io/cn-infra/v2/infra"
+	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/rpc/rest"
+	"go.ligato.io/cn-infra/v2/servicelabel"
 )
 
 // LoggerData encapsulates parameters of a logger represented as strings.

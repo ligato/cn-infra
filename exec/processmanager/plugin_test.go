@@ -17,10 +17,10 @@ package processmanager_test
 import (
 	"testing"
 
-	"github.com/ligato/cn-infra/exec/processmanager"
-	"github.com/ligato/cn-infra/exec/processmanager/status"
-	tmpModel "github.com/ligato/cn-infra/exec/processmanager/template/model/process"
 	. "github.com/onsi/gomega"
+	"go.ligato.io/cn-infra/v2/exec/processmanager"
+	"go.ligato.io/cn-infra/v2/exec/processmanager/status"
+	tmpModel "go.ligato.io/cn-infra/v2/exec/processmanager/template/model/process"
 )
 
 func TestNewProcess(t *testing.T) {

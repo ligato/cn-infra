@@ -19,9 +19,9 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/ligato/cn-infra/exec/processmanager/status"
+	"go.ligato.io/cn-infra/v2/exec/processmanager/status"
 
-	"github.com/ligato/cn-infra/logging"
+	"go.ligato.io/cn-infra/v2/logging"
 
 	"github.com/pkg/errors"
 )

@@ -22,9 +22,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/infra"
 	"github.com/namsral/flag"
+	"go.ligato.io/cn-infra/v2/config"
+	"go.ligato.io/cn-infra/v2/infra"
 	"google.golang.org/grpc"
 )
 

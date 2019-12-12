@@ -19,10 +19,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/infra"
-	access "github.com/ligato/cn-infra/rpc/rest/security/model/access-security"
 	"github.com/namsral/flag"
+	"go.ligato.io/cn-infra/v2/config"
+	"go.ligato.io/cn-infra/v2/infra"
+	access "go.ligato.io/cn-infra/v2/rpc/rest/security/model/access-security"
 )
 
 const (

@@ -28,16 +28,17 @@ import (
 
 	"errors"
 
+	"context"
+
 	"github.com/alicebob/miniredis"
 	goredis "github.com/go-redis/redis"
-	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
-	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/onsi/gomega"
-	"context"
+	"go.ligato.io/cn-infra/v2/config"
+	"go.ligato.io/cn-infra/v2/datasync"
+	"go.ligato.io/cn-infra/v2/db/keyval"
+	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/utils/safeclose"
 )
 
 var miniRedis *miniredis.Miniredis
@@ -80,11 +81,11 @@ func createMiniRedisConnection() {
 		},
 	}
 	nodeConfig := NodeConfig{
-		Endpoint: miniRedis.Addr(),
-		DB:       0,
+		Endpoint:               miniRedis.Addr(),
+		DB:                     0,
 		EnableReadQueryOnSlave: false,
-		TLS:          TLS{},
-		ClientConfig: clientConfig,
+		TLS:                    TLS{},
+		ClientConfig:           clientConfig,
 	}
 	var client Client
 	client = goredis.NewClient(&goredis.Options{
@@ -158,11 +159,11 @@ func TestConfig(t *testing.T) {
 		},
 	}
 	nodeConfig := NodeConfig{
-		Endpoint: "localhost:6379",
-		DB:       0,
+		Endpoint:               "localhost:6379",
+		DB:                     0,
 		EnableReadQueryOnSlave: false,
-		TLS:          TLS{},
-		ClientConfig: clientConfig,
+		TLS:                    TLS{},
+		ClientConfig:           clientConfig,
 	}
 	sentinelConfig := SentinelConfig{
 		Endpoints:    []string{"172.17.0.7:26379", "172.17.0.8:26379", "172.17.0.9:26379"},
@@ -199,11 +200,11 @@ func TestBadConfig(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
 	nodeConfig := NodeConfig{
-		Endpoint: "localhost:6379",
-		DB:       0,
+		Endpoint:               "localhost:6379",
+		DB:                     0,
 		EnableReadQueryOnSlave: false,
-		TLS:          TLS{},
-		ClientConfig: ClientConfig{},
+		TLS:                    TLS{},
+		ClientConfig:           ClientConfig{},
 	}
 
 	var cfg *NodeConfig

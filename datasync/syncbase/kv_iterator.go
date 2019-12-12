@@ -19,7 +19,7 @@ import (
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
-	"github.com/ligato/cn-infra/datasync"
+	"go.ligato.io/cn-infra/v2/datasync"
 )
 
 // KVIterator is a simple in memory implementation of data.Iterator.

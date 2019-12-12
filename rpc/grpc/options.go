@@ -18,9 +18,9 @@ import (
 	"crypto/tls"
 	"fmt"
 
-	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/rpc/rest"
+	"go.ligato.io/cn-infra/v2/config"
+	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/rpc/rest"
 )
 
 // DefaultPlugin is a default instance of Plugin.

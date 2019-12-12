@@ -14,7 +14,7 @@
 
 package cryptodata
 
-import "github.com/ligato/cn-infra/db/keyval"
+import "go.ligato.io/cn-infra/v2/db/keyval"
 
 // KvBytesPluginWrapper wraps keyval.KvBytesPlugin with additional support of reading encrypted data
 type KvBytesPluginWrapper struct {

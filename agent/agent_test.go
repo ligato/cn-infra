@@ -22,10 +22,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ligato/cn-infra/agent"
-	"github.com/ligato/cn-infra/infra"
-	"github.com/ligato/cn-infra/logging/logrus"
 	. "github.com/onsi/gomega"
+
+	"go.ligato.io/cn-infra/v2/agent"
+	"go.ligato.io/cn-infra/v2/infra"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
 const (

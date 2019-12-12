@@ -17,9 +17,9 @@ package servicelabel
 import (
 	"fmt"
 
-	"github.com/ligato/cn-infra/infra"
-	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/namsral/flag"
+	"go.ligato.io/cn-infra/v2/infra"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
 var microserviceLabelFlag string

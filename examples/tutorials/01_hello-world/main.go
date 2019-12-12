@@ -17,7 +17,7 @@ package main
 import (
 	"log"
 
-	"github.com/ligato/cn-infra/agent"
+	"go.ligato.io/cn-infra/v2/agent"
 )
 
 func main() {

@@ -18,8 +18,8 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	access "github.com/ligato/cn-infra/rpc/rest/security/model/access-security"
 	"github.com/unrolled/render"
+	access "go.ligato.io/cn-infra/v2/rpc/rest/security/model/access-security"
 )
 
 // HandlerProvider is a function used for registering handlers via HTTPHandlers

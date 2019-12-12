@@ -26,11 +26,11 @@ import (
 
 	"github.com/namsral/flag"
 
-	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/infra"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/measure"
-	"github.com/ligato/cn-infra/utils/once"
+	"go.ligato.io/cn-infra/v2/config"
+	"go.ligato.io/cn-infra/v2/infra"
+	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/logging/measure"
+	"go.ligato.io/cn-infra/v2/utils/once"
 )
 
 var agentLogger = logging.DefaultRegistry.NewLogger("agent")

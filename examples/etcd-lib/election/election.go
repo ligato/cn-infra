@@ -17,14 +17,15 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/db/keyval/etcd"
-	"github.com/ligato/cn-infra/logging/logrus"
 	"log"
 	"os"
 	"strconv"
 	"time"
+
+	"go.ligato.io/cn-infra/v2/config"
+	"go.ligato.io/cn-infra/v2/datasync"
+	"go.ligato.io/cn-infra/v2/db/keyval/etcd"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
 // processArgs processes input arguments.

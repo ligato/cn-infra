@@ -21,11 +21,11 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/ligato/cn-infra/exec/processmanager/status"
+	"go.ligato.io/cn-infra/v2/exec/processmanager/status"
 
-	pm "github.com/ligato/cn-infra/exec/processmanager"
-	"github.com/ligato/cn-infra/infra"
 	"github.com/pkg/errors"
+	pm "go.ligato.io/cn-infra/v2/exec/processmanager"
+	"go.ligato.io/cn-infra/v2/infra"
 )
 
 // Supervisor is a simple interface to gather information about running programs

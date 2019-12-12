@@ -6,14 +6,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ligato/cn-infra/agent"
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/datasync/kvdbsync"
-	"github.com/ligato/cn-infra/datasync/resync"
-	"github.com/ligato/cn-infra/db/keyval/etcd"
-	"github.com/ligato/cn-infra/examples/model"
-	"github.com/ligato/cn-infra/infra"
-	"github.com/ligato/cn-infra/servicelabel"
+	"go.ligato.io/cn-infra/v2/agent"
+	"go.ligato.io/cn-infra/v2/datasync"
+	"go.ligato.io/cn-infra/v2/datasync/kvdbsync"
+	"go.ligato.io/cn-infra/v2/datasync/resync"
+	"go.ligato.io/cn-infra/v2/db/keyval/etcd"
+	"go.ligato.io/cn-infra/v2/examples/model"
+	"go.ligato.io/cn-infra/v2/infra"
+	"go.ligato.io/cn-infra/v2/servicelabel"
 	"golang.org/x/net/context"
 )
 

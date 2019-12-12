@@ -19,14 +19,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/db/keyval/etcd/mocks"
-	"github.com/ligato/cn-infra/logging/logrus"
+	"go.ligato.io/cn-infra/v2/datasync"
+	"go.ligato.io/cn-infra/v2/db/keyval"
+	"go.ligato.io/cn-infra/v2/db/keyval/etcd/mocks"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
+
+	"context"
 
 	"github.com/coreos/etcd/etcdserver/api/v3client"
 	. "github.com/onsi/gomega"
-	"context"
 )
 
 const (
@@ -306,7 +307,7 @@ func testCompareAndSwap(t *testing.T) {
 
 	const key = "myKey"
 	var (
-		value1  = []byte("abcd")
+		value1 = []byte("abcd")
 		value2 = []byte("efgh")
 		value3 = []byte("ijkl")
 	)
@@ -356,7 +357,7 @@ func testCompareAndDelete(t *testing.T) {
 
 	const key = "myKey"
 	var (
-		value1  = []byte("abcd")
+		value1 = []byte("abcd")
 		value2 = []byte("efgh")
 	)
 

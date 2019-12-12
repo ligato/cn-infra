@@ -18,8 +18,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/ligato/cn-infra/utils/once"
 	"github.com/onsi/gomega"
+	"go.ligato.io/cn-infra/v2/utils/once"
 )
 
 const (

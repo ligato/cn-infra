@@ -4,9 +4,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/db/keyval/filedb/decoder"
+	"go.ligato.io/cn-infra/v2/datasync"
+	"go.ligato.io/cn-infra/v2/db/keyval"
+	"go.ligato.io/cn-infra/v2/db/keyval/filedb/decoder"
 )
 
 // BrokerWatcher implements CoreBrokerWatcher and provides broker/watcher constructors with client

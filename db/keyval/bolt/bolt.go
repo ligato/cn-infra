@@ -15,19 +15,18 @@
 package bolt
 
 import (
-	"context"
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"sync"
 
 	"github.com/boltdb/bolt"
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
+	"go.ligato.io/cn-infra/v2/datasync"
+	"go.ligato.io/cn-infra/v2/db/keyval"
+	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
-
 
 var boltLogger = logrus.NewLogger("bolt")
 

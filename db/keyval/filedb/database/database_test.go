@@ -17,8 +17,8 @@ package database_test
 import (
 	"testing"
 
-	"github.com/ligato/cn-infra/db/keyval/filedb/database"
-	"github.com/ligato/cn-infra/db/keyval/filedb/decoder"
+	"go.ligato.io/cn-infra/v2/db/keyval/filedb/database"
+	"go.ligato.io/cn-infra/v2/db/keyval/filedb/decoder"
 
 	. "github.com/onsi/gomega"
 )

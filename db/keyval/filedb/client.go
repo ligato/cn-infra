@@ -19,16 +19,16 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ligato/cn-infra/db/keyval/filedb/database"
-	"github.com/ligato/cn-infra/db/keyval/filedb/decoder"
-	"github.com/ligato/cn-infra/db/keyval/filedb/filesystem"
+	"go.ligato.io/cn-infra/v2/db/keyval/filedb/database"
+	"go.ligato.io/cn-infra/v2/db/keyval/filedb/decoder"
+	"go.ligato.io/cn-infra/v2/db/keyval/filedb/filesystem"
 
 	"github.com/pkg/errors"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/logging"
+	"go.ligato.io/cn-infra/v2/datasync"
+	"go.ligato.io/cn-infra/v2/db/keyval"
+	"go.ligato.io/cn-infra/v2/logging"
 )
 
 // Client arranges communication between file system and internal database, and is also responsible for upstream events.

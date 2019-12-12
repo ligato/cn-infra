@@ -15,9 +15,9 @@
 package cassandra
 
 import (
-	"github.com/ligato/cn-infra/db/sql"
-	"github.com/ligato/cn-infra/utils/structs"
 	"github.com/willfaught/gockle"
+	"go.ligato.io/cn-infra/v2/db/sql"
+	"go.ligato.io/cn-infra/v2/utils/structs"
 )
 
 // NewBrokerUsingSession is a Broker constructor. Use it like this:

@@ -9,7 +9,7 @@ import (
 
 	"github.com/namsral/flag"
 
-	"github.com/ligato/cn-infra/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
 const (

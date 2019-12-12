@@ -24,10 +24,10 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/bsm/sarama-cluster"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
-	"github.com/ligato/cn-infra/messaging/kafka/client"
-	"github.com/ligato/cn-infra/utils/clienttls"
+	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/messaging/kafka/client"
+	"go.ligato.io/cn-infra/v2/utils/clienttls"
 )
 
 var (

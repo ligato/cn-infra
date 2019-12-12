@@ -15,8 +15,8 @@
 package messaging
 
 import (
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/db/keyval"
+	"go.ligato.io/cn-infra/v2/datasync"
+	"go.ligato.io/cn-infra/v2/db/keyval"
 )
 
 // Mux defines API for the plugins that use access to kafka brokers.

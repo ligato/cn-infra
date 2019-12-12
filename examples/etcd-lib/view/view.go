@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/db/keyval/etcd"
-	"github.com/ligato/cn-infra/db/keyval/kvproto"
-	"github.com/ligato/cn-infra/examples/etcd-lib/model/phonebook"
-	"github.com/ligato/cn-infra/logging/logrus"
+	"go.ligato.io/cn-infra/v2/config"
+	"go.ligato.io/cn-infra/v2/db/keyval/etcd"
+	"go.ligato.io/cn-infra/v2/db/keyval/kvproto"
+	"go.ligato.io/cn-infra/v2/examples/etcd-lib/model/phonebook"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
 // processArgs processes input arguments.

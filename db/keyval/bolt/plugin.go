@@ -18,9 +18,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/db/keyval/kvproto"
-	"github.com/ligato/cn-infra/infra"
+	"go.ligato.io/cn-infra/v2/db/keyval"
+	"go.ligato.io/cn-infra/v2/db/keyval/kvproto"
+	"go.ligato.io/cn-infra/v2/infra"
 )
 
 // Config represents configuration for Bolt plugin.

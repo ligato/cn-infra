@@ -18,10 +18,11 @@ import (
 	"fmt"
 	"strings"
 
+	"context"
+
 	goredis "github.com/go-redis/redis"
 	"github.com/howeyc/crc16"
-	"github.com/ligato/cn-infra/db/keyval"
-	"context"
+	"go.ligato.io/cn-infra/v2/db/keyval"
 )
 
 type op struct {

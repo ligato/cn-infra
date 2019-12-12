@@ -14,7 +14,7 @@
 
 package syncbase
 
-import "github.com/ligato/cn-infra/logging/logrus"
+import "go.ligato.io/cn-infra/v2/logging/logrus"
 
 // NewDoneChannel creates a new instance of DoneChannel.
 func NewDoneChannel(doneChan chan error) *DoneChannel {

@@ -16,7 +16,7 @@ package syncbase
 
 import (
 	"github.com/golang/protobuf/proto"
-	"github.com/ligato/cn-infra/datasync"
+	"go.ligato.io/cn-infra/v2/datasync"
 )
 
 // Change represents a single Key-value pair plus changeType.

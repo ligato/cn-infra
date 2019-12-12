@@ -18,10 +18,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ligato/cn-infra/agent"
+	"go.ligato.io/cn-infra/v2/agent"
 
-	sv "github.com/ligato/cn-infra/exec/supervisor"
-	"github.com/ligato/cn-infra/logging"
+	sv "go.ligato.io/cn-infra/v2/exec/supervisor"
+	"go.ligato.io/cn-infra/v2/logging"
 )
 
 func main() {

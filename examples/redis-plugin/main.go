@@ -3,14 +3,14 @@ package main
 import (
 	"log"
 
-	"github.com/ligato/cn-infra/agent"
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/datasync/kvdbsync"
-		"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/db/keyval/etcd"
-	"github.com/ligato/cn-infra/db/keyval/redis"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/utils/safeclose"
+	"go.ligato.io/cn-infra/v2/agent"
+	"go.ligato.io/cn-infra/v2/datasync"
+	"go.ligato.io/cn-infra/v2/datasync/kvdbsync"
+	"go.ligato.io/cn-infra/v2/db/keyval"
+	"go.ligato.io/cn-infra/v2/db/keyval/etcd"
+	"go.ligato.io/cn-infra/v2/db/keyval/redis"
+	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/utils/safeclose"
 )
 
 // PluginName represents name of plugin.

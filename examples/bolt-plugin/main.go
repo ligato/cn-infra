@@ -4,10 +4,10 @@ import (
 	"context"
 	"log"
 
-	"github.com/ligato/cn-infra/agent"
-	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/db/keyval/bolt"
-	"github.com/ligato/cn-infra/logging"
+	"go.ligato.io/cn-infra/v2/agent"
+	"go.ligato.io/cn-infra/v2/db/keyval"
+	"go.ligato.io/cn-infra/v2/db/keyval/bolt"
+	"go.ligato.io/cn-infra/v2/logging"
 )
 
 const pluginName = "bolt-example"

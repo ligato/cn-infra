@@ -21,7 +21,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/bsm/sarama-cluster"
-	"github.com/ligato/cn-infra/logging"
+	"go.ligato.io/cn-infra/v2/logging"
 )
 
 // clusterConsumer defines an interface that allows to mock the implementation of

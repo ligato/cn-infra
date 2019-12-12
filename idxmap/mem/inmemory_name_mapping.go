@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/ligato/cn-infra/idxmap"
-	"github.com/ligato/cn-infra/logging"
+	"go.ligato.io/cn-infra/v2/idxmap"
+	"go.ligato.io/cn-infra/v2/logging"
 )
 
 // IndexFunction should return map field->values for a given item.

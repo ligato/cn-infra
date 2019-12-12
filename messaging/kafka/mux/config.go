@@ -1,12 +1,13 @@
 package mux
 
 import (
-	"github.com/Shopify/sarama"
-	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/messaging/kafka/client"
-	"github.com/ligato/cn-infra/utils/clienttls"
 	"time"
+
+	"github.com/Shopify/sarama"
+	"go.ligato.io/cn-infra/v2/config"
+	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/messaging/kafka/client"
+	"go.ligato.io/cn-infra/v2/utils/clienttls"
 )
 
 const (

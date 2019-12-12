@@ -15,13 +15,13 @@
 package restsync
 
 import (
-	"net/http"
 	"context"
 	"io/ioutil"
+	"net/http"
 
 	"github.com/unrolled/render"
 
-	"github.com/ligato/cn-infra/datasync/kvdbsync/local"
+	"go.ligato.io/cn-infra/v2/datasync/kvdbsync/local"
 )
 
 // putMessage is only a stub prepared for later implementation.

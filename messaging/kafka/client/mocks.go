@@ -18,7 +18,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/Shopify/sarama/mocks"
 	"github.com/bsm/sarama-cluster"
-	"github.com/ligato/cn-infra/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
 type clusterConsumerMock struct {

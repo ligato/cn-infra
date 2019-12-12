@@ -18,11 +18,11 @@ import (
 	"testing"
 
 	"github.com/Shopify/sarama"
-	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/examples/model"
-	"github.com/ligato/cn-infra/messaging"
-	"github.com/ligato/cn-infra/messaging/kafka/client"
 	"github.com/onsi/gomega"
+	"go.ligato.io/cn-infra/v2/db/keyval"
+	"go.ligato.io/cn-infra/v2/examples/model"
+	"go.ligato.io/cn-infra/v2/messaging"
+	"go.ligato.io/cn-infra/v2/messaging/kafka/client"
 )
 
 func TestMultiplexer(t *testing.T) {

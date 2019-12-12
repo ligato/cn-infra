@@ -16,8 +16,8 @@ package syncbase
 
 import (
 	"github.com/golang/protobuf/proto"
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/logging/logrus"
+	"go.ligato.io/cn-infra/v2/datasync"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
 // Adapter implements datasync.TransportAdapter but allows the Watch/ Put functions to be optionally implemented.

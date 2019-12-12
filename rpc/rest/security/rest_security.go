@@ -25,10 +25,10 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
-	"github.com/ligato/cn-infra/logging"
-	access "github.com/ligato/cn-infra/rpc/rest/security/model/access-security"
 	"github.com/pkg/errors"
 	"github.com/unrolled/render"
+	"go.ligato.io/cn-infra/v2/logging"
+	access "go.ligato.io/cn-infra/v2/rpc/rest/security/model/access-security"
 	"golang.org/x/crypto/bcrypt"
 )
 

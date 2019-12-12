@@ -19,10 +19,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/utils/safeclose"
+	"go.ligato.io/cn-infra/v2/datasync"
+	"go.ligato.io/cn-infra/v2/db/keyval"
+	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/utils/safeclose"
 )
 
 // BytesConnectionRedis allows to store, read and watch values from Redis.

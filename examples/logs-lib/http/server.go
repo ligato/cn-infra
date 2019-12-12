@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/ligato/cn-infra/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
 const loggerName = "loggerName"
@@ -74,7 +74,7 @@ func main() {
 	router.HandleFunc("/list", listLoggers).Methods("GET")
 	router.HandleFunc(fmt.Sprintf("/set/{%s}/{%s:debug|info|warning|error|fatal|panic}", loggerName, loggerLevel), setLevel).Methods("PUT")
 	err := http.ListenAndServe(":8080", router)
-	if err != nil{
+	if err != nil {
 		defaultLogger.Fatal(err)
 	}
 }

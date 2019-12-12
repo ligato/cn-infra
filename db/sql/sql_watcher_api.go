@@ -14,7 +14,7 @@
 
 package sql
 
-import "github.com/ligato/cn-infra/datasync"
+import "go.ligato.io/cn-infra/v2/datasync"
 
 // Watcher defines API for monitoring changes in a datastore.
 type Watcher interface {

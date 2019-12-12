@@ -21,7 +21,7 @@ import (
 	"sync"
 
 	"github.com/Shopify/sarama"
-	"github.com/ligato/cn-infra/logging"
+	"go.ligato.io/cn-infra/v2/logging"
 )
 
 // SyncProducer allows to publish messages to kafka using synchronous API.

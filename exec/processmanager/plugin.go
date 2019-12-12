@@ -20,12 +20,12 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/ligato/cn-infra/exec/processmanager/status"
-	"github.com/ligato/cn-infra/exec/processmanager/template"
-	"github.com/ligato/cn-infra/exec/processmanager/template/model/process"
+	"go.ligato.io/cn-infra/v2/exec/processmanager/status"
+	"go.ligato.io/cn-infra/v2/exec/processmanager/template"
+	"go.ligato.io/cn-infra/v2/exec/processmanager/template/model/process"
 
-	"github.com/ligato/cn-infra/infra"
 	"github.com/pkg/errors"
+	"go.ligato.io/cn-infra/v2/infra"
 )
 
 // ProcessManager defines methods to create, delete or manage processes

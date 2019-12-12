@@ -18,13 +18,13 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/ligato/cn-infra/health/statuscheck"
-	"github.com/ligato/cn-infra/health/statuscheck/model/status"
-	"github.com/ligato/cn-infra/infra"
-	prom "github.com/ligato/cn-infra/rpc/prometheus"
-	"github.com/ligato/cn-infra/rpc/rest"
-	"github.com/ligato/cn-infra/servicelabel"
 	"github.com/unrolled/render"
+	"go.ligato.io/cn-infra/v2/health/statuscheck"
+	"go.ligato.io/cn-infra/v2/health/statuscheck/model/status"
+	"go.ligato.io/cn-infra/v2/infra"
+	prom "go.ligato.io/cn-infra/v2/rpc/prometheus"
+	"go.ligato.io/cn-infra/v2/rpc/rest"
+	"go.ligato.io/cn-infra/v2/servicelabel"
 )
 
 const (

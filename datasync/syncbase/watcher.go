@@ -15,16 +15,16 @@
 package syncbase
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
 	"sync"
 	"time"
-	"context"
 
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/logging/logrus"
-	"github.com/ligato/cn-infra/utils/safeclose"
+	"go.ligato.io/cn-infra/v2/datasync"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/utils/safeclose"
 )
 
 var (

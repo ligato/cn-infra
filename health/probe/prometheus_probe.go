@@ -15,9 +15,9 @@
 package probe
 
 import (
-	"github.com/ligato/cn-infra/health/statuscheck/model/status"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.ligato.io/cn-infra/v2/health/statuscheck/model/status"
 )
 
 const (

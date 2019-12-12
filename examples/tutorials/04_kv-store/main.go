@@ -18,14 +18,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ligato/cn-infra/datasync"
+	"go.ligato.io/cn-infra/v2/datasync"
 
-	"github.com/ligato/cn-infra/agent"
-	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/db/keyval/etcd"
-	"github.com/ligato/cn-infra/examples/tutorials/04_kv-store/model"
-	"github.com/ligato/cn-infra/infra"
-	"github.com/ligato/cn-infra/logging"
+	"go.ligato.io/cn-infra/v2/agent"
+	"go.ligato.io/cn-infra/v2/db/keyval"
+	"go.ligato.io/cn-infra/v2/db/keyval/etcd"
+	"go.ligato.io/cn-infra/v2/examples/tutorials/04_kv-store/model"
+	"go.ligato.io/cn-infra/v2/infra"
+	"go.ligato.io/cn-infra/v2/logging"
 )
 
 //go:generate protoc --proto_path=model --go_out=model ./model/model.proto

@@ -15,11 +15,11 @@
 package filedb
 
 import (
-	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/db/keyval/filedb/decoder"
-	"github.com/ligato/cn-infra/db/keyval/filedb/filesystem"
-	"github.com/ligato/cn-infra/db/keyval/kvproto"
-	"github.com/ligato/cn-infra/infra"
+	"go.ligato.io/cn-infra/v2/db/keyval"
+	"go.ligato.io/cn-infra/v2/db/keyval/filedb/decoder"
+	"go.ligato.io/cn-infra/v2/db/keyval/filedb/filesystem"
+	"go.ligato.io/cn-infra/v2/db/keyval/kvproto"
+	"go.ligato.io/cn-infra/v2/infra"
 )
 
 // Plugin filesystem uses host os file system as database to store configuration.

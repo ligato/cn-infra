@@ -21,10 +21,10 @@ import (
 	"os"
 
 	"github.com/gocql/gocql"
-	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/db/sql"
-	"github.com/ligato/cn-infra/db/sql/cassandra"
 	"github.com/willfaught/gockle"
+	"go.ligato.io/cn-infra/v2/config"
+	"go.ligato.io/cn-infra/v2/db/sql"
+	"go.ligato.io/cn-infra/v2/db/sql/cassandra"
 )
 
 // UserTable global variable reused when building queries/statements

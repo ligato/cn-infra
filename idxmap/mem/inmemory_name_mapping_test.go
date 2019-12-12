@@ -18,10 +18,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ligato/cn-infra/idxmap"
-	"github.com/ligato/cn-infra/logging/logrus"
-	"github.com/onsi/gomega"
 	"strings"
+
+	"github.com/onsi/gomega"
+	"go.ligato.io/cn-infra/v2/idxmap"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
 func TestNewNamedMappingMem(t *testing.T) {

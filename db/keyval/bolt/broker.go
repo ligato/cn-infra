@@ -20,8 +20,8 @@ import (
 	"sync"
 
 	"github.com/boltdb/bolt"
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/db/keyval"
+	"go.ligato.io/cn-infra/v2/datasync"
+	"go.ligato.io/cn-infra/v2/db/keyval"
 )
 
 // BrokerWatcher uses Client to access the datastore.

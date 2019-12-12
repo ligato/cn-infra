@@ -15,7 +15,7 @@
 package local
 
 import (
-	"github.com/ligato/cn-infra/datasync/syncbase"
+	"go.ligato.io/cn-infra/v2/datasync/syncbase"
 )
 
 // DefaultRegistry is a default registry.

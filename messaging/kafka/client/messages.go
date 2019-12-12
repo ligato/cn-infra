@@ -20,7 +20,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/golang/protobuf/proto"
-	"github.com/ligato/cn-infra/db/keyval"
+	"go.ligato.io/cn-infra/v2/db/keyval"
 )
 
 // Encoder defines an interface that is used as argument of producer functions.

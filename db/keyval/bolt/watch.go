@@ -18,8 +18,8 @@ import (
 	"bytes"
 	"strings"
 
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/db/keyval"
+	"go.ligato.io/cn-infra/v2/datasync"
+	"go.ligato.io/cn-infra/v2/db/keyval"
 )
 
 type watchEvent struct {
@@ -163,7 +163,7 @@ func (w *watcher) watch() {
 			}
 			cb(r)
 
-		case regPrefix, ok := <- w.prefixRegCh:
+		case regPrefix, ok := <-w.prefixRegCh:
 			if !ok {
 				boltLogger.WithField("prefixes", w.prefixes).
 					Debug("Prefix-registration channel was closed")

@@ -15,14 +15,15 @@
 package main
 
 import (
-	"fmt"
-	"github.com/ligato/cn-infra/db/cryptodata"
-	"os"
-	"io/ioutil"
-	"encoding/pem"
-	"crypto/x509"
 	"crypto/rsa"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
+	"fmt"
+	"io/ioutil"
+	"os"
+
+	"go.ligato.io/cn-infra/v2/db/cryptodata"
 )
 
 // JSONData are example data to be decrypted

@@ -17,10 +17,10 @@ package kvdbsync
 import (
 	"fmt"
 
-	"github.com/ligato/cn-infra/datasync/resync"
-	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/servicelabel"
+	"go.ligato.io/cn-infra/v2/datasync/resync"
+	"go.ligato.io/cn-infra/v2/db/keyval"
+	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/servicelabel"
 )
 
 // NewPlugin creates a new Plugin with the provided Options.

@@ -15,21 +15,22 @@
 package main
 
 import (
-	"log"
-	"github.com/ligato/cn-infra/agent"
-	"github.com/ligato/cn-infra/db/keyval/etcd"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/servicelabel"
-	"github.com/ligato/cn-infra/db/cryptodata"
-	"github.com/ligato/cn-infra/config"
-	"io/ioutil"
-	"encoding/pem"
-	"crypto/x509"
 	"crypto/rsa"
-	"github.com/pkg/errors"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"fmt"
-	"github.com/ligato/cn-infra/db/keyval"
+	"io/ioutil"
+	"log"
+
+	"github.com/pkg/errors"
+	"go.ligato.io/cn-infra/v2/agent"
+	"go.ligato.io/cn-infra/v2/config"
+	"go.ligato.io/cn-infra/v2/db/cryptodata"
+	"go.ligato.io/cn-infra/v2/db/keyval"
+	"go.ligato.io/cn-infra/v2/db/keyval/etcd"
+	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/servicelabel"
 )
 
 // PluginName represents name of plugin.

@@ -21,7 +21,7 @@ import (
 	"path"
 	"strconv"
 
-	"github.com/ligato/cn-infra/logging"
+	"go.ligato.io/cn-infra/v2/logging"
 	"google.golang.org/grpc"
 )
 

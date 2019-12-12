@@ -16,12 +16,13 @@ package filesystem
 
 import (
 	"fmt"
-	"github.com/fsnotify/fsnotify"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/fsnotify/fsnotify"
+	"github.com/pkg/errors"
+	"go.ligato.io/cn-infra/v2/logging"
 )
 
 // API defines filesystem-related method with emphasis on the fileDB needs

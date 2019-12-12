@@ -3,9 +3,9 @@ package main
 import (
 	"log"
 
-	"github.com/ligato/cn-infra/agent"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logmanager"
+	"go.ligato.io/cn-infra/v2/agent"
+	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/logging/logmanager"
 )
 
 // *************************************************************************
