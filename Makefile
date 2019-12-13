@@ -24,58 +24,17 @@ help:
 
 .DEFAULT = help
 
-build: examples examples-plugin ## Build all
+build: examples ## Build all
 
-clean: clean-examples clean-examples-plugin ## Clean all
+clean: clean-examples ## Clean all
 
 examples: ## Build examples
 	@echo "# building examples"
-	cd examples/cassandra-lib  && go build -ldflags "${LDFLAGS}" ${GO_BUILD_ARGS}
-	cd examples/etcd-lib       && make build
-	cd examples/kafka-lib      && make build
-	cd examples/logs-lib       && make build
-	cd examples/redis-lib      && make build
-	cd examples/cryptodata-lib && go build -ldflags "${LDFLAGS}" ${GO_BUILD_ARGS}
-
-examples-plugin: ## Build plugin examples
-	@echo "# building plugin examples"
-	cd examples/configs-plugin                  && go build -ldflags "${LDFLAGS}" ${GO_BUILD_ARGS}
-	cd examples/datasync-plugin                 && go build -ldflags "${LDFLAGS}" ${GO_BUILD_ARGS}
-	cd examples/flags-lib                       && go build -ldflags "${LDFLAGS}" ${GO_BUILD_ARGS}
-	cd examples/kafka-plugin/hash-partitioner   && go build -ldflags "${LDFLAGS}" ${GO_BUILD_ARGS}
-	cd examples/kafka-plugin/manual-partitioner && go build -ldflags "${LDFLAGS}" ${GO_BUILD_ARGS}
-	cd examples/kafka-plugin/post-init-consumer && go build -ldflags "${LDFLAGS}" ${GO_BUILD_ARGS}
-	cd examples/logs-plugin                     && go build -ldflags "${LDFLAGS}" ${GO_BUILD_ARGS}
-	cd examples/redis-plugin                    && go build -ldflags "${LDFLAGS}" ${GO_BUILD_ARGS}
-	cd examples/simple-agent                    && go build -ldflags "${LDFLAGS}" ${GO_BUILD_ARGS}
-	cd examples/statuscheck-plugin              && go build -ldflags "${LDFLAGS}" ${GO_BUILD_ARGS}
-	cd examples/prometheus-plugin               && go build -ldflags "${LDFLAGS}" ${GO_BUILD_ARGS}
-	cd examples/cryptodata-plugin               && go build -ldflags "${LDFLAGS}" ${GO_BUILD_ARGS}
-	cd examples/bolt-plugin                     && go build -ldflags "${LDFLAGS}" ${GO_BUILD_ARGS}
+	@go list -f '{{if eq .Name "main"}}{{.Dir}}{{end}}' ./examples/... | xargs -t -I '{}' bash -c "cd {} && go build -ldflags \"${LDFLAGS}\" ${GO_BUILD_ARGS}"
 
 clean-examples:
 	@echo "# cleaning examples"
-	cd examples/cassandra-lib  && go clean
-	cd examples/etcd-lib       && make clean
-	cd examples/kafka-lib      && make clean
-	cd examples/logs-lib       && make clean
-	cd examples/redis-lib      && make clean
-	cd examples/cryptodata-lib && go clean
-
-clean-examples-plugin:
-	@echo "# cleaning plugin examples"
-	cd examples/configs-plugin                  && go clean
-	cd examples/datasync-plugin                 && go clean
-	cd examples/flags-lib                       && go clean
-	cd examples/kafka-plugin/hash-partitioner   && go clean
-	cd examples/kafka-plugin/manual-partitioner && go clean
-	cd examples/kafka-plugin/post-init-consumer && go clean
-	cd examples/logs-plugin                     && go clean
-	cd examples/redis-plugin                    && go clean
-	cd examples/simple-agent                    && go clean
-	cd examples/statuscheck-plugin              && go clean
-	cd examples/prometheus-plugin               && go clean
-	cd examples/bolt-plugin                     && go clean
+	@go list -f '{{if eq .Name "main"}}{{.Dir}}{{end}}' ./examples/... | xargs go clean -x
 
 # -------------------------------
 #  Testing
@@ -194,7 +153,7 @@ yamllint: get-yamllint
 
 .PHONY: help \
 	build clean \
-	examples examples-plugin clean-examples clean-examples-plugin \
+	examples clean-examples \
 	test test-examples get-testtools get-consul \
 	test-cover test-cover-html test-cover-xml \
 	dep-install dep-update \

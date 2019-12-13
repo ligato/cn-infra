@@ -37,3 +37,8 @@ simple-agent/simple-agent
 statuscheck-plugin/statuscheck-plugin
 supervisor-plugin/supervisor-plugin
 prometheus-plugin/prometheus-plugin
+tutorials/01_hello-world/01_hello-world
+tutorials/02_plugin-deps/02_plugin-deps
+tutorials/03_rest-handler/03_rest-handler
+tutorials/04_kv-store/04_kv-store
+tutorials/06_plugin_lookup/06_plugin_lookup
