@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+
 	"go.ligato.io/cn-infra/v2/exec/processmanager"
 	"go.ligato.io/cn-infra/v2/exec/processmanager/status"
 	tmpModel "go.ligato.io/cn-infra/v2/exec/processmanager/template/model/process"

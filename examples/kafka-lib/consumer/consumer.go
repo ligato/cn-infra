@@ -20,10 +20,10 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/namsral/flag"
-
 	"github.com/Shopify/sarama"
 	"github.com/bsm/sarama-cluster"
+	"github.com/namsral/flag"
+
 	"go.ligato.io/cn-infra/v2/logging"
 	"go.ligato.io/cn-infra/v2/logging/logrus"
 	"go.ligato.io/cn-infra/v2/messaging/kafka/client"

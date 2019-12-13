@@ -17,10 +17,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/namsral/flag"
-
-	"strings"
 
 	"go.ligato.io/cn-infra/v2/examples/kafka-lib/utils"
 	"go.ligato.io/cn-infra/v2/logging/logrus"

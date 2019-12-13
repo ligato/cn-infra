@@ -19,6 +19,7 @@ import (
 	"log"
 
 	"github.com/hashicorp/consul/api"
+
 	"go.ligato.io/cn-infra/v2/db/keyval"
 	"go.ligato.io/cn-infra/v2/db/keyval/consul"
 	"go.ligato.io/cn-infra/v2/db/keyval/kvproto"

@@ -20,11 +20,11 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"go.ligato.io/cn-infra/v2/exec/processmanager/status"
 	"go.ligato.io/cn-infra/v2/exec/processmanager/template"
 	"go.ligato.io/cn-infra/v2/exec/processmanager/template/model/process"
-
-	"github.com/pkg/errors"
 	"go.ligato.io/cn-infra/v2/infra"
 )
 

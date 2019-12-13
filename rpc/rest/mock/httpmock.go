@@ -15,10 +15,9 @@
 package mock
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
-
-	"io"
 
 	"go.ligato.io/cn-infra/v2/rpc/rest"
 )

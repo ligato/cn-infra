@@ -16,8 +16,9 @@ package etcd
 
 import (
 	"github.com/coreos/etcd/clientv3"
-	"go.ligato.io/cn-infra/v2/db/keyval"
 	"golang.org/x/net/context"
+
+	"go.ligato.io/cn-infra/v2/db/keyval"
 )
 
 // Txn allows grouping operations into the transaction. Transaction executes

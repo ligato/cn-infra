@@ -21,8 +21,9 @@ import (
 	"path"
 	"strconv"
 
-	"go.ligato.io/cn-infra/v2/logging"
 	"google.golang.org/grpc"
+
+	"go.ligato.io/cn-infra/v2/logging"
 )
 
 // ListenAndServe starts configured listener and serving for clients

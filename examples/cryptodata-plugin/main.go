@@ -24,6 +24,7 @@ import (
 	"log"
 
 	"github.com/pkg/errors"
+
 	"go.ligato.io/cn-infra/v2/agent"
 	"go.ligato.io/cn-infra/v2/config"
 	"go.ligato.io/cn-infra/v2/db/cryptodata"

@@ -15,10 +15,9 @@
 package cassandra
 
 import (
+	"strconv"
 	"strings"
 	"time"
-
-	"strconv"
 
 	"github.com/gocql/gocql"
 )

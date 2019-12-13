@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/bsm/sarama-cluster"
+
 	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 

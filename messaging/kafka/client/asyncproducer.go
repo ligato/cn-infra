@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/Shopify/sarama"
+
 	"go.ligato.io/cn-infra/v2/logging"
 )
 

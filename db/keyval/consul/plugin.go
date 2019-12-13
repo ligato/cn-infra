@@ -16,6 +16,7 @@ package consul
 
 import (
 	"github.com/hashicorp/consul/api"
+
 	"go.ligato.io/cn-infra/v2/datasync/resync"
 	"go.ligato.io/cn-infra/v2/db/keyval"
 	"go.ligato.io/cn-infra/v2/db/keyval/kvproto"

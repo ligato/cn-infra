@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/golang/protobuf/proto"
+
 	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/datasync/syncbase"
 )

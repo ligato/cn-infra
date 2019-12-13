@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/Shopify/sarama"
+
 	"go.ligato.io/cn-infra/v2/db/keyval"
 	"go.ligato.io/cn-infra/v2/health/statuscheck"
 	"go.ligato.io/cn-infra/v2/infra"

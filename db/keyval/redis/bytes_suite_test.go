@@ -15,24 +15,20 @@
 package redis
 
 import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
 	"reflect"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
-
-	"strconv"
-
-	"os"
-
-	"fmt"
-	"strings"
-
-	"errors"
-
-	"context"
 
 	"github.com/alicebob/miniredis"
 	goredis "github.com/go-redis/redis"
 	"github.com/onsi/gomega"
+
 	"go.ligato.io/cn-infra/v2/config"
 	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/db/keyval"

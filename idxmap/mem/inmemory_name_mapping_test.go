@@ -15,12 +15,12 @@
 package mem
 
 import (
+	"strings"
 	"testing"
 	"time"
 
-	"strings"
-
 	"github.com/onsi/gomega"
+
 	"go.ligato.io/cn-infra/v2/idxmap"
 	"go.ligato.io/cn-infra/v2/logging/logrus"
 )

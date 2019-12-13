@@ -23,9 +23,10 @@ import (
 	"strings"
 
 	"github.com/namsral/flag"
+	"google.golang.org/grpc"
+
 	"go.ligato.io/cn-infra/v2/config"
 	"go.ligato.io/cn-infra/v2/infra"
-	"google.golang.org/grpc"
 )
 
 // Config is a configuration for GRPC netListener

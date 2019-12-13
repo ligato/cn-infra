@@ -18,8 +18,9 @@ import (
 	"os"
 	"strconv"
 
-	"go.ligato.io/cn-infra/v2/logging/logrus"
 	"golang.org/x/crypto/bcrypt"
+
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
 // A simple utility to help with password hashing. Hashed password can be stored as

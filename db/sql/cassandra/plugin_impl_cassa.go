@@ -18,6 +18,7 @@ import (
 	"errors"
 
 	"github.com/willfaught/gockle"
+
 	"go.ligato.io/cn-infra/v2/db/sql"
 	"go.ligato.io/cn-infra/v2/health/statuscheck"
 	"go.ligato.io/cn-infra/v2/infra"

@@ -16,6 +16,7 @@ package cassandra
 
 import (
 	"github.com/willfaught/gockle"
+
 	"go.ligato.io/cn-infra/v2/db/sql"
 	"go.ligato.io/cn-infra/v2/utils/structs"
 )

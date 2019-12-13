@@ -18,10 +18,10 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-
 	"time"
 
 	"github.com/namsral/flag"
+
 	"go.ligato.io/cn-infra/v2/logging"
 	"go.ligato.io/cn-infra/v2/logging/logrus"
 	"go.ligato.io/cn-infra/v2/messaging/kafka/client"

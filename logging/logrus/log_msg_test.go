@@ -17,12 +17,12 @@ package logrus
 import (
 	"bytes"
 	"fmt"
+	"log/syslog"
 	"testing"
 
 	lg "github.com/sirupsen/logrus"
 
 	"github.com/onsi/gomega"
-	"log/syslog"
 	syslog2 "github.com/sirupsen/logrus/hooks/syslog"
 )
 

@@ -19,6 +19,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/onsi/gomega"
+
 	"go.ligato.io/cn-infra/v2/db/keyval"
 	"go.ligato.io/cn-infra/v2/examples/model"
 	"go.ligato.io/cn-infra/v2/messaging"

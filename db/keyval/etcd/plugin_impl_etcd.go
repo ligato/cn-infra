@@ -15,11 +15,10 @@
 package etcd
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
-
-	"context"
 
 	"go.ligato.io/cn-infra/v2/datasync/resync"
 	"go.ligato.io/cn-infra/v2/db/keyval"

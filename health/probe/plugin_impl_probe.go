@@ -19,6 +19,7 @@ import (
 	"net/http"
 
 	"github.com/unrolled/render"
+
 	"go.ligato.io/cn-infra/v2/health/statuscheck"
 	"go.ligato.io/cn-infra/v2/health/statuscheck/model/status"
 	"go.ligato.io/cn-infra/v2/infra"

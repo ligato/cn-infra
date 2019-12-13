@@ -15,14 +15,12 @@
 package grpcsync
 
 import (
+	"google.golang.org/grpc"
+
 	"go.ligato.io/cn-infra/v2/datasync"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
-
-	//TODO "github.com/gorilla/rpc/json"
-
 	"go.ligato.io/cn-infra/v2/datasync/syncbase"
 	"go.ligato.io/cn-infra/v2/datasync/syncbase/msg"
-	"google.golang.org/grpc"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
 // Adapter is a gRPC transport adapter in front of Agent Plugins.

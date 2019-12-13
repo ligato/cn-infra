@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+
 	"go.ligato.io/cn-infra/v2/exec/processmanager/status"
 )
 

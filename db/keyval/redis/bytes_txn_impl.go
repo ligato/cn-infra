@@ -15,13 +15,13 @@
 package redis
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
-	"context"
-
 	goredis "github.com/go-redis/redis"
 	"github.com/howeyc/crc16"
+
 	"go.ligato.io/cn-infra/v2/db/keyval"
 )
 

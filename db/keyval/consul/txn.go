@@ -15,11 +15,10 @@
 package consul
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/consul/api"
-
-	"context"
 
 	"go.ligato.io/cn-infra/v2/db/keyval"
 )

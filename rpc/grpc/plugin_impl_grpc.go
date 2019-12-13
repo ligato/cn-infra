@@ -20,14 +20,14 @@ import (
 	"net/http"
 	"strconv"
 
-	"google.golang.org/grpc/grpclog"
-
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"github.com/unrolled/render"
-	"go.ligato.io/cn-infra/v2/infra"
-	"go.ligato.io/cn-infra/v2/rpc/rest"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/grpclog"
+
+	"go.ligato.io/cn-infra/v2/infra"
+	"go.ligato.io/cn-infra/v2/rpc/rest"
 )
 
 // set according to google.golang.org/grpc/internal/transport/log.go

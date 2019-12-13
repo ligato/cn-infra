@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/namsral/flag"
+
 	"go.ligato.io/cn-infra/v2/config"
 	"go.ligato.io/cn-infra/v2/infra"
 	access "go.ligato.io/cn-infra/v2/rpc/rest/security/model/access-security"

@@ -5,13 +5,14 @@ import (
 	"errors"
 	"log"
 
+	"golang.org/x/net/context"
+	"google.golang.org/grpc/examples/helloworld/helloworld"
+
 	"go.ligato.io/cn-infra/v2/agent"
 	"go.ligato.io/cn-infra/v2/examples/grpc-plugin/insecure"
 	"go.ligato.io/cn-infra/v2/logging"
 	"go.ligato.io/cn-infra/v2/rpc/grpc"
 	"go.ligato.io/cn-infra/v2/rpc/rest"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc/examples/helloworld/helloworld"
 )
 
 // *************************************************************************

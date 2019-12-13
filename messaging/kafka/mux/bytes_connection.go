@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Shopify/sarama"
+
 	"go.ligato.io/cn-infra/v2/logging"
 	"go.ligato.io/cn-infra/v2/messaging/kafka/client"
 )

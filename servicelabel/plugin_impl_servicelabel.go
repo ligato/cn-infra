@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/namsral/flag"
+
 	"go.ligato.io/cn-infra/v2/infra"
 	"go.ligato.io/cn-infra/v2/logging/logrus"
 )

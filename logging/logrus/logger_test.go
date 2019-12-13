@@ -24,6 +24,7 @@ import (
 
 	. "github.com/onsi/gomega"
 	lg "github.com/sirupsen/logrus"
+
 	"go.ligato.io/cn-infra/v2/logging"
 )
 

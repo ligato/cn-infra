@@ -20,6 +20,7 @@ import (
 	"github.com/gocql/gocql"
 	"github.com/maraino/go-mock"
 	"github.com/willfaught/gockle"
+
 	"go.ligato.io/cn-infra/v2/db/sql"
 	"go.ligato.io/cn-infra/v2/db/sql/cassandra"
 )

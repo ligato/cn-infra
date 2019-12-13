@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+
 	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 

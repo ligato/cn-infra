@@ -23,10 +23,10 @@ import (
 	"path/filepath"
 	"time"
 
-	pm "go.ligato.io/cn-infra/v2/exec/processmanager"
-
 	"github.com/pkg/errors"
+
 	"go.ligato.io/cn-infra/v2/agent"
+	pm "go.ligato.io/cn-infra/v2/exec/processmanager"
 	"go.ligato.io/cn-infra/v2/exec/processmanager/status"
 	"go.ligato.io/cn-infra/v2/logging"
 )

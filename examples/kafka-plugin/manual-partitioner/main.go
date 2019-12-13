@@ -2,13 +2,13 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"time"
 
-	"log"
-
 	"github.com/namsral/flag"
+
 	"go.ligato.io/cn-infra/v2/agent"
 	"go.ligato.io/cn-infra/v2/examples/model"
 	"go.ligato.io/cn-infra/v2/logging"

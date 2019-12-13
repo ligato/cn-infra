@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/Shopify/sarama/mocks"
+
 	"go.ligato.io/cn-infra/v2/logging/logrus"
 	"go.ligato.io/cn-infra/v2/messaging/kafka/client"
 )

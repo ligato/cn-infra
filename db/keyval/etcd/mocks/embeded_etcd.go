@@ -12,6 +12,7 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/embed"
 	"github.com/coreos/etcd/etcdserver/api/v3client"
+
 	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 

@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	goredis "github.com/go-redis/redis"
+
 	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/db/keyval"
 	"go.ligato.io/cn-infra/v2/utils/safeclose"

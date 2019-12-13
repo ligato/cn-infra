@@ -15,9 +15,8 @@
 package local
 
 import (
-	"sync"
-
 	"context"
+	"sync"
 
 	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/datasync/syncbase"

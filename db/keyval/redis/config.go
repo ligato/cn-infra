@@ -15,12 +15,11 @@
 package redis
 
 import (
-	"io/ioutil"
-	"time"
-
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"io/ioutil"
+	"time"
 
 	"github.com/coreos/etcd/pkg/tlsutil"
 	"github.com/ghodss/yaml"

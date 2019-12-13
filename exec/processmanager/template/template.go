@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 
 	"github.com/pkg/errors"
+
 	"go.ligato.io/cn-infra/v2/exec/processmanager/template/model/process"
 	"go.ligato.io/cn-infra/v2/logging"
 )

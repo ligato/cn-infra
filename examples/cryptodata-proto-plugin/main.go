@@ -23,6 +23,7 @@ import (
 	"log"
 
 	"github.com/pkg/errors"
+
 	"go.ligato.io/cn-infra/v2/agent"
 	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/db/cryptodata"

@@ -15,14 +15,14 @@
 package restsync
 
 import (
-	"go.ligato.io/cn-infra/v2/datasync"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
-
 	"net/http"
 
 	"github.com/gorilla/mux"
 	"github.com/unrolled/render"
+
+	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/datasync/syncbase"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
 // Just a shortcut to make following code more readable.

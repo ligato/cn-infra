@@ -3,12 +3,13 @@ package main
 import (
 	"flag"
 
-	"go.ligato.io/cn-infra/v2/examples/grpc-plugin/insecure"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	pb "google.golang.org/grpc/examples/helloworld/helloworld"
+
+	"go.ligato.io/cn-infra/v2/examples/grpc-plugin/insecure"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
 const (

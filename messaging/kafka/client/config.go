@@ -16,13 +16,13 @@ package client
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"strings"
 
-	"crypto/tls"
-
 	"github.com/Shopify/sarama"
 	"github.com/bsm/sarama-cluster"
+
 	"go.ligato.io/cn-infra/v2/logging"
 )
 

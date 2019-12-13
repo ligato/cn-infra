@@ -21,10 +21,10 @@ import (
 	"strconv"
 	"sync"
 
-	"go.ligato.io/cn-infra/v2/exec/processmanager/status"
-
 	"github.com/pkg/errors"
+
 	pm "go.ligato.io/cn-infra/v2/exec/processmanager"
+	"go.ligato.io/cn-infra/v2/exec/processmanager/status"
 	"go.ligato.io/cn-infra/v2/infra"
 )
 

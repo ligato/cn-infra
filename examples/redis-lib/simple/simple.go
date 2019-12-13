@@ -1,14 +1,13 @@
 package main
 
 import (
-	"time"
-
+	"context"
 	"fmt"
 	"strconv"
-
-	"context"
+	"time"
 
 	"github.com/namsral/flag"
+
 	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/db/keyval"
 	"go.ligato.io/cn-infra/v2/db/keyval/redis"

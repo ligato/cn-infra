@@ -15,19 +15,18 @@
 package etcd
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/coreos/etcd/etcdserver/api/v3client"
+	. "github.com/onsi/gomega"
 
 	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/db/keyval"
 	"go.ligato.io/cn-infra/v2/db/keyval/etcd/mocks"
 	"go.ligato.io/cn-infra/v2/logging/logrus"
-
-	"context"
-
-	"github.com/coreos/etcd/etcdserver/api/v3client"
-	. "github.com/onsi/gomega"
 )
 
 const (

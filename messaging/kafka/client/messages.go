@@ -20,6 +20,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/golang/protobuf/proto"
+
 	"go.ligato.io/cn-infra/v2/db/keyval"
 )
 
