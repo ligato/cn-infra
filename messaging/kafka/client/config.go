@@ -16,13 +16,14 @@ package client
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"strings"
 
-	"crypto/tls"
 	"github.com/Shopify/sarama"
 	"github.com/bsm/sarama-cluster"
-	"github.com/ligato/cn-infra/logging"
+
+	"go.ligato.io/cn-infra/v2/logging"
 )
 
 // RequiredAcks is used in Produce Requests to tell the broker how many replica acknowledgements

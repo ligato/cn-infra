@@ -18,11 +18,12 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/ligato/cn-infra/infra"
-	"github.com/ligato/cn-infra/rpc/rest/security"
-	access "github.com/ligato/cn-infra/rpc/rest/security/model/access-security"
-	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/unrolled/render"
+
+	"go.ligato.io/cn-infra/v2/infra"
+	"go.ligato.io/cn-infra/v2/rpc/rest/security"
+	access "go.ligato.io/cn-infra/v2/rpc/rest/security/model/access-security"
+	"go.ligato.io/cn-infra/v2/utils/safeclose"
 )
 
 // Plugin struct holds all plugin-related data.

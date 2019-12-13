@@ -19,9 +19,10 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/datasync/syncbase"
-	"github.com/ligato/cn-infra/db/keyval"
+
+	"go.ligato.io/cn-infra/v2/datasync"
+	"go.ligato.io/cn-infra/v2/datasync/syncbase"
+	"go.ligato.io/cn-infra/v2/db/keyval"
 )
 
 // protoTxnItem is used in ProtoTxn.

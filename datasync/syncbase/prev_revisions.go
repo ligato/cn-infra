@@ -17,7 +17,7 @@ package syncbase
 import (
 	"sync"
 
-	"github.com/ligato/cn-infra/datasync"
+	"go.ligato.io/cn-infra/v2/datasync"
 )
 
 // PrevRevisions maintains the map of keys & values with revision.

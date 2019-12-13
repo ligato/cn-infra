@@ -19,9 +19,10 @@ import (
 	"io"
 	"strings"
 
-	"github.com/ligato/cn-infra/datasync/syncbase/msg"
-	"github.com/ligato/cn-infra/logging/logrus"
 	"golang.org/x/net/context"
+
+	"go.ligato.io/cn-infra/v2/datasync/syncbase/msg"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
 // NewDataMsgServiceServer creates a new instance of DataMsgServiceServer.

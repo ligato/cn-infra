@@ -19,7 +19,8 @@ import (
 	"time"
 
 	"github.com/bsm/sarama-cluster"
-	"github.com/ligato/cn-infra/logging/logrus"
+
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
 var log = logrus.DefaultLogger()

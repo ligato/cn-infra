@@ -16,8 +16,9 @@ package statuscheck
 
 import (
 	"github.com/golang/protobuf/proto"
-	"github.com/ligato/cn-infra/health/statuscheck/model/status"
-	"github.com/ligato/cn-infra/infra"
+
+	"go.ligato.io/cn-infra/v2/health/statuscheck/model/status"
+	"go.ligato.io/cn-infra/v2/infra"
 )
 
 //go:generate protoc --proto_path=model/status --go_out=model/status model/status/status.proto

@@ -17,15 +17,14 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/namsral/flag"
 
-	"strings"
-
-	"github.com/ligato/cn-infra/examples/kafka-lib/utils"
-	"github.com/ligato/cn-infra/logging/logrus"
-	"github.com/ligato/cn-infra/messaging/kafka/client"
-	"github.com/ligato/cn-infra/utils/clienttls"
+	"go.ligato.io/cn-infra/v2/examples/kafka-lib/utils"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/messaging/kafka/client"
+	"go.ligato.io/cn-infra/v2/utils/clienttls"
 )
 
 var (

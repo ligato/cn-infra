@@ -15,11 +15,11 @@
 package pluginstatusmap
 
 import (
-	"github.com/ligato/cn-infra/health/statuscheck/model/status"
-	"github.com/ligato/cn-infra/idxmap"
-	"github.com/ligato/cn-infra/idxmap/mem"
-	"github.com/ligato/cn-infra/infra"
-	"github.com/ligato/cn-infra/logging/logrus"
+	"go.ligato.io/cn-infra/v2/health/statuscheck/model/status"
+	"go.ligato.io/cn-infra/v2/idxmap"
+	"go.ligato.io/cn-infra/v2/idxmap/mem"
+	"go.ligato.io/cn-infra/v2/infra"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
 // PluginStatusIdxMap provides map of plugin names to plugin status.

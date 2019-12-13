@@ -12,7 +12,8 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/embed"
 	"github.com/coreos/etcd/etcdserver/api/v3client"
-	"github.com/ligato/cn-infra/logging/logrus"
+
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
 const etcdStartTimeout = 30

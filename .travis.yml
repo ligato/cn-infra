@@ -4,9 +4,9 @@ sudo: required
 
 language: go
 go:
-  - "1.12.x"
+  - 1.x
 
-go_import_path: github.com/ligato/cn-infra
+go_import_path: go.ligato.io/cn-infra/v2
 
 addons:
   apt:
@@ -18,18 +18,17 @@ git:
 
 before_install:
   - make get-linkcheck
-  - make get-linters
+  - make get-linter
   - make get-testtools
   - go get -v github.com/mattn/goveralls
 
 script:
   - make yamllint
   - make check-links || true
-  - make lint
   - make dep-check
-  - make
+  - make lint
+  - make build
   - make test-cover
-#  - make test-examples # TODO: refactor tests to not check exact log output
 
 after_success:
   - goveralls -coverprofile=/tmp/coverage.out -service=travis-ci

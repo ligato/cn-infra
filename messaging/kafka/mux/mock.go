@@ -18,8 +18,9 @@ import (
 	"testing"
 
 	"github.com/Shopify/sarama/mocks"
-	"github.com/ligato/cn-infra/logging/logrus"
-	"github.com/ligato/cn-infra/messaging/kafka/client"
+
+	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/messaging/kafka/client"
 )
 
 func getMockConsumerFactory(t *testing.T) ConsumerFactory {

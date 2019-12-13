@@ -15,7 +15,7 @@
 package cassandra
 
 import (
-	"github.com/ligato/cn-infra/db/sql"
+	"go.ligato.io/cn-infra/v2/db/sql"
 )
 
 // NewTxn creates a new Data Broker transaction. A transaction can

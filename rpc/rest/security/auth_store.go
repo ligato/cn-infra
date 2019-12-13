@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	access "github.com/ligato/cn-infra/rpc/rest/security/model/access-security"
+	access "go.ligato.io/cn-infra/v2/rpc/rest/security/model/access-security"
 )
 
 // AuthenticationDB is common interface to access user database/permissions

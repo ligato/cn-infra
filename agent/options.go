@@ -21,7 +21,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ligato/cn-infra/infra"
+	"go.ligato.io/cn-infra/v2/infra"
 )
 
 var (

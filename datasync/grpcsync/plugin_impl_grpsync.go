@@ -15,10 +15,10 @@
 package grpcsync
 
 import (
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/datasync/syncbase"
-	"github.com/ligato/cn-infra/infra"
-	"github.com/ligato/cn-infra/rpc/grpc"
+	"go.ligato.io/cn-infra/v2/datasync"
+	"go.ligato.io/cn-infra/v2/datasync/syncbase"
+	"go.ligato.io/cn-infra/v2/infra"
+	"go.ligato.io/cn-infra/v2/rpc/grpc"
 )
 
 // Plugin grpcsync implements Plugin interface, therefore can be loaded with other plugins.

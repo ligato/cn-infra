@@ -4,8 +4,9 @@ import (
 	"fmt"
 
 	"github.com/Shopify/sarama"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/messaging/kafka/client"
+
+	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/messaging/kafka/client"
 )
 
 // BytesConnection is interface for multiplexer with dynamic partitioner.

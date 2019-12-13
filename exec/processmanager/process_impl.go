@@ -23,8 +23,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ligato/cn-infra/exec/processmanager/status"
 	"github.com/pkg/errors"
+
+	"go.ligato.io/cn-infra/v2/exec/processmanager/status"
 )
 
 // Marked defines that the process should be always restarted

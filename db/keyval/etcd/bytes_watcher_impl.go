@@ -15,7 +15,7 @@
 package etcd
 
 import (
-	"github.com/ligato/cn-infra/datasync"
+	"go.ligato.io/cn-infra/v2/datasync"
 )
 
 // BytesWatchPutResp is sent when new key-value pair has been inserted

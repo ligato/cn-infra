@@ -17,8 +17,8 @@ package messaging
 import (
 	"time"
 
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
 // DefaultMsgTimeout for delivery of notification

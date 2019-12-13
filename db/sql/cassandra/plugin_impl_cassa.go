@@ -17,11 +17,12 @@ package cassandra
 import (
 	"errors"
 
-	"github.com/ligato/cn-infra/db/sql"
-	"github.com/ligato/cn-infra/health/statuscheck"
-	"github.com/ligato/cn-infra/infra"
-	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/willfaught/gockle"
+
+	"go.ligato.io/cn-infra/v2/db/sql"
+	"go.ligato.io/cn-infra/v2/health/statuscheck"
+	"go.ligato.io/cn-infra/v2/infra"
+	"go.ligato.io/cn-infra/v2/utils/safeclose"
 )
 
 //

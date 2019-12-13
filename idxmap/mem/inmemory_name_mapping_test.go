@@ -15,13 +15,14 @@
 package mem
 
 import (
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/ligato/cn-infra/idxmap"
-	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/onsi/gomega"
-	"strings"
+
+	"go.ligato.io/cn-infra/v2/idxmap"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
 func TestNewNamedMappingMem(t *testing.T) {

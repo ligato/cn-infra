@@ -19,7 +19,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ligato/cn-infra/db/keyval/filedb/decoder"
+	"go.ligato.io/cn-infra/v2/db/keyval/filedb/decoder"
 )
 
 const initialRev = 0

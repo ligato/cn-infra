@@ -1,19 +1,19 @@
 package main
 
 import (
-	"time"
-
+	"context"
 	"fmt"
 	"strconv"
+	"time"
 
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/db/keyval/redis"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
-	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
-	"context"
+
+	"go.ligato.io/cn-infra/v2/datasync"
+	"go.ligato.io/cn-infra/v2/db/keyval"
+	"go.ligato.io/cn-infra/v2/db/keyval/redis"
+	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/utils/safeclose"
 )
 
 // SimpleRedis is base structure which holds together all items needed to run the example - logger, redis client,

@@ -15,12 +15,12 @@
 package consul
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/consul/api"
 
-	"github.com/ligato/cn-infra/db/keyval"
-	"context"
+	"go.ligato.io/cn-infra/v2/db/keyval"
 )
 
 // Txn allows grouping operations into the transaction. Transaction executes

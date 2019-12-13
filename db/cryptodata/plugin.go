@@ -19,7 +19,7 @@ import (
 	"encoding/pem"
 	"io/ioutil"
 
-	"github.com/ligato/cn-infra/infra"
+	"go.ligato.io/cn-infra/v2/infra"
 )
 
 // Config is used to read private key from file

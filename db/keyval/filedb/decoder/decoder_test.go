@@ -17,7 +17,7 @@ package decoder_test
 import (
 	"testing"
 
-	"github.com/ligato/cn-infra/db/keyval/filedb/decoder"
+	"go.ligato.io/cn-infra/v2/db/keyval/filedb/decoder"
 
 	. "github.com/onsi/gomega"
 )

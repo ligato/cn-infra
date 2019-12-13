@@ -16,8 +16,8 @@
 package infra
 
 import (
-	"github.com/ligato/cn-infra/config"
-	"github.com/ligato/cn-infra/logging"
+	"go.ligato.io/cn-infra/v2/config"
+	"go.ligato.io/cn-infra/v2/logging"
 )
 
 // Plugin interface defines plugin's basic life-cycle methods.

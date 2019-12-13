@@ -18,8 +18,9 @@ import (
 	"context"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/datasync/syncbase"
+
+	"go.ligato.io/cn-infra/v2/datasync"
+	"go.ligato.io/cn-infra/v2/datasync/syncbase"
 )
 
 // ChangeWatchResp is a structure that adapts the BytesWatchResp to the

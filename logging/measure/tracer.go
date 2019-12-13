@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ligato/cn-infra/logging/measure/model/apitrace"
+	"go.ligato.io/cn-infra/v2/logging/measure/model/apitrace"
 )
 
 // Tracer allows to measure, store and list measured time entries.

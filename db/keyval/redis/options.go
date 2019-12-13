@@ -1,7 +1,7 @@
 package redis
 
 import (
-	"github.com/ligato/cn-infra/health/statuscheck"
+	"go.ligato.io/cn-infra/v2/health/statuscheck"
 )
 
 // DefaultPlugin is a default instance of Plugin.

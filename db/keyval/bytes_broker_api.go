@@ -15,8 +15,9 @@
 package keyval
 
 import (
-	"github.com/ligato/cn-infra/datasync"
 	"context"
+
+	"go.ligato.io/cn-infra/v2/datasync"
 )
 
 // BytesBroker allows storing, retrieving and removing data in a key-value form.

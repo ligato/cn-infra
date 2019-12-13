@@ -18,7 +18,8 @@ import (
 	"context"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/ligato/cn-infra/db/keyval"
+
+	"go.ligato.io/cn-infra/v2/db/keyval"
 )
 
 // protoTxn represents a transaction.

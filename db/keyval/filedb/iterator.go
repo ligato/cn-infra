@@ -3,9 +3,9 @@ package filedb
 import (
 	"strings"
 
-	"github.com/ligato/cn-infra/db/keyval/filedb/decoder"
+	"go.ligato.io/cn-infra/v2/db/keyval/filedb/decoder"
 
-	"github.com/ligato/cn-infra/db/keyval"
+	"go.ligato.io/cn-infra/v2/db/keyval"
 )
 
 // File system DB BytesKeyValIterator implementation

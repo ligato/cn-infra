@@ -18,9 +18,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ligato/cn-infra/exec/processmanager/status"
-	"github.com/ligato/cn-infra/logging/logrus"
 	. "github.com/onsi/gomega"
+
+	"go.ligato.io/cn-infra/v2/exec/processmanager/status"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
 // TestParseStatusFile parses test status file and verifies every parsed field

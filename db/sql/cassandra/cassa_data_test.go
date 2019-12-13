@@ -18,10 +18,11 @@ import (
 	"errors"
 
 	"github.com/gocql/gocql"
-	"github.com/ligato/cn-infra/db/sql"
-	"github.com/ligato/cn-infra/db/sql/cassandra"
 	"github.com/maraino/go-mock"
 	"github.com/willfaught/gockle"
+
+	"go.ligato.io/cn-infra/v2/db/sql"
+	"go.ligato.io/cn-infra/v2/db/sql/cassandra"
 )
 
 // test data

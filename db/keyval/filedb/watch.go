@@ -1,7 +1,7 @@
 package filedb
 
 import (
-	"github.com/ligato/cn-infra/datasync"
+	"go.ligato.io/cn-infra/v2/datasync"
 )
 
 // Implementation of BytesWatchResp (generic response)

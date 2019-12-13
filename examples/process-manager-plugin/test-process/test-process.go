@@ -21,8 +21,9 @@ package main
 import (
 	"time"
 
-	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/namsral/flag"
+
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
 var log = logrus.DefaultLogger()

@@ -18,14 +18,14 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-
 	"time"
 
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
-	"github.com/ligato/cn-infra/messaging/kafka/client"
-	"github.com/ligato/cn-infra/messaging/kafka/mux"
 	"github.com/namsral/flag"
+
+	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/messaging/kafka/client"
+	"go.ligato.io/cn-infra/v2/messaging/kafka/mux"
 )
 
 func main() {

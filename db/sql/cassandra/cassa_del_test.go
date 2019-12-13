@@ -17,9 +17,10 @@ package cassandra_test
 import (
 	"testing"
 
-	"github.com/ligato/cn-infra/db/sql"
-	"github.com/ligato/cn-infra/db/sql/cassandra"
 	"github.com/onsi/gomega"
+
+	"go.ligato.io/cn-infra/v2/db/sql"
+	"go.ligato.io/cn-infra/v2/db/sql/cassandra"
 )
 
 // TestDel1_convenient is most convenient way of deletening from cassandra

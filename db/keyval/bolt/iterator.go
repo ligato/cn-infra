@@ -3,7 +3,7 @@ package bolt
 import (
 	"strings"
 
-	"github.com/ligato/cn-infra/db/keyval"
+	"go.ligato.io/cn-infra/v2/db/keyval"
 )
 
 // kvPair is used to represent a single K/V entry

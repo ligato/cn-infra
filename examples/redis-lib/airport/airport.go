@@ -17,31 +17,28 @@
 package main
 
 import (
+	"fmt"
+	"math"
 	"math/rand"
 	"os"
 	"os/signal"
-	"sync"
-	"time"
-
-	"github.com/ligato/cn-infra/utils/safeclose"
-	"github.com/pkg/errors"
-
-	"fmt"
-
 	"sort"
 	"strconv"
-
-	"math"
+	"sync"
 	"sync/atomic"
+	"time"
 
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/db/keyval/kvproto"
-	"github.com/ligato/cn-infra/db/keyval/redis"
-	"github.com/ligato/cn-infra/examples/redis-lib/airport/model"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/logging/logrus"
 	"github.com/namsral/flag"
+	"github.com/pkg/errors"
+
+	"go.ligato.io/cn-infra/v2/datasync"
+	"go.ligato.io/cn-infra/v2/db/keyval"
+	"go.ligato.io/cn-infra/v2/db/keyval/kvproto"
+	"go.ligato.io/cn-infra/v2/db/keyval/redis"
+	"go.ligato.io/cn-infra/v2/examples/redis-lib/airport/model"
+	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/utils/safeclose"
 )
 
 var diagram = `

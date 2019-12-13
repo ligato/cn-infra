@@ -15,13 +15,14 @@
 package cryptodata
 
 import (
-	"crypto/rsa"
-	"github.com/ligato/cn-infra/db/keyval"
-	"errors"
 	"crypto/rand"
-	"io"
-	"hash"
+	"crypto/rsa"
 	"crypto/sha256"
+	"errors"
+	"hash"
+	"io"
+
+	"go.ligato.io/cn-infra/v2/db/keyval"
 )
 
 // ClientAPI handles encrypting/decrypting and wrapping data

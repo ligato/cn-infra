@@ -17,8 +17,9 @@ package config_test
 import (
 	"testing"
 
-	"github.com/ligato/cn-infra/config"
 	. "github.com/onsi/gomega"
+
+	"go.ligato.io/cn-infra/v2/config"
 )
 
 const (

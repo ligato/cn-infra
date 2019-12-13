@@ -2,20 +2,20 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"time"
 
-	"log"
-
-	"github.com/ligato/cn-infra/agent"
-	"github.com/ligato/cn-infra/examples/model"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/messaging"
-	"github.com/ligato/cn-infra/messaging/kafka"
-	"github.com/ligato/cn-infra/messaging/kafka/mux"
-	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
+
+	"go.ligato.io/cn-infra/v2/agent"
+	"go.ligato.io/cn-infra/v2/examples/model"
+	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/messaging"
+	"go.ligato.io/cn-infra/v2/messaging/kafka"
+	"go.ligato.io/cn-infra/v2/messaging/kafka/mux"
+	"go.ligato.io/cn-infra/v2/utils/safeclose"
 )
 
 //********************************************************************

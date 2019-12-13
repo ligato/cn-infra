@@ -22,9 +22,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ligato/cn-infra/exec/processmanager/template/model/process"
-	"github.com/ligato/cn-infra/logging"
 	"github.com/pkg/errors"
+
+	"go.ligato.io/cn-infra/v2/exec/processmanager/template/model/process"
+	"go.ligato.io/cn-infra/v2/logging"
 )
 
 // JSONExt - JSON extension

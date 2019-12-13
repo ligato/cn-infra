@@ -22,9 +22,10 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ligato/cn-infra/logging"
 	. "github.com/onsi/gomega"
 	lg "github.com/sirupsen/logrus"
+
+	"go.ligato.io/cn-infra/v2/logging"
 )
 
 func LogAndAssertJSON(t *testing.T, log func(*Logger), assertions func(fields lg.Fields)) {

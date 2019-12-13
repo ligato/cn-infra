@@ -5,13 +5,14 @@ import (
 	"errors"
 	"log"
 
-	"github.com/ligato/cn-infra/agent"
-	"github.com/ligato/cn-infra/examples/grpc-plugin/insecure"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/rpc/grpc"
-	"github.com/ligato/cn-infra/rpc/rest"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/examples/helloworld/helloworld"
+
+	"go.ligato.io/cn-infra/v2/agent"
+	"go.ligato.io/cn-infra/v2/examples/grpc-plugin/insecure"
+	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/rpc/grpc"
+	"go.ligato.io/cn-infra/v2/rpc/rest"
 )
 
 // *************************************************************************
@@ -27,7 +28,7 @@ func main() {
 		grpc.UseHTTP(&rest.DefaultPlugin),
 		// Remove 'UseConf' in order to allow GRPC config file
 		grpc.UseConf(grpc.Config{
-			Endpoint: "localhost:9111",
+			Endpoint:        "localhost:9111",
 			ExtendedLogging: true,
 		}),
 		grpc.UseAuth(&grpc.Authenticator{

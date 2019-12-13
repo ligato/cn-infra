@@ -6,11 +6,12 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/ligato/cn-infra/agent"
-	"github.com/ligato/cn-infra/logging"
-	prom "github.com/ligato/cn-infra/rpc/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"go.ligato.io/cn-infra/v2/agent"
+	"go.ligato.io/cn-infra/v2/logging"
+	prom "go.ligato.io/cn-infra/v2/rpc/prometheus"
 )
 
 // *************************************************************************

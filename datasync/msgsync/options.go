@@ -15,7 +15,7 @@
 package msgsync
 
 import (
-	"github.com/ligato/cn-infra/messaging"
+	"go.ligato.io/cn-infra/v2/messaging"
 )
 
 // NewPlugin creates a new Plugin with the provided Options.

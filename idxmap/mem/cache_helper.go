@@ -2,8 +2,9 @@ package mem
 
 import (
 	"github.com/golang/protobuf/proto"
-	"github.com/ligato/cn-infra/datasync"
-	"github.com/ligato/cn-infra/idxmap"
+
+	"go.ligato.io/cn-infra/v2/datasync"
+	"go.ligato.io/cn-infra/v2/idxmap"
 )
 
 // CacheHelper is a base cache implementation reused by multiple typesafe Caches.

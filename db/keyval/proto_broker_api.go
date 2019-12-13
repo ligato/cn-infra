@@ -19,7 +19,8 @@ import (
 	"io"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/ligato/cn-infra/datasync"
+
+	"go.ligato.io/cn-infra/v2/datasync"
 )
 
 // ProtoBroker is a decorator that allows to read/write proto file modelled data.

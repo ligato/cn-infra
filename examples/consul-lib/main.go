@@ -19,10 +19,11 @@ import (
 	"log"
 
 	"github.com/hashicorp/consul/api"
-	"github.com/ligato/cn-infra/db/keyval"
-	"github.com/ligato/cn-infra/db/keyval/consul"
-	"github.com/ligato/cn-infra/db/keyval/kvproto"
-	"github.com/ligato/cn-infra/examples/etcd-lib/model/phonebook"
+
+	"go.ligato.io/cn-infra/v2/db/keyval"
+	"go.ligato.io/cn-infra/v2/db/keyval/consul"
+	"go.ligato.io/cn-infra/v2/db/keyval/kvproto"
+	"go.ligato.io/cn-infra/v2/examples/etcd-lib/model/phonebook"
 )
 
 func main() {

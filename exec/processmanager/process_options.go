@@ -18,7 +18,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/ligato/cn-infra/exec/processmanager/status"
+	"go.ligato.io/cn-infra/v2/exec/processmanager/status"
 )
 
 // POptions is common object which holds all selected options
@@ -50,7 +50,7 @@ type POptions struct {
 	autoTerm bool
 
 	// cpu affinity
-	cpuAffinity string
+	cpuAffinity      string
 	cpuAffinityDelay time.Duration
 }
 

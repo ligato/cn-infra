@@ -13,9 +13,9 @@ agents tied together with a common life-cycle management mechanism.
 
 ## Documentation
 
-Extensive documentation with tutorials & how-to guides can be found at [docs.ligato.io](https://docs.ligato.io/).
+Extensive documentation with [tutorials](https://docs.ligato.io/en/latest/tutorials/01_hello-world/) & how-to guides can be found at [docs.ligato.io](https://docs.ligato.io/).
 
-Documentation for the code can be found at [godoc.org/github.com/ligato/cn-infra](https://godoc.org/github.com/ligato/cn-infra).
+Go docs for the code can be found at [godoc.org/github.com/ligato/cn-infra](https://godoc.org/github.com/ligato/cn-infra).
 
 ## Quickstart
 
@@ -24,7 +24,6 @@ is as follows:
 
 ```go
 func main() {
-
 	// Create agent with connector plugins
 	a := agent.NewAgent(agent.AllPlugins(
 		&etcd.DefaultPlugin,

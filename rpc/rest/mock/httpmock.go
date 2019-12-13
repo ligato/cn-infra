@@ -15,12 +15,11 @@
 package mock
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 
-	"io"
-
-	"github.com/ligato/cn-infra/rpc/rest"
+	"go.ligato.io/cn-infra/v2/rpc/rest"
 )
 
 // HTTPMock is supposed to be used to mock real HTTP server but have the ability

@@ -23,11 +23,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ligato/cn-infra/agent"
-	pm "github.com/ligato/cn-infra/exec/processmanager"
-	"github.com/ligato/cn-infra/exec/processmanager/status"
-	"github.com/ligato/cn-infra/logging"
 	"github.com/pkg/errors"
+
+	"go.ligato.io/cn-infra/v2/agent"
+	pm "go.ligato.io/cn-infra/v2/exec/processmanager"
+	"go.ligato.io/cn-infra/v2/exec/processmanager/status"
+	"go.ligato.io/cn-infra/v2/logging"
 )
 
 const pluginName = "process-manager-example"

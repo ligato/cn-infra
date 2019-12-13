@@ -21,7 +21,8 @@ import (
 	"sync"
 
 	"github.com/Shopify/sarama"
-	"github.com/ligato/cn-infra/logging"
+
+	"go.ligato.io/cn-infra/v2/logging"
 )
 
 // AsyncProducer allows to publish message to kafka using asynchronous API.

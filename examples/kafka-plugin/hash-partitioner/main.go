@@ -2,18 +2,19 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"time"
 
-	"github.com/ligato/cn-infra/examples/model"
-	"github.com/ligato/cn-infra/logging"
-	"github.com/ligato/cn-infra/messaging"
-	"github.com/ligato/cn-infra/utils/safeclose"
 	"github.com/namsral/flag"
-	"github.com/ligato/cn-infra/messaging/kafka"
-	"github.com/ligato/cn-infra/agent"
-	"log"
+
+	"go.ligato.io/cn-infra/v2/agent"
+	"go.ligato.io/cn-infra/v2/examples/model"
+	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/messaging"
+	"go.ligato.io/cn-infra/v2/messaging/kafka"
+	"go.ligato.io/cn-infra/v2/utils/safeclose"
 )
 
 //********************************************************************
@@ -34,8 +35,8 @@ func main() {
 	// Init example plugin and its dependencies
 	ep := &ExamplePlugin{
 		Deps: Deps{
-			Log:          logging.ForPlugin(PluginName),
-			Kafka:         &kafka.DefaultPlugin,
+			Log:   logging.ForPlugin(PluginName),
+			Kafka: &kafka.DefaultPlugin,
 		},
 		exampleFinished: make(chan struct{}),
 	}
@@ -66,10 +67,10 @@ type ExamplePlugin struct {
 	asyncErrorChannel   chan messaging.ProtoMessageErr
 
 	// Fields below are used to properly finish the example.
-	messagesSent bool
-	syncRecv     bool
-	asyncRecv    bool
-	asyncSuccess bool
+	messagesSent    bool
+	syncRecv        bool
+	asyncRecv       bool
+	asyncSuccess    bool
 	exampleFinished chan struct{}
 }
 
