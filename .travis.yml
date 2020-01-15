@@ -6,7 +6,7 @@ language: go
 go:
   - 1.x
 
-go_import_path: go.ligato.io/cn-infra/v2
+go_import_path: go.ligato.io/cn-infra
 
 addons:
   apt:
