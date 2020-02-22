@@ -18,6 +18,9 @@ import (
 	"crypto/tls"
 	"fmt"
 
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"google.golang.org/grpc"
+
 	"go.ligato.io/cn-infra/v2/config"
 	"go.ligato.io/cn-infra/v2/logging"
 	"go.ligato.io/cn-infra/v2/rpc/rest"
@@ -75,16 +78,30 @@ func UseHTTP(h rest.HTTPHandlers) Option {
 	}
 }
 
-// UseAuth return Option that sets Authenticator.
+// UseAuth returns Option that sets Authenticator.
 func UseAuth(a *Authenticator) Option {
 	return func(p *Plugin) {
 		p.auther = a
 	}
 }
 
-// UseTLS return Option that sets TLS config.
+// UseTLS returns Option that sets TLS config.
 func UseTLS(c *tls.Config) Option {
 	return func(p *Plugin) {
 		p.tlsConfig = c
+	}
+}
+
+// UseServerOpts returns Option that adds server options.
+func UseServerOpts(o ...grpc.ServerOption) Option {
+	return func(p *Plugin) {
+		p.serverOpts = append(p.serverOpts, o...)
+	}
+}
+
+// UsePromMetrics returns Option that sets custom server metrics.
+func UsePromMetrics(metrics *grpc_prometheus.ServerMetrics) Option {
+	return func(p *Plugin) {
+		p.metrics = metrics
 	}
 }

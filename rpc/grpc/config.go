@@ -62,17 +62,20 @@ type Config struct {
 	// ExtendedLogging enables detailed GRPC logging
 	ExtendedLogging bool `json:"extended-logging"`
 
+	// PrometheusMetrics enables prometheus metrics for gRPC client.
+	PrometheusMetrics bool `json:"prometheus-metrics"`
+
 	// Compression for inbound/outbound messages.
 	// Supported only gzip.
 	//TODO Compression string
 }
 
 func (cfg *Config) getGrpcOptions() (opts []grpc.ServerOption) {
-	switch {
-	case cfg.MaxConcurrentStreams > 0:
+	if cfg.MaxConcurrentStreams > 0 {
 		opts = append(opts, grpc.MaxConcurrentStreams(cfg.MaxConcurrentStreams))
-	case cfg.MaxMsgSize > 0:
-		opts = append(opts, grpc.MaxMsgSize(cfg.MaxMsgSize))
+	}
+	if cfg.MaxMsgSize > 0 {
+		opts = append(opts, grpc.MaxRecvMsgSize(cfg.MaxMsgSize))
 	}
 	return
 }
