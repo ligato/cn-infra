@@ -18,9 +18,9 @@ import (
 	"crypto/tls"
 	"io"
 	"net/http"
-	"strconv"
 
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/unrolled/render"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -40,15 +40,18 @@ type Plugin struct {
 
 	*Config
 
+	// Plugin availability flag
+	disabled bool
+
 	// GRPC server instance
 	grpcServer *grpc.Server
 	// GRPC network listener
 	netListener io.Closer
-	// Plugin availability flag
-	disabled bool
 
-	tlsConfig *tls.Config
-	auther    *Authenticator
+	tlsConfig  *tls.Config
+	auther     *Authenticator
+	serverOpts []grpc.ServerOption
+	metrics    *grpc_prometheus.ServerMetrics
 }
 
 // Deps is a list of injected dependencies of the GRPC plugin.
@@ -69,8 +72,6 @@ func (p *Plugin) Init() (err error) {
 
 	// Prepare GRPC server
 	if p.grpcServer == nil {
-		opts := p.Config.getGrpcOptions()
-
 		// If config for TLS was not provided with the `UseTLS` option, check config file.
 		if p.tlsConfig == nil {
 			tc, err := p.Config.getTLS()
@@ -80,13 +81,33 @@ func (p *Plugin) Init() (err error) {
 			p.tlsConfig = tc
 		}
 
+		// use default grpc prometheus metrics if not set by UseServerMetrics option.
+		if p.metrics == nil && p.Config.PrometheusMetrics {
+			p.metrics = grpc_prometheus.DefaultServerMetrics
+		}
+
+		// get server options from config
+		opts := p.Config.getGrpcOptions()
+
+		// add custom server options
+		opts = append(opts, p.serverOpts...)
+
+		// add server options for prometheus metrics
+		if p.metrics != nil {
+			p.Log.Debug("Prometheus server metrics for gRPC enabled")
+			opts = append(opts,
+				grpc.StreamInterceptor(p.metrics.StreamServerInterceptor()),
+				grpc.UnaryInterceptor(p.metrics.UnaryServerInterceptor()),
+			)
+		}
+
 		if p.tlsConfig != nil {
-			p.Log.Info("Secure connection for gRPC enabled")
+			p.Log.Debug("Secure connection (TLS) for gRPC enabled")
 			opts = append(opts, grpc.Creds(credentials.NewTLS(p.tlsConfig)))
 		}
 
 		if p.auther != nil {
-			p.Log.Info("Token authentication for gRPC enabled")
+			p.Log.Debug("Token authentication for gRPC enabled")
 			opts = append(opts, grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(p.auther.Authenticate)))
 			opts = append(opts, grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(p.auther.Authenticate)))
 		}
@@ -95,7 +116,7 @@ func (p *Plugin) Init() (err error) {
 
 	grpcLogger := p.Log.NewLogger("grpc-server")
 	if p.Config != nil && p.Config.ExtendedLogging {
-		p.Log.Info("GRPC transport logging enabled")
+		p.Log.Debug("GRPC transport logging enabled")
 		grpcLogger.SetVerbosity(logLevel)
 	}
 	grpclog.SetLoggerV2(grpcLogger)
@@ -110,13 +131,17 @@ func (p *Plugin) AfterInit() (err error) {
 	}
 
 	if p.Deps.HTTP != nil {
-		p.Log.Infof("exposing GRPC services via HTTP (port %v) on: /service",
-			strconv.Itoa(p.Deps.HTTP.GetPort()))
+		p.Log.Infof("exposing GRPC services via HTTP (port %v) on: /service", p.Deps.HTTP.GetPort())
 		p.Deps.HTTP.RegisterHTTPHandler("/service", func(formatter *render.Render) http.HandlerFunc {
 			return p.grpcServer.ServeHTTP
 		}, "GET", "PUT", "POST")
 	} else {
-		p.Log.Infof("HTTP not set, skip exposing GRPC services")
+		p.Log.Debugf("HTTP not set, skip exposing GRPC services")
+	}
+
+	// initialize prometheus metrics for grpc server
+	if p.metrics != nil {
+		p.metrics.InitializeMetrics(p.grpcServer)
 	}
 
 	// Start GRPC listener
