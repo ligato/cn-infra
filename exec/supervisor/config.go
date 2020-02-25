@@ -89,6 +89,10 @@ type Program struct {
 	// Warning: Locking process to CPU does NOT keep other processes off that CPU.
 	CPUAffinityMask string `json:"cpu-affinity-mask"`
 
+	// Bond process to given set of CPUs. Same as CPUAffinityMask, but CPUs can be specified
+	// as a list of CPU cores, e.g. "0-2,6".
+	CPUAffinityList string `json:"cpu-affinity-list"`
+
 	// This field can postpone CPU affinity setup for given time. Some processes may
 	// manipulate CPU scheduling during startup, this option allows to "bypass" it,
 	// waiting until the process is fully loaded and then lock it.

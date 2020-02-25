@@ -190,7 +190,7 @@ func (p *Plugin) execute(program *Program) error {
 			pm.Notify(stateChan),
 			pm.Restarts(int32(program.Restarts)),
 			pm.AutoTerminate(),
-			pm.CPUAffinityMask(program.CPUAffinityMask, program.CPUAffinitySetupDelay),
+			pm.CPUAffinity(program.CPUAffinityMask, program.CPUAffinityList, program.CPUAffinitySetupDelay),
 		)
 	} else {
 		process = p.PM.NewProcess(program.Name, program.ExecutablePath,
@@ -198,7 +198,7 @@ func (p *Plugin) execute(program *Program) error {
 			pm.Writer(svLogger, svLogger),
 			pm.Notify(stateChan),
 			pm.AutoTerminate(),
-			pm.CPUAffinityMask(program.CPUAffinityMask, program.CPUAffinitySetupDelay),
+			pm.CPUAffinity(program.CPUAffinityMask, program.CPUAffinityList, program.CPUAffinitySetupDelay),
 		)
 	}
 	if err := process.Start(); err != nil {

@@ -20,6 +20,8 @@ message Template {                      /* Template is process definition which 
                                            released */
         string cpu_affinity = 9;        /* Allows to set CPU affinity to given process. Value has to be in hexadecimal
                                            format (see taskset command) */
+        string cpu_affinity_list = 11;  /* Allows to set CPU affinity to given process. Same as cpu_affinity, but
+                                           value can be specified as a list of core numbers, e.g. "0-2,6" */
         string cpu_affinity_delay = 10; /* Postpone CPU affinity setup if needed */
     }
     pOptions p_options = 3;

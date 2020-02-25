@@ -50,7 +50,8 @@ type POptions struct {
 	autoTerm bool
 
 	// cpu affinity
-	cpuAffinity      string
+	cpuAffinityMask  string
+	cpuAffinityList  string
 	cpuAffinityDelay time.Duration
 }
 
@@ -117,10 +118,11 @@ func AutoTerminate() POption {
 	}
 }
 
-// CPUAffinityMask allows to set CPU affinity to given process
-func CPUAffinityMask(affinity string, delay time.Duration) POption {
+// CPUAffinity allows to set CPU affinity to given process
+func CPUAffinity(mask, list string, delay time.Duration) POption {
 	return func(p *POptions) {
-		p.cpuAffinity = affinity
+		p.cpuAffinityMask = mask
+		p.cpuAffinityList = list
 		p.cpuAffinityDelay = delay
 	}
 }

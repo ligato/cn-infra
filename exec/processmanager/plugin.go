@@ -328,7 +328,8 @@ func (p *Plugin) processToTemplate(pr *Process) (*process.Template, error) {
 			return true
 		}(pr.options.notifyChan),
 		AutoTerminate:    pr.options.autoTerm,
-		CpuAffinity:      pr.options.cpuAffinity,
+		CpuAffinity:      pr.options.cpuAffinityMask,
+		CpuAffinityList:  pr.options.cpuAffinityList,
 		CpuAffinityDelay: pr.options.cpuAffinityDelay.String(),
 	}
 
@@ -373,7 +374,8 @@ func (p *Plugin) templateToProcess(tmp *process.Template) (*Process, error) {
 			return nil
 		}(tmp.POptions.GetNotify())
 		pOptions.autoTerm = tmp.POptions.GetAutoTerminate()
-		pOptions.cpuAffinity = tmp.POptions.GetCpuAffinity()
+		pOptions.cpuAffinityMask = tmp.POptions.GetCpuAffinity()
+		pOptions.cpuAffinityList = tmp.POptions.GetCpuAffinityList()
 		pOptions.cpuAffinityDelay = p.parseDuration(tmp.POptions.GetCpuAffinityDelay())
 	}
 
