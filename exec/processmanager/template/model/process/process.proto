@@ -18,11 +18,11 @@ message Template {                      /* Template is process definition which 
                                            all status change events can be watched*/
         bool auto_terminate = 8;        /* This option ensures that every process which turns zombie/dead is automatically
                                            released */
-        string cpu_affinity = 9;        /* Allows to set CPU affinity to given process. Value has to be in hexadecimal
+        string cpu_affinity_mask = 9;   /* Allows to set CPU affinity to given process. Value has to be in hexadecimal
                                            format (see taskset command) */
-        string cpu_affinity_list = 11;  /* Allows to set CPU affinity to given process. Same as cpu_affinity, but
+        string cpu_affinity_list = 10;  /* Allows to set CPU affinity to given process. Same as cpu_affinity, but
                                            value can be specified as a list of core numbers, e.g. "0-2,6" */
-        string cpu_affinity_delay = 10; /* Postpone CPU affinity setup if needed */
+        string cpu_affinity_delay = 11; /* Postpone CPU affinity setup if needed */
     }
     pOptions p_options = 3;
 }

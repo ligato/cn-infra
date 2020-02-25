@@ -33,16 +33,16 @@ type ProcessManager interface {
 	// NewProcess creates new process instance with name, command to start and other options (arguments, policy).
 	// New process is not immediately started, process instance comprises from a set of methods to manage.
 	NewProcess(name, cmd string, options ...POption) ProcessInstance
-	// Starts process from template file
+	// NewProcessFromTemplate starts process from template file
 	NewProcessFromTemplate(tmp *process.Template) ProcessInstance
-	// Attach to existing process using its process ID. The process is stored under the provided name. Error
-	// is returned if process does not exits
+	// AttachProcess attaches to existing process using its process ID. The process is stored under the provided name.
+	// Error is returned if process does not exits
 	AttachProcess(name, cmd string, pid int, options ...POption) (ProcessInstance, error)
 	// GetProcessByName returns existing process instance using name
 	GetProcessByName(name string) ProcessInstance
-	// GetProcessByName returns existing process instance using PID
+	// GetProcessByPID returns existing process instance using PID
 	GetProcessByPID(pid int) ProcessInstance
-	// GetAll returns all processes known to plugin
+	// GetAllProcesses returns all processes known to plugin
 	GetAllProcesses() []ProcessInstance
 	// Delete removes process from the memory. Delete cancels process watcher, but does not stop the running instance
 	// (possible to attach later). Note: no process-related templates are removed
@@ -328,7 +328,7 @@ func (p *Plugin) processToTemplate(pr *Process) (*process.Template, error) {
 			return true
 		}(pr.options.notifyChan),
 		AutoTerminate:    pr.options.autoTerm,
-		CpuAffinity:      pr.options.cpuAffinityMask,
+		CpuAffinityMask:  pr.options.cpuAffinityMask,
 		CpuAffinityList:  pr.options.cpuAffinityList,
 		CpuAffinityDelay: pr.options.cpuAffinityDelay.String(),
 	}
@@ -374,7 +374,7 @@ func (p *Plugin) templateToProcess(tmp *process.Template) (*Process, error) {
 			return nil
 		}(tmp.POptions.GetNotify())
 		pOptions.autoTerm = tmp.POptions.GetAutoTerminate()
-		pOptions.cpuAffinityMask = tmp.POptions.GetCpuAffinity()
+		pOptions.cpuAffinityMask = tmp.POptions.GetCpuAffinityMask()
 		pOptions.cpuAffinityList = tmp.POptions.GetCpuAffinityList()
 		pOptions.cpuAffinityDelay = p.parseDuration(tmp.POptions.GetCpuAffinityDelay())
 	}
