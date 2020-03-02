@@ -85,7 +85,7 @@ func (p *Process) startProcess() (cmd *exec.Cmd, err error) {
 
 	// set process CPU lock in another go routine
 	// since it may contain delayed startup
-	if p.options.cpuAffinity != "" {
+	if p.options.cpuAffinityMask != "" || p.options.cpuAffinityList != "" {
 		go func() {
 			time.Sleep(p.options.cpuAffinityDelay)
 			p.setProcessCPUAffinity(cmd)
@@ -198,20 +198,30 @@ func (p *Process) signalToProcess(signal os.Signal) error {
 // setProcessCpuAffinity process CPU affinity. Unsuccessful CPU assignment does not return error
 // (message is only printed).
 func (p *Process) setProcessCPUAffinity(cmd *exec.Cmd) {
-	if cmd == nil || cmd.Process == nil || p.options == nil || p.options.cpuAffinity == "" {
+	if cmd == nil || cmd.Process == nil || p.options == nil {
 		return
 	}
-	if _, err := strconv.ParseUint(p.options.cpuAffinity, 16, 64); err != nil {
-		p.log.Errorf("Provided CPU affinity value %s for process %s is not valid (error: %v)",
-			p.options.cpuAffinity, "supervisor", err)
-		return
+	if p.options.cpuAffinityMask != "" {
+		if _, err := strconv.ParseUint(p.options.cpuAffinityMask, 16, 64); err != nil {
+			p.log.Errorf("Provided CPU affinity value %s for process %s is not valid (error: %v)",
+				p.options.cpuAffinityMask, p.name, err)
+			return
+		}
+		if _, err := exec.Command("taskset", "-ap", p.options.cpuAffinityMask,
+			strconv.Itoa(cmd.Process.Pid)).Output(); err != nil {
+			p.log.Errorf("Failed to assign CPU affinity to process %s: %v", p.name, err)
+			return
+		}
+		p.log.Warnf("CPU affinity mask %s set to process %s", p.options.cpuAffinityMask, p.name)
 	}
-	if _, err := exec.Command("taskset", "-p", p.options.cpuAffinity,
-		strconv.Itoa(cmd.Process.Pid)).Output(); err != nil {
-		p.log.Errorf("Failed to assign CPU affinity to process %s: %v", "supervisor", err)
-		return
+	if p.options.cpuAffinityList != "" {
+		if _, err := exec.Command("taskset", "-apc", p.options.cpuAffinityList,
+			strconv.Itoa(cmd.Process.Pid)).Output(); err != nil {
+			p.log.Errorf("Failed to assign CPU affinity to process %s: %v", p.name, err)
+			return
+		}
+		p.log.Warnf("CPU affinity %s set to process %s", p.options.cpuAffinityList, p.name)
 	}
-	p.log.Warnf("CPU affinity %s set to process %s", p.options.cpuAffinity, p.name)
 }
 
 // Periodically tries to 'ping' process. If the process is unresponsive, marks it as terminated. Otherwise the process
