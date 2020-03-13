@@ -23,7 +23,6 @@ import (
 	"go.ligato.io/cn-infra/v2/infra"
 	"go.ligato.io/cn-infra/v2/rpc/rest/security"
 	access "go.ligato.io/cn-infra/v2/rpc/rest/security/model/access-security"
-	"go.ligato.io/cn-infra/v2/utils/safeclose"
 )
 
 // Plugin struct holds all plugin-related data.
@@ -61,6 +60,10 @@ func (p *Plugin) Init() (err error) {
 		return err
 	}
 
+	if p.Config.Disabled {
+		return nil
+	}
+
 	// if there is no injected authenticator and there are credentials defined in the config file
 	// instantiate staticAuthenticator otherwise do not use basic Auth
 	if p.Authenticator == nil && len(p.Config.ClientBasicAuth) > 0 {
@@ -91,22 +94,24 @@ func (p *Plugin) Init() (err error) {
 
 // AfterInit starts the HTTP server.
 func (p *Plugin) AfterInit() (err error) {
-	cfgCopy := *p.Config
+	if p.Config.Disabled {
+		p.Log.Info("No serving (plugin disabled)")
+		return nil
+	}
 
 	var handler http.Handler = p.mx
 	if p.Authenticator != nil {
 		handler = auth(handler, p.Authenticator)
 	}
 
-	p.server, err = ListenAndServe(cfgCopy, handler)
+	p.server, err = ListenAndServe(*p.Config, handler)
 	if err != nil {
 		return err
 	}
-
-	if cfgCopy.UseHTTPS() {
-		p.Log.Info("Listening on https://", cfgCopy.Endpoint)
+	if p.Config.UseHTTPS() {
+		p.Log.Info("Serving on https://", p.Config.Endpoint)
 	} else {
-		p.Log.Info("Listening on http://", cfgCopy.Endpoint)
+		p.Log.Info("Serving on http://", p.Config.Endpoint)
 	}
 
 	return nil
@@ -114,6 +119,9 @@ func (p *Plugin) AfterInit() (err error) {
 
 // RegisterHTTPHandler registers HTTP <handler> at the given <path>. Every request is validated if enabled.
 func (p *Plugin) RegisterHTTPHandler(path string, provider HandlerProvider, methods ...string) *mux.Route {
+	if p.Config.Disabled {
+		return nil
+	}
 	p.Log.Debugf("Registering handler: %s", path)
 
 	if p.Config.EnableTokenAuth {
@@ -140,5 +148,8 @@ func (p *Plugin) GetPort() int {
 
 // Close stops the HTTP server.
 func (p *Plugin) Close() error {
-	return safeclose.Close(p.server)
+	if p.Config.Disabled {
+		return nil
+	}
+	return p.server.Close()
 }

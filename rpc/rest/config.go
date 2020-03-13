@@ -38,6 +38,9 @@ const (
 // Config is a configuration for HTTP server
 // It is meant to be extended with security (TLS...)
 type Config struct {
+	// Disabled disables HTTP server.
+	Disabled bool
+
 	// Endpoint is an address of HTTP server
 	Endpoint string
 
