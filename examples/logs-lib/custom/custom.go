@@ -25,14 +25,10 @@ var logger = logrus.NewLogger("custom logger")
 func init() {
 	logger.SetLevel(logging.DebugLevel)
 	// set formatter
-	logger.SetFormatter(logrus.NewCustomFormatter())
+	logger.SetFormatter(&logrus.CustomFormatter{})
 }
 
 func main() {
-
-	// assign a tag for the current go routine
-	logger.SetTag("main-thread")
-
 	// setup fields that will be added to all subsequent log entries
 	logger.SetStaticFields(map[string]interface{}{"component": "componentXY", "key": "value"})
 

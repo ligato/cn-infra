@@ -25,26 +25,27 @@ import (
 	"go.ligato.io/cn-infra/v2/logging"
 )
 
-// DefaultRegistry is a default logging registry
-//var DefaultRegistry logging.Registry
-
 var initialLogLvl = logrus.InfoLevel
+
+var defaultRegistry = NewLogRegistry()
 
 func init() {
 	if lvl, err := logrus.ParseLevel(os.Getenv("INITIAL_LOGLVL")); err == nil {
 		initialLogLvl = lvl
-		if err := setLevel(defaultLogger, lvl); err != nil {
+		defaultLogger.SetLevel(lvl)
+		defaultLogger.Debugf("initial log level: %v", lvl.String())
+		/*if err := defaultLogger.SetLevel(lvl); err != nil {
 			defaultLogger.Warnf("setting initial log level to %v failed: %v", lvl.String(), err)
 		} else {
 			defaultLogger.Debugf("initial log level: %v", lvl.String())
-		}
+		}*/
 	}
-	logging.DefaultRegistry = NewLogRegistry()
+	logging.DefaultRegistry = defaultRegistry
 }
 
 // NewLogRegistry is a constructor
-func NewLogRegistry() logging.Registry {
-	registry := &logRegistry{
+func NewLogRegistry() *LogRegistry {
+	registry := &LogRegistry{
 		loggers:      new(sync.Map),
 		logLevels:    make(map[string]logrus.Level),
 		defaultLevel: initialLogLvl,
@@ -54,8 +55,8 @@ func NewLogRegistry() logging.Registry {
 	return registry
 }
 
-// logRegistry contains logger map and rwlock guarding access to it
-type logRegistry struct {
+// LogRegistry contains logger map and rwlock guarding access to it
+type LogRegistry struct {
 	// loggers holds mapping of logger instances indexed by their names
 	loggers *sync.Map
 	// logLevels store map of log levels for logger names
@@ -77,7 +78,7 @@ func checkLoggerName(name string) error {
 
 // NewLogger creates new named Logger instance. Name can be subsequently used to
 // refer the logger in registry.
-func (lr *logRegistry) NewLogger(name string) logging.Logger {
+func (lr *LogRegistry) NewLogger(name string) logging.Logger {
 	if existingLogger := lr.getLoggerFromMapping(name); existingLogger != nil {
 		panic(fmt.Errorf("logger with name '%s' already exists", name))
 	}
@@ -89,23 +90,23 @@ func (lr *logRegistry) NewLogger(name string) logging.Logger {
 
 	// set initial logger level
 	if lvl, ok := lr.logLevels[name]; ok {
-		setLevel(logger, lvl)
+		logger.SetLevel(lvl)
 	} else {
-		setLevel(logger, lr.defaultLevel)
+		logger.SetLevel(lr.defaultLevel)
 	}
 
 	lr.putLoggerToMapping(logger)
 
 	// add all defined hooks
 	for _, hook := range lr.hooks {
-		logger.std.AddHook(hook)
+		logger.AddHook(hook)
 	}
 
 	return logger
 }
 
 // ListLoggers returns a map (loggerName => log level)
-func (lr *logRegistry) ListLoggers() map[string]string {
+func (lr *LogRegistry) ListLoggers() map[string]string {
 	list := make(map[string]string)
 
 	var wasErr error
@@ -134,7 +135,7 @@ func (lr *logRegistry) ListLoggers() map[string]string {
 	return list
 }
 
-func setLevel(logVal logging.Logger, lvl logrus.Level) error {
+/*func setLevel(logVal logging.Logger, lvl logrus.Level) error {
 	if logVal == nil {
 		return fmt.Errorf("logger %q not found", logVal)
 	}
@@ -153,10 +154,10 @@ func setLevel(logVal logging.Logger, lvl logrus.Level) error {
 		logVal.SetLevel(logging.FatalLevel)
 	}
 	return nil
-}
+}*/
 
 // SetLevel modifies log level of selected logger in the registry
-func (lr *logRegistry) SetLevel(logger, level string) error {
+func (lr *LogRegistry) SetLevel(logger, level string) error {
 	lvl, err := logrus.ParseLevel(level)
 	if err != nil {
 		return err
@@ -168,14 +169,14 @@ func (lr *logRegistry) SetLevel(logger, level string) error {
 	lr.logLevels[logger] = lvl
 	logVal := lr.getLoggerFromMapping(logger)
 	if logVal != nil {
-		defaultLogger.Debugf("setting logger level: %v -> %v", logVal.GetName(), lvl.String())
-		return setLevel(logVal, lvl)
+		defaultLogger.Tracef("setting logger level: %v -> %v", logVal.name, lvl.String())
+		logVal.SetLevel(lvl)
 	}
 	return nil
 }
 
 // GetLevel returns the currently set log level of the logger
-func (lr *logRegistry) GetLevel(logger string) (string, error) {
+func (lr *LogRegistry) GetLevel(logger string) (string, error) {
 	logVal := lr.getLoggerFromMapping(logger)
 	if logVal == nil {
 		return "", fmt.Errorf("logger %s not found", logger)
@@ -184,7 +185,7 @@ func (lr *logRegistry) GetLevel(logger string) (string, error) {
 }
 
 // Lookup returns a logger instance identified by name from registry
-func (lr *logRegistry) Lookup(loggerName string) (logger logging.Logger, found bool) {
+func (lr *LogRegistry) Lookup(loggerName string) (logger logging.Logger, found bool) {
 	loggerInt, found := lr.loggers.Load(loggerName)
 	if !found {
 		return nil, false
@@ -197,7 +198,7 @@ func (lr *logRegistry) Lookup(loggerName string) (logger logging.Logger, found b
 }
 
 // ClearRegistry removes all loggers except the default one from registry
-func (lr *logRegistry) ClearRegistry() {
+func (lr *LogRegistry) ClearRegistry() {
 	var wasErr error
 
 	// range over logger map and store keys
@@ -220,12 +221,12 @@ func (lr *logRegistry) ClearRegistry() {
 }
 
 // putLoggerToMapping writes logger into map of named loggers
-func (lr *logRegistry) putLoggerToMapping(logger *Logger) {
+func (lr *LogRegistry) putLoggerToMapping(logger *Logger) {
 	lr.loggers.Store(logger.name, logger)
 }
 
 // getLoggerFromMapping returns a logger by its name
-func (lr *logRegistry) getLoggerFromMapping(logger string) *Logger {
+func (lr *LogRegistry) getLoggerFromMapping(logger string) *Logger {
 	loggerVal, found := lr.loggers.Load(logger)
 	if !found {
 		return nil
@@ -240,8 +241,8 @@ func (lr *logRegistry) getLoggerFromMapping(logger string) *Logger {
 
 // HookConfigs stores hook configs provided by log manager
 // and applies hook to existing loggers
-func (lr *logRegistry) AddHook(hook logrus.Hook) {
-	defaultLogger.Infof("adding hook %q to registry", hook)
+func (lr *LogRegistry) AddHook(hook logrus.Hook) {
+	defaultLogger.Infof("adding hook %q to log registry", hook)
 	lr.hooks = append(lr.hooks, hook)
 
 	lgs := lr.ListLoggers()

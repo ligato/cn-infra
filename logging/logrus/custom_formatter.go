@@ -20,7 +20,7 @@ import (
 	"os"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	lg "github.com/sirupsen/logrus"
 )
 
 // CustomFormatter allows to turn off logging of some fields.
@@ -46,19 +46,19 @@ const (
 
 var compulsoryKeys = []string{fieldKeyTime, fieldKeyLevel, fieldKeyComponent, fieldKeyProcess}
 
-func (f *CustomFormatter) logLevelToString(level log.Level) string {
+func (f *CustomFormatter) logLevelToString(level lg.Level) string {
 	switch level {
-	case log.DebugLevel:
+	case lg.DebugLevel:
 		return "DEBUG"
-	case log.InfoLevel:
+	case lg.InfoLevel:
 		return "INFO"
-	case log.WarnLevel:
+	case lg.WarnLevel:
 		return "WARN"
-	case log.ErrorLevel:
+	case lg.ErrorLevel:
 		return "ERROR"
-	case log.FatalLevel:
+	case lg.FatalLevel:
 		return "FATAL"
-	case log.PanicLevel:
+	case lg.PanicLevel:
 		return "panic"
 	}
 
@@ -79,7 +79,7 @@ func (f *CustomFormatter) ignoredKey(key string) bool {
 }
 
 // Format formats the given log entry.
-func (f *CustomFormatter) Format(entry *log.Entry) ([]byte, error) {
+func (f *CustomFormatter) Format(entry *lg.Entry) ([]byte, error) {
 	buffer := &bytes.Buffer{}
 	compulsoryFields := map[string]interface{}{}
 

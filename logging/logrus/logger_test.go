@@ -231,6 +231,8 @@ func TestDefaultFieldsAreNotPrefixed(t *testing.T) {
 }
 
 func TestDoubleLoggingDoesntPrefixPreviousFields(t *testing.T) {
+	RegisterTestingT(t)
+
 	var buffer bytes.Buffer
 	var fields logging.Fields
 
@@ -244,7 +246,7 @@ func TestDoubleLoggingDoesntPrefixPreviousFields(t *testing.T) {
 
 	err := json.Unmarshal(buffer.Bytes(), &fields)
 	Expect(err).To(BeNil(), "should have decoded first message")
-	Expect(len(fields)).To(BeEquivalentTo(6), "should only have 6 fields (msg/time/level/context/loc/logger)")
+	Expect(len(fields)).To(BeEquivalentTo(5), "should only have 6 fields (msg/time/level/context/loc/logger)")
 	Expect(fields["msg"]).To(BeEquivalentTo("looks delicious"))
 	Expect(fields["context"]).To(BeEquivalentTo("eating raw fish"))
 
@@ -254,7 +256,7 @@ func TestDoubleLoggingDoesntPrefixPreviousFields(t *testing.T) {
 
 	err = json.Unmarshal(buffer.Bytes(), &fields)
 	Expect(err).To(BeNil(), "should have decoded second message")
-	Expect(len(fields)).To(BeEquivalentTo(6), "should only have 6 fields (msg/time/level/context/loc/logger)")
+	Expect(len(fields)).To(BeEquivalentTo(5), "should only have 6 fields (msg/time/level/context/loc/logger)")
 	Expect(fields["msg"]).To(BeEquivalentTo("omg it is!"))
 	Expect(fields["context"]).To(BeEquivalentTo("eating raw fish"))
 	Expect(fields["fields.msg"]).To(BeNil(), "should not have prefixed previous `msg` entry")
@@ -310,42 +312,4 @@ func TestLogInterface(t *testing.T) {
 	// test Entry
 	e := logger.WithField("another", "value")
 	fn(e.(*Entry).logger)
-}
-
-func TestSetTag(t *testing.T) {
-	LogAndAssertJSON(t, func(log *Logger) {
-		log.SetTag("testtag")
-		log.Info("hello")
-	}, func(fields lg.Fields) {
-		Expect(fields["tag"]).To(BeEquivalentTo("testtag"))
-	})
-}
-
-func TestClearTag(t *testing.T) {
-	LogAndAssertJSON(t, func(log *Logger) {
-		log.SetTag("testtag")
-		log.ClearTag()
-		log.Info("hello")
-	}, func(fields lg.Fields) {
-		Expect(fields["tag"]).To(BeNil())
-	})
-}
-
-func TestInitTag(t *testing.T) {
-	LogAndAssertJSON(t, func(log *Logger) {
-		log.InitTag()
-		log.Info("hello")
-	}, func(fields lg.Fields) {
-		Expect(fields["tag"]).ToNot(BeEquivalentTo(""))
-	})
-}
-
-func TestGetTag(t *testing.T) {
-	LogAndAssertJSON(t, func(log *Logger) {
-		log.SetTag("testtag")
-		tag := log.GetTag()
-		log.Info(tag)
-	}, func(fields lg.Fields) {
-		Expect(fields["msg"]).To(BeEquivalentTo("testtag"))
-	})
 }

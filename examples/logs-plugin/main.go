@@ -26,6 +26,8 @@ import (
 const PluginName = "logs-example"
 
 func main() {
+	logging.Info("starting logging example")
+
 	// Prepare example plugin and start the agent
 	p := &ExamplePlugin{
 		exampleFinished: make(chan struct{}),
@@ -83,7 +85,7 @@ func (plugin *ExamplePlugin) Init() (err error) {
 
 	// Custom (child) logger with name
 	childLogger := plugin.Log.NewLogger("childLogger")
-	childLogger.Infof("Log using named logger with name: %v", childLogger.GetName())
+	childLogger.Infof("Log using named logger")
 	childLogger.Debug("Debug log using childLogger!")
 
 	childLogger2 := plugin.Log.NewLogger("childLogger2")

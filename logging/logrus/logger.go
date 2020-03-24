@@ -15,19 +15,9 @@
 package logrus
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
-	"io"
-	"path"
-	"runtime"
-	"strconv"
-	"strings"
 	"sync"
-	"sync/atomic"
-	"unsafe"
 
-	"github.com/satori/go.uuid"
 	lg "github.com/sirupsen/logrus"
 
 	"go.ligato.io/cn-infra/v2/logging"
@@ -37,10 +27,14 @@ import (
 const DefaultLoggerName = "defaultLogger"
 
 var (
-	defaultLogger = NewLogger(DefaultLoggerName)
+	defaultLogger = &Logger{
+		name:   DefaultLoggerName,
+		Logger: lg.StandardLogger(),
+	}
 )
 
 func init() {
+	lg.SetFormatter(DefaultFormatter)
 	logging.DefaultLogger = defaultLogger
 }
 
@@ -50,23 +44,23 @@ func DefaultLogger() *Logger {
 	return defaultLogger
 }
 
+var _ logging.Logger = (*Logger)(nil)
+
 // Logger is wrapper of Logrus logger. In addition to Logrus functionality it
 // allows to define static log fields that are added to all subsequent log entries. It also automatically
 // appends file name and line where the log is coming from. In order to distinguish logs from different
 // go routines a tag (number that is based on the stack address) is computed. To achieve better readability
 // numeric value of a tag can be replaced by a string using SetTag function.
 type Logger struct {
+	*lg.Logger
+
 	name         string
-	std          *lg.Logger
 	verbosity    int
-	depth        int
-	tagMap       sync.Map
 	staticFields sync.Map
-	littleBuf    sync.Pool
 }
 
 // NewLogger is a constructor creates instances of named logger.
-// This constructor is called from logRegistry which is useful
+// This constructor is called from LogRegistry which is useful
 // when log levels needs to be changed by management API (such as REST)
 //
 // Example:
@@ -75,93 +69,18 @@ type Logger struct {
 //    logger.Info()
 //
 func NewLogger(name string) *Logger {
+	l := lg.New()
 	logger := &Logger{
-		tagMap:       sync.Map{},
-		staticFields: sync.Map{},
-		std:          lg.New(),
-		depth:        2,
-		name:         name,
+		Logger: l,
+		name:   name,
 	}
-
-	tf := NewTextFormatter()
-	tf.TimestampFormat = "2006-01-02 15:04:05.00000"
-	logger.SetFormatter(tf)
-
-	logger.littleBuf.New = func() interface{} {
-		buf := make([]byte, 64)
-		return &buf
-	}
+	logger.SetFormatter(DefaultFormatter)
 	return logger
 }
 
-// NewJSONFormatter creates a new instance of JSONFormatter
-func NewJSONFormatter() *lg.JSONFormatter {
-	return &lg.JSONFormatter{}
-}
-
-// NewTextFormatter creates a new instance of TextFormatter
-func NewTextFormatter() *lg.TextFormatter {
-	return &lg.TextFormatter{}
-}
-
-// NewCustomFormatter creates a new instance of CustomFormatter
-func NewCustomFormatter() *CustomFormatter {
-	return &CustomFormatter{}
-}
-
-// StandardLogger returns internally used Logrus logger
-func (logger *Logger) StandardLogger() *lg.Logger {
-	return logger.std
-}
-
-// InitTag sets the tag for the main thread.
-func (logger *Logger) InitTag(tag ...string) {
-	var t string
-	var index uint64 // first index
-	if len(tag) > 0 {
-		t = tag[0]
-	} else {
-		id, err := uuid.NewV4()
-		if err != nil {
-			panic(fmt.Errorf("error generating uuid: " + err.Error()))
-		}
-		t = id.String()[0:8]
-	}
-	logger.tagMap.Store(index, t)
-}
-
-// GetTag returns the tag identifying the caller's go routine.
-func (logger *Logger) GetTag() string {
-	goID := logger.curGoroutineID()
-	if tagVal, found := logger.tagMap.Load(goID); !found {
-		return ""
-	} else if tag, ok := tagVal.(string); ok {
-		return tag
-	}
-	panic(fmt.Errorf("cannot cast log tag from map to string"))
-}
-
-// SetTag allows to define a string tag for the current go routine. Otherwise
-// numeric identification is used.
-func (logger *Logger) SetTag(tag ...string) {
-	goID := logger.curGoroutineID()
-	var t string
-	if len(tag) > 0 {
-		t = tag[0]
-	} else {
-		id, err := uuid.NewV4()
-		if err != nil {
-			panic(fmt.Errorf("error generating uuid: " + err.Error()))
-		}
-		t = id.String()[0:8]
-	}
-	logger.tagMap.Store(goID, t)
-}
-
-// ClearTag removes the previously set string tag for the current go routine.
-func (logger *Logger) ClearTag() {
-	goID := logger.curGoroutineID()
-	logger.tagMap.Delete(goID)
+// GetName return the logger name
+func (logger *Logger) GetName() string {
+	return logger.name
 }
 
 // SetStaticFields sets a map of fields that will be part of the each subsequent
@@ -197,69 +116,6 @@ func (logger *Logger) GetStaticFields() map[string]interface{} {
 	return staticFieldsMap
 }
 
-// GetName return the logger name
-func (logger *Logger) GetName() string {
-	return logger.name
-}
-
-// SetOutput sets the standard logger output.
-func (logger *Logger) SetOutput(out io.Writer) {
-	unsafeStd := (*unsafe.Pointer)(unsafe.Pointer(&logger.std))
-	old := logger.std
-	logger.std.Out = out
-	atomic.CompareAndSwapPointer(unsafeStd, unsafe.Pointer(old), unsafe.Pointer(logger.std))
-
-}
-
-// SetFormatter sets the standard logger formatter.
-func (logger *Logger) SetFormatter(formatter lg.Formatter) {
-	unsafeStd := (*unsafe.Pointer)(unsafe.Pointer(&logger.std))
-	old := logger.std
-	logger.std.Formatter = formatter
-	atomic.CompareAndSwapPointer(unsafeStd, unsafe.Pointer(old), unsafe.Pointer(logger.std))
-}
-
-// SetLevel sets the standard logger level.
-func (logger *Logger) SetLevel(level logging.LogLevel) {
-	switch level {
-	case logging.PanicLevel:
-		logger.std.Level = lg.PanicLevel
-	case logging.FatalLevel:
-		logger.std.Level = lg.FatalLevel
-	case logging.ErrorLevel:
-		logger.std.Level = lg.ErrorLevel
-	case logging.WarnLevel:
-		logger.std.Level = lg.WarnLevel
-	case logging.InfoLevel:
-		logger.std.Level = lg.InfoLevel
-	case logging.DebugLevel:
-		logger.std.Level = lg.DebugLevel
-	}
-}
-
-// GetLevel returns the standard logger level.
-func (logger *Logger) GetLevel() logging.LogLevel {
-	unsafeStd := (*unsafe.Pointer)(unsafe.Pointer(&logger.std))
-	stdVal := (*lg.Logger)(atomic.LoadPointer(unsafeStd))
-	l := stdVal.Level
-	switch l {
-	case lg.PanicLevel:
-		return logging.PanicLevel
-	case lg.FatalLevel:
-		return logging.FatalLevel
-	case lg.ErrorLevel:
-		return logging.ErrorLevel
-	case lg.WarnLevel:
-		return logging.WarnLevel
-	case lg.InfoLevel:
-		return logging.InfoLevel
-	case lg.DebugLevel:
-		return logging.DebugLevel
-	default:
-		return logging.DebugLevel
-	}
-}
-
 // SetVerbosity allows to set a logger verbosity. The verbosity can be used
 // in custom loggers passed to external libraries (like GRPC) and may not
 // correspond with the Logger plugin log levels. See the documentation of the
@@ -268,17 +124,9 @@ func (logger *Logger) SetVerbosity(v int) {
 	logger.verbosity = v
 }
 
-// AddHook adds a hook to the standard logger hooks.
-func (logger *Logger) AddHook(hook lg.Hook) {
-	mux := &sync.Mutex{}
-
-	unsafeStd := (*unsafe.Pointer)(unsafe.Pointer(&logger.std))
-	stdVal := (*lg.Logger)(atomic.LoadPointer(unsafeStd))
-	old := logger.std
-	mux.Lock()
-	stdVal.Hooks.Add(hook)
-	mux.Unlock()
-	atomic.CompareAndSwapPointer(unsafeStd, unsafe.Pointer(old), unsafe.Pointer(logger.std))
+// V reports whether verbosity level is at least at the requested level
+func (logger *Logger) V(l int) bool {
+	return l <= logger.verbosity
 }
 
 // WithField creates an entry from the standard logger and adds a field to
@@ -304,34 +152,19 @@ func (logger *Logger) withFields(fields logging.Fields, depth int) *Entry {
 	static := logger.GetStaticFields()
 
 	data := make(lg.Fields, len(fields)+len(static))
-
 	for k, v := range static {
 		data[k] = v
 	}
-
 	for k, v := range fields {
 		data[k] = v
 	}
 
 	data[loggerKey] = logger.name
-	if _, ok := data[tagKey]; !ok {
-		if tag := logger.GetTag(); tag != "" {
-			data[tagKey] = tag
-		}
-	}
-	if _, ok := data[locKey]; !ok {
-		data[locKey] = logger.getLineInfo(logger.depth + depth)
-	}
 
 	return &Entry{
 		logger:  logger,
-		lgEntry: logger.std.WithFields(data),
+		lgEntry: logger.Logger.WithFields(data),
 	}
-}
-
-// V reports whether verbosity level is at least at the requested level
-func (logger *Logger) V(l int) bool {
-	return l <= logger.verbosity
 }
 
 func (logger *Logger) header(depth int) *Entry {
@@ -339,52 +172,73 @@ func (logger *Logger) header(depth int) *Entry {
 }
 
 // Debug logs a message at level Debug on the standard logger.
+func (logger *Logger) log(lvl lg.Level, args ...interface{}) {
+	if logger.IsLevelEnabled(lvl) {
+		logger.header(1).Log(lvl, args...)
+	}
+}
+
+func (logger *Logger) Log(lvl lg.Level, args ...interface{}) {
+	if logger.IsLevelEnabled(lvl) {
+		logger.header(1).Log(lvl, args...)
+	}
+}
+
+func (logger *Logger) Logf(lvl lg.Level, f string, args ...interface{}) {
+	if logger.IsLevelEnabled(lvl) {
+		logger.header(1).Logf(lvl, f, args...)
+	}
+}
+
+func (logger *Logger) Logln(lvl lg.Level, args ...interface{}) {
+	if logger.IsLevelEnabled(lvl) {
+		logger.header(1).Logln(lvl, args...)
+	}
+}
+
+// Debug logs a message at level Debug on the standard logger.
 func (logger *Logger) Debug(args ...interface{}) {
-	if logger.std.Level >= lg.DebugLevel {
+	if logger.Level >= lg.DebugLevel {
 		logger.header(1).Debug(args...)
 	}
 }
 
-// Print logs a message at level Info on the standard logger.
+// Info logs a message at level Info on the standard logger.
 func (logger *Logger) Print(args ...interface{}) {
-	unsafeStd := (*unsafe.Pointer)(unsafe.Pointer(&logger.std))
-	stdVal := (*lg.Logger)(atomic.LoadPointer(unsafeStd))
-	if stdVal != nil {
-		stdVal.Print(args...)
-	}
+	logger.header(1).Info(args...)
 }
 
 // Info logs a message at level Info on the standard logger.
 func (logger *Logger) Info(args ...interface{}) {
-	if logger.std.Level >= lg.InfoLevel {
+	if logger.Level >= lg.InfoLevel {
 		logger.header(1).Info(args...)
 	}
 }
 
 // Warn logs a message at level Warning on the standard logger.
 func (logger *Logger) Warn(args ...interface{}) {
-	if logger.std.Level >= lg.WarnLevel {
+	if logger.Level >= lg.WarnLevel {
 		logger.header(1).Warn(args...)
 	}
 }
 
 // Warning logs a message at level Warn on the standard logger.
 func (logger *Logger) Warning(args ...interface{}) {
-	if logger.std.Level >= lg.WarnLevel {
+	if logger.Level >= lg.WarnLevel {
 		logger.header(1).Warning(args...)
 	}
 }
 
 // Error logs a message at level Error on the standard logger.
 func (logger *Logger) Error(args ...interface{}) {
-	if logger.std.Level >= lg.ErrorLevel {
+	if logger.Level >= lg.ErrorLevel {
 		logger.header(1).Error(args...)
 	}
 }
 
 // Fatal logs a message at level Fatal on the standard logger.
 func (logger *Logger) Fatal(args ...interface{}) {
-	if logger.std.Level >= lg.FatalLevel {
+	if logger.Level >= lg.FatalLevel {
 		logger.header(1).Fatal(args...)
 	}
 }
@@ -396,7 +250,7 @@ func (logger *Logger) Panic(args ...interface{}) {
 
 // Debugf logs a message at level Debug on the standard logger.
 func (logger *Logger) Debugf(format string, args ...interface{}) {
-	if logger.std.Level >= lg.DebugLevel {
+	if logger.Level >= lg.DebugLevel {
 		logger.header(1).Debugf(format, args...)
 	}
 }
@@ -408,35 +262,35 @@ func (logger *Logger) Printf(format string, args ...interface{}) {
 
 // Infof logs a message at level Info on the standard logger.
 func (logger *Logger) Infof(format string, args ...interface{}) {
-	if logger.std.Level >= lg.InfoLevel {
+	if logger.Level >= lg.InfoLevel {
 		logger.header(1).Infof(format, args...)
 	}
 }
 
 // Warnf logs a message at level Warn on the standard logger.
 func (logger *Logger) Warnf(format string, args ...interface{}) {
-	if logger.std.Level >= lg.WarnLevel {
+	if logger.Level >= lg.WarnLevel {
 		logger.header(1).Warnf(format, args...)
 	}
 }
 
 // Warningf logs a message at level Warn on the standard logger.
 func (logger *Logger) Warningf(format string, args ...interface{}) {
-	if logger.std.Level >= lg.WarnLevel {
+	if logger.Level >= lg.WarnLevel {
 		logger.header(1).Warningf(format, args...)
 	}
 }
 
 // Errorf logs a message at level Error on the standard logger.
 func (logger *Logger) Errorf(format string, args ...interface{}) {
-	if logger.std.Level >= lg.ErrorLevel {
+	if logger.Level >= lg.ErrorLevel {
 		logger.header(1).Errorf(format, args...)
 	}
 }
 
 // Fatalf logs a message at level Fatal on the standard logger.
 func (logger *Logger) Fatalf(format string, args ...interface{}) {
-	if logger.std.Level >= lg.FatalLevel {
+	if logger.Level >= lg.FatalLevel {
 		logger.header(1).Fatalf(format, args...)
 	}
 }
@@ -448,7 +302,7 @@ func (logger *Logger) Panicf(format string, args ...interface{}) {
 
 // Debugln logs a message at level Debug on the standard logger.
 func (logger *Logger) Debugln(args ...interface{}) {
-	if logger.std.Level >= lg.DebugLevel {
+	if logger.Level >= lg.DebugLevel {
 		logger.header(1).Debugln(args...)
 	}
 }
@@ -460,21 +314,21 @@ func (logger *Logger) Println(args ...interface{}) {
 
 // Infoln logs a message at level Info on the standard logger.
 func (logger *Logger) Infoln(args ...interface{}) {
-	if logger.std.Level >= lg.InfoLevel {
+	if logger.Level >= lg.InfoLevel {
 		logger.header(1).Infoln(args...)
 	}
 }
 
 // Warningln logs a message at level Warn on the standard logger.
 func (logger *Logger) Warningln(args ...interface{}) {
-	if logger.std.Level >= lg.WarnLevel {
+	if logger.Level >= lg.WarnLevel {
 		logger.header(1).Warningln(args...)
 	}
 }
 
 // Errorln logs a message at level Error on the standard logger.
 func (logger *Logger) Errorln(args ...interface{}) {
-	if logger.std.Level >= lg.ErrorLevel {
+	if logger.Level >= lg.ErrorLevel {
 		logger.header(1).Errorln(args...)
 	}
 }
@@ -486,148 +340,7 @@ func (logger *Logger) Panicln(args ...interface{}) {
 
 // Fatalln logs a message at level Fatal on the standard logger.
 func (logger *Logger) Fatalln(args ...interface{}) {
-	if logger.std.Level >= lg.FatalLevel {
+	if logger.Level >= lg.FatalLevel {
 		logger.header(1).Fatalln(args...)
 	}
-}
-
-// getLineInfo returns the location (filename + linenumber) of the caller.
-func (logger *Logger) getLineInfo(depth int) string {
-	_, f, l, ok := runtime.Caller(depth)
-	if !ok {
-		return ""
-	}
-	if f == "<autogenerated>" {
-		_, f, l, ok = runtime.Caller(depth + 1)
-		if !ok {
-			return ""
-		}
-	}
-
-	base := path.Base(f)
-	dir := path.Dir(f)
-	folders := strings.Split(dir, "/")
-	parent := ""
-	if folders != nil {
-		parent = folders[len(folders)-1] + "/"
-	}
-	file := parent + base
-	line := strconv.Itoa(l)
-	return fmt.Sprintf("%s(%s)", file, line)
-}
-
-func (logger *Logger) curGoroutineID() uint64 {
-	goroutineSpace := []byte("goroutine ")
-	bp := logger.littleBuf.Get().(*[]byte)
-	defer logger.littleBuf.Put(bp)
-	b := *bp
-	b = b[:runtime.Stack(b, false)]
-	b = bytes.TrimPrefix(b, goroutineSpace)
-	i := bytes.IndexByte(b, ' ')
-	if i < 0 {
-		// panic(fmt.Sprintf("No space found in %q", b))
-		return 0
-	}
-	b = b[:i]
-	n, err := logger.parseUintBytes(b, 10, 64)
-	if err != nil {
-		// panic(fmt.Sprintf("Failed to parse goroutine ID out of %q: %v", b, err))
-		return 0
-	}
-	return n
-}
-
-// parseUintBytes is like strconv.ParseUint, but using a []byte.
-func (logger *Logger) parseUintBytes(s []byte, base int, bitSize int) (n uint64, err error) {
-	var cutoff, maxVal uint64
-
-	if bitSize == 0 {
-		bitSize = strconv.IntSize
-	}
-
-	s0 := s
-	switch {
-	case len(s) < 1:
-		err = strconv.ErrSyntax
-		goto Error
-
-	case 2 <= base && base <= 36:
-		// valid base; nothing to do
-
-	case base == 0:
-		// Look for octal, hex prefix.
-		switch {
-		case s[0] == '0' && len(s) > 1 && (s[1] == 'x' || s[1] == 'X'):
-			base = 16
-			s = s[2:]
-			if len(s) < 1 {
-				err = strconv.ErrSyntax
-				goto Error
-			}
-		case s[0] == '0':
-			base = 8
-		default:
-			base = 10
-		}
-
-	default:
-		err = errors.New("invalid base " + strconv.Itoa(base))
-		goto Error
-	}
-
-	n = 0
-	cutoff = logger.cutoff64(base)
-	maxVal = 1<<uint(bitSize) - 1
-
-	for i := 0; i < len(s); i++ {
-		var v byte
-		d := s[i]
-		switch {
-		case '0' <= d && d <= '9':
-			v = d - '0'
-		case 'a' <= d && d <= 'z':
-			v = d - 'a' + 10
-		case 'A' <= d && d <= 'Z':
-			v = d - 'A' + 10
-		default:
-			n = 0
-			err = strconv.ErrSyntax
-			goto Error
-		}
-		if int(v) >= base {
-			n = 0
-			err = strconv.ErrSyntax
-			goto Error
-		}
-
-		if n >= cutoff {
-			// n*base overflows
-			n = 1<<64 - 1
-			err = strconv.ErrRange
-			goto Error
-		}
-		n *= uint64(base)
-
-		n1 := n + uint64(v)
-		if n1 < n || n1 > maxVal {
-			// n+v overflows
-			n = 1<<64 - 1
-			err = strconv.ErrRange
-			goto Error
-		}
-		n = n1
-	}
-
-	return n, nil
-
-Error:
-	return n, &strconv.NumError{Func: "ParseUint", Num: string(s0), Err: err}
-}
-
-// Return the first number n such that n*base >= 1<<64.
-func (logger *Logger) cutoff64(base int) uint64 {
-	if base < 2 {
-		return 0
-	}
-	return (1<<64-1)/uint64(base) + 1
 }
