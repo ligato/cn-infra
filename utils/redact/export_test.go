@@ -14,13 +14,7 @@
 
 package redact
 
-import (
-	"github.com/golang/protobuf/proto"
-)
-
-func Proto(value proto.Message) proto.Message {
-	if r, ok := value.(Redactor); ok {
-		value = r.Redacted().(proto.Message)
-	}
-	return value
+// ContainsRedacted is exported for testing.
+func ContainsRedacted(x interface{}) bool {
+	return containsRedacted(x)
 }

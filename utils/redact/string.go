@@ -14,33 +14,24 @@
 
 package redact
 
-import (
-	"strings"
-)
+import "strings"
 
-// StringRedactor is default redacting of sensitive strings.
-var StringRedactor = func(s string) string {
+// MaskedString is a type that masks an actual string data.
+// It implements fmt.Stringer and encoding.TextMarshaler for returning
+// asterisks `*` characters with same length as the actual string value.
+type MaskedString string
+
+func (s MaskedString) String() string {
 	return strings.Repeat("*", len(s))
 }
 
-// Redactor is an interface to be implemented by types that contain
-// sensitive data that should be redacted.
-type Redactor interface {
-	Redacted() interface{}
+func (s MaskedString) MarshalText() (text []byte, err error) {
+	return []byte(s.String()), nil
 }
 
-// Value returns value with sensitive fields redacted.
-// The value will return unchanged if it cannot be redacted.
-func Value(v interface{}) interface{} {
-	if !enabled {
-		return v
-	}
-
-	if r, ok := v.(Redactor); ok {
-		v = r.Redacted()
-	}
-
-	return v
+// StringRedactor is the default redactor for strings.
+var StringRedactor = func(s string) string {
+	return MaskedString(s).String()
 }
 
 // String returns redacted string.
@@ -50,11 +41,4 @@ func String(s string) string {
 	}
 
 	return StringRedactor(s)
-}
-
-// BlackedString blacks out strings.
-type BlackedString string
-
-func (s BlackedString) String() string {
-	return strings.Repeat("*", len(s))
 }

@@ -56,7 +56,7 @@ func TestRedactMapping(t *testing.T) {
 			data := test.input
 
 			//t.Logf("before: %T %+v", data, data)
-			Mapped(&data)
+			redactMapped(&data)
 			//t.Logf(" after: %T %+v", data, data)
 
 			if !reflect.DeepEqual(data, test.expect) {

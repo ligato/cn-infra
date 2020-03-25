@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package testdata;
+
+message TestData {
+    string username = 1;
+    string password = 2;
+}
+
+message TestNested {
+    string name = 1;
+    TestData data = 2;
+}

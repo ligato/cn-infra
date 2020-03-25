@@ -12,14 +12,38 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-// +build redact
-
-package redact_test
+package redact
 
 import (
+	"fmt"
 	"testing"
 )
 
-func TestEnabled(t *testing.T) {
+func TestMaskedString(t *testing.T) {
+	var input = "data"
+	const masked = "****"
 
+	clear := fmt.Sprintf("%s", input)
+	if clear != input {
+		t.Fatalf("expected:\n%q, got\n%q", input, clear)
+	}
+
+	out := fmt.Sprintf("%s", MaskedString(input))
+	if out != masked {
+		t.Fatalf("expected:\n%q, got\n%q", masked, out)
+	}
+}
+
+func TestMaskedData(t *testing.T) {
+	type Data struct {
+		Clear  string
+		Secret MaskedString
+	}
+	data := Data{"clear", "secret"}
+	const redacted = `{Clear:clear Secret:******}`
+
+	out := fmt.Sprintf("%+v", data)
+	if out != redacted {
+		t.Fatalf("expected:\n%q, got\n%q", redacted, out)
+	}
 }

@@ -12,36 +12,18 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package redact
+package testdata
 
 import (
-	"fmt"
-	"testing"
+	"github.com/golang/protobuf/proto"
+
+	"go.ligato.io/cn-infra/v2/utils/redact"
 )
 
-func TestMaskString(t *testing.T) {
-	var input = "data"
-	const redactedStr = "****"
+//go:generate protoc --proto_path=. --go_out=. model.proto
 
-	clear := fmt.Sprintf("%s", input)
-	if clear != input {
-		t.Fatalf("expected:\n%q, got\n%q", input, clear)
-	}
-
-	secret := fmt.Sprintf("%s", BlackedString(input))
-	if secret != redactedStr {
-		t.Fatalf("expected:\n%q, got\n%q", redactedStr, secret)
-	}
-
-	type Data struct {
-		Clear  string
-		Secret BlackedString
-	}
-	data := Data{"clear", "secret"}
-	const redactedData = `{Clear:clear Secret:******}`
-
-	out := fmt.Sprintf("%+v", data)
-	if out != redactedData {
-		t.Fatalf("expected:\n%q, got\n%q", redactedData, out)
-	}
+func (m *TestData) Redacted() interface{} {
+	r := proto.Clone(m).(*TestData)
+	r.Password = redact.String(r.Password)
+	return r
 }

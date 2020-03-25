@@ -21,17 +21,26 @@ import (
 
 var fieldPathsMap = map[reflect.Type][][]string{}
 
+// RegisterFieldsPaths registers type's field paths that should be redacted.
 func RegisterFieldsPaths(x interface{}, paths ...[]string) {
 	t := reflect.TypeOf(x)
 	fieldPathsMap[t] = paths
 }
 
-func Mapped(x interface{}) {
+func isMapped(x interface{}) bool {
+	v := reflect.ValueOf(x)
+	if v.Kind() != reflect.Ptr {
+		return false
+	}
+	_, ok := fieldPathsMap[v.Elem().Type()]
+	return ok
+}
+
+func redactMapped(x interface{}) {
 	v := reflect.ValueOf(x)
 	if v.Kind() != reflect.Ptr {
 		panic(fmt.Sprintf("Redact used with non-Ptr kind %v", v.Kind()))
 	}
-
 	v = v.Elem()
 	m, ok := fieldPathsMap[v.Type()]
 	if !ok {
@@ -47,7 +56,7 @@ func Mapped(x interface{}) {
 		if r.Kind() != reflect.String {
 			panic("only strings can be mapped")
 		}
-		r.SetString(String(r.String()))
+		r.SetString(StringRedactor(r.String()))
 	}
 	return
 }
