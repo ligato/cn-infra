@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"go.ligato.io/cn-infra/v2/exec/processmanager/status"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 // TestParseStatusFile parses test status file and verifies every parsed field
@@ -33,7 +33,7 @@ func TestParseStatusFile(t *testing.T) {
 	Expect(file).ToNot(BeNil())
 
 	r := status.Reader{
-		Log: logrus.DefaultLogger(),
+		Log: logs.DefaultLogger(),
 	}
 
 	statusFile := r.ReadStatusFromFile(file)

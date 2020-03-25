@@ -22,10 +22,10 @@ import (
 
 	"go.ligato.io/cn-infra/v2/infra"
 	"go.ligato.io/cn-infra/v2/logging"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
-var infraLogger = logrus.NewLogger("infra")
+var infraLogger = logs.NewLogger("infra")
 
 func init() {
 	if os.Getenv("DEBUG_INFRA") != "" {

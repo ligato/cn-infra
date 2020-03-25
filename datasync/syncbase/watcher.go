@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"go.ligato.io/cn-infra/v2/datasync"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 	"go.ligato.io/cn-infra/v2/utils/safeclose"
 )
 
@@ -158,7 +158,7 @@ func (adapter *Registry) PropagateChanges(ctx context.Context, txData map[string
 			return err
 		}
 	case <-time.After(PropagateChangesTimeout):
-		logrus.DefaultLogger().Warnf("Timeout of aggregated data-change callbacks (%v)",
+		logs.DefaultLogger().Warnf("Timeout of aggregated data-change callbacks (%v)",
 			PropagateChangesTimeout)
 	}
 
@@ -214,7 +214,7 @@ func (adapter *Registry) PropagateResync(ctx context.Context, txData map[string]
 
 	// TODO: maybe higher timeout for resync event?
 	case <-time.After(PropagateChangesTimeout):
-		logrus.DefaultLogger().Warnf("Timeout of aggregated resync callbacks (%v)",
+		logs.DefaultLogger().Warnf("Timeout of aggregated resync callbacks (%v)",
 			PropagateChangesTimeout)
 	}
 
@@ -271,7 +271,7 @@ func (reg *WatchDataReg) Unregister(keyPrefix string) error {
 	// verify if key is registered for change events
 	if subs.ChangeChan == nil {
 		// not an error
-		logrus.DefaultLogger().Infof("key %v not registered for change events", keyPrefix)
+		logs.DefaultLogger().Infof("key %v not registered for change events", keyPrefix)
 		return nil
 	}
 	if subs.CloseChan == nil {
@@ -282,7 +282,7 @@ func (reg *WatchDataReg) Unregister(keyPrefix string) error {
 		if prefix == keyPrefix {
 			subs.KeyPrefixes = append(subs.KeyPrefixes[:index], subs.KeyPrefixes[index+1:]...)
 			subs.CloseChan <- keyPrefix
-			logrus.DefaultLogger().WithField("resyncName", reg.ResyncName).Infof("Key %v removed from subscription", keyPrefix)
+			logs.DefaultLogger().WithField("resyncName", reg.ResyncName).Infof("Key %v removed from subscription", keyPrefix)
 			return nil
 		}
 	}

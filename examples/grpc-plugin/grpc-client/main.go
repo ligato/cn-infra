@@ -9,7 +9,7 @@ import (
 	pb "google.golang.org/grpc/examples/helloworld/helloworld"
 
 	"go.ligato.io/cn-infra/v2/examples/grpc-plugin/insecure"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 const (
@@ -35,16 +35,16 @@ func main() {
 	)
 
 	if err != nil {
-		logrus.DefaultLogger().Fatalf("did not connect: %v", err)
+		logs.DefaultLogger().Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
 	c := pb.NewGreeterClient(conn)
 
 	r, err := c.SayHello(context.Background(), &pb.HelloRequest{Name: name})
 	if err != nil {
-		logrus.DefaultLogger().Fatalf("could not greet: %v", err)
+		logs.DefaultLogger().Fatalf("could not greet: %v", err)
 	}
-	logrus.DefaultLogger().Printf("Reply: %s (received from server)", r.Message)
+	logs.DefaultLogger().Printf("Reply: %s (received from server)", r.Message)
 }
 
 type tokenAuth struct {

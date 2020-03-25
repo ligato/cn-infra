@@ -21,14 +21,14 @@ import (
 
 	"github.com/onsi/gomega"
 
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 func ExampleAsyncProducer() {
-	log := logrus.DefaultLogger()
+	log := logs.DefaultLogger()
 
 	//init config
-	config := NewConfig(logrus.DefaultLogger())
+	config := NewConfig(logs.DefaultLogger())
 	config.SetBrokers("localhost:9091", "localhost:9092")
 	config.SetSendSuccess(true)
 	config.SetSuccessChan(make(chan *ProducerMessage))

@@ -26,10 +26,10 @@ import (
 	"go.ligato.io/cn-infra/v2/db/keyval/filedb"
 	"go.ligato.io/cn-infra/v2/db/keyval/filedb/decoder"
 	"go.ligato.io/cn-infra/v2/db/keyval/filedb/filesystem"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
-var log = logrus.DefaultLogger()
+var log = logs.DefaultLogger()
 
 func TestNewClient(t *testing.T) {
 	RegisterTestingT(t)
@@ -172,7 +172,7 @@ func TestJsonReaderWatcher(t *testing.T) {
 	// Test responses. Tests expected event value.
 	var create1, create2, update, del, delFile bool
 	f := func(resp keyval.BytesWatchResp) {
-		logrus.DefaultLogger().Warnf("resp: %v, %v, %v", resp.GetKey(), resp.GetValue(), resp.GetPrevValue())
+		logs.DefaultLogger().Warnf("resp: %v, %v, %v", resp.GetKey(), resp.GetValue(), resp.GetPrevValue())
 		if !create1 {
 			Expect(resp.GetChangeType()).To(BeEquivalentTo(datasync.Put))
 			Expect(resp.GetKey()).To(BeEquivalentTo("/test-path/vpp/config/interfaces/if1"))

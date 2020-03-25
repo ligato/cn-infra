@@ -13,4 +13,4 @@
 // limitations under the License.
 
 // Package logrus implements the logging API based on the Logrus logger.
-package logrus
+package logs

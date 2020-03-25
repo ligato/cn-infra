@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package logrus
+package logs
 
 import (
 	"testing"
@@ -27,7 +27,7 @@ func TestListLoggers(t *testing.T) {
 	loggers := logRegistry.ListLoggers()
 	gomega.Expect(loggers).NotTo(gomega.BeNil())
 
-	lg, found := loggers[DefaultLoggerName]
+	lg, found := loggers[globalName]
 	gomega.Expect(found).To(gomega.BeTrue())
 	gomega.Expect(lg).NotTo(gomega.BeNil())
 }
@@ -54,18 +54,18 @@ func TestGetSetLevel(t *testing.T) {
 	gomega.RegisterTestingT(t)
 	const level = "error"
 	//existing logger
-	err := logRegistry.SetLevel(DefaultLoggerName, level)
+	err := logRegistry.SetLevel(globalName, level)
 	gomega.Expect(err).To(gomega.BeNil())
 
 	loggers := logRegistry.ListLoggers()
 	gomega.Expect(loggers).NotTo(gomega.BeNil())
 
-	logger, found := loggers[DefaultLoggerName]
+	logger, found := loggers[globalName]
 	gomega.Expect(found).To(gomega.BeTrue())
 	gomega.Expect(logger).NotTo(gomega.BeNil())
-	gomega.Expect(loggers[DefaultLoggerName]).To(gomega.BeEquivalentTo(level))
+	gomega.Expect(loggers[globalName]).To(gomega.BeEquivalentTo(level))
 
-	currentLevel, err := logRegistry.GetLevel(DefaultLoggerName)
+	currentLevel, err := logRegistry.GetLevel(globalName)
 	gomega.Expect(err).To(gomega.BeNil())
 	gomega.Expect(level).To(gomega.BeEquivalentTo(currentLevel))
 
@@ -124,6 +124,6 @@ func TestClearRegistry(t *testing.T) {
 	_, found = logRegistry.Lookup(loggerB)
 	gomega.Expect(found).To(gomega.BeFalse())
 
-	_, found = logRegistry.Lookup(DefaultLoggerName)
+	_, found = logRegistry.Lookup(globalName)
 	gomega.Expect(found).To(gomega.BeTrue())
 }

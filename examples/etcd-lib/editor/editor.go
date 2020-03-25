@@ -11,7 +11,7 @@ import (
 	"go.ligato.io/cn-infra/v2/db/keyval/etcd"
 	"go.ligato.io/cn-infra/v2/db/keyval/kvproto"
 	"go.ligato.io/cn-infra/v2/examples/etcd-lib/model/phonebook"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 const (
@@ -118,7 +118,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	db, err := etcd.NewEtcdConnectionWithBytes(*cfg, logrus.DefaultLogger())
+	db, err := etcd.NewEtcdConnectionWithBytes(*cfg, logs.DefaultLogger())
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

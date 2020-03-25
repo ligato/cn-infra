@@ -12,14 +12,14 @@ import (
 	"go.ligato.io/cn-infra/v2/db/keyval"
 	"go.ligato.io/cn-infra/v2/db/keyval/redis"
 	"go.ligato.io/cn-infra/v2/logging"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 	"go.ligato.io/cn-infra/v2/utils/safeclose"
 )
 
 // SimpleRedis is base structure which holds together all items needed to run the example - logger, redis client,
 // test prefix, channel for redis responses and channel to close the redis watcher
 type SimpleRedis struct {
-	log    *logrus.Logger
+	log    *logs.Logger
 	client redis.Client
 
 	prefix string
@@ -37,7 +37,7 @@ func main() {
 	flag.StringVar(&redisConfigPath, "redis-config", "", "Redis configuration file path")
 	flag.Parse()
 
-	log := logrus.DefaultLogger()
+	log := logs.DefaultLogger()
 	if debug {
 		log.SetLevel(logging.DebugLevel)
 	}

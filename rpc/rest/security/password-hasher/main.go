@@ -20,7 +20,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 // A simple utility to help with password hashing. Hashed password can be stored as
@@ -37,20 +37,20 @@ func main() {
 	pass := args[1]
 	cost, err := strconv.Atoi(args[2])
 	if err != nil {
-		logrus.DefaultLogger().Errorf("invalid cost format: %v", err)
+		logs.DefaultLogger().Errorf("invalid cost format: %v", err)
 		os.Exit(1)
 	}
 	if cost < 4 || cost > 31 {
-		logrus.DefaultLogger().Errorf("invalid cost value %d, set it in interval 4-31", cost)
+		logs.DefaultLogger().Errorf("invalid cost value %d, set it in interval 4-31", cost)
 		os.Exit(1)
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(pass), cost)
 	if err != nil {
-		logrus.DefaultLogger().Errorf("failed to hash password: %v", err)
+		logs.DefaultLogger().Errorf("failed to hash password: %v", err)
 		os.Exit(1)
 	}
 
-	logrus.DefaultLogger().Print(string(hash))
+	logs.DefaultLogger().Print(string(hash))
 }
 
 // Show info
@@ -73,5 +73,5 @@ func usage() {
 	We didn't spend much time securing it.
 	`)
 
-	logrus.DefaultLogger().Print(buffer.String())
+	logs.DefaultLogger().Print(buffer.String())
 }

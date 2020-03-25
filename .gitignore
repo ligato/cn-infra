@@ -15,9 +15,9 @@ db/keyval/etcd/examples/phonebook/editor/editor
 db/keyval/etcd/examples/phonebook/view/view
 db/keyval/etcd/examples/phonebook/watcher/watcher
 db/sql/cassandra/examples/simple/simple
-logging/logrus/examples/basic/basic
-logging/logrus/examples/custom/custom
-logging/logrus/examples/http/http
+logging/logs/examples/basic/basic
+logging/logs/examples/custom/custom
+logging/logs/examples/http/http
 messaging/kafka/examples/asyncproducer/asyncproducer
 messaging/kafka/examples/consumer/consumer
 messaging/kafka/examples/mux/mux

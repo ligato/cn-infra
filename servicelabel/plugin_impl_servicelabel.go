@@ -20,7 +20,7 @@ import (
 	"github.com/namsral/flag"
 
 	"go.ligato.io/cn-infra/v2/infra"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 var microserviceLabelFlag string
@@ -42,7 +42,7 @@ func (p *Plugin) Init() error {
 	if p.MicroserviceLabel == "" {
 		p.MicroserviceLabel = microserviceLabelFlag
 	}
-	logrus.DefaultLogger().Debugf("Microservice label is set to %v", p.MicroserviceLabel)
+	logs.DefaultLogger().Debugf("Microservice label is set to %v", p.MicroserviceLabel)
 	return nil
 }
 

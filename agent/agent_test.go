@@ -26,7 +26,7 @@ import (
 
 	"go.ligato.io/cn-infra/v2/agent"
 	"go.ligato.io/cn-infra/v2/infra"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 const (
@@ -223,19 +223,19 @@ func TestAgentWithPluginsReceiveSignal(t *testing.T) {
 	Expect(err).To(BeNil())
 	wg := sync.WaitGroup{}
 	wg.Add(1) //  We have one go routine we are about to launch
-	logrus.DefaultLogger().Info("wg.Add(1)")
+	logs.DefaultLogger().Info("wg.Add(1)")
 	go func() {
-		logrus.DefaultLogger().Info("entering goroutine")
+		logs.DefaultLogger().Info("entering goroutine")
 		defer wg.Done() // Release the wg when we are done
 		err := agent.Wait()
 		Expect(err).To(BeNil())
-		logrus.DefaultLogger().Info("exiting goroutine")
+		logs.DefaultLogger().Info("exiting goroutine")
 	}()
 
 	// Send the signal
 
 	syscall.Kill(os.Getpid(), syscall.SIGINT)
-	logrus.DefaultLogger().Info("wg.Wait()")
+	logs.DefaultLogger().Info("wg.Wait()")
 	wg.Wait()
 }
 

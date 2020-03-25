@@ -16,13 +16,13 @@ package main
 
 import (
 	"go.ligato.io/cn-infra/v2/logging"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 var logger logging.Logger
 
 func init() {
-	logger = logrus.DefaultLogger()
+	logger = logs.DefaultLogger()
 	logger.SetLevel(logging.DebugLevel)
 }
 

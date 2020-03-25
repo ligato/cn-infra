@@ -19,14 +19,14 @@ import (
 	"reflect"
 	"strings"
 
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 // safeClose closes closable object.
 func safeClose(obj interface{}) error {
 	defer func() {
 		if r := recover(); r != nil {
-			logrus.DefaultLogger().Error("Recovered in safeclose: ", r)
+			logs.DefaultLogger().Error("Recovered in safeclose: ", r)
 		}
 	}()
 
@@ -81,7 +81,7 @@ func Close(objs ...interface{}) error {
 // CloseAll tries to close all objects and return all errors (there are nils if there was no errors).
 // DEPRECATED - use safeclose.Close(...) instead
 func CloseAll(objs ...interface{}) ([]error, error) {
-	logrus.DefaultLogger().Debugf("safeclose.CloseAll() is DEPRECATED! Please use safeclose.Close() instead")
+	logs.DefaultLogger().Debugf("safeclose.CloseAll() is DEPRECATED! Please use safeclose.Close() instead")
 
 	errs := make([]error, len(objs))
 

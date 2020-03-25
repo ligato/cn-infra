@@ -24,12 +24,12 @@ import (
 	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/db/keyval"
 	"go.ligato.io/cn-infra/v2/logging"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 
 	"github.com/hashicorp/consul/api"
 )
 
-var consulLogger = logrus.NewLogger("consul")
+var consulLogger = logs.NewLogger("consul")
 
 func init() {
 	if os.Getenv("DEBUG_CONSUL_CLIENT") != "" {

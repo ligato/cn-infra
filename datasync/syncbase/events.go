@@ -20,7 +20,7 @@ import (
 	"github.com/golang/protobuf/proto"
 
 	"go.ligato.io/cn-infra/v2/datasync"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 // NewResyncEventDB creates a new instance of ResyncEventDB using the given map of iterators.
@@ -71,7 +71,7 @@ func (ev *ChangeEvent) Done(err error) {
 	if ev.delegate != nil {
 		ev.delegate.Done(err)
 	} else if err != nil {
-		logrus.DefaultLogger().Error(err)
+		logs.DefaultLogger().Error(err)
 	}
 }
 

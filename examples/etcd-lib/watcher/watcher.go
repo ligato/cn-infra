@@ -11,7 +11,7 @@ import (
 	"go.ligato.io/cn-infra/v2/db/keyval/etcd"
 	"go.ligato.io/cn-infra/v2/db/keyval/kvproto"
 	"go.ligato.io/cn-infra/v2/examples/etcd-lib/model/phonebook"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 func processArgs() (*etcd.ClientConfig, error) {
@@ -53,7 +53,7 @@ func main() {
 	}
 
 	// Create connection to etcd datastore.
-	broker, err := etcd.NewEtcdConnectionWithBytes(*cfg, logrus.DefaultLogger())
+	broker, err := etcd.NewEtcdConnectionWithBytes(*cfg, logs.DefaultLogger())
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -87,7 +87,7 @@ watcherLoop:
 				resp.GetValue(contact)
 				exists, err := resp.GetPrevValue(prevContact)
 				if err != nil {
-					logrus.DefaultLogger().Errorf("err: %v\n", err)
+					logs.DefaultLogger().Errorf("err: %v\n", err)
 				}
 				printContact(contact)
 				if exists {
@@ -100,7 +100,7 @@ watcherLoop:
 				prevContact := &phonebook.Contact{}
 				exists, err := resp.GetPrevValue(prevContact)
 				if err != nil {
-					logrus.DefaultLogger().Errorf("err: %v\n", err)
+					logs.DefaultLogger().Errorf("err: %v\n", err)
 				}
 				if exists {
 					printPrevContact(prevContact)

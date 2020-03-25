@@ -27,11 +27,11 @@ import (
 	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/db/keyval"
 	"go.ligato.io/cn-infra/v2/logging"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 func init() {
-	logrus.DefaultLogger().SetLevel(logging.DebugLevel)
+	logs.DefaultLogger().SetLevel(logging.DebugLevel)
 	boltLogger.SetLevel(logging.DebugLevel)
 }
 

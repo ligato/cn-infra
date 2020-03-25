@@ -22,7 +22,7 @@ import (
 
 	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/datasync/syncbase"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 // Just a shortcut to make following code more readable.
@@ -50,7 +50,7 @@ func (adapter *Adapter) RegisterTestHandler() {
 func (adapter *Adapter) Watch(resyncName string, changeChan chan datasync.ChangeEvent,
 	resyncChan chan datasync.ResyncEvent, keyPrefixes ...string) (datasync.WatchRegistration, error) {
 
-	logrus.DefaultLogger().Debug("REST KeyValProtoWatcher WatchData ", resyncName, " ", keyPrefixes)
+	logs.DefaultLogger().Debug("REST KeyValProtoWatcher WatchData ", resyncName, " ", keyPrefixes)
 
 	for _, keyPrefix := range keyPrefixes {
 		adapter.registerHTTPHandler(keyPrefix+"{suffix}", adapter.putMessage, "PUT")

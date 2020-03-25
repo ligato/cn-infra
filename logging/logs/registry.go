@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package logrus
+package logs
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"sync"
 
@@ -25,22 +24,11 @@ import (
 	"go.ligato.io/cn-infra/v2/logging"
 )
 
-var initialLogLvl = logrus.InfoLevel
-
 var defaultRegistry = NewLogRegistry()
 
-func init() {
-	if lvl, err := logrus.ParseLevel(os.Getenv("INITIAL_LOGLVL")); err == nil {
-		initialLogLvl = lvl
-		defaultLogger.SetLevel(lvl)
-		defaultLogger.Debugf("initial log level: %v", lvl.String())
-		/*if err := defaultLogger.SetLevel(lvl); err != nil {
-			defaultLogger.Warnf("setting initial log level to %v failed: %v", lvl.String(), err)
-		} else {
-			defaultLogger.Debugf("initial log level: %v", lvl.String())
-		}*/
-	}
-	logging.DefaultRegistry = defaultRegistry
+// DefaultRegistry returns the global registry instance.
+func DefaultRegistry() *LogRegistry {
+	return defaultRegistry
 }
 
 // NewLogRegistry is a constructor
@@ -135,27 +123,6 @@ func (lr *LogRegistry) ListLoggers() map[string]string {
 	return list
 }
 
-/*func setLevel(logVal logging.Logger, lvl logrus.Level) error {
-	if logVal == nil {
-		return fmt.Errorf("logger %q not found", logVal)
-	}
-	switch lvl {
-	case logrus.DebugLevel:
-		logVal.SetLevel(logging.DebugLevel)
-	case logrus.InfoLevel:
-		logVal.SetLevel(logging.InfoLevel)
-	case logrus.WarnLevel:
-		logVal.SetLevel(logging.WarnLevel)
-	case logrus.ErrorLevel:
-		logVal.SetLevel(logging.ErrorLevel)
-	case logrus.PanicLevel:
-		logVal.SetLevel(logging.PanicLevel)
-	case logrus.FatalLevel:
-		logVal.SetLevel(logging.FatalLevel)
-	}
-	return nil
-}*/
-
 // SetLevel modifies log level of selected logger in the registry
 func (lr *LogRegistry) SetLevel(logger, level string) error {
 	lvl, err := logrus.ParseLevel(level)
@@ -209,7 +176,7 @@ func (lr *LogRegistry) ClearRegistry() {
 			// false stops the iteration
 			return false
 		}
-		if key != DefaultLoggerName {
+		if key != globalName {
 			lr.loggers.Delete(key)
 		}
 		return true

@@ -25,7 +25,7 @@ import (
 	"go.ligato.io/cn-infra/v2/config"
 	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/db/keyval/etcd"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 // processArgs processes input arguments.
@@ -69,7 +69,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	db, err := etcd.NewEtcdConnectionWithBytes(*cfg, logrus.DefaultLogger())
+	db, err := etcd.NewEtcdConnectionWithBytes(*cfg, logs.DefaultLogger())
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

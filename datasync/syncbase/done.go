@@ -14,7 +14,7 @@
 
 package syncbase
 
-import "go.ligato.io/cn-infra/v2/logging/logrus"
+import "go.ligato.io/cn-infra/v2/logging/logs"
 
 // NewDoneChannel creates a new instance of DoneChannel.
 func NewDoneChannel(doneChan chan error) *DoneChannel {
@@ -34,10 +34,10 @@ func (ev *DoneChannel) Done(err error) {
 		case ev.DoneChan <- err:
 			// sent successfully
 		default:
-			logrus.DefaultLogger().Debug("Nobody is listening anymore")
+			logs.DefaultLogger().Debug("Nobody is listening anymore")
 		}
 	} else if err != nil {
-		logrus.DefaultLogger().Error(err)
+		logs.DefaultLogger().Error(err)
 	}
 }
 
@@ -52,7 +52,7 @@ func (ev *DoneCallback) Done(err error) {
 	if ev.Callback != nil {
 		ev.Callback(err)
 	} else if err != nil {
-		logrus.DefaultLogger().Error(err)
+		logs.DefaultLogger().Error(err)
 	}
 }
 
@@ -76,7 +76,7 @@ func collectDoneEvents(partialDone, done chan error, count int) {
 				lastErr = err
 			}
 		}
-		logrus.DefaultLogger().Debug("TX Done - all events callbacks received")
+		logs.DefaultLogger().Debug("TX Done - all events callbacks received")
 	}
 
 	done <- lastErr

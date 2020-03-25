@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package logrus
+package logs
 
 import (
 	"github.com/sirupsen/logrus"
@@ -27,13 +27,15 @@ func redactArgs(args ...interface{}) []interface{} {
 	return args
 }
 
-type RedactHook struct {
-}
+type RedactHook struct{}
 
 func (r *RedactHook) Levels() []logrus.Level {
 	return logrus.AllLevels
 }
 
 func (r *RedactHook) Fire(e *logrus.Entry) error {
+	for k, v := range e.Data {
+		e.Data[k] = redact.Value(v)
+	}
 	return nil
 }

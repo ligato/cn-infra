@@ -22,13 +22,13 @@ import (
 	"github.com/onsi/gomega"
 
 	"go.ligato.io/cn-infra/v2/idxmap"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 func TestNewNamedMappingMem(t *testing.T) {
 	gomega.RegisterTestingT(t)
 	title := "Title"
-	mapping := NewNamedMapping(logrus.DefaultLogger(), title, nil)
+	mapping := NewNamedMapping(logs.DefaultLogger(), title, nil)
 	returnedTitle := mapping.GetRegistryTitle()
 	gomega.Expect(returnedTitle).To(gomega.BeEquivalentTo(title))
 
@@ -38,7 +38,7 @@ func TestNewNamedMappingMem(t *testing.T) {
 
 func TestUpdateMetadata(t *testing.T) {
 	gomega.RegisterTestingT(t)
-	mapping := NewNamedMapping(logrus.DefaultLogger(), "title", nil)
+	mapping := NewNamedMapping(logs.DefaultLogger(), "title", nil)
 
 	success := mapping.Update("Name1", "value1")
 	gomega.Expect(success).To(gomega.BeFalse())
@@ -58,7 +58,7 @@ func TestUpdateMetadata(t *testing.T) {
 
 func TestClear(t *testing.T) {
 	gomega.RegisterTestingT(t)
-	mapping := NewNamedMapping(logrus.DefaultLogger(), "title", nil)
+	mapping := NewNamedMapping(logs.DefaultLogger(), "title", nil)
 
 	mapping.Put("Name1", "value1")
 	mapping.Put("Name2", "value2")
@@ -83,7 +83,7 @@ func TestClear(t *testing.T) {
 
 func TestCrudOps(t *testing.T) {
 	gomega.RegisterTestingT(t)
-	mapping := NewNamedMapping(logrus.DefaultLogger(), "title", nil)
+	mapping := NewNamedMapping(logs.DefaultLogger(), "title", nil)
 
 	mapping.Put("Name1", "value1")
 	meta, found := mapping.GetValue("Name1")
@@ -121,7 +121,7 @@ func TestCrudOps(t *testing.T) {
 func TestSecondaryIndexes(t *testing.T) {
 	gomega.RegisterTestingT(t)
 	const secondaryIx = "secondary"
-	mapping := NewNamedMapping(logrus.DefaultLogger(), "title", func(meta interface{}) map[string][]string {
+	mapping := NewNamedMapping(logs.DefaultLogger(), "title", func(meta interface{}) map[string][]string {
 		res := map[string][]string{}
 		if str, ok := meta.(string); ok {
 			res[secondaryIx] = []string{str, strings.ToLower(str), strings.ToUpper(str)}
@@ -176,7 +176,7 @@ func TestSecondaryIndexes(t *testing.T) {
 
 func TestNotifications(t *testing.T) {
 	gomega.RegisterTestingT(t)
-	mapping := NewNamedMapping(logrus.DefaultLogger(), "title", nil)
+	mapping := NewNamedMapping(logs.DefaultLogger(), "title", nil)
 
 	ch := make(chan idxmap.NamedMappingGenericEvent, 10)
 	err := mapping.Watch("subscriber", idxmap.ToChan(ch))

@@ -12,4 +12,26 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package logrus
+package logs
+
+import (
+	"os"
+
+	"github.com/sirupsen/logrus"
+
+	"go.ligato.io/cn-infra/v2/logging"
+)
+
+var initialLogLvl = logrus.InfoLevel
+
+func init() {
+	if lvl, err := logrus.ParseLevel(os.Getenv("INITIAL_LOGLVL")); err == nil {
+		initialLogLvl = lvl
+		defaultLogger.SetLevel(lvl)
+		defaultLogger.Tracef("initial log level: %v", lvl.String())
+	}
+	logrus.AddHook(&RedactHook{})
+	logrus.SetFormatter(DefaultFormatter())
+	logging.DefaultLogger = DefaultLogger()
+	logging.DefaultRegistry = DefaultRegistry()
+}

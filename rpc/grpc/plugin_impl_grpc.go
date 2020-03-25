@@ -27,7 +27,7 @@ import (
 	"google.golang.org/grpc/grpclog"
 
 	"go.ligato.io/cn-infra/v2/infra"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 	"go.ligato.io/cn-infra/v2/rpc/rest"
 )
 
@@ -115,7 +115,7 @@ func (p *Plugin) Init() (err error) {
 		p.grpcServer = grpc.NewServer(opts...)
 	}
 
-	grpcLogger := logrus.NewLogger("grpc-server")
+	grpcLogger := logs.NewLogger("grpc-server")
 	if p.Config != nil && p.Config.ExtendedLogging {
 		p.Log.Debug("GRPC transport logging enabled")
 		grpcLogger.SetVerbosity(logLevel)

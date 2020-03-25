@@ -68,13 +68,6 @@ type Logger interface {
 	SetFormatter(formatter logrus.Formatter)
 }
 
-type GrpcLogger interface {
-	// SetVerbosity sets logger verbosity
-	SetVerbosity(v int)
-	// V reports whether verbosity level is at least at the requested level
-	V(l int) bool
-}
-
 // LoggerFactory is API for the plugins that want to create their own loggers.
 type LoggerFactory interface {
 	NewLogger(name string) Logger
@@ -98,10 +91,8 @@ type Registry interface {
 	AddHook(hook logrus.Hook)
 }
 
-type LogLevel = logrus.Level
-
 // LogLevel represents severity of log record
-//type LogLevel uint32
+type LogLevel = logrus.Level
 
 const (
 	// PanicLevel - highest level of severity. Logs and then calls panic with the message passed in.
@@ -120,6 +111,7 @@ const (
 	TraceLevel
 )
 
+// ParseLogLevel parses log level from string or returns InfoLevel on error.
 func ParseLogLevel(str string) logrus.Level {
 	if lvl, err := logrus.ParseLevel(str); err == nil {
 		return lvl

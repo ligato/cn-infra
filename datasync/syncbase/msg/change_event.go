@@ -22,7 +22,7 @@ import (
 	"github.com/golang/protobuf/proto"
 
 	"go.ligato.io/cn-infra/v2/datasync"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 //go:generate protoc --proto_path=. --go_out=plugins=grpc:. datamsg.proto
@@ -59,7 +59,7 @@ func (ev *ChangeEvent) GetChanges() []datasync.ProtoWatchResp {
 func (ev *ChangeEvent) Done(err error) {
 	//TODO publish response to the topic
 	if err != nil {
-		logrus.DefaultLogger().Error(err)
+		logs.DefaultLogger().Error(err)
 	}
 }
 

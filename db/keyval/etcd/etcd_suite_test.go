@@ -21,7 +21,7 @@ import (
 
 	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/db/keyval"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/mvcc/mvccpb"
@@ -134,7 +134,7 @@ func setupTest(t *testing.T) *testCtx {
 		mem: make(map[string]string),
 	}
 	dataBroker := &BytesConnectionEtcd{
-		Logger: logrus.DefaultLogger(),
+		Logger: logs.DefaultLogger(),
 		etcdClient: &clientv3.Client{
 			KV:      mockKV,
 			Watcher: mockKV,

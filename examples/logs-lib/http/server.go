@@ -22,14 +22,14 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 const loggerName = "loggerName"
 const loggerLevel = "level"
 
-var logRegistry = logrus.NewLogRegistry()
-var defaultLogger = logrus.DefaultLogger()
+var logRegistry = logs.NewLogRegistry()
+var defaultLogger = logs.DefaultLogger()
 
 // Every 10 seconds prints a set of logs using default and custom logger
 func generateLogs() {

@@ -24,7 +24,7 @@ import (
 	"go.ligato.io/cn-infra/v2/datasync/resync"
 	"go.ligato.io/cn-infra/v2/datasync/syncbase"
 	"go.ligato.io/cn-infra/v2/db/keyval"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 var (
@@ -99,7 +99,7 @@ func (keys *watchBrokerKeys) watchResync(resyncReg resync.Registration) {
 			err := keys.resync()
 			if err != nil {
 				// We are not able to propagate it somewhere else.
-				logrus.DefaultLogger().Errorf("getting resync data failed: %v", err)
+				logs.DefaultLogger().Errorf("getting resync data failed: %v", err)
 				// TODO NICE-to-HAVE publish the err using the transport asynchronously
 			}
 		}
@@ -120,7 +120,7 @@ func (keys *watchBrokerKeys) resyncRev() error {
 			if stop {
 				break
 			}
-			logrus.DefaultLogger().Debugf("registering key found in KV: %q", data.GetKey())
+			logs.DefaultLogger().Debugf("registering key found in KV: %q", data.GetKey())
 
 			keys.adapter.base.LastRev().PutWithRevision(data.GetKey(),
 				syncbase.NewKeyVal(data.GetKey(), data, data.GetRevision()))
@@ -147,7 +147,7 @@ func (keys *watchBrokerKeys) resync() error {
 	case keys.resyncChan <- resyncEvent:
 		// ok
 	case <-time.After(ResyncAcceptTimeout):
-		logrus.DefaultLogger().Warn("Timeout of resync send!")
+		logs.DefaultLogger().Warn("Timeout of resync send!")
 		return errors.New("resync not accepted in time")
 	}
 
@@ -157,7 +157,7 @@ func (keys *watchBrokerKeys) resync() error {
 			return errors.WithMessagef(err, "resync returned error")
 		}
 	case <-time.After(ResyncDoneTimeout):
-		logrus.DefaultLogger().Warn("Timeout of resync callback!")
+		logs.DefaultLogger().Warn("Timeout of resync callback!")
 	}
 
 	return nil

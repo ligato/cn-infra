@@ -22,7 +22,7 @@ import (
 	"github.com/namsral/flag"
 
 	"go.ligato.io/cn-infra/v2/examples/kafka-lib/utils"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 	"go.ligato.io/cn-infra/v2/messaging/kafka/client"
 	"go.ligato.io/cn-infra/v2/utils/clienttls"
 )
@@ -51,7 +51,7 @@ func main() {
 	errCh := make(chan *client.ProducerError)
 
 	// init config
-	config := client.NewConfig(logrus.DefaultLogger())
+	config := client.NewConfig(logs.DefaultLogger())
 	config.SetDebug(*debug)
 	config.SetPartition(int32(*partition))
 	config.SetSendSuccess(true)

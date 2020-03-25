@@ -20,12 +20,12 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/onsi/gomega"
 
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 func ExampleSyncProducer() {
 	// init config
-	config := NewConfig(logrus.DefaultLogger())
+	config := NewConfig(logs.DefaultLogger())
 	config.ProducerConfig().Producer.RequiredAcks = sarama.WaitForAll
 	config.SetBrokers("localhost:9091", "localhost:9092")
 

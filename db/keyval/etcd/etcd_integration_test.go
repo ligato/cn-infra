@@ -26,7 +26,7 @@ import (
 	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/db/keyval"
 	"go.ligato.io/cn-infra/v2/db/keyval/etcd/mocks"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 const (
@@ -70,7 +70,7 @@ func setupBrokers(t *testing.T) {
 	RegisterTestingT(t)
 
 	var err error
-	broker, err = NewEtcdConnectionUsingClient(v3client.New(embd.ETCD.Server), logrus.DefaultLogger())
+	broker, err = NewEtcdConnectionUsingClient(v3client.New(embd.ETCD.Server), logs.DefaultLogger())
 
 	Expect(err).To(BeNil())
 	Expect(broker).NotTo(BeNil())
@@ -249,7 +249,7 @@ func testDelWithPrefix(t *testing.T) {
 func testPutIfNotExists(t *testing.T) {
 	RegisterTestingT(t)
 
-	conn, err := NewEtcdConnectionUsingClient(v3client.New(embd.ETCD.Server), logrus.DefaultLogger())
+	conn, err := NewEtcdConnectionUsingClient(v3client.New(embd.ETCD.Server), logs.DefaultLogger())
 
 	Expect(err).To(BeNil())
 	Expect(conn).NotTo(BeNil())
@@ -299,7 +299,7 @@ func testPutIfNotExists(t *testing.T) {
 func testCompareAndSwap(t *testing.T) {
 	RegisterTestingT(t)
 
-	conn, err := NewEtcdConnectionUsingClient(v3client.New(embd.ETCD.Server), logrus.DefaultLogger())
+	conn, err := NewEtcdConnectionUsingClient(v3client.New(embd.ETCD.Server), logs.DefaultLogger())
 
 	Expect(err).To(BeNil())
 	Expect(conn).NotTo(BeNil())
@@ -349,7 +349,7 @@ func testCompareAndSwap(t *testing.T) {
 func testCompareAndDelete(t *testing.T) {
 	RegisterTestingT(t)
 
-	conn, err := NewEtcdConnectionUsingClient(v3client.New(embd.ETCD.Server), logrus.DefaultLogger())
+	conn, err := NewEtcdConnectionUsingClient(v3client.New(embd.ETCD.Server), logs.DefaultLogger())
 
 	Expect(err).To(BeNil())
 	Expect(conn).NotTo(BeNil())

@@ -12,29 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package logrus
+package logs
 
 import (
-	lg "github.com/sirupsen/logrus"
-)
-
-// Tag names for structured fields of log message
-const (
-	locKey    = "loc"
-	tagKey    = "tag"
-	loggerKey = "logger"
+	"github.com/sirupsen/logrus"
 )
 
 // Entry is the logging entry. It has logrus' entry struct which is a final or intermediate Logrus logging entry
 type Entry struct {
 	logger  *Logger
-	fields  lg.Fields
-	lgEntry *lg.Entry
+	fields  logrus.Fields
+	lgEntry *logrus.Entry
 }
 
 // NewEntry creates net entry object which stores provided logger and logrus' entry
 func NewEntry(logger *Logger) *Entry {
-	lgEntry := lg.NewEntry(logger.Logger)
+	lgEntry := logrus.NewEntry(logger.Logger)
 	return &Entry{
 		logger:  logger,
 		lgEntry: lgEntry,
@@ -58,12 +51,12 @@ func (entry *Entry) WithError(err error) *Entry {
 
 // WithField calls transforms key/value to field and passes to WithFields
 func (entry *Entry) WithField(key string, value interface{}) *Entry {
-	return entry.WithFields(lg.Fields{key: value})
+	return entry.WithFields(logrus.Fields{key: value})
 }
 
 // WithFields stores field entries. These entries are used later when log method (Info, Debug, etc) is called
-func (entry *Entry) WithFields(fields lg.Fields) *Entry {
-	data := make(lg.Fields, len(entry.fields)+len(fields))
+func (entry *Entry) WithFields(fields logrus.Fields) *Entry {
+	data := make(logrus.Fields, len(entry.fields)+len(fields))
 	for k, v := range entry.fields {
 		data[k] = v
 	}
@@ -73,135 +66,155 @@ func (entry *Entry) WithFields(fields lg.Fields) *Entry {
 	return &Entry{logger: entry.logger, fields: data, lgEntry: entry.lgEntry}
 }
 
-func (entry *Entry) Log(lvl lg.Level, args ...interface{}) {
+func (entry *Entry) Log(lvl logrus.Level, args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lvl {
 		entry.lgEntry.WithFields(entry.fields).Log(lvl, redactArgs(args...)...)
 	}
 }
 
-func (entry *Entry) Logf(lvl lg.Level, f string, args ...interface{}) {
+func (entry *Entry) Logf(lvl logrus.Level, f string, args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lvl {
 		entry.lgEntry.WithFields(entry.fields).Logf(lvl, f, redactArgs(args...)...)
 	}
 }
 
-func (entry *Entry) Logln(lvl lg.Level, args ...interface{}) {
+func (entry *Entry) Logln(lvl logrus.Level, args ...interface{}) {
 	if entry.lgEntry.Logger.Level >= lvl {
 		entry.lgEntry.WithFields(entry.fields).Logln(lvl, redactArgs(args...)...)
 	}
 }
 
+// Trace logs a message at level Trace on the standard logger.
+func (entry *Entry) Trace(args ...interface{}) {
+	entry.Log(logrus.TraceLevel, args...)
+}
+
 // Debug logs a message at level Debug on the standard logger.
 func (entry *Entry) Debug(args ...interface{}) {
-	entry.Log(lg.DebugLevel, args...)
+	entry.Log(logrus.DebugLevel, args...)
 }
 
 // Print logs a message at level Info on the standard logger.
 func (entry *Entry) Print(args ...interface{}) {
-	entry.Log(lg.InfoLevel, args...)
+	entry.Log(logrus.InfoLevel, args...)
 }
 
 // Info logs a message at level Info on the standard logger.
 func (entry *Entry) Info(args ...interface{}) {
-	entry.Log(lg.InfoLevel, args...)
+	entry.Log(logrus.InfoLevel, args...)
 }
 
 // Warn logs a message at level Warning on the standard logger.
 func (entry *Entry) Warn(args ...interface{}) {
-	entry.Log(lg.WarnLevel, args...)
+	entry.Log(logrus.WarnLevel, args...)
 }
 
 // Warning logs a message at level Warning on the standard logger.
 func (entry *Entry) Warning(args ...interface{}) {
-	entry.Log(lg.WarnLevel, args...)
+	entry.Log(logrus.WarnLevel, args...)
 }
 
 // Error logs a message at level Error on the standard logger.
 func (entry *Entry) Error(args ...interface{}) {
-	entry.Log(lg.ErrorLevel, args...)
+	entry.Log(logrus.ErrorLevel, args...)
 }
 
 // Fatal logs a message at level Fatal on the standard logger.
 func (entry *Entry) Fatal(args ...interface{}) {
-	entry.Log(lg.FatalLevel, args...)
+	entry.Log(logrus.FatalLevel, args...)
 }
 
 // Panic logs a message at level Panic on the standard logger.
 func (entry *Entry) Panic(args ...interface{}) {
-	entry.Log(lg.PanicLevel, args...)
+	entry.Log(logrus.PanicLevel, args...)
+}
+
+// Tracef logs a message at level Trace on the standard logger.
+func (entry *Entry) Tracef(format string, args ...interface{}) {
+	entry.Logf(logrus.TraceLevel, format, args...)
 }
 
 // Debugf logs a message at level Debug on the standard logger.
 func (entry *Entry) Debugf(format string, args ...interface{}) {
-	entry.Logf(lg.DebugLevel, format, args...)
+	entry.Logf(logrus.DebugLevel, format, args...)
 }
 
 // Infof logs a message at level Info on the standard logger.
 func (entry *Entry) Infof(format string, args ...interface{}) {
-	entry.Logf(lg.InfoLevel, format, args...)
+	entry.Logf(logrus.InfoLevel, format, args...)
 }
 
 // Printf logs a message at level Info on the standard logger.
 func (entry *Entry) Printf(format string, args ...interface{}) {
-	entry.Logf(lg.InfoLevel, format, args...)
+	entry.Logf(logrus.InfoLevel, format, args...)
 }
 
 // Warnf logs a message at level Warn on the standard logger.
 func (entry *Entry) Warnf(format string, args ...interface{}) {
-	entry.Logf(lg.WarnLevel, format, args...)
+	entry.Logf(logrus.WarnLevel, format, args...)
 }
 
 // Warningf logs a message at level Warn on the standard logger.
 func (entry *Entry) Warningf(format string, args ...interface{}) {
-	entry.Logf(lg.WarnLevel, format, args...)
+	entry.Logf(logrus.WarnLevel, format, args...)
 }
 
 // Errorf logs a message at level Error on the standard logger.
 func (entry *Entry) Errorf(format string, args ...interface{}) {
-	entry.Logf(lg.ErrorLevel, format, args...)
+	entry.Logf(logrus.ErrorLevel, format, args...)
 }
 
 // Fatalf logs a message at level Debug on the standard logger.
 func (entry *Entry) Fatalf(format string, args ...interface{}) {
-	entry.Logf(lg.FatalLevel, format, args...)
+	entry.Logf(logrus.FatalLevel, format, args...)
 }
 
 // Panicf logs a message at level Panic on the standard logger.
 func (entry *Entry) Panicf(format string, args ...interface{}) {
-	entry.Logf(lg.PanicLevel, format, args...)
+	entry.Logf(logrus.PanicLevel, format, args...)
+}
+
+// Traceln logs a message at level Trace on the standard logger.
+func (entry *Entry) Traceln(args ...interface{}) {
+	entry.Logln(logrus.TraceLevel, args...)
 }
 
 // Debugln logs a message at level Debug on the standard logger.
 func (entry *Entry) Debugln(args ...interface{}) {
-	entry.Logln(lg.DebugLevel, args...)
+	entry.Logln(logrus.DebugLevel, args...)
 }
 
 // Infoln logs a message at level Info on the standard logger.
 func (entry *Entry) Infoln(args ...interface{}) {
-	entry.Logln(lg.InfoLevel, args...)
+	entry.Logln(logrus.InfoLevel, args...)
 }
 
 // Println logs a message at level Info on the standard logger.
 func (entry *Entry) Println(args ...interface{}) {
-	entry.Logln(lg.InfoLevel, args...)
+	entry.Logln(logrus.InfoLevel, args...)
+}
+
+// Warnln logs a message at level Warn on the standard logger.
+func (entry *Entry) Warnln(args ...interface{}) {
+	entry.Logln(logrus.WarnLevel, args...)
 }
 
 // Warningln logs a message at level Warn on the standard logger.
 func (entry *Entry) Warningln(args ...interface{}) {
-	entry.Logln(lg.WarnLevel, args...)
+	entry.Logln(logrus.WarnLevel, args...)
 }
 
 // Errorln logs a message at level Error on the standard logger.
 func (entry *Entry) Errorln(args ...interface{}) {
-	entry.Logln(lg.ErrorLevel, args...)
+	entry.Logln(logrus.ErrorLevel, args...)
 }
 
 // Fatalln logs a message at level Fatal on the standard logger.
 func (entry *Entry) Fatalln(args ...interface{}) {
-	entry.Logln(lg.FatalLevel, args...)
+	entry.Logln(logrus.FatalLevel, args...)
 }
 
 // Panicln logs a message at level Panic on the standard logger.
 func (entry *Entry) Panicln(args ...interface{}) {
-	entry.Logln(lg.PanicLevel, args...)
+	entry.Logln(logrus.PanicLevel, args...)
 }

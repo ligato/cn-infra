@@ -20,7 +20,7 @@ import (
 	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/datasync/syncbase"
 	"go.ligato.io/cn-infra/v2/datasync/syncbase/msg"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 // Adapter is a gRPC transport adapter in front of Agent Plugins.
@@ -45,7 +45,7 @@ func NewAdapter(grpcServer *grpc.Server) *Adapter {
 func (adapter *Adapter) Watch(resyncName string, changeChan chan datasync.ChangeEvent,
 	resyncChan chan datasync.ResyncEvent, keyPrefixes ...string) (datasync.WatchRegistration, error) {
 
-	logrus.DefaultLogger().Debug("GRPC KeyValProtoWatcher WatchData ", resyncName, " ", keyPrefixes)
+	logs.DefaultLogger().Debug("GRPC KeyValProtoWatcher WatchData ", resyncName, " ", keyPrefixes)
 
 	return adapter.base.Watch(resyncName, changeChan, resyncChan, keyPrefixes...)
 }

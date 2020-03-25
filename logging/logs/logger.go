@@ -12,39 +12,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package logrus
+package logs
 
 import (
+	"context"
 	"fmt"
 	"sync"
+	"time"
 
-	lg "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	"go.ligato.io/cn-infra/v2/logging"
 )
 
-// DefaultLoggerName is logger name of global instance of logger
-const DefaultLoggerName = "defaultLogger"
-
-var (
-	defaultLogger = &Logger{
-		name:   DefaultLoggerName,
-		Logger: lg.StandardLogger(),
-	}
+// Tag names for structured fields of log message
+const (
+	globalName = "global"
+	loggerKey  = "logger"
 )
 
-func init() {
-	lg.SetFormatter(DefaultFormatter)
-	logging.DefaultLogger = defaultLogger
-}
+var defaultLogger = WrapLogger(logrus.StandardLogger(), globalName)
 
-// DefaultLogger returns a global Logrus logger.
+// DefaultLogger returns a global logger.
 // Note, that recommended approach is to create a custom logger.
 func DefaultLogger() *Logger {
 	return defaultLogger
 }
 
-var _ logging.Logger = (*Logger)(nil)
+// WrapLogger wraps logrus.Logger and returns named Logger.
+func WrapLogger(logger *logrus.Logger, name string) *Logger {
+	return &Logger{
+		Logger: logger,
+		name:   name,
+	}
+}
 
 // Logger is wrapper of Logrus logger. In addition to Logrus functionality it
 // allows to define static log fields that are added to all subsequent log entries. It also automatically
@@ -52,7 +53,7 @@ var _ logging.Logger = (*Logger)(nil)
 // go routines a tag (number that is based on the stack address) is computed. To achieve better readability
 // numeric value of a tag can be replaced by a string using SetTag function.
 type Logger struct {
-	*lg.Logger
+	*logrus.Logger
 
 	name         string
 	verbosity    int
@@ -69,16 +70,13 @@ type Logger struct {
 //    logger.Info()
 //
 func NewLogger(name string) *Logger {
-	l := lg.New()
-	logger := &Logger{
-		Logger: l,
-		name:   name,
-	}
-	logger.SetFormatter(DefaultFormatter)
+	logger := WrapLogger(logrus.New(), name)
+	logger.SetFormatter(defaultFormatter)
+	logger.AddHook(&RedactHook{})
 	return logger
 }
 
-// GetName return the logger name
+// GetName return the logger name.
 func (logger *Logger) GetName() string {
 	return logger.name
 }
@@ -129,6 +127,37 @@ func (logger *Logger) V(l int) bool {
 	return l <= logger.verbosity
 }
 
+func (logger *Logger) WithError(err error) logging.LogWithLevel {
+	return &Entry{
+		logger:  logger,
+		lgEntry: logger.Logger.WithFields(logger.fields()).WithError(err),
+	}
+}
+
+func (logger *Logger) WithContext(ctx context.Context) logging.LogWithLevel {
+	return &Entry{
+		logger:  logger,
+		lgEntry: logger.Logger.WithFields(logger.fields()).WithContext(ctx),
+	}
+}
+
+func (logger *Logger) WithTime(t time.Time) logging.LogWithLevel {
+	return &Entry{
+		logger:  logger,
+		lgEntry: logger.Logger.WithFields(logger.fields()).WithTime(t),
+	}
+}
+
+func (logger *Logger) fields() logrus.Fields {
+	static := logger.GetStaticFields()
+	data := make(logrus.Fields, len(static)+1)
+	for k, v := range static {
+		data[k] = v
+	}
+	data[loggerKey] = logger.name
+	return data
+}
+
 // WithField creates an entry from the standard logger and adds a field to
 // it. If you want multiple fields, use `WithFields`.
 //
@@ -150,8 +179,7 @@ func (logger *Logger) WithFields(fields logging.Fields) logging.LogWithLevel {
 
 func (logger *Logger) withFields(fields logging.Fields, depth int) *Entry {
 	static := logger.GetStaticFields()
-
-	data := make(lg.Fields, len(fields)+len(static))
+	data := make(logrus.Fields, len(fields)+len(static))
 	for k, v := range static {
 		data[k] = v
 	}
@@ -172,73 +200,80 @@ func (logger *Logger) header(depth int) *Entry {
 }
 
 // Debug logs a message at level Debug on the standard logger.
-func (logger *Logger) log(lvl lg.Level, args ...interface{}) {
+func (logger *Logger) log(lvl logrus.Level, args ...interface{}) {
 	if logger.IsLevelEnabled(lvl) {
 		logger.header(1).Log(lvl, args...)
 	}
 }
 
-func (logger *Logger) Log(lvl lg.Level, args ...interface{}) {
+func (logger *Logger) Log(lvl logrus.Level, args ...interface{}) {
 	if logger.IsLevelEnabled(lvl) {
 		logger.header(1).Log(lvl, args...)
 	}
 }
 
-func (logger *Logger) Logf(lvl lg.Level, f string, args ...interface{}) {
+func (logger *Logger) Logf(lvl logrus.Level, f string, args ...interface{}) {
 	if logger.IsLevelEnabled(lvl) {
 		logger.header(1).Logf(lvl, f, args...)
 	}
 }
 
-func (logger *Logger) Logln(lvl lg.Level, args ...interface{}) {
+func (logger *Logger) Logln(lvl logrus.Level, args ...interface{}) {
 	if logger.IsLevelEnabled(lvl) {
 		logger.header(1).Logln(lvl, args...)
 	}
 }
 
+// Trace logs a message at level Trace on the standard logger.
+func (logger *Logger) Trace(args ...interface{}) {
+	if logger.Level >= logrus.TraceLevel {
+		logger.header(1).Trace(args...)
+	}
+}
+
 // Debug logs a message at level Debug on the standard logger.
 func (logger *Logger) Debug(args ...interface{}) {
-	if logger.Level >= lg.DebugLevel {
+	if logger.Level >= logrus.DebugLevel {
 		logger.header(1).Debug(args...)
 	}
 }
 
 // Info logs a message at level Info on the standard logger.
 func (logger *Logger) Print(args ...interface{}) {
-	logger.header(1).Info(args...)
+	logger.header(1).Print(args...)
 }
 
 // Info logs a message at level Info on the standard logger.
 func (logger *Logger) Info(args ...interface{}) {
-	if logger.Level >= lg.InfoLevel {
+	if logger.Level >= logrus.InfoLevel {
 		logger.header(1).Info(args...)
 	}
 }
 
 // Warn logs a message at level Warning on the standard logger.
 func (logger *Logger) Warn(args ...interface{}) {
-	if logger.Level >= lg.WarnLevel {
+	if logger.Level >= logrus.WarnLevel {
 		logger.header(1).Warn(args...)
 	}
 }
 
 // Warning logs a message at level Warn on the standard logger.
 func (logger *Logger) Warning(args ...interface{}) {
-	if logger.Level >= lg.WarnLevel {
+	if logger.Level >= logrus.WarnLevel {
 		logger.header(1).Warning(args...)
 	}
 }
 
 // Error logs a message at level Error on the standard logger.
 func (logger *Logger) Error(args ...interface{}) {
-	if logger.Level >= lg.ErrorLevel {
+	if logger.Level >= logrus.ErrorLevel {
 		logger.header(1).Error(args...)
 	}
 }
 
 // Fatal logs a message at level Fatal on the standard logger.
 func (logger *Logger) Fatal(args ...interface{}) {
-	if logger.Level >= lg.FatalLevel {
+	if logger.Level >= logrus.FatalLevel {
 		logger.header(1).Fatal(args...)
 	}
 }
@@ -248,9 +283,16 @@ func (logger *Logger) Panic(args ...interface{}) {
 	logger.header(1).Panic(args...)
 }
 
+// Tracef logs a message at level Trae on the standard logger.
+func (logger *Logger) Tracef(format string, args ...interface{}) {
+	if logger.Level >= logrus.TraceLevel {
+		logger.header(1).Tracef(format, args...)
+	}
+}
+
 // Debugf logs a message at level Debug on the standard logger.
 func (logger *Logger) Debugf(format string, args ...interface{}) {
-	if logger.Level >= lg.DebugLevel {
+	if logger.Level >= logrus.DebugLevel {
 		logger.header(1).Debugf(format, args...)
 	}
 }
@@ -262,35 +304,35 @@ func (logger *Logger) Printf(format string, args ...interface{}) {
 
 // Infof logs a message at level Info on the standard logger.
 func (logger *Logger) Infof(format string, args ...interface{}) {
-	if logger.Level >= lg.InfoLevel {
+	if logger.Level >= logrus.InfoLevel {
 		logger.header(1).Infof(format, args...)
 	}
 }
 
 // Warnf logs a message at level Warn on the standard logger.
 func (logger *Logger) Warnf(format string, args ...interface{}) {
-	if logger.Level >= lg.WarnLevel {
+	if logger.Level >= logrus.WarnLevel {
 		logger.header(1).Warnf(format, args...)
 	}
 }
 
 // Warningf logs a message at level Warn on the standard logger.
 func (logger *Logger) Warningf(format string, args ...interface{}) {
-	if logger.Level >= lg.WarnLevel {
+	if logger.Level >= logrus.WarnLevel {
 		logger.header(1).Warningf(format, args...)
 	}
 }
 
 // Errorf logs a message at level Error on the standard logger.
 func (logger *Logger) Errorf(format string, args ...interface{}) {
-	if logger.Level >= lg.ErrorLevel {
+	if logger.Level >= logrus.ErrorLevel {
 		logger.header(1).Errorf(format, args...)
 	}
 }
 
 // Fatalf logs a message at level Fatal on the standard logger.
 func (logger *Logger) Fatalf(format string, args ...interface{}) {
-	if logger.Level >= lg.FatalLevel {
+	if logger.Level >= logrus.FatalLevel {
 		logger.header(1).Fatalf(format, args...)
 	}
 }
@@ -300,9 +342,16 @@ func (logger *Logger) Panicf(format string, args ...interface{}) {
 	logger.header(1).Panicf(format, args...)
 }
 
+// Traceln logs a message at level Trace on the standard logger.
+func (logger *Logger) Traceln(args ...interface{}) {
+	if logger.Level >= logrus.TraceLevel {
+		logger.header(1).Traceln(args...)
+	}
+}
+
 // Debugln logs a message at level Debug on the standard logger.
 func (logger *Logger) Debugln(args ...interface{}) {
-	if logger.Level >= lg.DebugLevel {
+	if logger.Level >= logrus.DebugLevel {
 		logger.header(1).Debugln(args...)
 	}
 }
@@ -314,33 +363,40 @@ func (logger *Logger) Println(args ...interface{}) {
 
 // Infoln logs a message at level Info on the standard logger.
 func (logger *Logger) Infoln(args ...interface{}) {
-	if logger.Level >= lg.InfoLevel {
+	if logger.Level >= logrus.InfoLevel {
 		logger.header(1).Infoln(args...)
+	}
+}
+
+// Warnln logs a message at level Warn on the standard logger.
+func (logger *Logger) Warnln(args ...interface{}) {
+	if logger.Level >= logrus.WarnLevel {
+		logger.header(1).Warnln(args...)
 	}
 }
 
 // Warningln logs a message at level Warn on the standard logger.
 func (logger *Logger) Warningln(args ...interface{}) {
-	if logger.Level >= lg.WarnLevel {
+	if logger.Level >= logrus.WarnLevel {
 		logger.header(1).Warningln(args...)
 	}
 }
 
 // Errorln logs a message at level Error on the standard logger.
 func (logger *Logger) Errorln(args ...interface{}) {
-	if logger.Level >= lg.ErrorLevel {
+	if logger.Level >= logrus.ErrorLevel {
 		logger.header(1).Errorln(args...)
+	}
+}
+
+// Fatalln logs a message at level Fatal on the standard logger.
+func (logger *Logger) Fatalln(args ...interface{}) {
+	if logger.Level >= logrus.FatalLevel {
+		logger.header(1).Fatalln(args...)
 	}
 }
 
 // Panicln logs a message at level Panic on the standard logger.
 func (logger *Logger) Panicln(args ...interface{}) {
 	logger.header(1).Panicln(args...)
-}
-
-// Fatalln logs a message at level Fatal on the standard logger.
-func (logger *Logger) Fatalln(args ...interface{}) {
-	if logger.Level >= lg.FatalLevel {
-		logger.header(1).Fatalln(args...)
-	}
 }

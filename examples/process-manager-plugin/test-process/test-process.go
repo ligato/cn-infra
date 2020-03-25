@@ -23,10 +23,10 @@ import (
 
 	"github.com/namsral/flag"
 
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
-var log = logrus.DefaultLogger()
+var log = logs.DefaultLogger()
 var maxUptime = flag.Uint("max-uptime", 0, "Max uptime in seconds the test application can be running")
 
 func main() {

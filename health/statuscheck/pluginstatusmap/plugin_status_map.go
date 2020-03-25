@@ -19,7 +19,7 @@ import (
 	"go.ligato.io/cn-infra/v2/idxmap"
 	"go.ligato.io/cn-infra/v2/idxmap/mem"
 	"go.ligato.io/cn-infra/v2/infra"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 // PluginStatusIdxMap provides map of plugin names to plugin status.
@@ -51,7 +51,7 @@ type PluginStatusIdxMapRW interface {
 // NewPluginStatusMap is a constructor for PluginStatusIdxMapRW.
 func NewPluginStatusMap(owner infra.PluginName) PluginStatusIdxMapRW {
 	return &pluginStatusMap{
-		mapping: mem.NewNamedMapping(logrus.DefaultLogger(), "plugin_status", IndexPluginStatus),
+		mapping: mem.NewNamedMapping(logs.DefaultLogger(), "plugin_status", IndexPluginStatus),
 	}
 }
 
@@ -86,7 +86,7 @@ func (swi *pluginStatusMap) Put(pluginName string, pluginStatus *status.PluginSt
 // IndexPluginStatus creates indexes for plugin states and records the state
 // passed as untyped data.
 func IndexPluginStatus(data interface{}) map[string][]string {
-	logrus.DefaultLogger().Debug("IndexPluginStatus ", data)
+	logs.DefaultLogger().Debug("IndexPluginStatus ", data)
 
 	indexes := map[string][]string{}
 	pluginStatus, ok := data.(*status.PluginStatus)

@@ -25,7 +25,7 @@ import (
 	"github.com/namsral/flag"
 
 	"go.ligato.io/cn-infra/v2/logging"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 	"go.ligato.io/cn-infra/v2/messaging/kafka/client"
 	"go.ligato.io/cn-infra/v2/utils/clienttls"
 )
@@ -46,7 +46,7 @@ var (
 )
 
 func main() {
-	logrus.DefaultLogger().SetLevel(logging.DebugLevel)
+	logs.DefaultLogger().SetLevel(logging.DebugLevel)
 
 	flag.Parse()
 
@@ -83,7 +83,7 @@ func main() {
 	}
 
 	// init config
-	config := client.NewConfig(logrus.DefaultLogger())
+	config := client.NewConfig(logs.DefaultLogger())
 	config.SetDebug(*debug)
 	config.SetInitialOffset(initialOffset)
 	config.SetRecvNotification(true)
@@ -119,7 +119,7 @@ func main() {
 		select {
 		case <-signalChan:
 			consumer.Close()
-			logrus.DefaultLogger().Debug("exiting")
+			logs.DefaultLogger().Debug("exiting")
 		}
 	}()
 
@@ -180,9 +180,9 @@ func messageCallback(consumer *client.Consumer, msg *client.ConsumerMessage, com
 		consumer.MarkOffset(msg, "")
 		err := consumer.CommitOffsets()
 		if err != nil {
-			logrus.DefaultLogger().Errorf("CommitOffset Errored: %v", err)
+			logs.DefaultLogger().Errorf("CommitOffset Errored: %v", err)
 		}
-		logrus.DefaultLogger().Info("Message Offset committed")
+		logs.DefaultLogger().Info("Message Offset committed")
 	}
 }
 

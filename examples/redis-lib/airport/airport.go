@@ -37,7 +37,7 @@ import (
 	"go.ligato.io/cn-infra/v2/db/keyval/redis"
 	"go.ligato.io/cn-infra/v2/examples/redis-lib/airport/model"
 	"go.ligato.io/cn-infra/v2/logging"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 	"go.ligato.io/cn-infra/v2/utils/safeclose"
 )
 
@@ -118,7 +118,7 @@ func (p priorities) Less(i, j int) bool { return p[i] < p[j] }
 // Airport struct to manage arrivals/departures
 type Airport struct {
 	sync.Mutex
-	log    *logrus.Logger
+	log    *logs.Logger
 	client redis.Client
 
 	connection *redis.BytesConnectionRedis
@@ -165,7 +165,7 @@ func main() {
 	flag.StringVar(&redisConfigPath, "redis-config", "", "Redis configuration file path")
 	flag.Parse()
 
-	log := logrus.DefaultLogger()
+	log := logs.DefaultLogger()
 	if debug {
 		log.SetLevel(logging.DebugLevel)
 	}

@@ -12,22 +12,26 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package logrus
+package logs
 
-import lg "github.com/sirupsen/logrus"
+import "github.com/sirupsen/logrus"
 
-// DefaultFormatter is used as default formatter for loggers.
-var DefaultFormatter = &Formatter{
-	TextFormatter: &lg.TextFormatter{
+var defaultFormatter = &Formatter{
+	TextFormatter: &logrus.TextFormatter{
 		EnvironmentOverrideColors: true,
 		TimestampFormat:           "2006-01-02 15:04:05.00000",
 	},
 }
 
-type Formatter struct {
-	*lg.TextFormatter
+// DefaultFormatter returns a formatter used as the default formatter for loggers.
+func DefaultFormatter() *Formatter {
+	return defaultFormatter
 }
 
-func (t *Formatter) Format(entry *lg.Entry) ([]byte, error) {
+type Formatter struct {
+	*logrus.TextFormatter
+}
+
+func (t *Formatter) Format(entry *logrus.Entry) ([]byte, error) {
 	return t.TextFormatter.Format(entry)
 }

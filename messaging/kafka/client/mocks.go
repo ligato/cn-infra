@@ -19,7 +19,7 @@ import (
 	"github.com/Shopify/sarama/mocks"
 	"github.com/bsm/sarama-cluster"
 
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 type clusterConsumerMock struct {
@@ -39,10 +39,10 @@ func GetAsyncProducerMock(t mocks.ErrorReporter) (*AsyncProducer, *mocks.AsyncPr
 	saramaCfg.Producer.Return.Successes = true
 	mock := mocks.NewAsyncProducer(t, saramaCfg)
 
-	cfg := NewConfig(logrus.DefaultLogger())
+	cfg := NewConfig(logs.DefaultLogger())
 	cfg.SetSendSuccess(true)
 	cfg.SetSuccessChan(make(chan *ProducerMessage, 1))
-	ap := AsyncProducer{Logger: logrus.DefaultLogger(), Config: cfg, Producer: mock, closeChannel: make(chan struct{}), Client: &saramaClientMock{}}
+	ap := AsyncProducer{Logger: logs.DefaultLogger(), Config: cfg, Producer: mock, closeChannel: make(chan struct{}), Client: &saramaClientMock{}}
 	go ap.successHandler(mock.Successes())
 
 	return &ap, mock
@@ -55,8 +55,8 @@ func GetSyncProducerMock(t mocks.ErrorReporter) (*SyncProducer, *mocks.SyncProdu
 	saramaCfg.Producer.Return.Successes = true
 	mock := mocks.NewSyncProducer(t, saramaCfg)
 
-	cfg := NewConfig(logrus.DefaultLogger())
-	ap := SyncProducer{Logger: logrus.DefaultLogger(), Config: cfg, Producer: mock, closeChannel: make(chan struct{}), Client: &saramaClientMock{}}
+	cfg := NewConfig(logs.DefaultLogger())
+	ap := SyncProducer{Logger: logs.DefaultLogger(), Config: cfg, Producer: mock, closeChannel: make(chan struct{}), Client: &saramaClientMock{}}
 
 	return &ap, mock
 }
@@ -64,9 +64,9 @@ func GetSyncProducerMock(t mocks.ErrorReporter) (*SyncProducer, *mocks.SyncProdu
 // GetConsumerMock returns mocked implementation of consumer that doesn't need connection
 // to kafka cluster.
 func GetConsumerMock(t mocks.ErrorReporter) *Consumer {
-	cfg := NewConfig(logrus.DefaultLogger())
+	cfg := NewConfig(logs.DefaultLogger())
 	ap := Consumer{
-		Logger:       logrus.DefaultLogger(),
+		Logger:       logs.DefaultLogger(),
 		Config:       cfg,
 		Consumer:     newClusterConsumerMock(t),
 		closeChannel: make(chan struct{}),

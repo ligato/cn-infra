@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"go.ligato.io/cn-infra/v2/logging"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 // DefaultMsgTimeout for delivery of notification
@@ -56,7 +56,7 @@ func ToProtoMsgErrChan(ch chan ProtoMessageErr, opts ...interface{}) func(ProtoM
 // ParseOpts returns timeout and logger to be used based on the given options.
 func ParseOpts(opts ...interface{}) (time.Duration, logging.Logger) {
 	timeout := DefaultMsgTimeout
-	var logger logging.Logger = logrus.DefaultLogger()
+	var logger logging.Logger = logs.DefaultLogger()
 
 	for _, opt := range opts {
 		switch opt.(type) {

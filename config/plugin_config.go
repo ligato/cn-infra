@@ -9,7 +9,7 @@ import (
 
 	"github.com/namsral/flag"
 
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 const (
@@ -210,7 +210,7 @@ func (p *pluginConfig) getConfigName() string {
 			}
 			cfgDir, err := Dir()
 			if err != nil {
-				logrus.DefaultLogger().Error(err)
+				logs.DefaultLogger().Error(err)
 				return ""
 			}
 			// if the file exists (flag value in config dir)

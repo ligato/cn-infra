@@ -33,7 +33,7 @@ import (
 	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/db/keyval"
 	"go.ligato.io/cn-infra/v2/logging"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 	"go.ligato.io/cn-infra/v2/utils/safeclose"
 )
 
@@ -49,7 +49,7 @@ var keyValues = map[string]string{
 }
 
 func TestMain(m *testing.M) {
-	log = logrus.DefaultLogger()
+	log = logs.DefaultLogger()
 
 	var err error
 	miniRedis, err = miniredis.Run()
@@ -129,7 +129,7 @@ func createMiniRedisConnection() {
 		MaxRetryBackoff: 0,
 	})
 	// client = &MockGoredisClient{}
-	bytesConn, _ = NewBytesConnection(client, logrus.DefaultLogger())
+	bytesConn, _ = NewBytesConnection(client, logs.DefaultLogger())
 	bytesBrokerWatcher = bytesConn.NewBrokerWatcher("unit_test-")
 
 	for k, v := range keyValues {

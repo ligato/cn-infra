@@ -22,7 +22,7 @@ import (
 	"golang.org/x/net/context"
 
 	"go.ligato.io/cn-infra/v2/datasync/syncbase/msg"
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 // NewDataMsgServiceServer creates a new instance of DataMsgServiceServer.
@@ -54,7 +54,7 @@ func (s *DataMsgServiceServer) DataChanges(stream msg.DataMsgService_DataChanges
 						err = stream.Send(&msg.DataChangeReply{Key: chng.Key, OperationType: chng.OperationType,
 							Result: 0 /*TODO VPP Result*/})
 						if err != nil {
-							logrus.DefaultLogger().Error(err) //Not able to propagate it somewhere else
+							logs.DefaultLogger().Error(err) //Not able to propagate it somewhere else
 						}
 					})
 				}

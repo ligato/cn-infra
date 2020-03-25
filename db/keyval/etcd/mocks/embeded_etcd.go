@@ -13,7 +13,7 @@ import (
 	"github.com/coreos/etcd/embed"
 	"github.com/coreos/etcd/etcdserver/api/v3client"
 
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
 const etcdStartTimeout = 30
@@ -48,7 +48,7 @@ func (embd *Embedded) Start(t *testing.T) {
 
 	select {
 	case <-embd.ETCD.Server.ReadyNotify():
-		logrus.DefaultLogger().Debug("Server is ready!")
+		logs.DefaultLogger().Debug("Server is ready!")
 	case <-time.After(etcdStartTimeout * time.Second):
 		embd.ETCD.Server.Stop() // trigger a shutdown
 		t.Error("Server took too long to start!")

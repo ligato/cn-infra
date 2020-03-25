@@ -20,15 +20,15 @@ import (
 
 	"github.com/bsm/sarama-cluster"
 
-	"go.ligato.io/cn-infra/v2/logging/logrus"
+	"go.ligato.io/cn-infra/v2/logging/logs"
 )
 
-var log = logrus.DefaultLogger()
+var log = logs.DefaultLogger()
 
 func ExampleConsumer() {
 
 	//init config
-	config := NewConfig(logrus.DefaultLogger())
+	config := NewConfig(logs.DefaultLogger())
 	config.SetBrokers("localhost:9091,localhost:9092")
 	config.SetRecvNotification(true)
 	config.SetRecvNotificationChan(make(chan *cluster.Notification))
