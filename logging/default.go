@@ -22,6 +22,10 @@ var (
 	DefaultRegistry Registry
 )
 
+func Trace(args ...interface{}) { DefaultLogger.Trace(args...) }
+
+func Tracef(format string, args ...interface{}) { DefaultLogger.Tracef(format, args...) }
+
 func Debug(args ...interface{}) { DefaultLogger.Debug(args...) }
 
 func Debugf(format string, args ...interface{}) { DefaultLogger.Debugf(format, args...) }
@@ -41,3 +45,7 @@ func Errorf(format string, args ...interface{}) { DefaultLogger.Errorf(format, a
 func Fatal(args ...interface{}) { DefaultLogger.Fatal(args...) }
 
 func Fatalf(format string, args ...interface{}) { DefaultLogger.Fatalf(format, args...) }
+
+func Panic(args ...interface{}) { DefaultLogger.Panic(args...) }
+
+func Panicf(format string, args ...interface{}) { DefaultLogger.Panicf(format, args...) }

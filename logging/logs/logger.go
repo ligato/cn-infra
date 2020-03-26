@@ -66,8 +66,8 @@ type Logger struct {
 //
 // Example:
 //
-//    logger := NewLogger("loggerXY")
-//    logger.Info()
+//    logger := NewLogger("MyLogger")
+//    logger.Info("informative message")
 //
 func NewLogger(name string) *Logger {
 	logger := WrapLogger(logrus.New(), name)
@@ -79,6 +79,16 @@ func NewLogger(name string) *Logger {
 // GetName return the logger name.
 func (logger *Logger) GetName() string {
 	return logger.name
+}
+
+// SetLevel sets the logging level for logger.
+func (logger *Logger) SetLevel(lvl logging.Level) {
+	logger.Logger.SetLevel(logrus.Level(lvl))
+}
+
+// GetLevel returns the logging level for logger.
+func (logger *Logger) GetLevel() logging.Level {
+	return logging.Level(logger.Logger.GetLevel())
 }
 
 // SetStaticFields sets a map of fields that will be part of the each subsequent

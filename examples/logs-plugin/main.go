@@ -62,9 +62,9 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	exampleNum := 15
 
 	// Set log level which logs only entries with current severity or above
-	plugin.Log.SetLevel(logging.WarnLevel)  // warn, error, panic, fatal
-	plugin.Log.SetLevel(logging.InfoLevel)  // info, warn, error, panic, fatal - default log level
-	plugin.Log.SetLevel(logging.DebugLevel) // everything
+	plugin.Log.SetLevel(logging.WarningLevel) // warn, error, panic, fatal
+	plugin.Log.SetLevel(logging.InfoLevel)    // info, warn, error, panic, fatal - default log level
+	plugin.Log.SetLevel(logging.DebugLevel)   // everything
 
 	// Basic logger options
 	plugin.Log.Print("----------- Log examples -----------")

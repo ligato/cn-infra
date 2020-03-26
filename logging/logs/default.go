@@ -22,10 +22,10 @@ import (
 	"go.ligato.io/cn-infra/v2/logging"
 )
 
-var initialLogLvl = logrus.InfoLevel
+var initialLogLvl = logging.InfoLevel
 
 func init() {
-	if lvl, err := logrus.ParseLevel(os.Getenv("INITIAL_LOGLVL")); err == nil {
+	if lvl, err := logging.ParseLevel(os.Getenv("INITIAL_LOGLVL")); err == nil {
 		initialLogLvl = lvl
 		defaultLogger.SetLevel(lvl)
 		defaultLogger.Tracef("initial log level: %v", lvl.String())

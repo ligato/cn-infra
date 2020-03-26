@@ -58,13 +58,13 @@ func TestProtoNested(t *testing.T) {
 	out := fmt.Sprint(redact.Value(data))
 	const expected = `name:"SomeName" data:<username:"bob" password:"***********" > `
 	if out != expected {
-		t.Fatalf("expected:\n%q, but got:\n%q", expected, out)
+		t.Fatalf("expected redacted fields:\n%q, but got:\n%q", expected, out)
 	}
 	// check if original data is unchanged
 	out2 := fmt.Sprint(data)
 	const expected2 = `name:"SomeName" data:<username:"bob" password:"password123" > `
 	if out2 != expected2 {
-		t.Fatalf("expected:\n%q, but got:\n%q", expected2, out2)
+		t.Fatalf("expected original data:\n%q, to not change but got:\n%q", expected2, out2)
 	}
 }
 

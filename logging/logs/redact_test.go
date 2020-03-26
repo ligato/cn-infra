@@ -90,7 +90,7 @@ func testLoggerRedact(t *testing.T, logger *Logger) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			logger.SetLevel(logrus.TraceLevel)
+			logger.SetLevel(logging.TraceLevel)
 			var b bytes.Buffer
 			logger.SetOutput(&b)
 			test.do()

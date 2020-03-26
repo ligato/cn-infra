@@ -17,33 +17,39 @@ package logging
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 )
 
 // LogWithLevel allows to log with different log levels
 type LogWithLevel interface {
-	Debug(args ...interface{})
+	Tracef(format string, args ...interface{})
 	Debugf(format string, args ...interface{})
-	Info(args ...interface{})
-	Infoln(args ...interface{})
 	Infof(format string, args ...interface{})
-	Warn(args ...interface{})
 	Warnf(format string, args ...interface{})
-	Warning(args ...interface{})
-	Warningln(args ...interface{})
-	Warningf(format string, args ...interface{})
-	Error(args ...interface{})
-	Errorln(args ...interface{})
 	Errorf(format string, args ...interface{})
-	Fatal(args ...interface{})
 	Fatalf(format string, args ...interface{})
-	Fatalln(args ...interface{})
-	Panic(args ...interface{})
 	Panicf(format string, args ...interface{})
-	Print(v ...interface{})
-	Printf(format string, v ...interface{})
-	Println(v ...interface{})
+	Printf(format string, args ...interface{})
+
+	Trace(args ...interface{})
+	Debug(args ...interface{})
+	Info(args ...interface{})
+	Warn(args ...interface{})
+	Error(args ...interface{})
+	Fatal(args ...interface{})
+	Panic(args ...interface{})
+	Print(args ...interface{})
+
+	Debugln(args ...interface{})
+	Infoln(args ...interface{})
+	Println(args ...interface{})
+	Warnln(args ...interface{})
+	Warningln(args ...interface{})
+	Errorln(args ...interface{})
+	Fatalln(args ...interface{})
+	Panicln(args ...interface{})
 }
 
 // Logger provides logging capabilities
@@ -53,9 +59,9 @@ type Logger interface {
 	// GetName returns the logger name
 	GetName() string
 	// SetLevel modifies the log level
-	SetLevel(level LogLevel)
+	SetLevel(level Level)
 	// GetLevel returns currently set log level
-	GetLevel() LogLevel
+	GetLevel() Level
 	// WithField creates one structured field
 	WithField(key string, value interface{}) LogWithLevel
 	// WithFields creates multiple structured fields
@@ -91,18 +97,21 @@ type Registry interface {
 	AddHook(hook logrus.Hook)
 }
 
-// LogLevel represents severity of log record
-type LogLevel = logrus.Level
+// Fields is a type accepted by WithFields method.
+type Fields map[string]interface{}
+
+// Level defines severity of log entry.
+type Level uint32
 
 const (
 	// PanicLevel - highest level of severity. Logs and then calls panic with the message passed in.
-	PanicLevel LogLevel = iota
+	PanicLevel Level = iota
 	// FatalLevel - logs and then calls `os.Exit(1)`.
 	FatalLevel
 	// ErrorLevel - used for errors that should definitely be noted.
 	ErrorLevel
-	// WarnLevel - non-critical entries that deserve eyes.
-	WarnLevel
+	// WarningLevel - non-critical entries that deserve eyes.
+	WarningLevel
 	// InfoLevel - general operational entries about what's going on inside the application.
 	InfoLevel
 	// DebugLevel - enabled for debugging, very verbose logging.
@@ -111,16 +120,65 @@ const (
 	TraceLevel
 )
 
-// ParseLogLevel parses log level from string or returns InfoLevel on error.
-func ParseLogLevel(str string) logrus.Level {
-	if lvl, err := logrus.ParseLevel(str); err == nil {
-		return lvl
+// Convert the Level to a string.
+func (level Level) String() string {
+	if b, err := level.MarshalText(); err == nil {
+		return string(b)
 	}
-	return InfoLevel
+	return fmt.Sprintf("UnknownLevel(%d)", level)
 }
 
-// Fields is a type accepted by WithFields method. It can be used to instantiate map using shorter notation.
-type Fields = logrus.Fields
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (level *Level) UnmarshalText(text []byte) error {
+	l, err := ParseLevel(string(text))
+	if err != nil {
+		return err
+	}
+	*level = Level(l)
+	return nil
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (level Level) MarshalText() ([]byte, error) {
+	switch level {
+	case TraceLevel:
+		return []byte("trace"), nil
+	case DebugLevel:
+		return []byte("debug"), nil
+	case InfoLevel:
+		return []byte("info"), nil
+	case WarningLevel:
+		return []byte("warning"), nil
+	case ErrorLevel:
+		return []byte("error"), nil
+	case FatalLevel:
+		return []byte("fatal"), nil
+	case PanicLevel:
+		return []byte("panic"), nil
+	}
+	return nil, fmt.Errorf("not a valid log level %d", level)
+}
+
+// ParseLevel parses the string as log level.
+func ParseLevel(lvl string) (Level, error) {
+	switch strings.ToLower(lvl) {
+	case "panic":
+		return PanicLevel, nil
+	case "fatal":
+		return FatalLevel, nil
+	case "error":
+		return ErrorLevel, nil
+	case "warn", "warning":
+		return WarningLevel, nil
+	case "info":
+		return InfoLevel, nil
+	case "debug":
+		return DebugLevel, nil
+	case "trace":
+		return TraceLevel, nil
+	}
+	return InfoLevel, fmt.Errorf("not a valid log level: %q", lvl)
+}
 
 // ParentLogger provides logger with logger factory that creates loggers with prefix.
 type ParentLogger struct {
@@ -164,7 +222,7 @@ type PluginLogger interface {
 // and optionally created children (their name prefixed by plugin logger name)
 func ForPlugin(name string) PluginLogger {
 	if logger, found := DefaultRegistry.Lookup(name); found {
-		DefaultLogger.Debugf("using plugin logger for %q that was already initialized", name)
+		DefaultLogger.Tracef("using plugin logger for %q that was already initialized", name)
 		return &ParentLogger{
 			Logger:  logger,
 			Prefix:  name,

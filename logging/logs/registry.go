@@ -35,7 +35,7 @@ func DefaultRegistry() *LogRegistry {
 func NewLogRegistry() *LogRegistry {
 	registry := &LogRegistry{
 		loggers:      new(sync.Map),
-		logLevels:    make(map[string]logrus.Level),
+		logLevels:    make(map[string]logging.Level),
 		defaultLevel: initialLogLvl,
 	}
 	// put default logger
@@ -48,9 +48,9 @@ type LogRegistry struct {
 	// loggers holds mapping of logger instances indexed by their names
 	loggers *sync.Map
 	// logLevels store map of log levels for logger names
-	logLevels map[string]logrus.Level
+	logLevels map[string]logging.Level
 	// defaultLevel is used if logger level is not set
-	defaultLevel logrus.Level
+	defaultLevel logging.Level
 	// logging hooks
 	hooks []logrus.Hook
 }
@@ -125,7 +125,7 @@ func (lr *LogRegistry) ListLoggers() map[string]string {
 
 // SetLevel modifies log level of selected logger in the registry
 func (lr *LogRegistry) SetLevel(logger, level string) error {
-	lvl, err := logrus.ParseLevel(level)
+	lvl, err := logging.ParseLevel(level)
 	if err != nil {
 		return err
 	}
@@ -209,14 +209,24 @@ func (lr *LogRegistry) getLoggerFromMapping(logger string) *Logger {
 // HookConfigs stores hook configs provided by log manager
 // and applies hook to existing loggers
 func (lr *LogRegistry) AddHook(hook logrus.Hook) {
-	defaultLogger.Infof("adding hook %q to log registry", hook)
 	lr.hooks = append(lr.hooks, hook)
-
-	lgs := lr.ListLoggers()
-	for lg := range lgs {
-		logger, found := lr.Lookup(lg)
+	defaultLogger.Debugf("adding hook %q to log registry", hook)
+	for loggerName := range lr.ListLoggers() {
+		logger, found := lr.lookupLogger(loggerName)
 		if found {
 			logger.AddHook(hook)
 		}
 	}
+}
+
+func (lr *LogRegistry) lookupLogger(name string) (*Logger, bool) {
+	loggerInt, found := lr.loggers.Load(name)
+	if !found {
+		return nil, false
+	}
+	logger, ok := loggerInt.(*Logger)
+	if ok {
+		return logger, found
+	}
+	panic(fmt.Errorf("cannot cast log value to Logger obj"))
 }
