@@ -40,7 +40,7 @@ func main() {
 	// Run starts the agent with plugins, wait until shutdown
 	// and then stops the agent and its plugins.
 	if err := a.Run(); err != nil {
-		logging.DefaultLogger.Error(err)
+		logging.Error(err)
 	}
 }
 

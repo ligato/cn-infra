@@ -57,7 +57,7 @@ func ListenAndServe(cfg *Config, srv *grpc.Server) (netListener net.Listener, er
 	go func() {
 		err := srv.Serve(netListener)
 		// Serve always returns non-nil error
-		logging.DefaultLogger.Debugf("GRPC server Serve: %v", err)
+		logging.Debugf("GRPC server Serve: %v", err)
 	}()
 
 	return netListener, nil

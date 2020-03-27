@@ -19,9 +19,9 @@ import (
 	"time"
 
 	"go.ligato.io/cn-infra/v2/agent"
-
 	sv "go.ligato.io/cn-infra/v2/exec/supervisor"
 	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
 func main() {
@@ -40,7 +40,7 @@ func main() {
 	//	panic(err)
 	//}
 
-	log := logging.DefaultLogger
+	log := logrus.DefaultLogger()
 
 	conf := sv.Config{
 		Programs: []sv.Program{

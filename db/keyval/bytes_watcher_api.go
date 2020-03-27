@@ -46,7 +46,7 @@ func ToChan(respCh chan BytesWatchResp, opts ...interface{}) func(dto BytesWatch
 		case respCh <- dto:
 			// success
 		case <-time.After(datasync.DefaultNotifTimeout):
-			logging.DefaultLogger.Warn("Unable to deliver notification")
+			logging.Warn("Unable to deliver notification")
 		}
 	}
 }

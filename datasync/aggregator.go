@@ -79,7 +79,7 @@ func (ta KVProtoWriters) Put(key string, data proto.Message, opts ...PutOption) 
 func (wa *AggregatedRegistration) Register(resyncName, keyPrefix string) error {
 	for _, registration := range wa.Registrations {
 		if err := registration.Register(resyncName, keyPrefix); err != nil {
-			logging.DefaultLogger.Warnf("aggregated register failed: %v", err)
+			logging.Warnf("aggregated register failed: %v", err)
 		}
 	}
 
@@ -91,7 +91,7 @@ func (wa *AggregatedRegistration) Register(resyncName, keyPrefix string) error {
 func (wa *AggregatedRegistration) Unregister(keyPrefix string) error {
 	for _, registration := range wa.Registrations {
 		if err := registration.Unregister(keyPrefix); err != nil {
-			logging.DefaultLogger.Warnf("aggregated unregister failed: %v", err)
+			logging.Warnf("aggregated unregister failed: %v", err)
 		}
 	}
 
