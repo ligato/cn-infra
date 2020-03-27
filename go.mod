@@ -52,6 +52,7 @@ require (
 	github.com/howeyc/crc16 v0.0.0-20171223171357-2b2a61e366a6
 	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/json-iterator/go v1.1.6 // indirect
+	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/maraino/go-mock v0.0.0-20180321183845-4c74c434cd3a
 	github.com/mattn/go-isatty v0.0.4 // indirect
 	github.com/mitchellh/go-homedir v1.0.0 // indirect
@@ -66,8 +67,7 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v0.9.2
 	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a // indirect
-	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
-	github.com/sirupsen/logrus v1.3.0
+	github.com/sirupsen/logrus v1.4.2
 	github.com/soheilhy/cmux v0.1.4 // indirect
 	github.com/tinylib/msgp v1.0.2 // indirect
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20171017195756-830351dc03c6 // indirect
@@ -81,8 +81,8 @@ require (
 	go.uber.org/zap v1.9.1 // indirect
 	golang.org/x/crypto v0.0.0-20181030102418-4d3f4d9ffa16
 	golang.org/x/net v0.0.0-20190108150841-be88a9aa50a1
-	golang.org/x/sys v0.0.0-20181031143558-9b800f95dbbc // indirect
-	golang.org/x/time v0.0.0-20180412165947-fbb02b2291d2
+	golang.org/x/sys v0.0.0-20200317113312-5766fd39f98d // indirect
+	golang.org/x/time v0.0.0-20180412165947-fbb02b2291d2 // indirect
 	google.golang.org/genproto v0.0.0-20181101192439-c830210a61df // indirect
 	google.golang.org/grpc v1.16.0
 )

@@ -17,113 +17,120 @@ package logrus
 import (
 	"testing"
 
-	"github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 )
 
 func TestListLoggers(t *testing.T) {
+	RegisterTestingT(t)
+
 	logRegistry := NewLogRegistry()
-
-	gomega.RegisterTestingT(t)
 	loggers := logRegistry.ListLoggers()
-	gomega.Expect(loggers).NotTo(gomega.BeNil())
+	Expect(loggers).NotTo(BeNil())
 
-	lg, found := loggers[DefaultLoggerName]
-	gomega.Expect(found).To(gomega.BeTrue())
-	gomega.Expect(lg).NotTo(gomega.BeNil())
+	lg, found := loggers[globalName]
+	Expect(found).To(BeTrue())
+	Expect(lg).NotTo(BeNil())
 }
 
 func TestNewLogger(t *testing.T) {
-	logRegistry := NewLogRegistry()
+	RegisterTestingT(t)
 
 	const loggerName = "myLogger"
-	gomega.RegisterTestingT(t)
+
+	logRegistry := NewLogRegistry()
 	lg := logRegistry.NewLogger(loggerName)
-	gomega.Expect(lg).NotTo(gomega.BeNil())
+	Expect(lg).NotTo(BeNil())
 
 	loggers := logRegistry.ListLoggers()
-	gomega.Expect(loggers).NotTo(gomega.BeNil())
+	Expect(loggers).NotTo(BeNil())
 
 	fromRegistry, found := loggers[loggerName]
-	gomega.Expect(found).To(gomega.BeTrue())
-	gomega.Expect(fromRegistry).NotTo(gomega.BeNil())
+	Expect(found).To(BeTrue())
+	Expect(fromRegistry).NotTo(BeNil())
 }
 
 func TestGetSetLevel(t *testing.T) {
+	RegisterTestingT(t)
+
+	const level = "error"
+
 	logRegistry := NewLogRegistry()
 
-	gomega.RegisterTestingT(t)
-	const level = "error"
-	//existing logger
-	err := logRegistry.SetLevel(DefaultLoggerName, level)
-	gomega.Expect(err).To(gomega.BeNil())
+	// existing logger
+	err := logRegistry.SetLevel(globalName, level)
+	Expect(err).To(BeNil())
 
 	loggers := logRegistry.ListLoggers()
-	gomega.Expect(loggers).NotTo(gomega.BeNil())
+	Expect(loggers).NotTo(BeNil())
 
-	logger, found := loggers[DefaultLoggerName]
-	gomega.Expect(found).To(gomega.BeTrue())
-	gomega.Expect(logger).NotTo(gomega.BeNil())
-	gomega.Expect(loggers[DefaultLoggerName]).To(gomega.BeEquivalentTo(level))
+	logger, found := loggers[globalName]
+	Expect(found).To(BeTrue())
+	Expect(logger).NotTo(BeNil())
+	Expect(loggers[globalName]).To(BeEquivalentTo(level))
 
-	currentLevel, err := logRegistry.GetLevel(DefaultLoggerName)
-	gomega.Expect(err).To(gomega.BeNil())
-	gomega.Expect(level).To(gomega.BeEquivalentTo(currentLevel))
+	currentLevel, err := logRegistry.GetLevel(globalName)
+	Expect(err).To(BeNil())
+	Expect(level).To(BeEquivalentTo(currentLevel))
 
-	//non-existing logger
+	// non-existing logger
 	err = logRegistry.SetLevel("unknown", level)
-	gomega.Expect(err).To(gomega.BeNil()) // will be kept in logger level map in registry
+	Expect(err).To(BeNil()) // will be kept in logger level map in registry
 
 	_, err = logRegistry.GetLevel("unknown")
-	gomega.Expect(err).NotTo(gomega.BeNil())
+	Expect(err).NotTo(BeNil())
 }
 
 func TestGetLoggerByName(t *testing.T) {
-	logRegistry := NewLogRegistry()
+	RegisterTestingT(t)
 
 	const (
 		loggerA = "myLoggerA"
 		loggerB = "myLoggerB"
 	)
+
+	logRegistry := NewLogRegistry()
 	lgA := logRegistry.NewLogger(loggerA)
-	gomega.Expect(lgA).NotTo(gomega.BeNil())
+	Expect(lgA).NotTo(BeNil())
 
 	lgB := logRegistry.NewLogger(loggerB)
-	gomega.Expect(lgB).NotTo(gomega.BeNil())
+	Expect(lgB).NotTo(BeNil())
 
 	returnedA, found := logRegistry.Lookup(loggerA)
-	gomega.Expect(found).To(gomega.BeTrue())
-	gomega.Expect(returnedA).To(gomega.BeEquivalentTo(lgA))
+	Expect(found).To(BeTrue())
+	Expect(returnedA).To(BeEquivalentTo(lgA))
 
 	returnedB, found := logRegistry.Lookup(loggerB)
-	gomega.Expect(found).To(gomega.BeTrue())
-	gomega.Expect(returnedB).To(gomega.BeEquivalentTo(lgB))
+	Expect(found).To(BeTrue())
+	Expect(returnedB).To(BeEquivalentTo(lgB))
 
 	unknown, found := logRegistry.Lookup("unknown")
-	gomega.Expect(found).To(gomega.BeFalse())
-	gomega.Expect(unknown).To(gomega.BeNil())
+	Expect(found).To(BeFalse())
+	Expect(unknown).To(BeNil())
 }
 
 func TestClearRegistry(t *testing.T) {
-	logRegistry := NewLogRegistry()
+	RegisterTestingT(t)
 
 	const (
 		loggerA = "loggerA"
 		loggerB = "loggerB"
 	)
+
+	logRegistry := NewLogRegistry()
 	lgA := NewLogger(loggerA)
-	gomega.Expect(lgA).NotTo(gomega.BeNil())
+	Expect(lgA).NotTo(BeNil())
 
 	lgB := NewLogger(loggerB)
-	gomega.Expect(lgB).NotTo(gomega.BeNil())
+	Expect(lgB).NotTo(BeNil())
 
 	logRegistry.ClearRegistry()
 
 	_, found := logRegistry.Lookup(loggerA)
-	gomega.Expect(found).To(gomega.BeFalse())
+	Expect(found).To(BeFalse())
 
 	_, found = logRegistry.Lookup(loggerB)
-	gomega.Expect(found).To(gomega.BeFalse())
+	Expect(found).To(BeFalse())
 
-	_, found = logRegistry.Lookup(DefaultLoggerName)
-	gomega.Expect(found).To(gomega.BeTrue())
+	_, found = logRegistry.Lookup(globalName)
+	Expect(found).To(BeTrue())
 }
