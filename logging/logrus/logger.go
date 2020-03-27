@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -27,8 +28,16 @@ import (
 
 const globalName = "global"
 
+var initialLogLvl = logging.InfoLevel
+
 func init() {
-	logrus.SetFormatter(DefaultFormatter())
+	if lvl, err := logging.ParseLogLevel(os.Getenv("INITIAL_LOGLVL")); err == nil {
+		initialLogLvl = lvl
+		defaultFormatter.Location = initialLogLvl >= logging.DebugLevel
+		defaultFormatter.Function = initialLogLvl >= logging.TraceLevel
+		defaultLogger.SetLevel(lvl)
+		defaultLogger.Tracef("initial log level: %v", lvl.String())
+	}
 	logging.DefaultLogger = DefaultLogger()
 }
 
@@ -55,6 +64,7 @@ type Logger struct {
 
 // WrapLogger wraps logrus.Logger and returns named Logger.
 func WrapLogger(logger *logrus.Logger, name string) *Logger {
+	logger.SetFormatter(DefaultFormatter())
 	return &Logger{
 		Logger: logger,
 		name:   name,
@@ -72,7 +82,6 @@ func WrapLogger(logger *logrus.Logger, name string) *Logger {
 //
 func NewLogger(name string) *Logger {
 	logger := WrapLogger(logrus.New(), name)
-	logger.Logger.Formatter = defaultFormatter
 	return logger
 }
 
@@ -197,7 +206,7 @@ func (logger *Logger) entryWithFields(fields logging.Fields) *logrus.Entry {
 	for k, v := range redactData(fields) {
 		data[k] = v
 	}
-	data[loggerKey] = logger.name
+	data[LoggerKey] = logger.name
 	return logger.Logger.WithFields(data)
 }
 

@@ -15,59 +15,80 @@
 package logrus
 
 import (
+	"fmt"
+	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/sirupsen/logrus"
 )
 
-var defaultFormatter = &Formatter{
-	TextFormatter: &logrus.TextFormatter{
-		EnvironmentOverrideColors: true,
-		TimestampFormat:           "2006-01-02 15:04:05.00000",
-		/*CallerPrettyfier: func(frame *runtime.Frame) (funcVal string, fileVal string) {
-			pcs := make([]uintptr, 20)
-			depth := runtime.Callers(2, pcs)
-			frames := runtime.CallersFrames(pcs[:depth])
-
-			fmt.Println()
-			for f, again := frames.Next(); again; f, again = frames.Next() {
-				//pkg := getPackageName(f.Function)
-				fmt.Printf("\t -> CALLER: %v\n", f.Function)
-			}
-
-			funcVal = frame.Function
-			dir, file := filepath.Split(frame.File)
-			fileVal = fmt.Sprintf("%s/%s:%d", filepath.Base(dir), file, frame.Line)
-			return
-		},*/
-	},
-}
+var defaultFormatter = NewFormatter()
 
 // DefaultFormatter returns a formatter used as the default formatter for loggers.
 func DefaultFormatter() *Formatter {
 	return defaultFormatter
 }
 
+// Tag names for structured fields of log entry
+const (
+	LoggerKey   = "logger"
+	FunctionKey = "func"
+	LocationKey = "loc"
+)
+
+func sortKeys(keys []string) {
+	sort.SliceStable(keys, func(i, j int) bool {
+		if keys[j] == LocationKey && keys[i] != FunctionKey ||
+			keys[j] == FunctionKey && keys[i] != LocationKey {
+			return true
+		}
+		if keys[i] == LocationKey && keys[j] != FunctionKey ||
+			keys[i] == FunctionKey && keys[j] != LocationKey {
+			return false
+		}
+		return strings.Compare(keys[i], keys[j]) == -1
+	})
+}
+
 type Formatter struct {
-	*logrus.TextFormatter
+	Function bool
+	Location bool
+	FullPath bool
+
+	Formatter logrus.Formatter
 }
 
-func (t *Formatter) Format(entry *logrus.Entry) ([]byte, error) {
-	return t.TextFormatter.Format(entry)
+func NewFormatter() *Formatter {
+	return &Formatter{
+		Formatter: &logrus.TextFormatter{
+			EnvironmentOverrideColors: true,
+			TimestampFormat:           "2006-01-02 15:04:05.00000",
+			SortingFunc:               sortKeys,
+		},
+	}
 }
 
-// getPackageName reduces a fully qualified function name to the package name
-// There really ought to be to be a better way...
-func getPackageName(f string) string {
-	for {
-		lastPeriod := strings.LastIndex(f, ".")
-		lastSlash := strings.LastIndex(f, "/")
-		if lastPeriod > lastSlash {
-			f = f[:lastPeriod]
-		} else {
-			break
+func (f *Formatter) Format(entry *logrus.Entry) ([]byte, error) {
+	if f.Function || f.Location {
+		if caller := getCaller(); caller != nil {
+			data := logrus.Fields{}
+			if f.Function {
+				data[FunctionKey] = caller.Function
+			}
+			if f.Location {
+				file := caller.File
+				if !f.FullPath {
+					dir, name := filepath.Split(file)
+					file = filepath.Join(filepath.Base(dir), name)
+				}
+				data[LocationKey] = fmt.Sprintf("%s:%d", file, caller.Line)
+			}
+			for k, v := range entry.Data {
+				data[k] = v
+			}
+			entry.Data = data
 		}
 	}
-
-	return f
+	return f.Formatter.Format(entry)
 }

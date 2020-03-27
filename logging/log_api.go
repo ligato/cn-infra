@@ -17,6 +17,7 @@ package logging
 import (
 	"fmt"
 	"io"
+	"log"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -30,20 +31,34 @@ var (
 	DefaultRegistry Registry
 )
 
-func Trace(args ...interface{})                 { DefaultLogger.Trace(args...) }
-func Tracef(format string, args ...interface{}) { DefaultLogger.Tracef(format, args...) }
-func Debug(args ...interface{})                 { DefaultLogger.Debug(args...) }
-func Debugf(format string, args ...interface{}) { DefaultLogger.Debugf(format, args...) }
-func Info(args ...interface{})                  { DefaultLogger.Info(args...) }
-func Infof(format string, args ...interface{})  { DefaultLogger.Infof(format, args...) }
-func Warn(args ...interface{})                  { DefaultLogger.Warn(args...) }
-func Warnf(format string, args ...interface{})  { DefaultLogger.Warnf(format, args...) }
-func Error(args ...interface{})                 { DefaultLogger.Error(args...) }
-func Errorf(format string, args ...interface{}) { DefaultLogger.Errorf(format, args...) }
-func Fatal(args ...interface{})                 { DefaultLogger.Fatal(args...) }
-func Fatalf(format string, args ...interface{}) { DefaultLogger.Fatalf(format, args...) }
-func Panic(args ...interface{})                 { DefaultLogger.Panic(args...) }
-func Panicf(format string, args ...interface{}) { DefaultLogger.Panicf(format, args...) }
+var (
+	Trace  = logLvlFn(TraceLevel)
+	Tracef = logfLvlFn(TraceLevel)
+	Debug  = logLvlFn(DebugLevel)
+	Debugf = logfLvlFn(DebugLevel)
+	Info   = logLvlFn(InfoLevel)
+	Infof  = logfLvlFn(InfoLevel)
+	Warn   = logLvlFn(WarnLevel)
+	Warnf  = logfLvlFn(WarnLevel)
+	Error  = logLvlFn(ErrorLevel)
+	Errorf = logfLvlFn(ErrorLevel)
+	Fatal  = log.Fatal
+	Fatalf = log.Fatalf
+	Panic  = log.Panic
+	Panicf = log.Panicf
+)
+
+func logLvlFn(lvl LogLevel) func(...interface{}) {
+	return func(args ...interface{}) {
+		log.Printf("%s: %s", strings.ToUpper(lvl.String()), fmt.Sprint(args...))
+	}
+}
+
+func logfLvlFn(lvl LogLevel) func(string, ...interface{}) {
+	return func(format string, args ...interface{}) {
+		log.Printf("%s: %s", strings.ToUpper(lvl.String()), fmt.Sprintf(format, args...))
+	}
+}
 
 // LogWithLevel allows to log with different log levels
 type LogWithLevel interface {

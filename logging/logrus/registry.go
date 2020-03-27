@@ -16,7 +16,6 @@ package logrus
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"sync"
 
@@ -25,14 +24,7 @@ import (
 	"go.ligato.io/cn-infra/v2/logging"
 )
 
-var initialLogLvl = logging.InfoLevel
-
 func init() {
-	if lvl, err := logging.ParseLogLevel(os.Getenv("INITIAL_LOGLVL")); err == nil {
-		initialLogLvl = lvl
-		defaultLogger.SetLevel(lvl)
-		defaultLogger.Tracef("initial log level: %v", lvl.String())
-	}
 	logging.DefaultRegistry = DefaultRegistry()
 }
 

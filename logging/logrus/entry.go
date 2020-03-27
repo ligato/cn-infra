@@ -18,12 +18,8 @@ import (
 	"fmt"
 
 	"github.com/sirupsen/logrus"
-	"go.ligato.io/cn-infra/v2/logging"
-)
 
-// Tag names for structured fields of log message
-const (
-	loggerKey = "logger"
+	"go.ligato.io/cn-infra/v2/logging"
 )
 
 // Entry is the logging entry. It has logrus' entry struct which is a final or intermediate Logrus logging entry
@@ -77,19 +73,19 @@ func (entry *Entry) withFields(fields logging.Fields) *Entry {
 }
 
 func (entry *Entry) Log(lvl logrus.Level, args ...interface{}) {
-	if entry.lgEntry.Logger.Level >= lvl {
+	if entry.lgEntry.Logger.IsLevelEnabled(lvl) {
 		entry.lgEntry.Log(lvl, redactArgs(args)...)
 	}
 }
 
 func (entry *Entry) Logf(lvl logrus.Level, f string, args ...interface{}) {
-	if entry.lgEntry.Logger.Level >= lvl {
+	if entry.lgEntry.Logger.IsLevelEnabled(lvl) {
 		entry.lgEntry.Log(lvl, fmt.Sprintf(f, redactArgs(args)...))
 	}
 }
 
 func (entry *Entry) Logln(lvl logrus.Level, args ...interface{}) {
-	if entry.lgEntry.Logger.Level >= lvl {
+	if entry.lgEntry.Logger.IsLevelEnabled(lvl) {
 		entry.lgEntry.Log(lvl, sprintlnn(redactArgs(args)...))
 	}
 }
