@@ -20,7 +20,7 @@ import (
 	"strings"
 )
 
-func auth(h http.Handler, auth BasicHTTPAuthenticator) http.HandlerFunc {
+func authMiddleware(h http.Handler, auth BasicHTTPAuthenticator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, pass, _ := r.BasicAuth()
 		if !auth.Authenticate(user, pass) {

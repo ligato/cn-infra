@@ -19,6 +19,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/unrolled/render"
+	"golang.org/x/time/rate"
 
 	"go.ligato.io/cn-infra/v2/infra"
 	"go.ligato.io/cn-infra/v2/rpc/rest/security"
@@ -37,6 +38,8 @@ type Plugin struct {
 
 	// Access to HTTP security API
 	auth security.AuthenticatorAPI
+	// Rate limiting
+	limiter *rate.Limiter
 }
 
 // Deps lists the dependencies of the Rest plugin.
@@ -73,6 +76,10 @@ func (p *Plugin) Init() (err error) {
 		}
 	}
 
+	if p.limiter == nil {
+		p.limiter = defaultRateLimiter()
+	}
+
 	p.mx = mux.NewRouter()
 	p.formatter = render.New(render.Options{
 		IndentJSON: true,
@@ -100,8 +107,13 @@ func (p *Plugin) AfterInit() (err error) {
 	}
 
 	var handler http.Handler = p.mx
+
+	if p.limiter != nil {
+		handler = p.limitMiddleware(handler)
+		p.Log.Debugf("Rate limiter set to rate %.1f req/s (%d max burst)", p.limiter.Limit(), p.limiter.Burst())
+	}
 	if p.Authenticator != nil {
-		handler = auth(handler, p.Authenticator)
+		handler = authMiddleware(handler, p.Authenticator)
 	}
 
 	p.server, err = ListenAndServe(*p.Config, handler)

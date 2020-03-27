@@ -19,9 +19,11 @@ import (
 	"io"
 	"net/http"
 
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/unrolled/render"
+	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
@@ -52,6 +54,7 @@ type Plugin struct {
 	auther     *Authenticator
 	serverOpts []grpc.ServerOption
 	metrics    *grpc_prometheus.ServerMetrics
+	limiter    *rate.Limiter
 }
 
 // Deps is a list of injected dependencies of the GRPC plugin.
@@ -86,31 +89,48 @@ func (p *Plugin) Init() (err error) {
 			p.metrics = grpc_prometheus.DefaultServerMetrics
 		}
 
-		// get server options from config
-		opts := p.Config.getGrpcOptions()
+		var unaryChain []grpc.UnaryServerInterceptor
+		var streamChain []grpc.StreamServerInterceptor
 
-		// add custom server options
-		opts = append(opts, p.serverOpts...)
+		// Rate limiting middleware
+		if p.limiter == nil {
+			p.limiter = defaultRateLimiter()
+		}
+		p.Log.Debugf("Rate limiter set to rate %.1f req/s (%d max burst)", p.limiter.Limit(), p.limiter.Burst())
+		unaryChain = append(unaryChain, UnaryServerInterceptorLimiter(p.limiter))
+		streamChain = append(streamChain, StreamServerInterceptorLimiter(p.limiter))
+
+		// Auth middleware
+		if p.auther != nil {
+			p.Log.Debug("Token authentication for gRPC enabled")
+			unaryChain = append(unaryChain, grpc_auth.UnaryServerInterceptor(p.auther.Authenticate))
+			streamChain = append(streamChain, grpc_auth.StreamServerInterceptor(p.auther.Authenticate))
+
+		}
 
 		// add server options for prometheus metrics
 		if p.metrics != nil {
 			p.Log.Debug("Prometheus server metrics for gRPC enabled")
-			opts = append(opts,
-				grpc.StreamInterceptor(p.metrics.StreamServerInterceptor()),
-				grpc.UnaryInterceptor(p.metrics.UnaryServerInterceptor()),
-			)
+			unaryChain = append(unaryChain, p.metrics.UnaryServerInterceptor())
+			streamChain = append(streamChain, p.metrics.StreamServerInterceptor())
 		}
+
+		// get server options from config
+		opts := p.Config.getGrpcOptions()
+
+		opts = append(opts,
+			grpc_middleware.WithUnaryServerChain(unaryChain...),
+			grpc_middleware.WithStreamServerChain(streamChain...),
+		)
+
+		// add custom server options
+		opts = append(opts, p.serverOpts...)
 
 		if p.tlsConfig != nil {
 			p.Log.Debug("Secure connection (TLS) for gRPC enabled")
 			opts = append(opts, grpc.Creds(credentials.NewTLS(p.tlsConfig)))
 		}
 
-		if p.auther != nil {
-			p.Log.Debug("Token authentication for gRPC enabled")
-			opts = append(opts, grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(p.auther.Authenticate)))
-			opts = append(opts, grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(p.auther.Authenticate)))
-		}
 		p.grpcServer = grpc.NewServer(opts...)
 	}
 
