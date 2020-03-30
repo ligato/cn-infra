@@ -23,10 +23,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func defaultRateLimiter() *rate.Limiter {
-	return rate.NewLimiter(rate.Limit(10), 10)
-}
-
 // UnaryServerInterceptorLimiter returns a new unary server interceptors that performs request rate limiting.
 func UnaryServerInterceptorLimiter(limiter *rate.Limiter) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {

@@ -93,12 +93,11 @@ func (p *Plugin) Init() (err error) {
 		var streamChain []grpc.StreamServerInterceptor
 
 		// Rate limiting middleware
-		if p.limiter == nil {
-			p.limiter = defaultRateLimiter()
+		if p.limiter != nil {
+			p.Log.Debugf("Rate limiter set to rate %.1f req/s (%d max burst)", p.limiter.Limit(), p.limiter.Burst())
+			unaryChain = append(unaryChain, UnaryServerInterceptorLimiter(p.limiter))
+			streamChain = append(streamChain, StreamServerInterceptorLimiter(p.limiter))
 		}
-		p.Log.Debugf("Rate limiter set to rate %.1f req/s (%d max burst)", p.limiter.Limit(), p.limiter.Burst())
-		unaryChain = append(unaryChain, UnaryServerInterceptorLimiter(p.limiter))
-		streamChain = append(streamChain, StreamServerInterceptorLimiter(p.limiter))
 
 		// Auth middleware
 		if p.auther != nil {
