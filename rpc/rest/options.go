@@ -19,6 +19,8 @@ import (
 
 	"go.ligato.io/cn-infra/v2/config"
 	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/utils/ratelimit"
+
 	"golang.org/x/time/rate"
 )
 
@@ -74,8 +76,8 @@ func UseAuthenticator(a BasicHTTPAuthenticator) Option {
 }
 
 // UseRateLimiter returns an Option which sets rate limiter.
-func UseRateLimiter(r *rate.Limiter) Option {
+func UseRateLimiter(limit rate.Limit, maxBurst int) Option {
 	return func(p *Plugin) {
-		p.limiter = r
+		p.limiters = ratelimit.NewLimiter(limit, maxBurst)
 	}
 }

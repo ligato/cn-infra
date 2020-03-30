@@ -19,6 +19,7 @@ package security
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"net/http"
 	"strings"
 	"time"
@@ -27,17 +28,15 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/unrolled/render"
-	"golang.org/x/crypto/bcrypt"
 
 	"go.ligato.io/cn-infra/v2/logging"
 	access "go.ligato.io/cn-infra/v2/rpc/rest/security/model/access-security"
 )
 
-const (
-	// AuthHeaderKey helps to obtain authorization header matching the field in a request
-	AuthHeaderKey = "authorization"
-	// Admin constant, used to define admin security group and user
-	admin = "admin"
+var (
+	ErrPermissionDenied          = errors.New("auth: permission denied")
+	ErrInvalidAuthToken          = errors.New("auth: invalid auth token")
+	ErrInvalidUsernameOrPassword = errors.New("auth: invalid username or password")
 )
 
 const (
@@ -48,28 +47,44 @@ const (
 	// Authentication page, validates credentials and if successful, returns a token or writes a cookie to a browser
 	authenticate = "/authenticate"
 	// Cookie name identifier
-	cookieName = "ligato-rest"
+	cookieName = "ligato-rest-auth"
+	// AuthHeaderKey helps to obtain authorization header matching the field in a request
+	AuthHeaderKey = "authorization"
 )
 
-// Default value to sign the token, if not provided from config file
-var signature = "secret"
-
-// Default expiration time for token/cookie
-var defaultExpTime = time.Hour
+// Default values, if not provided from config file
+const (
+	defaultUser    = "admin"
+	defaultPass    = "ligato123"
+	defaultSignKey = "secret"
+	defaultExpTime = time.Hour
+)
 
 // AuthenticatorAPI provides methods for handling permissions
 type AuthenticatorAPI interface {
-	// AddPermissionGroup adds new permission group. PG is defined by name and a set of URL keys. User with
-	// permission group enabled has access to that set of keys. PGs with duplicated names are skipped.
+	// RegisterHandlers registers authenticator handlers to router.
+	RegisterHandlers(router *mux.Router)
+
+	// AddPermissionGroup adds new permission group. PG is defined by name and
+	// a set of URL keys. User with permission group enabled has access to that
+	// set of keys. PGs with duplicated names are skipped.
 	AddPermissionGroup(group ...*access.PermissionGroup)
 
-	// Validate serves as middleware used while registering new HTTP handler. For every request, token
-	// and permission group is validated.
-	Validate(provider http.HandlerFunc) http.HandlerFunc
+	// Validate provides middleware used while registering new HTTP handler.
+	// For every request, token and permission group is validated.
+	Validate(h http.Handler) http.Handler
+
+	// AuthorizeRequest tries to authorize user from request.
+	AuthorizeRequest(r *http.Request) (user string, err error)
+
+	// IsPermitted checks if user is permitted to access URL from request.
+	IsPermitted(user string, r *http.Request) error
 }
 
 // Settings defines fields required to instantiate authenticator
 type Settings struct {
+	// Router
+	Router *mux.Router
 	// Authentication database, default implementation is used if not set
 	AuthStore AuthenticationDB
 	// List of registered users
@@ -78,8 +93,8 @@ type Settings struct {
 	ExpTime time.Duration
 	// Cost value used to hash user passwords
 	Cost int
-	// Custom token signature. If not set, default value will be used.
-	Signature string
+	// Custom token sign key. If not set, default value will be used.
+	SignKey string
 }
 
 // Credentials struct represents simple user login input
@@ -92,59 +107,54 @@ type credentials struct {
 type authenticator struct {
 	log logging.Logger
 
-	// Router instance automatically registers login/logout REST API handlers if authentication is enabled
-	router    *mux.Router
+	urlPaths  []string
 	formatter *render.Render
 
-	// User database keeps all known users with permissions and hashed password. Users are loaded from
-	// HTTP config file
-	// TODO add option to register users
-	userDb AuthenticationDB
-	// Permission database is a map of name/permissions and bound URLs
+	authDB  AuthenticationDB
 	groupDb map[string][]*access.PermissionGroup_Permissions
 
-	// Token claims
 	expTime time.Duration
+	signKey string
 }
 
 // NewAuthenticator prepares new instance of authenticator.
-func NewAuthenticator(router *mux.Router, ctx *Settings, log logging.Logger) AuthenticatorAPI {
+func NewAuthenticator(opt *Settings, log logging.Logger) AuthenticatorAPI {
 	a := &authenticator{
-		router: router,
-		log:    log,
+		log: log,
 		formatter: render.New(render.Options{
 			IndentJSON: true,
 		}),
 		groupDb: make(map[string][]*access.PermissionGroup_Permissions),
-		expTime: ctx.ExpTime,
+		expTime: defaultExpTime,
+		signKey: defaultSignKey,
 	}
 
 	// Authentication store
-	if ctx.AuthStore != nil {
-		a.userDb = ctx.AuthStore
+	if opt.AuthStore != nil {
+		a.authDB = opt.AuthStore
 	} else {
-		a.userDb = CreateDefaultAuthDB()
+		a.authDB = CreateDefaultAuthDB(opt.Cost)
 	}
 
-	// Set token signature
-	signature = ctx.Signature
-	if a.expTime == 0 {
-		a.expTime = defaultExpTime
-		a.log.Debugf("Token expiration time claim not set, defaulting to 1 hour")
+	if opt.SignKey != "" {
+		a.signKey = opt.SignKey
 	}
+	if opt.ExpTime != 0 {
+		a.expTime = opt.ExpTime
+	}
+	a.log.Debugf("Token expiration time set to %v", a.expTime)
 
 	// Hash of default admin password, hashed with cost 10
-	hash := "$2a$10$q5s1LP7xbCJWJlLet1g/h.rGrsHtciILps90bNRdJ.6DRekw9b.zK"
-	if err := a.userDb.AddUser(admin, hash, []string{admin}); err != nil {
+	if err := a.authDB.AddUser(defaultUser, defaultPass, []string{defaultUser}); err != nil {
 		a.log.Errorf("failed to add admin user: %v", err)
 	}
 
-	for _, user := range ctx.Users {
-		if user.Name == admin {
+	for _, user := range opt.Users {
+		if user.Name == defaultUser {
 			a.log.Errorf("rejected to create user-defined account named 'admin'")
 			continue
 		}
-		if err := a.userDb.AddUser(user.Name, user.PasswordHash, user.Permissions); err != nil {
+		if err := a.authDB.AddUser(user.Name, user.Password, user.Permissions); err != nil {
 			a.log.Errorf("failed to add user %s: %v", user.Name, err)
 			continue
 		}
@@ -152,58 +162,133 @@ func NewAuthenticator(router *mux.Router, ctx *Settings, log logging.Logger) Aut
 	}
 
 	// Admin-group, available by default and always enabled for all URLs
-	a.groupDb[admin] = []*access.PermissionGroup_Permissions{}
-
-	a.registerSecurityHandlers()
+	a.groupDb[defaultUser] = []*access.PermissionGroup_Permissions{}
 
 	return a
+}
+
+// RegisterHandlers authenticator-wide security handlers
+func (a *authenticator) RegisterHandlers(router *mux.Router) {
+	add := func(r *mux.Route) {
+		path, err := r.URLPath()
+		if err != nil {
+			panic(err)
+		}
+		a.urlPaths = append(a.urlPaths, path.Path)
+	}
+
+	add(router.HandleFunc(login, a.loginHandler).Methods(http.MethodGet, http.MethodPost))
+	add(router.HandleFunc(authenticate, a.authenticationHandler).Methods(http.MethodPost))
+	add(router.HandleFunc(logout, a.logoutHandler).Methods(http.MethodPost))
+}
+
+func (a *authenticator) requiresAuth(req *http.Request) bool {
+	for _, path := range a.urlPaths {
+		if req.URL.Path == path {
+			return false
+		}
+	}
+	return true
 }
 
 // AddPermissionGroup adds new permission group.
 func (a *authenticator) AddPermissionGroup(group ...*access.PermissionGroup) {
 	for _, newPermissionGroup := range group {
 		if _, ok := a.groupDb[newPermissionGroup.Name]; ok {
-			a.log.Warnf("permission group %s already exists, skipped")
+			a.log.Warnf("permission group %s already exists", newPermissionGroup.Name)
 			continue
 		}
-		a.log.Debugf("added HTTP permission group %s", newPermissionGroup.Name)
 		a.groupDb[newPermissionGroup.Name] = newPermissionGroup.Permissions
+		a.log.Debugf("added permission group %s", newPermissionGroup.Name)
 	}
 }
 
+func (a *authenticator) AuthorizeRequest(req *http.Request) (string, error) {
+	if !a.requiresAuth(req) {
+		return "", nil
+	}
+
+	// Token may be accessed via cookie, or from authentication header
+	tokenString, err := a.getTokenStringFromRequest(req)
+	if err != nil {
+		return "", err
+	}
+	// Retrieve token object from raw string
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := jwt.GetSigningMethod(token.Header["alg"].(string)).(*jwt.SigningMethodHMAC); !ok {
+			return nil, ErrInvalidAuthToken
+		}
+		return []byte(a.signKey), nil
+	})
+	if err != nil {
+		return "", err
+	}
+	// Validate token claims
+	if token.Claims != nil {
+		if err := token.Claims.Valid(); err != nil {
+			return "", err
+		}
+	}
+	// Authorize user
+	user, err := a.authorizeUser(token)
+	if err != nil {
+		return "", err
+	}
+
+	return user.Name, nil
+}
+
+func (a *authenticator) IsPermitted(userName string, req *http.Request) error {
+	if !a.requiresAuth(req) {
+		return nil
+	}
+
+	user, err := a.authDB.GetUser(userName)
+	if err != nil {
+		return fmt.Errorf("invalid user: %v", err)
+	}
+	if err := a.checkUserPermission(user, req.URL.Path, req.Method); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Validate the request
-func (a *authenticator) Validate(provider http.HandlerFunc) http.HandlerFunc {
+func (a *authenticator) Validate(provider http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// Token may be accessed via cookie, or from authentication header
-		tokenString, errCode, err := a.getTokenStringFromRequest(req)
+		tokenString, err := a.getTokenStringFromRequest(req)
 		if err != nil {
-			a.formatter.Text(w, errCode, err.Error())
+			a.formatter.Text(w, http.StatusUnauthorized, err.Error())
 			return
 		}
 		// Retrieve token object from raw string
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := jwt.GetSigningMethod(token.Header["alg"].(string)).(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("error parsing token")
+				return nil, ErrInvalidAuthToken
 			}
-			return []byte(signature), nil
+			return []byte(a.signKey), nil
 		})
 		if err != nil {
-			errStr := fmt.Sprintf("500 internal server error: %s", err)
-			a.formatter.Text(w, http.StatusInternalServerError, errStr)
+			a.formatter.Text(w, http.StatusUnauthorized, err.Error())
 			return
 		}
 		// Validate token claims
 		if token.Claims != nil {
 			if err := token.Claims.Valid(); err != nil {
-				errStr := fmt.Sprintf("401 Unauthorized: %v", err)
-				a.formatter.Text(w, http.StatusUnauthorized, errStr)
+				a.formatter.Text(w, http.StatusUnauthorized, err.Error())
 				return
 			}
 		}
-		// Validate token itself
-		if err := a.validateToken(token, req.URL.Path, req.Method); err != nil {
-			errStr := fmt.Sprintf("401 Unauthorized: %v", err)
-			a.formatter.Text(w, http.StatusUnauthorized, errStr)
+
+		user, err := a.authorizeUser(token)
+		if err != nil {
+			a.formatter.Text(w, http.StatusUnauthorized, err.Error())
+			return
+		}
+		err = a.checkUserPermission(user, req.URL.Path, req.Method)
+		if err != nil {
+			a.formatter.Text(w, http.StatusForbidden, err.Error())
 			return
 		}
 
@@ -211,31 +296,21 @@ func (a *authenticator) Validate(provider http.HandlerFunc) http.HandlerFunc {
 	})
 }
 
-// Register authenticator-wide security handlers
-func (a *authenticator) registerSecurityHandlers() {
-	a.router.HandleFunc(login, a.loginHandler).Methods(http.MethodGet, http.MethodPost)
-	a.router.HandleFunc(authenticate, a.authenticationHandler).Methods(http.MethodPost)
-	a.router.HandleFunc(logout, a.logoutHandler).Methods(http.MethodPost)
-}
-
 // Login handler shows simple page to log in
 func (a *authenticator) loginHandler(w http.ResponseWriter, req *http.Request) {
 	// GET returns login page. Submit redirects to authenticate.
 	if req.Method == http.MethodGet {
-		r := render.New(render.Options{
-			Directory:  "templates",
-			Asset:      Asset,
-			AssetNames: AssetNames,
-		})
-		r.HTML(w, http.StatusOK, "login", nil)
-	} else {
+		if err := loginFormTmpl.Execute(w, nil); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else if req.Method == http.MethodPost {
 		// POST decodes provided credentials
 		credentials := &credentials{}
-		decoder := json.NewDecoder(req.Body)
-		err := decoder.Decode(&credentials)
+		err := json.NewDecoder(req.Body).Decode(&credentials)
 		if err != nil {
-			errStr := fmt.Sprintf("500 internal server error: failed to decode json: %v", err)
-			a.formatter.Text(w, http.StatusInternalServerError, errStr)
+			errStr := fmt.Sprintf("decoding credentials failed: %v", err)
+			a.formatter.Text(w, http.StatusBadRequest, errStr)
 			return
 		}
 		token, errCode, err := a.getTokenFor(credentials)
@@ -246,6 +321,8 @@ func (a *authenticator) loginHandler(w http.ResponseWriter, req *http.Request) {
 
 		// Returns token string.
 		a.formatter.Text(w, http.StatusOK, token)
+	} else {
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 	}
 }
 
@@ -253,7 +330,7 @@ func (a *authenticator) loginHandler(w http.ResponseWriter, req *http.Request) {
 func (a *authenticator) authenticationHandler(w http.ResponseWriter, req *http.Request) {
 	// Read name and password from the form (if accessed from browser)
 	credentials := &credentials{
-		Username: req.FormValue("name"),
+		Username: req.FormValue("username"),
 		Password: req.FormValue("password"),
 	}
 	token, errCode, err := a.getTokenFor(credentials)
@@ -261,6 +338,7 @@ func (a *authenticator) authenticationHandler(w http.ResponseWriter, req *http.R
 		a.formatter.Text(w, errCode, err.Error())
 		return
 	}
+
 	// Writes cookie with token.
 	http.SetCookie(w, &http.Cookie{
 		Name:   cookieName,
@@ -270,117 +348,135 @@ func (a *authenticator) authenticationHandler(w http.ResponseWriter, req *http.R
 		Secure: false,
 	})
 	// Automatically move to index page.
-	target := "/"
-	http.Redirect(w, req, target, http.StatusMovedPermanently)
+	http.Redirect(w, req, "/", http.StatusMovedPermanently)
 }
 
 // Removes token endpoint from the DB. During processing, token will not be found and will be considered as invalid.
 func (a *authenticator) logoutHandler(w http.ResponseWriter, req *http.Request) {
-	decoder := json.NewDecoder(req.Body)
 	var credentials credentials
-	err := decoder.Decode(&credentials)
+	err := json.NewDecoder(req.Body).Decode(&credentials)
 	if err != nil {
 		errStr := fmt.Sprintf("500 internal server error: failed to decode json: %v", err)
 		a.formatter.Text(w, http.StatusInternalServerError, errStr)
 		return
 	}
 
-	a.userDb.SetLogoutTime(credentials.Username)
-	a.log.Debugf("user %s was logged out", credentials.Username)
+	a.authDB.SetLogoutTime(credentials.Username)
+	a.log.Debugf("user %s has logged out", credentials.Username)
 }
 
 // Read raw token from request.
-func (a *authenticator) getTokenStringFromRequest(req *http.Request) (result string, errCode int, err error) {
+func (a *authenticator) getTokenStringFromRequest(req *http.Request) (result string, err error) {
 	// Try to read header, validate it if exists.
 	authHeader := req.Header.Get(AuthHeaderKey)
 	if authHeader != "" {
-		bearerToken := strings.Split(authHeader, " ")
-		if len(bearerToken) != 2 {
-			return "", http.StatusUnauthorized, fmt.Errorf("401 Unauthorized: invalid authorization token")
-		}
-		// Parse token header constant
-		if bearerToken[0] != "Bearer" {
-			return "", http.StatusUnauthorized, fmt.Errorf("401 Unauthorized: invalid authorization header")
-		}
-		return bearerToken[1], 0, nil
+		return parseTokenFromAuthHeader(authHeader)
 	}
-	a.log.Debugf("Authentication header not found (err: %v)", err)
+	a.log.Debugf("authorization header not found, checking cookies..")
 
 	// Otherwise read cookie
 	cookie, err := req.Cookie(cookieName)
 	if err == nil && cookie != nil {
-		return cookie.Value, 0, nil
+		return cookie.Value, nil
 	}
-	a.log.Debugf("Authentication cookie not found (err: %v)", err)
+	a.log.Debugf("authorization cookie not found (err: %v)", err)
 
-	return "", http.StatusUnauthorized, fmt.Errorf("401 Unauthorized: authorization required")
+	return "", fmt.Errorf("authorization required")
+}
+
+func parseTokenFromAuthHeader(authHeader string) (string, error) {
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 {
+		return "", ErrInvalidAuthToken
+	}
+	// Parse token header constant
+	if parts[0] != "Bearer" {
+		return "", ErrInvalidAuthToken
+	}
+	return parts[1], nil
 }
 
 // Get token for credentials
-func (a *authenticator) getTokenFor(credentials *credentials) (string, int, error) {
-	name, errCode, err := a.validateCredentials(credentials)
+func (a *authenticator) getTokenFor(cred *credentials) (string, int, error) {
+	err := a.authDB.Authenticate(cred.Username, cred.Password)
+	//name, errCode, err := a.validateCredentials(cred)
 	if err != nil {
-		return "", errCode, err
+		a.log.Warnf("authentication failed for user: %v", cred.Username)
+		return "", http.StatusUnauthorized, err
 	}
+
 	claims := jwt.StandardClaims{
-		Audience:  name,
+		Audience:  cred.Username,
 		ExpiresAt: a.expTime.Nanoseconds(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(signature))
+	tokenString, err := token.SignedString([]byte(a.signKey))
 	if err != nil {
 		return "", http.StatusInternalServerError, fmt.Errorf("500 internal server error: failed to sign token: %v", err)
 	}
-	a.userDb.SetLoginTime(name)
-	a.log.Debugf("user %s was logged in", name)
+
+	a.authDB.SetLoginTime(cred.Username)
+	a.log.Infof("user %s has logged in", cred.Username)
 
 	return tokenString, 0, nil
 }
 
 // Validates credentials, returns name and error code/message if invalid
-func (a *authenticator) validateCredentials(credentials *credentials) (string, int, error) {
-	user, err := a.userDb.GetUser(credentials.Username)
+/*func (a *authenticator) validateCredentials(credentials *credentials) (string, int, error) {
+	user, err := a.authDB.GetUser(credentials.Username)
 	if err != nil {
-		return "", http.StatusUnauthorized, errors.Errorf("401 unauthorized: user name or password is incorrect")
+		return "", http.StatusUnauthorized, ErrInvalidUsernameOrPassword
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(credentials.Password)); err != nil {
-		return credentials.Username, http.StatusUnauthorized, fmt.Errorf("401 unauthorized: user name or password is incorrect")
+		return credentials.Username, http.StatusUnauthorized, ErrInvalidUsernameOrPassword
 	}
 	return credentials.Username, 0, nil
-}
+}*/
 
-// Validates token itself and permissions
-func (a *authenticator) validateToken(token *jwt.Token, url, method string) error {
+func (a *authenticator) userNameFromToken(token *jwt.Token) (string, error) {
 	var userName string
 	// Read audience from the token
 	switch v := token.Claims.(type) {
 	case jwt.MapClaims:
 		var ok bool
 		if userName, ok = v["aud"].(string); !ok {
-			return fmt.Errorf("failed to validate token claims audience")
+			return "", fmt.Errorf("failed to validate token claims audience")
 		}
 	case jwt.StandardClaims:
 		userName = v.Audience
 	default:
-		return fmt.Errorf("failed to validate token claims")
+		return "", fmt.Errorf("failed to validate token claims")
 	}
-	loggedOut, err := a.userDb.IsLoggedOut(userName)
+	return userName, nil
+}
+
+func (a *authenticator) authorizeUser(token *jwt.Token) (*User, error) {
+	userName, err := a.userNameFromToken(token)
 	if err != nil {
-		return fmt.Errorf("failed to validate token: %v", err)
+		return nil, err
 	}
+	loggedOut, err := a.authDB.IsLoggedOut(userName)
+	if err != nil {
+		return nil, fmt.Errorf("authorizing user failed: %v", err)
+	}
+	// User logged out
 	if loggedOut {
-		// User logged out
 		token.Valid = false
-		return fmt.Errorf("invalid token")
+		return nil, fmt.Errorf("user has logged out")
 	}
-	user, err := a.userDb.GetUser(userName)
+	user, err := a.authDB.GetUser(userName)
 	if err != nil {
-		return fmt.Errorf("failed to validate token: %v", err)
+		return nil, fmt.Errorf("invalid user: %v", err)
 	}
+	return user, nil
+}
+
+func (a *authenticator) checkUserPermission(user *User, url, method string) error {
 	// Do not check for permissions if user is admin
 	if userIsAdmin(user) {
 		return nil
 	}
+
 	perms := a.getPermissionsForURL(url, method)
 	for _, userPerm := range user.Permissions {
 		for _, perm := range perms {
@@ -390,7 +486,7 @@ func (a *authenticator) validateToken(token *jwt.Token, url, method string) erro
 		}
 	}
 
-	return fmt.Errorf("not permitted")
+	return ErrPermissionDenied
 }
 
 // Returns all permission groups provided URL/Method is allowed for
@@ -415,9 +511,29 @@ func (a *authenticator) getPermissionsForURL(url, method string) []string {
 // Checks user admin permission
 func userIsAdmin(user *User) bool {
 	for _, permission := range user.Permissions {
-		if permission == admin {
+		if permission == defaultUser {
 			return true
 		}
 	}
 	return false
 }
+
+var loginFormTmpl = template.Must(template.New("templates").Parse(
+	`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Login</title>
+</head>
+<body>
+<div class="form">
+    <h2>Login</h2>
+    <form method="post" action="authenticate">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username"> <br/>
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password">  <br/>
+        <button type="submit">Login</button>
+     </form>
+</div>
+</body>
+</html>`))

@@ -19,18 +19,22 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
+
 	access "go.ligato.io/cn-infra/v2/rpc/rest/security/model/access-security"
 )
 
 // AuthenticationDB is common interface to access user database/permissions
 type AuthenticationDB interface {
 	// AddUser adds new user with name, password and permission groups. Password should be already hashed.
-	AddUser(name, passwordHash string, permissions []string) error
+	AddUser(name, password string, permissions []string) error
 	// GetUser returns user data according to name, or nil of not found
 	GetUser(name string) (*User, error)
+	// Authenticate authenticates user with password.
+	Authenticate(name, password string) error
 	// SetLoginTime writes last login time for specific user
 	SetLoginTime(name string)
-	// SetLoginTime writes last logout time for specific user
+	// SetLogoutTime writes last logout time for specific user
 	SetLogoutTime(name string)
 	// IsLoggedOut uses login/logout timestamps to evaluate whether the user was logged out
 	IsLoggedOut(name string) (bool, error)
@@ -44,20 +48,21 @@ type User struct {
 }
 
 // defaultAuthStorage is default implementation of AuthStore
-type defaultAuthDB struct {
+type memoryAuthDB struct {
 	sync.Mutex
-
-	db []*User
+	cost int
+	db   []*User
 }
 
 // CreateDefaultAuthDB builds new default storage
-func CreateDefaultAuthDB() AuthenticationDB {
-	return &defaultAuthDB{
-		db: make([]*User, 0),
+func CreateDefaultAuthDB(cost int) AuthenticationDB {
+	return &memoryAuthDB{
+		cost: cost,
+		db:   make([]*User, 0),
 	}
 }
 
-func (ds *defaultAuthDB) AddUser(name, passwordHash string, permissions []string) error {
+func (ds *memoryAuthDB) AddUser(name, password string, permissions []string) error {
 	ds.Lock()
 	defer ds.Unlock()
 
@@ -68,17 +73,22 @@ func (ds *defaultAuthDB) AddUser(name, passwordHash string, permissions []string
 		}
 	}
 
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), ds.cost)
+	if err != nil {
+		return err
+	}
+
 	ds.db = append(ds.db, &User{
 		User: access.User{
-			Name:         name,
-			PasswordHash: passwordHash,
-			Permissions:  permissions,
+			Name:        name,
+			Password:    string(passwordHash),
+			Permissions: permissions,
 		},
 	})
 	return nil
 }
 
-func (ds *defaultAuthDB) GetUser(name string) (*User, error) {
+func (ds *memoryAuthDB) GetUser(name string) (*User, error) {
 	ds.Lock()
 	defer ds.Unlock()
 
@@ -90,7 +100,18 @@ func (ds *defaultAuthDB) GetUser(name string) (*User, error) {
 	return nil, fmt.Errorf("user %s not found", name)
 }
 
-func (ds *defaultAuthDB) SetLoginTime(name string) {
+func (ds *memoryAuthDB) Authenticate(name, password string) error {
+	user, err := ds.GetUser(name)
+	if err != nil {
+		return err
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+		return ErrInvalidUsernameOrPassword
+	}
+	return nil
+}
+
+func (ds *memoryAuthDB) SetLoginTime(name string) {
 	ds.Lock()
 	defer ds.Unlock()
 
@@ -101,7 +122,7 @@ func (ds *defaultAuthDB) SetLoginTime(name string) {
 	}
 }
 
-func (ds *defaultAuthDB) SetLogoutTime(name string) {
+func (ds *memoryAuthDB) SetLogoutTime(name string) {
 	ds.Lock()
 	defer ds.Unlock()
 
@@ -112,7 +133,7 @@ func (ds *defaultAuthDB) SetLogoutTime(name string) {
 	}
 }
 
-func (ds *defaultAuthDB) IsLoggedOut(name string) (bool, error) {
+func (ds *memoryAuthDB) IsLoggedOut(name string) (bool, error) {
 	ds.Lock()
 	defer ds.Unlock()
 

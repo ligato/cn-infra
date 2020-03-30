@@ -15,21 +15,28 @@
 package rest
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
 )
 
-func authMiddleware(h http.Handler, auth BasicHTTPAuthenticator) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		user, pass, _ := r.BasicAuth()
-		if !auth.Authenticate(user, pass) {
-			w.Header().Set("WWW-Authenticate", "Provide valid username and password")
-			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
-			return
-		}
-		h.ServeHTTP(w, r)
+type contextKey int
+
+const (
+	userKey contextKey = iota
+)
+
+// UserName returns name of authorized user for the request.
+func UserName(r *http.Request) string {
+	if val := r.Context().Value(userKey); val != nil {
+		return val.(string)
 	}
+	return ""
+}
+
+func setUserName(r *http.Request, username string) *http.Request {
+	return r.WithContext(context.WithValue(r.Context(), userKey, username))
 }
 
 // staticAuthenticator is default implementation of BasicHTTPAuthenticator
