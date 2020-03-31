@@ -17,6 +17,7 @@ package logging
 import (
 	"fmt"
 	"io"
+	"log"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -30,85 +31,88 @@ var (
 	DefaultRegistry Registry
 )
 
-// Debug is for logging with default logger.
-func Debug(args ...interface{}) { DefaultLogger.Debug(args...) }
+var (
+	Trace  = logLvlFn(TraceLevel)
+	Tracef = logfLvlFn(TraceLevel)
+	Debug  = logLvlFn(DebugLevel)
+	Debugf = logfLvlFn(DebugLevel)
+	Info   = logLvlFn(InfoLevel)
+	Infof  = logfLvlFn(InfoLevel)
+	Warn   = logLvlFn(WarnLevel)
+	Warnf  = logfLvlFn(WarnLevel)
+	Error  = logLvlFn(ErrorLevel)
+	Errorf = logfLvlFn(ErrorLevel)
+	Fatal  = log.Fatal
+	Fatalf = log.Fatalf
+	Panic  = log.Panic
+	Panicf = log.Panicf
+)
 
-// Debugf is for logging with default logger.
-func Debugf(format string, args ...interface{}) { DefaultLogger.Debugf(format, args...) }
+func logLvlFn(lvl LogLevel) func(...interface{}) {
+	return func(args ...interface{}) {
+		log.Printf("%s: %s", strings.ToUpper(lvl.String()), fmt.Sprint(args...))
+	}
+}
 
-// Info is for logging with default logger.
-func Info(args ...interface{}) { DefaultLogger.Info(args...) }
-
-// Infof is for logging with default logger.
-func Infof(format string, args ...interface{}) { DefaultLogger.Infof(format, args...) }
-
-// Warn is for logging with default logger.
-func Warn(args ...interface{}) { DefaultLogger.Warn(args...) }
-
-// Warnf is for logging with default logger.
-func Warnf(format string, args ...interface{}) { DefaultLogger.Warnf(format, args...) }
-
-// Warning is for logging with default logger.
-func Warning(args ...interface{}) { DefaultLogger.Warning(args...) }
-
-// Warningf is for logging with default logger.
-func Warningf(format string, args ...interface{}) { DefaultLogger.Warningf(format, args...) }
-
-// Error is for logging with default logger.
-func Error(args ...interface{}) { DefaultLogger.Error(args...) }
-
-// Errorf is for logging with default logger.
-func Errorf(format string, args ...interface{}) { DefaultLogger.Errorf(format, args...) }
+func logfLvlFn(lvl LogLevel) func(string, ...interface{}) {
+	return func(format string, args ...interface{}) {
+		log.Printf("%s: %s", strings.ToUpper(lvl.String()), fmt.Sprintf(format, args...))
+	}
+}
 
 // LogWithLevel allows to log with different log levels
 type LogWithLevel interface {
-	Debug(args ...interface{})
+	WithField(key string, value interface{}) LogWithLevel
+	WithFields(fields Fields) LogWithLevel
+	WithError(err error) LogWithLevel
+
+	Tracef(format string, args ...interface{})
 	Debugf(format string, args ...interface{})
-	Info(args ...interface{})
-	Infoln(args ...interface{})
 	Infof(format string, args ...interface{})
-	Warn(args ...interface{})
 	Warnf(format string, args ...interface{})
-	Warning(args ...interface{})
-	Warningln(args ...interface{})
 	Warningf(format string, args ...interface{})
-	Error(args ...interface{})
-	Errorln(args ...interface{})
 	Errorf(format string, args ...interface{})
-	Fatal(args ...interface{})
 	Fatalf(format string, args ...interface{})
-	Fatalln(args ...interface{})
-	Panic(args ...interface{})
 	Panicf(format string, args ...interface{})
-	Print(v ...interface{})
-	Printf(format string, v ...interface{})
-	Println(v ...interface{})
+	Printf(format string, args ...interface{})
+
+	Trace(args ...interface{})
+	Debug(args ...interface{})
+	Info(args ...interface{})
+	Warn(args ...interface{})
+	Warning(args ...interface{})
+	Error(args ...interface{})
+	Fatal(args ...interface{})
+	Panic(args ...interface{})
+	Print(args ...interface{})
+
+	Traceln(args ...interface{})
+	Debugln(args ...interface{})
+	Infoln(args ...interface{})
+	Println(args ...interface{})
+	Warnln(args ...interface{})
+	Warningln(args ...interface{})
+	Errorln(args ...interface{})
+	Fatalln(args ...interface{})
+	Panicln(args ...interface{})
 }
 
 // Logger provides logging capabilities
 type Logger interface {
+	LogWithLevel
+
 	// GetName returns the logger name
 	GetName() string
 	// SetLevel modifies the log level
 	SetLevel(level LogLevel)
 	// GetLevel returns currently set log level
 	GetLevel() LogLevel
-	// SetVerbosity sets logger verbosity
-	SetVerbosity(v int)
-	// WithField creates one structured field
-	WithField(key string, value interface{}) LogWithLevel
-	// WithFields creates multiple structured fields
-	WithFields(fields Fields) LogWithLevel
-	// Add hook to send log to external address
+	// AddHook adds hook to logger
 	AddHook(hook logrus.Hook)
 	// SetOutput sets output writer
 	SetOutput(out io.Writer)
 	// SetFormatter sets custom formatter
 	SetFormatter(formatter logrus.Formatter)
-	// V reports whether verbosity level is at least at the requested level
-	V(l int) bool
-
-	LogWithLevel
 }
 
 // LoggerFactory is API for the plugins that want to create their own loggers.
@@ -118,9 +122,9 @@ type LoggerFactory interface {
 
 // Registry groups multiple Logger instances and allows to mange their log levels.
 type Registry interface {
-	// LoggerFactory allow to create new loggers
 	LoggerFactory
-	// List Loggers returns a map (loggerName => log level)
+
+	// ListLoggers returns a map (loggerName => log level)
 	ListLoggers() map[string]string
 	// SetLevel modifies log level of selected logger in the registry
 	SetLevel(logger, level string) error
@@ -130,11 +134,14 @@ type Registry interface {
 	Lookup(loggerName string) (logger Logger, found bool)
 	// ClearRegistry removes all loggers except the default one from registry
 	ClearRegistry()
-	// HookConfigs stores hooks from log manager to be used for new loggers
+	// AddHook stores hooks from log manager to be used for new loggers
 	AddHook(hook logrus.Hook)
 }
 
-// LogLevel represents severity of log record
+// Fields is a type accepted by WithFields method.
+type Fields map[string]interface{}
+
+// LogLevel defines severity of log entry.
 type LogLevel uint32
 
 const (
@@ -150,99 +157,66 @@ const (
 	InfoLevel
 	// DebugLevel - enabled for debugging, very verbose logging.
 	DebugLevel
+	// TraceLevel - extra level for debugging specific parts.
+	TraceLevel
 )
 
-// String converts the LogLevel to a string. E.g. PanicLevel becomes "panic".
+// Convert the LogLevel to a string.
 func (level LogLevel) String() string {
+	if b, err := level.MarshalText(); err == nil {
+		return string(b)
+	}
+	return fmt.Sprintf("UnknownLevel(%d)", level)
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (level *LogLevel) UnmarshalText(text []byte) error {
+	l, err := ParseLogLevel(string(text))
+	if err != nil {
+		return err
+	}
+	*level = LogLevel(l)
+	return nil
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (level LogLevel) MarshalText() ([]byte, error) {
 	switch level {
-	case PanicLevel:
-		return "panic"
-	case FatalLevel:
-		return "fatal"
-	case ErrorLevel:
-		return "error"
-	case WarnLevel:
-		return "warn"
-	case InfoLevel:
-		return "info"
+	case TraceLevel:
+		return []byte("trace"), nil
 	case DebugLevel:
-		return "debug"
-	default:
-		return fmt.Sprintf("unknown(%d)", level)
+		return []byte("debug"), nil
+	case InfoLevel:
+		return []byte("info"), nil
+	case WarnLevel:
+		return []byte("warn"), nil
+	case ErrorLevel:
+		return []byte("error"), nil
+	case FatalLevel:
+		return []byte("fatal"), nil
+	case PanicLevel:
+		return []byte("panic"), nil
 	}
+	return nil, fmt.Errorf("invalid log level %d", level)
 }
 
-// ParseLogLevel parses string representation of LogLevel.
-func ParseLogLevel(level string) LogLevel {
+// ParseLogLevel parses the string as log level.
+func ParseLogLevel(level string) (LogLevel, error) {
 	switch strings.ToLower(level) {
-	case "debug":
-		return DebugLevel
-	case "info":
-		return InfoLevel
-	case "warn", "warning":
-		return WarnLevel
-	case "error":
-		return ErrorLevel
-	case "fatal":
-		return FatalLevel
 	case "panic":
-		return PanicLevel
-	default:
-		return InfoLevel
+		return PanicLevel, nil
+	case "fatal":
+		return FatalLevel, nil
+	case "error":
+		return ErrorLevel, nil
+	case "warn", "warning":
+		return WarnLevel, nil
+	case "info":
+		return InfoLevel, nil
+	case "debug":
+		return DebugLevel, nil
+	case "trace":
+		return TraceLevel, nil
 	}
-}
-
-// Fields is a type accepted by WithFields method. It can be used to instantiate map using shorter notation.
-type Fields map[string]interface{}
-
-// ParentLogger provides logger with logger factory that creates loggers with prefix.
-type ParentLogger struct {
-	Logger
-	Prefix  string
-	Factory LoggerFactory
-}
-
-// NewParentLogger creates new parent logger with given LoggerFactory and name as prefix.
-func NewParentLogger(name string, factory LoggerFactory) *ParentLogger {
-	return &ParentLogger{
-		Logger:  factory.NewLogger(name),
-		Prefix:  name,
-		Factory: factory,
-	}
-}
-
-// NewLogger returns logger using name prefixed with prefix defined in parent logger.
-// If Factory is nil, DefaultRegistry is used.
-func (p *ParentLogger) NewLogger(name string) Logger {
-	factory := p.Factory
-	if factory == nil {
-		factory = DefaultRegistry
-	}
-	return factory.NewLogger(fmt.Sprintf("%s.%s", p.Prefix, name))
-}
-
-// PluginLogger is intended for:
-// 1. small plugins (that just need one logger; name corresponds to plugin name)
-// 2. large plugins that need multiple loggers (all loggers share same name prefix)
-type PluginLogger interface {
-	// Plugin has by default possibility to log
-	// Logger name is initialized with plugin name
-	Logger
-	// LoggerFactory can be optionally used by large plugins
-	// to create child loggers (their names are prefixed by plugin logger name)
-	LoggerFactory
-}
-
-// ForPlugin is used to initialize plugin logger by name
-// and optionally created children (their name prefixed by plugin logger name)
-func ForPlugin(name string) PluginLogger {
-	if logger, found := DefaultRegistry.Lookup(name); found {
-		DefaultLogger.Debugf("using plugin logger for %q that was already initialized", name)
-		return &ParentLogger{
-			Logger:  logger,
-			Prefix:  name,
-			Factory: DefaultRegistry,
-		}
-	}
-	return NewParentLogger(name, DefaultRegistry)
+	return InfoLevel, fmt.Errorf("invalid log level: %q", level)
 }

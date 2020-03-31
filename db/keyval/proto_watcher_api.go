@@ -39,7 +39,7 @@ func ToChanProto(respCh chan datasync.ProtoWatchResp, opts ...interface{}) func(
 		case respCh <- dto:
 			// success
 		case <-time.After(datasync.DefaultNotifTimeout):
-			logging.DefaultLogger.Warn("Unable to deliver notification")
+			logging.Warn("Unable to deliver notification")
 		}
 	}
 }

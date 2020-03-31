@@ -26,6 +26,8 @@ import (
 const PluginName = "logs-example"
 
 func main() {
+	logging.Info("starting logging example")
+
 	// Prepare example plugin and start the agent
 	p := &ExamplePlugin{
 		exampleFinished: make(chan struct{}),
@@ -60,19 +62,22 @@ func (plugin *ExamplePlugin) Init() (err error) {
 	exampleNum := 15
 
 	// Set log level which logs only entries with current severity or above
-	plugin.Log.SetLevel(logging.WarnLevel)  // warn, error, panic, fatal
-	plugin.Log.SetLevel(logging.InfoLevel)  // info, warn, error, panic, fatal - default log level
-	plugin.Log.SetLevel(logging.DebugLevel) // everything
+	plugin.Log.SetLevel(logging.WarnLevel)  // logs warn/error/fatal/panic levels
+	plugin.Log.SetLevel(logging.InfoLevel)  // logs info/warn/error//fatal/panic levels
+	plugin.Log.SetLevel(logging.TraceLevel) // logs all levels
 
 	// Basic logger options
 	plugin.Log.Print("----------- Log examples -----------")
 	plugin.Log.Printf("Print with format specifier. String: %s, Digit: %d, Value: %v", exampleString, exampleNum, plugin)
+	plugin.Log.Println()
 
 	// Format also available for all 6 levels of log levels
-	plugin.Log.Debug("Debug log example: Debugging information")
-	plugin.Log.Info("Info log example: Something informative")
-	plugin.Log.Warn("Warn log example: Something unexpected, warning")
-	plugin.Log.Error("Error log example: Failure without exit")
+	plugin.Log.Trace("Trace log message")
+	plugin.Log.Debug("Debug log message")
+	plugin.Log.Info("Info log message")
+	plugin.Log.Infof("Infof log message")
+	plugin.Log.Warn("Warn log message")
+	plugin.Log.Error("Error log message")
 	plugin.showPanicLog()
 	//log.Fatal("Bye") calls os.Exit(1) after logging
 
@@ -83,7 +88,7 @@ func (plugin *ExamplePlugin) Init() (err error) {
 
 	// Custom (child) logger with name
 	childLogger := plugin.Log.NewLogger("childLogger")
-	childLogger.Infof("Log using named logger with name: %v", childLogger.GetName())
+	childLogger.Infof("Log using named logger")
 	childLogger.Debug("Debug log using childLogger!")
 
 	childLogger2 := plugin.Log.NewLogger("childLogger2")

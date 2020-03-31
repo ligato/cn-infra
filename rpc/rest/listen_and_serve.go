@@ -70,7 +70,7 @@ func ListenAndServe(config Config, handler http.Handler) (srv *http.Server, err 
 			err = server.Serve(l)
 		}
 		// Serve always returns non-nil error
-		logging.DefaultLogger.Debugf("HTTP server Serve: %v", err)
+		logging.Debugf("HTTP server Serve: %v", err)
 	}()
 
 	return server, nil

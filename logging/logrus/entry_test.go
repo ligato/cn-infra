@@ -20,32 +20,33 @@ import (
 	"log/syslog"
 	"testing"
 
-	lg "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
+	syslog_hook "github.com/sirupsen/logrus/hooks/syslog"
 
-	"github.com/onsi/gomega"
-	syslog2 "github.com/sirupsen/logrus/hooks/syslog"
+	. "github.com/onsi/gomega"
 )
 
 func TestEntryPanicln(t *testing.T) {
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 
 	errBoom := fmt.Errorf("boom time")
 
 	defer func() {
 		p := recover()
-		gomega.Expect(p).NotTo(gomega.BeNil())
+		Expect(p).NotTo(BeNil())
 
 		switch pVal := p.(type) {
-		case *lg.Entry:
-			gomega.Expect("kaboom").To(gomega.BeEquivalentTo(pVal.Message))
-			gomega.Expect(errBoom).To(gomega.BeEquivalentTo(pVal.Data["err"]))
+		case *logrus.Entry:
+			Expect(pVal.Message).To(BeEquivalentTo("kaboom"))
+			Expect(pVal.Data["err"]).To(BeEquivalentTo(errBoom))
 		default:
 			t.Fatalf("want type *LogMsg, got %T: %#v", pVal, pVal)
 		}
 	}()
 
 	logger := NewLogger("testLogger")
-	logger.std.Out = &bytes.Buffer{}
+	var buffer bytes.Buffer
+	logger.SetOutput(&buffer)
 	entry := NewEntry(logger)
 	entry.WithField("err", errBoom).Panicln("kaboom")
 }
@@ -55,36 +56,33 @@ func TestEntryPanicf(t *testing.T) {
 
 	defer func() {
 		p := recover()
-		gomega.Expect(p).NotTo(gomega.BeNil())
+		Expect(p).NotTo(BeNil())
 
 		switch pVal := p.(type) {
-		case *lg.Entry:
-			gomega.Expect("kaboom true").To(gomega.BeEquivalentTo(pVal.Message))
-			gomega.Expect(errBoom).To(gomega.BeEquivalentTo(pVal.Data["err"]))
+		case *logrus.Entry:
+			Expect("kaboom true").To(BeEquivalentTo(pVal.Message))
+			Expect(errBoom).To(BeEquivalentTo(pVal.Data["err"]))
 		default:
 			t.Fatalf("want type *LogMsg, got %T: %#v", pVal, pVal)
 		}
 	}()
 
 	logger := NewLogger("testLogger")
-	logger.std.Out = &bytes.Buffer{}
+	var buffer bytes.Buffer
+	logger.SetOutput(&buffer)
 	entry := NewEntry(logger)
 	entry.WithField("err", errBoom).Panicf("kaboom %v", true)
 }
 
 func TestAddHook(t *testing.T) {
-	gomega.RegisterTestingT(t)
+	RegisterTestingT(t)
 
 	logRegistry := NewLogRegistry()
 	lgA := logRegistry.NewLogger("logger")
-	gomega.Expect(lgA).NotTo(gomega.BeNil())
+	Expect(lgA).NotTo(BeNil())
 
-	hook, _ := syslog2.NewSyslogHook(
-		"",
-		"",
-		syslog.LOG_INFO, "")
+	hook, _ := syslog_hook.NewSyslogHook("", "", syslog.LOG_INFO, "")
 
 	lgA.AddHook(hook)
 	lgA.Info("Test Hook")
-
 }

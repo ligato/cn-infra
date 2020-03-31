@@ -86,7 +86,8 @@ func (p *Plugin) Init() error {
 					if !exists {
 						continue
 					}
-					logger.SetLevel(logging.ParseLogLevel(defaultLogLvl))
+					lvl, _ := logging.ParseLogLevel(defaultLogLvl)
+					logger.SetLevel(lvl)
 				}
 			}
 		}
