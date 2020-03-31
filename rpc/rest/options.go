@@ -19,6 +19,9 @@ import (
 
 	"go.ligato.io/cn-infra/v2/config"
 	"go.ligato.io/cn-infra/v2/logging"
+	"go.ligato.io/cn-infra/v2/utils/ratelimit"
+
+	"golang.org/x/time/rate"
 )
 
 // DefaultPlugin is a default instance of Plugin.
@@ -69,5 +72,12 @@ func UseDeps(cb func(*Deps)) Option {
 func UseAuthenticator(a BasicHTTPAuthenticator) Option {
 	return func(p *Plugin) {
 		p.Deps.Authenticator = a
+	}
+}
+
+// UseRateLimiter returns an Option which sets rate limiter.
+func UseRateLimiter(limit rate.Limit, maxBurst int) Option {
+	return func(p *Plugin) {
+		p.limiters = ratelimit.NewLimiter(limit, maxBurst)
 	}
 }

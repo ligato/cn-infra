@@ -106,8 +106,16 @@ type Config struct {
 	// Hash cost for password. High values take a lot of time to process.
 	PasswordHashCost int `json:"password-hash-cost"`
 
-	// TokenSignature is used to sign a token. Default value is used if not set.
-	TokenSignature string `json:"token-signature"`
+	// SignKey is used to sign a token. Default value is used if not set.
+	SignKey string `json:"sign-key"`
+
+	RateLimiter *struct {
+		// Limit defines rate limit for number of requests per second.
+		Limit float64 `json:"limit"`
+
+		// MaxBurst defines max number of requests in single burst.
+		MaxBurst int `json:"burst"`
+	} `json:"rate-limiter"`
 }
 
 // DefaultConfig returns new instance of config with default endpoint

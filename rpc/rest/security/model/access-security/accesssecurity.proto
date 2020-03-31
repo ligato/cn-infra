@@ -5,7 +5,7 @@ package access_security;
 
 message User {
     string name = 1;
-    string password_hash = 2;
+    string password = 2;
     repeated string permissions = 3;            // Permission name, user is allowed for more permission groups
 }
 

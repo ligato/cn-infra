@@ -194,7 +194,7 @@ To add permission group to the user, put its name to the config file under user'
 
 #### Login and logout
 
-To log in a user, follow the URL `http://localhost:9191/login`. The site is enabled for two
+To log in a user, follow the URL `http://localhost:9191/auth/login`. The site is enabled for two
 methods. It is possible to use a `POST` to directly provide credentials in the format:
 
 ```
@@ -207,7 +207,7 @@ methods. It is possible to use a `POST` to directly provide credentials in the f
 The site returns access token as plain text. If URL is accessed with `GET`, it shows the login page where the credentials are supposed to be put. After successful submit, 
 it redirects to the index.
 
-To log out, post username to `http://localhost:9191/logout`.
+To log out, post username to `http://localhost:9191/auth/logout`.
 
 ```
 {

@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 
 	"go.ligato.io/cn-infra/v2/config"
@@ -103,5 +104,12 @@ func UseServerOpts(o ...grpc.ServerOption) Option {
 func UsePromMetrics(metrics *grpc_prometheus.ServerMetrics) Option {
 	return func(p *Plugin) {
 		p.metrics = metrics
+	}
+}
+
+// UseRateLimiter returns an Option which sets rate limiter.
+func UseRateLimiter(r *rate.Limiter) Option {
+	return func(p *Plugin) {
+		p.limiter = r
 	}
 }

@@ -19,10 +19,12 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/unrolled/render"
+	"golang.org/x/time/rate"
 
 	"go.ligato.io/cn-infra/v2/infra"
 	"go.ligato.io/cn-infra/v2/rpc/rest/security"
 	access "go.ligato.io/cn-infra/v2/rpc/rest/security/model/access-security"
+	"go.ligato.io/cn-infra/v2/utils/ratelimit"
 )
 
 // Plugin struct holds all plugin-related data.
@@ -35,15 +37,15 @@ type Plugin struct {
 	mx        *mux.Router
 	formatter *render.Render
 
-	// Access to HTTP security API
-	auth security.AuthenticatorAPI
+	auth     security.AuthenticatorAPI
+	limiters *ratelimit.Limiters
 }
 
 // Deps lists the dependencies of the Rest plugin.
 type Deps struct {
 	infra.PluginDeps
 
-	// Authenticator can be injected in a flavor inject method.
+	// Authenticator is used for authenticating requests.
 	// If there is no authenticator injected and config contains
 	// user password, the default staticAuthenticator is instantiated.
 	// By default the authenticator is disabled.
@@ -59,9 +61,15 @@ func (p *Plugin) Init() (err error) {
 	if err := PluginConfig(p.Cfg, p.Config, p.PluginName); err != nil {
 		return err
 	}
-
 	if p.Config.Disabled {
+		p.Log.Debugf("Init skipped (plugin disabled)")
 		return nil
+	}
+
+	if p.limiters == nil {
+		if limiter := p.Config.RateLimiter; limiter != nil {
+			p.limiters = ratelimit.NewLimiter(rate.Limit(limiter.Limit), limiter.MaxBurst)
+		}
 	}
 
 	// if there is no injected authenticator and there are credentials defined in the config file
@@ -80,13 +88,14 @@ func (p *Plugin) Init() (err error) {
 
 	// Enable authentication if defined by config
 	if p.EnableTokenAuth {
-		p.Log.Info("Token authentication for HTTP enabled")
-		p.auth = security.NewAuthenticator(p.mx, &security.Settings{
-			Users:     p.Users,
-			ExpTime:   p.TokenExpiration,
-			Cost:      p.PasswordHashCost,
-			Signature: p.TokenSignature,
+		p.Log.Info("Token authentication enabled")
+		p.auth = security.NewAuthenticator(&security.Settings{
+			Users:   p.Users,
+			ExpTime: p.TokenExpiration,
+			Cost:    p.PasswordHashCost,
+			SignKey: p.SignKey,
 		}, p.Log)
+		p.auth.RegisterHandlers(p.mx.PathPrefix("/auth").Subrouter())
 	}
 
 	return err
@@ -99,15 +108,13 @@ func (p *Plugin) AfterInit() (err error) {
 		return nil
 	}
 
-	var handler http.Handler = p.mx
-	if p.Authenticator != nil {
-		handler = auth(handler, p.Authenticator)
-	}
+	h := p.makeHandler()
 
-	p.server, err = ListenAndServe(*p.Config, handler)
+	p.server, err = ListenAndServe(*p.Config, h)
 	if err != nil {
 		return err
 	}
+
 	if p.Config.UseHTTPS() {
 		p.Log.Info("Serving on https://", p.Config.Endpoint)
 	} else {
@@ -124,9 +131,6 @@ func (p *Plugin) RegisterHTTPHandler(path string, provider HandlerProvider, meth
 	}
 	p.Log.Debugf("Registering handler: %s", path)
 
-	if p.Config.EnableTokenAuth {
-		return p.mx.Handle(path, p.auth.Validate(provider(p.formatter))).Methods(methods...)
-	}
 	return p.mx.Handle(path, provider(p.formatter)).Methods(methods...)
 }
 
@@ -152,4 +156,36 @@ func (p *Plugin) Close() error {
 		return nil
 	}
 	return p.server.Close()
+}
+
+func (p *Plugin) makeHandler() http.Handler {
+	var (
+		authFunc func(r *http.Request) (string, error)
+		permFunc func(user string, r *http.Request) error
+	)
+	if p.Config.EnableTokenAuth {
+		authFunc = p.auth.AuthorizeRequest
+		permFunc = p.auth.IsPermitted
+	} else if p.Authenticator != nil {
+		authFunc = func(r *http.Request) (user string, err error) {
+			user, pass, _ := r.BasicAuth()
+			if !p.Authenticator.Authenticate(user, pass) {
+				//w.Header().Set("WWW-Authenticate", "Provide valid username and password")
+				return "", security.ErrInvalidUsernameOrPassword
+			}
+			return user, nil
+		}
+	}
+
+	if authFunc != nil {
+		p.mx.Use(p.authMiddleware(authFunc))
+	}
+	if permFunc != nil {
+		p.mx.Use(p.permMiddleware(permFunc))
+	}
+	if p.limiters != nil {
+		p.mx.Use(rateLimitMiddleware(p.limiters))
+	}
+
+	return p.mx
 }
