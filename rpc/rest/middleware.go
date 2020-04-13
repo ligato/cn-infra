@@ -27,8 +27,9 @@ import (
 const (
 	HeaderKeyAuthUsername = "X-Ligato-Auth-Username"
 
-	HeaderKeyRateLimitLimit = "X-Ligato-RateLimit-Limit"
-	HeaderKeyRateLimitBurst = "X-Ligato-RateLimit-Burst"
+	HeaderKeyRateLimitLimit = "X-Ligato-RateLimiter-Limit"
+	HeaderKeyRateLimitBurst = "X-Ligato-RateLimiter-MaxBurst"
+	HeaderKeyRateLimitDelay = "X-Ligato-RateLimiter-WaitDelay"
 )
 
 func (p *Plugin) permMiddleware(isPermitted func(user string, r *http.Request) error) mux.MiddlewareFunc {
@@ -51,7 +52,7 @@ func (p *Plugin) authMiddleware(authorize func(r *http.Request) (string, error))
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			userName, err := authorize(r)
 			if err != nil {
-				p.Log.Warnf("authorization failed for user: %v", userName)
+				p.Log.Warnf("authorization failed for user %v: %v", userName, err)
 				http.Error(w, err.Error(), http.StatusUnauthorized)
 				return
 			}
@@ -78,7 +79,13 @@ func rateLimitMiddleware(limiters *ratelimit.Limiters) mux.MiddlewareFunc {
 			w.Header().Set(HeaderKeyRateLimitLimit, fmt.Sprint(limiter.Limit()))
 			w.Header().Set(HeaderKeyRateLimitBurst, fmt.Sprint(limiter.Burst()))
 
-			if !limiter.Allow() {
+			res := limiter.Reserve()
+			if !res.OK() {
+				http.Error(w, "rate limit burst exceeded", http.StatusTooManyRequests)
+				return
+			} else if res.Delay() > 0 {
+				w.Header().Set(HeaderKeyRateLimitDelay, res.Delay().String())
+				res.Cancel()
 				http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
 				return
 			}

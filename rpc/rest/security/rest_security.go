@@ -356,8 +356,8 @@ func (a *authenticator) logoutHandler(w http.ResponseWriter, req *http.Request) 
 	var credentials credentials
 	err := json.NewDecoder(req.Body).Decode(&credentials)
 	if err != nil {
-		errStr := fmt.Sprintf("500 internal server error: failed to decode json: %v", err)
-		a.formatter.Text(w, http.StatusInternalServerError, errStr)
+		errStr := fmt.Sprintf("failed to decode json: %v", err)
+		a.formatter.Text(w, http.StatusBadRequest, errStr)
 		return
 	}
 
@@ -399,7 +399,6 @@ func parseTokenFromAuthHeader(authHeader string) (string, error) {
 // Get token for credentials
 func (a *authenticator) getTokenFor(cred *credentials) (string, int, error) {
 	err := a.authDB.Authenticate(cred.Username, cred.Password)
-	//name, errCode, err := a.validateCredentials(cred)
 	if err != nil {
 		a.log.Warnf("authentication failed for user: %v", cred.Username)
 		return "", http.StatusUnauthorized, err
@@ -408,11 +407,12 @@ func (a *authenticator) getTokenFor(cred *credentials) (string, int, error) {
 	claims := jwt.StandardClaims{
 		Audience:  cred.Username,
 		ExpiresAt: a.expTime.Nanoseconds(),
+		Issuer:    "cn-infra.ligato.io",
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString([]byte(a.signKey))
 	if err != nil {
-		return "", http.StatusInternalServerError, fmt.Errorf("500 internal server error: failed to sign token: %v", err)
+		return "", http.StatusInternalServerError, fmt.Errorf("failed to sign token: %v", err)
 	}
 
 	a.authDB.SetLoginTime(cred.Username)
@@ -420,18 +420,6 @@ func (a *authenticator) getTokenFor(cred *credentials) (string, int, error) {
 
 	return tokenString, 0, nil
 }
-
-// Validates credentials, returns name and error code/message if invalid
-/*func (a *authenticator) validateCredentials(credentials *credentials) (string, int, error) {
-	user, err := a.authDB.GetUser(credentials.Username)
-	if err != nil {
-		return "", http.StatusUnauthorized, ErrInvalidUsernameOrPassword
-	}
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(credentials.Password)); err != nil {
-		return credentials.Username, http.StatusUnauthorized, ErrInvalidUsernameOrPassword
-	}
-	return credentials.Username, 0, nil
-}*/
 
 func (a *authenticator) userNameFromToken(token *jwt.Token) (string, error) {
 	var userName string
