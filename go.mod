@@ -60,7 +60,6 @@ require (
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742 // indirect
-	github.com/namsral/flag v1.7.4-pre
 	github.com/onsi/gomega v1.4.3
 	github.com/philhofer/fwd v1.0.0 // indirect
 	github.com/pierrec/lz4 v2.3.0+incompatible // indirect
@@ -69,6 +68,7 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/soheilhy/cmux v0.1.4 // indirect
+	github.com/spf13/pflag v1.0.5
 	github.com/tinylib/msgp v1.0.2 // indirect
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20171017195756-830351dc03c6 // indirect
 	github.com/unrolled/render v0.0.0-20180914162206-b9786414de4d

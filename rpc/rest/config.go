@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/namsral/flag"
+	flag "github.com/spf13/pflag"
 
 	"go.ligato.io/cn-infra/v2/config"
 	"go.ligato.io/cn-infra/v2/infra"
@@ -34,6 +34,13 @@ const (
 	// DefaultEndpoint 0.0.0.0:9191
 	DefaultEndpoint = DefaultHost + ":" + DefaultHTTPPort
 )
+
+// DefaultConfig returns new instance of config with default endpoint
+func DefaultConfig() *Config {
+	return &Config{
+		Endpoint: DefaultEndpoint,
+	}
+}
 
 // Config is a configuration for HTTP server
 // It is meant to be extended with security (TLS...)
@@ -118,11 +125,23 @@ type Config struct {
 	} `json:"rate-limiter"`
 }
 
-// DefaultConfig returns new instance of config with default endpoint
-func DefaultConfig() *Config {
-	return &Config{
-		Endpoint: DefaultEndpoint,
+// GetPort parses suffix from endpoint & returns integer after last ":" (otherwise it returns 0)
+func (cfg *Config) GetPort() int {
+	if cfg.Endpoint != "" && cfg.Endpoint != ":" {
+		index := strings.LastIndex(cfg.Endpoint, ":")
+		if index >= 0 {
+			port, err := strconv.Atoi(cfg.Endpoint[index+1:])
+			if err == nil {
+				return port
+			}
+		}
 	}
+	return 0
+}
+
+// UseHTTPS returns true if server certificate and key is defined.
+func (cfg *Config) UseHTTPS() bool {
+	return cfg.ServerCertfile != "" && cfg.ServerKeyfile != ""
 }
 
 // PluginConfig tries :
@@ -136,11 +155,9 @@ func PluginConfig(pluginCfg config.PluginConfig, cfg *Config, pluginName infra.P
 		cfg.Endpoint = DefaultHost + ":" + portFlag.Value.String()
 	}
 
-	if pluginCfg != nil {
-		_, err := pluginCfg.LoadValue(cfg)
-		if err != nil {
-			return err
-		}
+	_, err := pluginCfg.LoadValue(cfg)
+	if err != nil {
+		return err
 	}
 
 	FixConfig(cfg)
@@ -156,26 +173,6 @@ func FixConfig(cfg *Config) {
 	if cfg.Endpoint == "" {
 		cfg.Endpoint = DefaultEndpoint
 	}
-}
-
-// GetPort parses suffix from endpoint & returns integer after last ":" (otherwise it returns 0)
-func (cfg *Config) GetPort() int {
-	if cfg.Endpoint != "" && cfg.Endpoint != ":" {
-		index := strings.LastIndex(cfg.Endpoint, ":")
-		if index >= 0 {
-			port, err := strconv.Atoi(cfg.Endpoint[index+1:])
-			if err == nil {
-				return port
-			}
-		}
-	}
-
-	return 0
-}
-
-// UseHTTPS returns true if server certificate and key is defined.
-func (cfg *Config) UseHTTPS() bool {
-	return cfg.ServerCertfile != "" && cfg.ServerKeyfile != ""
 }
 
 // DeclareHTTPPortFlag declares http port (with usage & default value) a flag for a particular plugin name

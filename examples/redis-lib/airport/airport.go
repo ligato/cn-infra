@@ -28,14 +28,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/namsral/flag"
 	"github.com/pkg/errors"
+	flag "github.com/spf13/pflag"
 
 	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/db/keyval"
 	"go.ligato.io/cn-infra/v2/db/keyval/kvproto"
 	"go.ligato.io/cn-infra/v2/db/keyval/redis"
-	"go.ligato.io/cn-infra/v2/examples/redis-lib/airport/model"
+	flight "go.ligato.io/cn-infra/v2/examples/redis-lib/airport/model"
 	"go.ligato.io/cn-infra/v2/logging"
 	"go.ligato.io/cn-infra/v2/logging/logrus"
 	"go.ligato.io/cn-infra/v2/utils/safeclose"

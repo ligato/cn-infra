@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/namsral/flag"
+	flag "github.com/spf13/pflag"
 )
 
 // *************************************************************************

@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/namsral/flag"
+	flag "github.com/spf13/pflag"
 
 	"go.ligato.io/cn-infra/v2/config"
 	"go.ligato.io/cn-infra/v2/infra"
