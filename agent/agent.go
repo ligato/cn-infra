@@ -73,23 +73,6 @@ type Agent interface {
 	Error() error
 }
 
-var (
-	DefaultAgent Agent = NewAgent()
-)
-
-func Init(opts ...Option) { DefaultAgent.Init(opts...) }
-func Start() error        { return DefaultAgent.Start() }
-func Stop() error         { return DefaultAgent.Stop() }
-func Wait() error         { return DefaultAgent.Wait() }
-func Run() error          { return DefaultAgent.Run() }
-
-/*func Run() error {
-	if err := Start(); err != nil {
-		return err
-	}
-	return Wait()
-}*/
-
 // NewAgent creates a new agent using given options and registers all flags
 // defined for plugins via config.ForPlugin.
 func NewAgent(opts ...Option) Agent {
@@ -126,9 +109,6 @@ func (a *agent) Init(opts ...Option) {
 	for _, o := range opts {
 		o(&a.opts)
 	}
-	/*if err := a.init(); err != nil {
-		agentLogger.Fatal("agent init error:", err)
-	}*/
 }
 
 func (a *agent) setup() error {
