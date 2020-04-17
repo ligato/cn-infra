@@ -34,7 +34,6 @@ func init() {
 	defaultViper.SetDefault(DirFlag, DirDefault)
 	defaultViper.BindEnv(DirFlag, "CONFIG_DIR")
 	defaultViper.AutomaticEnv()
-	//defaultViper.SetTypeByDefaultValue(true)
 }
 
 func Load() error                                     { return DefaultConf.Load() }
