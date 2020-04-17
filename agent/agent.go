@@ -17,6 +17,7 @@ package agent
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"runtime"
@@ -52,6 +53,8 @@ type Agent interface {
 	// close of quit channel (can be set via options) and then stops the agent.
 	// Returns nil if all the plugins were intialized and closed successfully.
 	Run() error
+	// Init applies given options to the agent.
+	Init(...Option)
 	// Start starts the agent with all the plugins, calling their Init() and optionally AfterInit().
 	// Returns nil if all the plugins were initialized successfully.
 	Start() error
@@ -60,7 +63,6 @@ type Agent interface {
 	Stop() error
 	// Options returns all agent's options configured via constructor.
 	Options() Options
-
 	// Wait waits until agent is stopped  and returns same error as Stop().
 	Wait() error
 	// After returns a channel that is closed before the agents is stopped.
@@ -71,25 +73,27 @@ type Agent interface {
 	Error() error
 }
 
+var (
+	DefaultAgent Agent = NewAgent()
+)
+
+func Init(opts ...Option) { DefaultAgent.Init(opts...) }
+func Start() error        { return DefaultAgent.Start() }
+func Stop() error         { return DefaultAgent.Stop() }
+func Wait() error         { return DefaultAgent.Wait() }
+func Run() error          { return DefaultAgent.Run() }
+
+/*func Run() error {
+	if err := Start(); err != nil {
+		return err
+	}
+	return Wait()
+}*/
+
 // NewAgent creates a new agent using given options and registers all flags
 // defined for plugins via config.ForPlugin.
 func NewAgent(opts ...Option) Agent {
-	options := newOptions(opts...)
-
-	if !flag.Parsed() {
-		config.DefineDirFlag()
-		for _, p := range options.Plugins {
-			name := p.String()
-			infraLogger.Debugf("registering flags for: %q", name)
-			config.DefineFlagsFor(name)
-		}
-		flag.Parse()
-	}
-
-	return &agent{
-		opts:   options,
-		tracer: measure.NewTracer("agent-plugins"),
-	}
+	return newAgent(opts...)
 }
 
 type agent struct {
@@ -104,6 +108,46 @@ type agent struct {
 
 	mu        sync.Mutex
 	curPlugin infra.Plugin
+}
+
+func newAgent(opts ...Option) *agent {
+	options := NewOptions(opts...)
+	return &agent{
+		opts:   options,
+		tracer: measure.NewTracer("agent-plugins"),
+	}
+}
+
+func (a *agent) Name() string {
+	return a.opts.Name
+}
+
+func (a *agent) Init(opts ...Option) {
+	for _, o := range opts {
+		o(&a.opts)
+	}
+	/*if err := a.init(); err != nil {
+		agentLogger.Fatal("agent init error:", err)
+	}*/
+}
+
+func (a *agent) setup() error {
+	if a.opts.initialized {
+		return nil
+	}
+	a.opts.initialized = true
+
+	if a.opts.Conf == nil {
+		a.opts.Conf = config.DefaultConf
+	}
+
+	if err := a.parseFlags(); err != nil {
+		return fmt.Errorf("flags error: %w", err)
+	}
+	if err := a.loadConfig(); err != nil {
+		return fmt.Errorf("config error: %w", err)
+	}
+	return nil
 }
 
 // Options returns the Options the agent was created with
@@ -130,11 +174,69 @@ func (a *agent) Run() error {
 	return a.Wait()
 }
 
+func (a *agent) parseFlags() error {
+	flagSet := flag.NewFlagSet(a.Name(), flag.ExitOnError)
+	flagSet.SortFlags = false
+	//flags.SetOutput(ioutil.Discard)
+
+	log.Printf("adding %d flags from CommandLine", strings.Count(flag.CommandLine.FlagUsages(), "\n"))
+	flagSet.AddFlagSet(flag.CommandLine)
+
+	// global flags
+	AddFlagsTo(flagSet)
+	//flags.AddGoFlagSet(goflag.CommandLine)
+	//flags.AddFlagSet(FlagSet)
+
+	for _, p := range a.opts.Plugins {
+		name := p.String()
+		infraLogger.Debugf("registering flags for: %q", name)
+		flagSet.AddFlagSet(config.GetFlagSetFor(name))
+	}
+
+	err := flagSet.Parse(os.Args[1:])
+	if errors.Is(err, flag.ErrHelp) {
+		os.Exit(2)
+	} else if err != nil {
+		//fmt.Fprintf(os.Stderr, "Usage of %s:\n", a.Name())
+		//fmt.Fprint(os.Stderr, flags.FlagUsages())
+		return err
+	}
+
+	ver, err := flagSet.GetBool("version")
+	if ver {
+		fmt.Fprintf(os.Stdout, "%s %s\n", a.opts.Name, a.opts.Version)
+		os.Exit(0)
+	} else if err != nil {
+		log.Println(err)
+	}
+
+	logLevel, err := flagSet.GetString("log-level")
+	if err == nil && logLevel != "" {
+		lvl, _ := logging.ParseLogLevel(logLevel)
+		agentLogger.Infoln("setting log level to:", lvl)
+		logging.DefaultLogger.SetLevel(lvl)
+	}
+
+	return nil
+}
+func (a *agent) loadConfig() error {
+	conf := a.opts.Conf
+	if err := conf.Load(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (a *agent) starter() error {
+	if err := a.setup(); err != nil {
+		return err
+	}
+
 	agentLogger.WithFields(logging.Fields{
 		"CommitHash": CommitHash,
 		"BuildDate":  BuildDate,
-	}).Infof("Starting agent version: %v", BuildVersion)
+		"Version":    BuildVersion,
+	}).Infof("Starting %s", a.opts.Name)
 
 	// If we want to properly handle cleanup when a SIG comes in *during*
 	// agent startup (ie, clean up after its finished) we need to register
@@ -150,7 +252,7 @@ func (a *agent) starter() error {
 		go func() {
 			select {
 			case s := <-sig:
-				agentLogger.Infof("Signal %v received during agent start, stopping", s)
+				agentLogger.Infof("Signal %v received during starting, stopping", s)
 				os.Exit(1)
 			case <-started:
 				// agent started
@@ -158,7 +260,7 @@ func (a *agent) starter() error {
 				a.mu.Lock()
 				curPlugin := a.curPlugin
 				a.mu.Unlock()
-				agentLogger.Errorf("Agent failed to start before timeout (%v) last plugin: %s", timeout, curPlugin)
+				agentLogger.Errorf("Failed to start before timeout (%v) last plugin: %s", timeout, curPlugin)
 				dumpStacktrace()
 				os.Exit(1)
 			}
@@ -176,8 +278,8 @@ func (a *agent) starter() error {
 	}
 	close(started)
 
-	agentLogger.Infof("Agent started with %d plugins (took %v)",
-		len(a.opts.Plugins), time.Since(t).Round(time.Millisecond))
+	agentLogger.Infof("Started %s with %d plugins (took %v)",
+		a.Name(), len(a.opts.Plugins), time.Since(t).Round(time.Millisecond))
 
 	a.stopCh = make(chan struct{}) // If we are started, we have a stopCh to signal stopping
 
@@ -207,7 +309,7 @@ func (a *agent) starter() error {
 }
 
 func (a *agent) start() error {
-	agentLogger.Debugf("starting %d plugins", len(a.opts.Plugins))
+	agentLogger.Debugf("starting init for %d plugins", len(a.opts.Plugins))
 
 	// Init plugins
 	for _, plugin := range a.opts.Plugins {
@@ -266,7 +368,7 @@ func (a *agent) start() error {
 }
 
 func (a *agent) stopper() error {
-	agentLogger.Infof("Stopping agent")
+	agentLogger.Infof("Stopping %s", a.Name())
 
 	stopped := make(chan struct{})
 	defer close(stopped)
@@ -288,7 +390,7 @@ func (a *agent) stopper() error {
 		return err
 	}
 
-	agentLogger.Info("Agent stopped")
+	agentLogger.Infof("Stopped %s", a.Name())
 
 	return nil
 }

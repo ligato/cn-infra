@@ -14,12 +14,13 @@
 
 package servicelabel
 
+import (
+	"path"
+)
+
 // default service key prefix, can be changed in the build time using ldflgs, e.g.
 // -ldflags '-X github.com/ligato/cn-infra/servicelabel.agentPrefix=/xyz/'
 var agentPrefix = "/vnf-agent/"
-
-// MicroserviceLabelEnvVar label is inferred from the flag name.
-const MicroserviceLabelEnvVar = "MICROSERVICE_LABEL"
 
 // ReaderAPI allows to read microservice label and key prefix associated with
 // this Agent instance.
@@ -55,5 +56,5 @@ func GetAllAgentsPrefix() string {
 // GetDifferentAgentPrefix returns the key prefix used by (another) Agent
 // instance from microservice labelled as <microserviceLabel>.
 func GetDifferentAgentPrefix(microserviceLabel string) string {
-	return agentPrefix + microserviceLabel + "/"
+	return path.Join(agentPrefix, microserviceLabel) + "/"
 }

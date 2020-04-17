@@ -15,7 +15,7 @@
 package main
 
 import (
-	"log"
+	"encoding/json"
 	"time"
 
 	"go.ligato.io/cn-infra/v2/agent"
@@ -24,39 +24,36 @@ import (
 	"go.ligato.io/cn-infra/v2/logging"
 )
 
-// PluginName is injected as the plugin name.
-// LocalFlavor.InfraDeps() will create and initialize a new flag used to make
-// the plugin config file name configurable for the user (via dedicated CLI
-// option and env. variable).
-// The flag name is composed of the plugin name and the suffix config.FlagSuffix.
-// The default (flag value) filename for the configuration file is the plugin
-// name with the extension ".conf".
-const PluginName = "example"
-
-// *************************************************************************
-// This file contains a PluginConfig show case:
-// - plugin binds it's configuration to an example specific Conf structure
-//   (see Init() to learn how the default configuration is set & how it can be
-//    overridden via flags)
-// - cn-infra helps by locating and parsing the configuration file
-//
-// ************************************************************************/
+// ExampleCfg defines config values as struct.
+type ExampleCfg struct {
+	Name        string
+	Description string
+	Port        uint
+	Settings    *struct {
+		Max     int
+		Timeout time.Duration
+	}
+}
 
 func main() {
+	const PluginName = "example"
+
 	p := &ExamplePlugin{
 		Deps: Deps{
-			PluginName:   infra.PluginName(PluginName),
-			Log:          logging.ForPlugin(PluginName),
-			PluginConfig: config.ForPlugin(PluginName),
+			PluginName: infra.PluginName(PluginName),
+			Log:        logging.ForPlugin(PluginName),
+			Config:     config.ForPlugin(PluginName),
 		},
 		exampleFinished: make(chan struct{}),
 	}
+
 	a := agent.NewAgent(
 		agent.AllPlugins(p),
 		agent.QuitOnClose(p.exampleFinished),
 	)
+
 	if err := a.Run(); err != nil {
-		log.Fatal(err)
+		logging.Fatalf("Run() error: %+v", err)
 	}
 }
 
@@ -64,7 +61,7 @@ func main() {
 type ExamplePlugin struct {
 	Deps
 
-	Conf *Conf // it is possible to set config value programmatically (can be overridden)
+	Conf *ExampleCfg
 
 	exampleFinished chan struct{}
 }
@@ -72,53 +69,48 @@ type ExamplePlugin struct {
 // Deps defines dependencies for ExamplePlugin.
 type Deps struct {
 	infra.PluginName
-	Log          logging.PluginLogger
-	PluginConfig config.PluginConfig
-}
-
-// Conf - example config binding
-type Conf struct {
-	Field1 string
-	Sleep  time.Duration
-	// even nested fields are possible
-}
-
-func (conf *Conf) String() string {
-	return "{Field1:" + conf.Field1 + ", Sleep:" + conf.Sleep.String() + "}"
+	Log    logging.PluginLogger
+	Config config.PluginConfig
 }
 
 // Init loads the configuration file assigned to ExamplePlugin (can be changed
 // via the example-config flag).
 // Loaded config is printed into the log file.
-func (plugin *ExamplePlugin) Init() (err error) {
-	plugin.Log.Info("Loading plugin config ", plugin.PluginConfig.GetConfigName())
+func (p *ExamplePlugin) Init() (err error) {
+	p.Log.Debug("Loading plugin config ", p.Config.GetConfigName())
 
-	if plugin.Conf == nil {
-		plugin.Conf = &Conf{Field1: "some default value"}
+	p.Conf = &ExampleCfg{
+		Name:        "defaultName",
+		Description: "no description",
+		Port:        9191,
 	}
+	p.Log.Infof("DEFAULT: %+v", p.Conf)
 
-	found, err := plugin.PluginConfig.LoadValue(plugin.Conf)
+	found, err := p.Config.LoadValue(p.Conf)
 	if err != nil {
-		plugin.Log.Error("Error loading config", err)
-	} else if found {
-		plugin.Log.Info("Loaded plugin config - found external configuration ", plugin.PluginConfig.GetConfigName())
+		p.Log.Error("Error loading config", err)
+	} else if !found {
+		p.Log.Warn("Config not found, using default values")
 	} else {
-		plugin.Log.Info("Loaded plugin config - default")
+		p.Log.Info("Config loaded, values from", p.Config.GetConfigName())
 	}
-	plugin.Log.Info("Plugin Config ", plugin.Conf)
+	p.Log.Infof("LOADED: %+v", p.Conf)
 
-	time.Sleep(plugin.Conf.Sleep)
-	close(plugin.exampleFinished)
+	b, err := json.MarshalIndent(p.Conf, "", "  ")
+	if err != nil {
+		return err
+	}
+	p.Log.Infof("CONFIG JSON: %s", b)
+
+	go func() {
+		time.Sleep(time.Second)
+		close(p.exampleFinished)
+	}()
 
 	return nil
 }
 
 // Close closes the plugin.
-func (plugin *ExamplePlugin) Close() (err error) {
+func (p *ExamplePlugin) Close() (err error) {
 	return nil
-}
-
-// Name returns name of the plugin.
-func (plugin *ExamplePlugin) Name() string {
-	return PluginName
 }
