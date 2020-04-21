@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/sirupsen/logrus"
 
 	"go.ligato.io/cn-infra/v2/logging"
@@ -181,5 +182,35 @@ func testLogWithLevelRedact(t *testing.T, logger *Logger, log logging.LogWithLev
 				t.Fatalf("expected log output to not contain password (%q)", pwd)
 			}
 		})
+	}
+}
+
+func TestNilPointer(t *testing.T) {
+	logger := NewLogger("testlogger")
+
+	var b bytes.Buffer
+	logger.SetOutput(&b)
+
+	// Redactor
+	var x *TestData
+	logger.Printf("pointer: %+v", x)
+
+	t.Logf("out: %s", b.String())
+	if out := b.String(); !strings.Contains(out, "nil") {
+		t.Fatalf("expected log output to contain nil")
+	}
+
+	b.Reset()
+
+	// proto.Message
+	type protoMsg struct {
+		proto.Message
+	}
+	var m *protoMsg
+	logger.Printf("protomsg: %+v", m)
+
+	t.Logf("out: %s", b.String())
+	if out := b.String(); !strings.Contains(out, "nil") {
+		t.Fatalf("expected log output to contain nil")
 	}
 }
