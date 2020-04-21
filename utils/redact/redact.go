@@ -16,6 +16,8 @@
 package redact
 
 import (
+	"reflect"
+
 	"github.com/golang/protobuf/proto"
 )
 
@@ -40,6 +42,10 @@ func Value(v interface{}) interface{} {
 
 	switch x := v.(type) {
 	case Redactor:
+		val := reflect.ValueOf(v)
+		if val.Kind() == reflect.Ptr && val.IsNil() {
+			return v
+		}
 		return x.Redacted()
 	case proto.Message:
 		return redactProto(x)
