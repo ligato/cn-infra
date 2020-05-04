@@ -40,7 +40,7 @@ type Options struct {
 	Name    string
 	Version string
 
-	Conf config.Config
+	Config config.Config
 	//FlagSet *config.FlagSet
 	Flags []config.Flag
 
@@ -51,26 +51,19 @@ type Options struct {
 	Context      context.Context
 
 	Plugins []infra.Plugin
-	//pluginMap   map[infra.Plugin]struct{}
-	//pluginNames map[string]struct{}
 
 	initialized bool
 }
 
-func NewOptions(opts ...Option) Options {
+func newOptions() Options {
 	opt := Options{
 		Name:         "agent",
 		Version:      "dev",
-		Conf:         config.DefaultConf,
+		Config:       config.DefaultConfig,
 		StartTimeout: DefaultStartTimeout,
 		StopTimeout:  DefaultStopTimeout,
-		QuitSignals: []os.Signal{
-			syscall.SIGINT,
-			syscall.SIGTERM,
-		},
-	}
-	for _, o := range opts {
-		o(&opt)
+		QuitSignals:  []os.Signal{syscall.SIGINT, syscall.SIGTERM},
+		Context:      context.Background(),
 	}
 	return opt
 }

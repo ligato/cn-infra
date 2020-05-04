@@ -94,11 +94,15 @@ type agent struct {
 }
 
 func newAgent(opts ...Option) *agent {
-	options := NewOptions(opts...)
-	return &agent{
+	options := newOptions()
+	for _, o := range opts {
+		o(&options)
+	}
+	a := &agent{
 		opts:   options,
 		tracer: measure.NewTracer("agent-plugins"),
 	}
+	return a
 }
 
 func (a *agent) Name() string {
@@ -109,25 +113,9 @@ func (a *agent) Init(opts ...Option) {
 	for _, o := range opts {
 		o(&a.opts)
 	}
-}
-
-func (a *agent) setup() error {
-	if a.opts.initialized {
-		return nil
+	if err := a.setup(); err != nil {
+		agentLogger.Warn("setup failed:", err)
 	}
-	a.opts.initialized = true
-
-	if a.opts.Conf == nil {
-		a.opts.Conf = config.DefaultConf
-	}
-
-	if err := a.parseFlags(); err != nil {
-		return fmt.Errorf("flags error: %w", err)
-	}
-	if err := a.loadConfig(); err != nil {
-		return fmt.Errorf("config error: %w", err)
-	}
-	return nil
 }
 
 // Options returns the Options the agent was created with
@@ -154,12 +142,31 @@ func (a *agent) Run() error {
 	return a.Wait()
 }
 
+func (a *agent) setup() error {
+	if a.opts.initialized {
+		return nil
+	}
+	a.opts.initialized = true
+
+	if a.opts.Config == nil {
+		a.opts.Config = config.DefaultConfig
+	}
+
+	if err := a.parseFlags(); err != nil {
+		return fmt.Errorf("flags error: %w", err)
+	}
+	if err := a.loadConfig(); err != nil {
+		return fmt.Errorf("config error: %w", err)
+	}
+	return nil
+}
+
 func (a *agent) parseFlags() error {
 	flagSet := flag.NewFlagSet(a.Name(), flag.ExitOnError)
 	flagSet.SortFlags = false
 	//flags.SetOutput(ioutil.Discard)
 
-	log.Printf("adding %d flags from CommandLine", strings.Count(flag.CommandLine.FlagUsages(), "\n"))
+	infraLogger.Debugf("adding %d flags from CommandLine", strings.Count(flag.CommandLine.FlagUsages(), "\n"))
 	flagSet.AddFlagSet(flag.CommandLine)
 
 	// global flags
@@ -199,9 +206,10 @@ func (a *agent) parseFlags() error {
 
 	return nil
 }
+
 func (a *agent) loadConfig() error {
-	conf := a.opts.Conf
-	if err := conf.Load(); err != nil {
+	conf := a.opts.Config
+	if err := conf.Read(); err != nil {
 		return err
 	}
 	return nil
