@@ -115,6 +115,7 @@ type Option func(*options)
 
 // WithCustomizedFlag is an option to customize config flag for plugin in ForPlugin.
 // The parameters are used to replace defaults in this order: flag name, default, usage.
+// DEPRECATED
 func WithCustomizedFlag(s ...string) Option {
 	return func(o *options) {
 		if len(s) > 0 {
@@ -161,7 +162,7 @@ func ForPlugin(name string, opts ...Option) PluginConfig {
 	}
 
 	if opt.Conf == nil {
-		opt.Conf = DefaultConf
+		opt.Conf = DefaultConfig
 	}
 
 	if opt.FlagName != "" && opt.flagSet.Lookup(opt.FlagName) == nil {
@@ -225,13 +226,16 @@ func (p *pluginConfig) LoadValue(cfg interface{}) (found bool, err error) {
 	conf := p.conf
 
 	if logger.GetLevel() >= logging.TraceLevel {
-		conf.(*Conf).Debug()
+		conf.(*config).Debug()
 	}
 
-	//var def map[string]interface{}
 	def := cfgToStringMap(cfg)
-	log.Tracef("setting default to: %+v", def)
+	log.Tracef("setting default %s config to: %+v", p.name, def)
 	conf.SetDefault(p.name, def)
+
+	if logger.GetLevel() >= logging.TraceLevel {
+		conf.(*config).Debug()
+	}
 
 	cfgName := p.GetConfigName()
 	/*if cfgName == "" {
@@ -239,7 +243,11 @@ func (p *pluginConfig) LoadValue(cfg interface{}) (found bool, err error) {
 	}*/
 	if cfgName != "" {
 		log.Tracef("pluginConfig.cfgName: %q", cfgName)
-		data, err := parseYamlFileForMerge(cfgName)
+		var data map[string]interface{}
+		if sub := p.conf.Sub(p.name); sub != nil {
+			data = sub.All()
+		}
+		err := parseYamlFileForMerge(cfgName, &data)
 		if err != nil {
 			return false, err
 		}
@@ -251,14 +259,14 @@ func (p *pluginConfig) LoadValue(cfg interface{}) (found bool, err error) {
 			log.Debugf("ERROR merging from plugin config file: %v", err)
 			return false, err
 		}
-		log.Debugf("merged %q OK: %+v", p.name, conf.(*Conf).AllKeys())
+		log.Debugf("merged %q OK", p.name /*, conf.(*config).AllKeys()*/)
 		if logger.GetLevel() >= logging.TraceLevel {
-			conf.(*Conf).Debug()
+			conf.(*config).Debug()
 		}
 	}
 
 	pluginCfg := conf.Get(p.name)
-	if pluginCfg == nil || !conf.(*Conf).InConfig(p.name) {
+	if pluginCfg == nil || !conf.(*config).InConfig(p.name) {
 		return false, nil
 	}
 	log.Tracef("pluginCfg: %+v", pluginCfg)
@@ -279,7 +287,7 @@ func cfgToStringMap(cfg interface{}) map[string]interface{} {
 	if err != nil {
 		return nil
 	}
-	m := make(map[string]interface{})
+	var m map[string]interface{}
 	if err := json.Unmarshal(b, &m); err != nil {
 		return nil
 	}

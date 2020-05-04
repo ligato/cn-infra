@@ -24,18 +24,15 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-func parseYamlFileForMerge(path string) (map[string]interface{}, error) {
+func parseYamlFileForMerge(path string, data interface{}) error {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	var data map[string]interface{}
-	if err := yaml.Unmarshal(b, &data); err != nil {
-		return nil, err
+	if err := yaml.Unmarshal(b, data); err != nil {
+		return err
 	}
-
-	return data, nil
+	return nil
 }
 
 // ParseConfigFromYamlFile parses a configuration from a file in YAML

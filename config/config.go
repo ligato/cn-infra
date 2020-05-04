@@ -16,28 +16,32 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/kr/pretty"
+	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
+	_ "github.com/spf13/viper/remote"
 
 	"go.ligato.io/cn-infra/v2/logging"
 	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
-// Config defines API for config management.
+// Config defines an API for handling configuration.
 type Config interface {
-	Load() error
-	LoadFrom(io.Reader) error
+	Read() error
+	ReadFrom(io.Reader) error
 	MergeFrom(io.Reader) error
 	MergeMap(map[string]interface{}) error
 	WriteAs(filename string) error
 
+	SetDefault(key string, val interface{})
 	BindEnv(key string, env string) error
 	BindFlag(key string, flag *Flag) error
-	SetDefault(key string, val interface{})
 	Set(key string, val interface{})
 
 	Sub(key string) Config
@@ -66,31 +70,26 @@ type Config interface {
 
 // NewConfig returns fresh new Config instance.
 func NewConfig() Config {
-	v := viper.NewWithOptions()
+	v := viper.New()
 	return newConf(v)
 }
 
-var logger = logrus.NewLogger("config")
-
-func init() {
-	if debug := os.Getenv("DEBUG"); strings.Contains(debug, "config") {
-		logger.SetLevel(logging.TraceLevel)
-	}
+// NewConfigFromFile returns new Config instance that reads from given file.
+func NewConfigFromFile(file string) Config {
+	v := viper.New()
+	v.SetConfigFile(file)
+	return newConf(v)
 }
 
-type Conf struct {
+type config struct {
 	*viper.Viper
 }
 
-func newConf(v *viper.Viper) *Conf {
-	if v.Get(DirFlag) == nil {
-		v.SetDefault(DirFlag, ".")
-		v.BindEnv(DirFlag, "CONFIG_DIR")
-	}
-	return &Conf{Viper: v}
+func newConf(v *viper.Viper) *config {
+	return &config{Viper: v}
 }
 
-func (c *Conf) Load() error {
+func (c *config) Read() error {
 	configDir := c.Viper.GetString(DirFlag)
 
 	logger.Debugf("adding config path: %q", configDir)
@@ -103,34 +102,33 @@ func (c *Conf) Load() error {
 			return err
 		}
 	}
-
 	logger.Debugf("loaded config from: %q", c.Viper.ConfigFileUsed())
 
 	if logger.GetLevel() >= logging.TraceLevel {
-		c.Viper.Debug()
+		c.Debug()
 	}
 
 	return nil
 }
 
-func (c *Conf) LoadFrom(r io.Reader) error {
+func (c *config) ReadFrom(r io.Reader) error {
 	return c.Viper.ReadConfig(r)
 }
 
-func (c *Conf) MergeFrom(r io.Reader) error {
+func (c *config) MergeFrom(r io.Reader) error {
 	return c.Viper.MergeConfig(r)
 }
 
-func (c *Conf) MergeMap(m map[string]interface{}) error {
+func (c *config) MergeMap(m map[string]interface{}) error {
 	return c.Viper.MergeConfigMap(m)
 }
 
-func (c *Conf) WriteAs(filename string) error {
-	logger.Tracef("Conf.WriteAs %q", filename)
+func (c *config) WriteAs(filename string) error {
+	logger.Tracef("config.WriteAs %q", filename)
 	return c.Viper.WriteConfigAs(filename)
 }
 
-func (c *Conf) BindEnv(key string, env string) error {
+func (c *config) BindEnv(key string, env string) error {
 	logger.Tracef("bind config key %q to ENV %q", key, env)
 	err := c.Viper.BindEnv(key, env)
 	if err != nil {
@@ -139,7 +137,7 @@ func (c *Conf) BindEnv(key string, env string) error {
 	return err
 }
 
-func (c *Conf) BindFlag(key string, flag *Flag) error {
+func (c *config) BindFlag(key string, flag *Flag) error {
 	logger.Tracef("bind config key %q to FLAG %q", key, flag.Name)
 	err := c.Viper.BindPFlag(key, flag)
 	if err != nil {
@@ -148,8 +146,8 @@ func (c *Conf) BindFlag(key string, flag *Flag) error {
 	return err
 }
 
-func (c *Conf) Sub(key string) Config {
-	logger.Tracef("Conf.Sub %q", key)
+func (c *config) Sub(key string) Config {
+	logger.Tracef("config.Sub %q", key)
 	sub := c.Viper.Sub(key)
 	if sub == nil {
 		return nil
@@ -157,17 +155,47 @@ func (c *Conf) Sub(key string) Config {
 	return newConf(sub)
 }
 
-func (c *Conf) All() map[string]interface{} {
-	logger.Debugf("Conf.All: %+v", c.All())
+func (c *config) All() map[string]interface{} {
 	return c.Viper.AllSettings()
 }
 
-func (c *Conf) Unmarshal(cfg interface{}) error {
-	logger.Tracef("Conf.Unmarshal")
-	return c.Viper.Unmarshal(cfg)
+func (c *config) Unmarshal(cfg interface{}) error {
+	logger.Tracef("config.Unmarshal")
+	return c.Viper.Unmarshal(cfg, func(c *mapstructure.DecoderConfig) { c.TagName = "json" })
 }
 
-func (c *Conf) UnmarshalKey(key string, cfg interface{}) error {
-	logger.Tracef("Conf.UnmarshalKey %q", key)
-	return c.Viper.UnmarshalKey(key, cfg)
+func (c *config) UnmarshalKey(key string, cfg interface{}) error {
+	logger.Tracef("config.UnmarshalKey %q", key)
+	return c.Viper.UnmarshalKey(key, cfg, func(c *mapstructure.DecoderConfig) { c.TagName = "json" })
+}
+func (c *config) Dump() {
+	fmt.Println(" ===  CONFIG DUMP  ===")
+	pretty.Printf(" VIPER: %# v\n", c.All())
+	fmt.Println(" --- ")
+}
+
+func (c *config) Debug() {
+	/*
+		fmt.Printf("Aliases:\n%#v\n", v.aliases)
+		fmt.Printf("Override:\n%#v\n", v.override)
+		fmt.Printf("PFlags:\n%#v\n", v.pflags)
+		fmt.Printf("Env:\n%#v\n", v.env)
+		fmt.Printf("Key/Value Store:\n%#v\n", v.kvstore)
+		fmt.Printf("Config:\n%#v\n", v.config)
+		fmt.Printf("Defaults:\n%#v\n", v.defaults)
+	*/
+	fmt.Println(" ===  CONFIG DUMP  ===")
+	//pp.Printf(" VIPER: %#v\n", c.Viper)
+	c.Viper.Debug()
+	fmt.Println(" ---  +  +  +  +  ---")
+	pretty.Printf(" VIPER: %# v\n", c.All())
+	fmt.Println(" ---  ---  ---")
+}
+
+var logger = logrus.NewLogger("config")
+
+func init() {
+	if debug := os.Getenv("DEBUG"); strings.Contains(debug, "config") {
+		logger.SetLevel(logging.TraceLevel)
+	}
 }
