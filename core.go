@@ -32,18 +32,6 @@ var WireDefaultLogRegistry = wire.NewSet(
 	wire.InterfaceValue(new(logging.Registry), logging.DefaultRegistry),
 )
 
-/*func CoreProvider(
-	ServiceLabel servicelabel.ReaderAPI,
-	StatusCheck statuscheck.PluginStatusWriter,
-	LogRegistry logging.Registry,
-) Core {
-	return Core{
-		ServiceLabel: ServiceLabel,
-		StatusCheck:  StatusCheck,
-		LogRegistry:  LogRegistry,
-	}
-}*/
-
 type Core struct {
 	LogRegistry  logging.Registry
 	LogManager   *logmanager.Plugin
