@@ -48,6 +48,8 @@ type Deps struct {
 
 // Init initializes variables.
 func (p *Plugin) Init() error {
+	p.Log.Debug("Init()")
+
 	p.registrations = make(map[string]*registration)
 	return nil
 }

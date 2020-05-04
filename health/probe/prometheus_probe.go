@@ -88,7 +88,7 @@ func (p *Plugin) registerPrometheusProbe() error {
 	)
 	allPluginStatusMap := p.StatusCheck.GetAllPluginStatus()
 	for k, v := range allPluginStatusMap {
-		p.Log.Infof("k=%v, v=%v, state=%v", k, v, v.State)
+		p.Log.Tracef("k=%v, v=%v, state=%v", k, v, v.State)
 		p.Prometheus.RegisterGaugeFunc(DefaultHealthPath,
 			Namespace, Subsystem,
 			DependencyHealthName, DependencyHealthHelp,
@@ -114,11 +114,11 @@ func (p *Plugin) getServiceHealth() float64 {
 
 // getDependencyHealth returns plugin health status
 func (p *Plugin) getDependencyHealth(pluginName string, pluginStatus *status.PluginStatus) func() float64 {
-	p.Log.Infof("DependencyHealth for plugin %v: %v", pluginName, float64(pluginStatus.State))
+	p.Log.Tracef("DependencyHealth for plugin %v: %v", pluginName, float64(pluginStatus.State))
 
 	return func() float64 {
 		health := float64(pluginStatus.State)
-		p.Log.Infof("Dependency Health %v: %v", pluginName, health)
+		p.Log.Tracef("Dependency Health %v: %v", pluginName, health)
 		return health
 	}
 }

@@ -17,11 +17,11 @@ package rest
 import (
 	"fmt"
 
+	"golang.org/x/time/rate"
+
 	"go.ligato.io/cn-infra/v2/config"
 	"go.ligato.io/cn-infra/v2/logging"
 	"go.ligato.io/cn-infra/v2/utils/ratelimit"
-
-	"golang.org/x/time/rate"
 )
 
 // DefaultPlugin is a default instance of Plugin.
@@ -43,8 +43,9 @@ func NewPlugin(opts ...Option) *Plugin {
 	if p.Deps.Cfg == nil {
 		p.Deps.Cfg = config.ForPlugin(p.String(),
 			config.WithExtraFlags(func(flags *config.FlagSet) {
-				flags.String(httpPortFlag(p.PluginName), DefaultHTTPPort, fmt.Sprintf(
-					"Configure %q server port", p.String()))
+				flags.String("http-port", DefaultHTTPPort, fmt.Sprintf("Configure %q server port", p.String()))
+				f := flags.Lookup("http-port")
+				config.DefaultConfig.BindFlag("http.port", f)
 			}))
 	}
 

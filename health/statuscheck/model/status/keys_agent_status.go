@@ -14,12 +14,16 @@
 
 package status
 
+import "path"
+
 const (
 	// StatusPrefix is the relative key prefix for the agent/plugin status.
 	StatusPrefix = "check/status/v1/"
 	// AgentStatusPrefix is the relative key prefix for the agent status,
 	// filtering out statuses of individual plugins.
 	AgentStatusPrefix = StatusPrefix + "agent"
+
+	PluginStatusPrefix = StatusPrefix + "plugin"
 )
 
 // AgentStatusKey returns the key used in ETCD to store the operational status
@@ -31,5 +35,5 @@ func AgentStatusKey() string {
 // PluginStatusKey returns the key used in ETCD to store the operational status
 // of the vpp agent plugin.
 func PluginStatusKey(pluginLabel string) string {
-	return StatusPrefix + "plugin/" + pluginLabel
+	return path.Join(PluginStatusPrefix, pluginLabel)
 }

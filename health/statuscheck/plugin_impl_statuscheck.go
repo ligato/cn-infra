@@ -29,15 +29,29 @@ import (
 )
 
 var (
-	// PeriodicWriteTimeout is frequency of periodic writes of state data into ETCD.
-	PeriodicWriteTimeout = time.Second * 10
-	// PeriodicProbingTimeout is frequency of periodic plugin state probing.
-	PeriodicProbingTimeout = time.Second * 5
+	// DefaultPublishPeriod is frequency of periodic writes of state data into ETCD.
+	DefaultPublishPeriod = time.Second * 10
+	// DefaultProbingPeriod is frequency of periodic plugin state probing.
+	DefaultProbingPeriod = time.Second * 5
 )
+
+type Config struct {
+	PublishPeriod time.Duration
+	ProbingPeriod time.Duration
+}
+
+func DefaultConfig() *Config {
+	return &Config{
+		PublishPeriod: DefaultPublishPeriod,
+		ProbingPeriod: DefaultProbingPeriod,
+	}
+}
 
 // Plugin struct holds all plugin-related data.
 type Plugin struct {
 	Deps
+
+	conf *Config
 
 	access sync.Mutex // lock for the Plugin data
 
@@ -60,7 +74,13 @@ type Deps struct {
 
 // Init prepares the initial status data.
 func (p *Plugin) Init() error {
-	// write initial status data into ETCD
+	p.Log.Debug("Init()")
+
+	if p.conf == nil {
+		p.conf = DefaultConfig()
+	}
+
+	// prepare initial status
 	p.agentStat = &status.AgentStatus{
 		State:        status.OperationalState_INIT,
 		BuildVersion: agent.BuildVersion,
@@ -69,14 +89,8 @@ func (p *Plugin) Init() error {
 		StartTime:    time.Now().Unix(),
 		LastChange:   time.Now().Unix(),
 	}
-
-	// initial empty interface status
 	p.interfaceStat = &status.InterfaceStats{}
-
-	// init pluginStat map
 	p.pluginStat = make(map[string]*status.PluginStatus)
-
-	// init map with plugin state probes
 	p.pluginProbe = make(map[string]PluginStateProbe)
 
 	// prepare context for all go routines
@@ -88,65 +102,108 @@ func (p *Plugin) Init() error {
 // AfterInit starts go routines for periodic probing and periodic updates.
 // Initial state data are published via the injected transport.
 func (p *Plugin) AfterInit() error {
-	p.access.Lock()
-	defer p.access.Unlock()
 
-	// do periodic status probing for plugins that have provided the probe function
-	go p.periodicProbing(p.ctx)
-
-	// do periodic updates of the state data in ETCD
-	go p.periodicUpdates(p.ctx)
-
-	p.publishAgentData()
-
-	// transition to OK state if there are no plugins
-	if len(p.pluginStat) == 0 {
-		p.agentStat.State = status.OperationalState_OK
-		p.agentStat.LastChange = time.Now().Unix()
-		p.publishAgentData()
-	}
+	p.StartProbing()
 
 	return nil
 }
 
 // Close stops go routines for periodic probing and periodic updates.
 func (p *Plugin) Close() error {
-	p.cancel()
+	if p.cancel != nil {
+		p.cancel()
+	}
 	p.wg.Wait()
-
 	return nil
+}
+
+func (p *Plugin) StartProbing() {
+	// do periodic status probing for plugins that have provided the probe function
+	p.wg.Add(1)
+	go p.periodicProbing(p.ctx)
+
+	// do periodic updates of the state data in ETCD
+	p.wg.Add(1)
+	go p.periodicUpdates(p.ctx)
+
+	p.publishInitial()
+}
+
+func (p *Plugin) publishInitial() {
+	p.access.Lock()
+	defer p.access.Unlock()
+
+	// transition to OK state if there are no plugins
+	if len(p.pluginStat) == 0 {
+		p.agentStat.State = status.OperationalState_OK
+		p.agentStat.LastChange = time.Now().Unix()
+	}
+	if err := p.publishAgentData(); err != nil {
+		p.Log.Warnf("publishing agent status failed: %v", err)
+	}
+}
+
+// GetAllPluginStatus returns a map containing pluginname and its status, for all plugins
+func (p *Plugin) GetAllPluginStatus() map[string]*status.PluginStatus {
+	//TODO - used currently, will be removed after incoporating improvements for exposing copy of map
+	p.access.Lock()
+	defer p.access.Unlock()
+
+	return p.pluginStat
+}
+
+// GetInterfaceStats returns current global operational status of interfaces
+func (p *Plugin) GetInterfaceStats() status.InterfaceStats {
+	p.access.Lock()
+	defer p.access.Unlock()
+
+	return *p.interfaceStat
+}
+
+// GetAgentStatus return current global operational state of the agent.
+func (p *Plugin) GetAgentStatus() status.AgentStatus {
+	p.access.Lock()
+	defer p.access.Unlock()
+	return *p.agentStat
 }
 
 // Register a plugin for status change reporting.
 func (p *Plugin) Register(pluginName infra.PluginName, probe PluginStateProbe) {
-	p.access.Lock()
-	defer p.access.Unlock()
+	if pluginName == "" {
+		p.Log.Warnf("registering empty plugin name")
+		return
+	}
 
 	stat := &status.PluginStatus{
 		State:      status.OperationalState_INIT,
 		LastChange: time.Now().Unix(),
 	}
-	p.pluginStat[string(pluginName)] = stat
 
+	p.access.Lock()
+	defer p.access.Unlock()
+
+	p.pluginStat[string(pluginName)] = stat
 	if probe != nil {
 		p.pluginProbe[string(pluginName)] = probe
 	}
 
-	// write initial status data into ETCD
-	p.publishPluginData(pluginName, stat)
+	p.Log.Tracef("Plugin %v: status check probe registered", pluginName)
 
-	p.Log.Debugf("Plugin %v: status check probe registered", pluginName)
+	// write initial status data into ETCD
+	if err := p.publishPluginData(pluginName.String(), stat); err != nil {
+		p.Log.Warnf("publishing plugin status failed: %v", err)
+	}
 }
 
 // ReportStateChange can be used to report a change in the status of a previously registered plugin.
 func (p *Plugin) ReportStateChange(pluginName infra.PluginName, state PluginState, lastError error) {
-	p.reportStateChange(pluginName, state, lastError)
+	p.reportStateChange(pluginName.String(), state, lastError)
 }
 
 // ReportStateChangeWithMeta can be used to report a change in the status of a previously registered plugin and report
 // the specific metadata state
 func (p *Plugin) ReportStateChangeWithMeta(pluginName infra.PluginName, state PluginState, lastError error, meta proto.Message) {
-	p.reportStateChange(pluginName, state, lastError)
+	p.reportStateChange(pluginName.String(), state, lastError)
 
 	switch data := meta.(type) {
 	case *status.InterfaceStats_Interface:
@@ -156,13 +213,13 @@ func (p *Plugin) ReportStateChangeWithMeta(pluginName infra.PluginName, state Pl
 	}
 }
 
-func (p *Plugin) reportStateChange(pluginName infra.PluginName, state PluginState, lastError error) {
+func (p *Plugin) reportStateChange(pluginName string, state PluginState, lastError error) {
 	p.access.Lock()
 	defer p.access.Unlock()
 
-	stat, ok := p.pluginStat[string(pluginName)]
+	stat, ok := p.pluginStat[pluginName]
 	if !ok {
-		p.Log.Errorf("Unregistered plugin %s is reporting the state, ignoring.", pluginName)
+		p.Log.Errorf("Unregistered plugin %s is reporting state, ignoring it.", pluginName)
 		return
 	}
 
@@ -180,8 +237,11 @@ func (p *Plugin) reportStateChange(pluginName infra.PluginName, state PluginStat
 		return
 	}
 
-	p.Log.WithFields(map[string]interface{}{"plugin": pluginName, "state": state, "lastErr": lastError}).
-		Info("Agent plugin state update.")
+	p.Log.WithFields(logging.Fields{
+		"plugin":  pluginName,
+		"state":   state,
+		"lastErr": lastError,
+	}).Info("Agent plugin state update.")
 
 	// update plugin state
 	stat.State = stateToProto(state)
@@ -191,7 +251,9 @@ func (p *Plugin) reportStateChange(pluginName infra.PluginName, state PluginStat
 	} else {
 		stat.Error = ""
 	}
-	p.publishPluginData(pluginName, stat)
+	if err := p.publishPluginData(pluginName, stat); err != nil {
+		p.Log.Warnf("publishing plugin status failed: %v", err)
+	}
 
 	// update global state
 	p.agentStat.State = stateToProto(state)
@@ -203,7 +265,7 @@ func (p *Plugin) reportStateChange(pluginName infra.PluginName, state PluginStat
 	}
 	var pluginStatusExists bool
 	for _, pluginStatus := range p.agentStat.Plugins {
-		if pluginStatus.Name == pluginName.String() {
+		if pluginStatus.Name == pluginName {
 			pluginStatusExists = true
 			pluginStatus.State = stateToProto(state)
 			pluginStatus.Error = lastErr
@@ -212,12 +274,14 @@ func (p *Plugin) reportStateChange(pluginName infra.PluginName, state PluginStat
 	// Status for new plugin
 	if !pluginStatusExists {
 		p.agentStat.Plugins = append(p.agentStat.Plugins, &status.PluginStatus{
-			Name:  pluginName.String(),
+			Name:  pluginName,
 			State: stateToProto(state),
 			Error: lastErr,
 		})
 	}
-	p.publishAgentData()
+	if err := p.publishAgentData(); err != nil {
+		p.Log.Warnf("publishing agent status failed: %v", err)
+	}
 }
 
 func (p *Plugin) reportInterfaceStateChange(data *status.InterfaceStats_Interface) {
@@ -263,37 +327,41 @@ func (p *Plugin) publishAgentData() error {
 }
 
 // publishPluginData writes the current plugin state into ETCD.
-func (p *Plugin) publishPluginData(pluginName infra.PluginName, pluginStat *status.PluginStatus) error {
+func (p *Plugin) publishPluginData(pluginName string, pluginStat *status.PluginStatus) error {
 	pluginStat.LastUpdate = time.Now().Unix()
 	if p.Transport != nil {
-		return p.Transport.Put(status.PluginStatusKey(string(pluginName)), pluginStat)
+		return p.Transport.Put(status.PluginStatusKey(pluginName), pluginStat)
 	}
 	return nil
 }
 
-// publishAllData publishes global agent + all plugins state data into ETCD.
-func (p *Plugin) publishAllData() {
+// publishAll publishes global agent + all plugins state data into ETCD.
+func (p *Plugin) publishAll() error {
 	p.access.Lock()
 	defer p.access.Unlock()
 
-	p.publishAgentData()
-	for name, s := range p.pluginStat {
-		p.publishPluginData(infra.PluginName(name), s)
+	if err := p.publishAgentData(); err != nil {
+		return err
 	}
+	for name, s := range p.pluginStat {
+		if err := p.publishPluginData(name, s); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // periodicProbing does periodic status probing for all plugins
 // that have registered probe functions.
 func (p *Plugin) periodicProbing(ctx context.Context) {
-	p.wg.Add(1)
 	defer p.wg.Done()
 
 	for {
 		select {
-		case <-time.After(PeriodicProbingTimeout):
+		case <-time.After(p.conf.ProbingPeriod):
 			for pluginName, probe := range p.pluginProbe {
-				state, lastErr := probe()
-				p.ReportStateChange(infra.PluginName(pluginName), state, lastErr)
+				state, err := probe()
+				p.reportStateChange(pluginName, state, err)
 				// just check in-between probes if the plugin is closing
 				select {
 				case <-ctx.Done():
@@ -311,49 +379,19 @@ func (p *Plugin) periodicProbing(ctx context.Context) {
 
 // periodicUpdates does periodic writes of state data into ETCD.
 func (p *Plugin) periodicUpdates(ctx context.Context) {
-	p.wg.Add(1)
 	defer p.wg.Done()
 
 	for {
 		select {
-		case <-time.After(PeriodicWriteTimeout):
-			p.publishAllData()
+		case <-time.After(p.conf.PublishPeriod):
+			if err := p.publishAll(); err != nil {
+				p.Log.Warnf("periodic status publishing failed: %v", err)
+			}
 
 		case <-ctx.Done():
 			return
 		}
 	}
-}
-
-// getAgentState return current global operational state of the agent.
-func (p *Plugin) getAgentState() status.OperationalState {
-	p.access.Lock()
-	defer p.access.Unlock()
-	return p.agentStat.State
-}
-
-// GetAllPluginStatus returns a map containing pluginname and its status, for all plugins
-func (p *Plugin) GetAllPluginStatus() map[string]*status.PluginStatus {
-	//TODO - used currently, will be removed after incoporating improvements for exposing copy of map
-	p.access.Lock()
-	defer p.access.Unlock()
-
-	return p.pluginStat
-}
-
-// GetInterfaceStats returns current global operational status of interfaces
-func (p *Plugin) GetInterfaceStats() status.InterfaceStats {
-	p.access.Lock()
-	defer p.access.Unlock()
-
-	return *p.interfaceStat
-}
-
-// GetAgentStatus return current global operational state of the agent.
-func (p *Plugin) GetAgentStatus() status.AgentStatus {
-	p.access.Lock()
-	defer p.access.Unlock()
-	return *p.agentStat
 }
 
 // stateToProto converts agent state type into protobuf agent state type.

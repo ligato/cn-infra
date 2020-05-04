@@ -29,9 +29,24 @@ import (
 	"go.ligato.io/cn-infra/v2/infra"
 )
 
+const (
+	DefaultHost     = "0.0.0.0"
+	DefaultHTTPPort = "9111"
+	DefaultEndpoint = DefaultHost + ":" + DefaultHTTPPort
+)
+
+func DefaultConfig() *Config {
+	return &Config{
+		Endpoint: DefaultEndpoint,
+	}
+}
+
 // Config is a configuration for GRPC netListener
 // It is meant to be extended with security (TLS...)
 type Config struct {
+	// Disabled disables plugin
+	Disabled bool `json:"disabled"`
+
 	// Endpoint is an address of GRPC netListener
 	Endpoint string `json:"endpoint"`
 

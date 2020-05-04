@@ -44,7 +44,7 @@ const (
 type Plugin struct {
 	Deps
 
-	*Config
+	config *Config
 }
 
 // Deps groups dependencies injected into the plugin so that they are
@@ -58,57 +58,64 @@ type Deps struct {
 
 // Init does nothing
 func (p *Plugin) Init() error {
-	if p.Cfg != nil {
-		if p.Config == nil {
-			p.Config = NewConf()
-		}
+	p.Log.Debug("Init()")
 
-		_, err := p.Cfg.LoadValue(p.Config)
+	if p.config == nil {
+		p.config = DefaultConfig()
+	}
+	if p.Cfg != nil {
+		_, err := p.Cfg.LoadValue(p.config)
 		if err != nil {
 			return err
 		}
-		p.Log.Debugf("logs config: %+v", p.Config)
+	}
+	p.Log.Debugf("logs config: %+v", p.config)
 
-		// Handle default log level. Prefer value from environmental variable
-		defaultLogLvl := os.Getenv("INITIAL_LOGLVL")
-		if defaultLogLvl == "" {
-			defaultLogLvl = p.Config.DefaultLevel
-		}
-		if defaultLogLvl != "" {
-			if err := p.LogRegistry.SetLevel("default", defaultLogLvl); err != nil {
-				p.Log.Warnf("setting default log level failed: %v", err)
-			} else {
-				// All loggers created up to this point were created with initial log level set (defined
-				// via INITIAL_LOGLVL env. variable with value 'info' by default), so at first, let's set default
-				// log level for all of them.
-				for loggerName := range p.LogRegistry.ListLoggers() {
-					logger, exists := p.LogRegistry.Lookup(loggerName)
-					if !exists {
-						continue
-					}
-					lvl, _ := logging.ParseLogLevel(defaultLogLvl)
-					logger.SetLevel(lvl)
+	// Handle default log level. Prefer value from environmental variable
+	defaultLogLvl := os.Getenv("INITIAL_LOGLVL")
+	if defaultLogLvl == "" {
+		defaultLogLvl = p.config.DefaultLevel
+	}
+	if defaultLogLvl != "" {
+		if err := p.LogRegistry.SetLevel("default", defaultLogLvl); err != nil {
+			p.Log.Warnf("setting default log level failed: %v", err)
+		} else {
+			// All loggers created up to this point were created with initial log level set (defined
+			// via INITIAL_LOGLVL env. variable with value 'info' by default), so at first, let's set default
+			// log level for all of them.
+			for loggerName := range p.LogRegistry.ListLoggers() {
+				logger, exists := p.LogRegistry.Lookup(loggerName)
+				if !exists {
+					continue
 				}
+				lvl, _ := logging.ParseLogLevel(defaultLogLvl)
+				logger.SetLevel(lvl)
 			}
 		}
+	}
 
-		// Handle config file log levels
-		for _, logCfgEntry := range p.Config.Loggers {
-			// Put log/level entries from configuration file to the registry.
-			if err := p.LogRegistry.SetLevel(logCfgEntry.Name, logCfgEntry.Level); err != nil {
-				// Intentionally just log warn & not propagate the error (it is minor thing to interrupt startup)
-				p.Log.Warnf("setting log level %s for logger %s failed: %v",
-					logCfgEntry.Level, logCfgEntry.Name, err)
+	// Handle config file log levels
+	for _, logCfgEntry := range p.config.Loggers {
+		// Put log/level entries from configuration file to the registry.
+		if err := p.LogRegistry.SetLevel(logCfgEntry.Name, logCfgEntry.Level); err != nil {
+			// Intentionally just log warn & not propagate the error (it is minor thing to interrupt startup)
+			p.Log.Warnf("setting log level %s for logger %s failed: %v",
+				logCfgEntry.Level, logCfgEntry.Name, err)
+		}
+	}
+	if len(p.config.Hooks) > 0 {
+		p.Log.Info("configuring log hooks")
+		for hookName, hookConfig := range p.config.Hooks {
+			if err := p.addHook(hookName, hookConfig); err != nil {
+				p.Log.Warnf("configuring log hook %s failed: %v", hookName, err)
 			}
 		}
-		if len(p.Config.Hooks) > 0 {
-			p.Log.Info("configuring log hooks")
-			for hookName, hookConfig := range p.Config.Hooks {
-				if err := p.addHook(hookName, hookConfig); err != nil {
-					p.Log.Warnf("configuring log hook %s failed: %v", hookName, err)
-				}
-			}
-		}
+	}
+
+	if p.HTTP != nil {
+		p.HTTP.RegisterHTTPHandler(fmt.Sprintf("/log/{%s}/{%s}",
+			loggerVarName, levelVarName), p.logLevelHandler, "PUT")
+		p.HTTP.RegisterHTTPHandler("/log/list", p.listLoggersHandler, "GET")
 	}
 
 	return nil
@@ -120,11 +127,6 @@ func (p *Plugin) Init() error {
 // - Set log level for a registered logger:
 //   > curl -X PUT http://localhost:<port>/log/<logger-name>/<log-level>
 func (p *Plugin) AfterInit() error {
-	if p.HTTP != nil {
-		p.HTTP.RegisterHTTPHandler(fmt.Sprintf("/log/{%s}/{%s}",
-			loggerVarName, levelVarName), p.logLevelHandler, "PUT")
-		p.HTTP.RegisterHTTPHandler("/log/list", p.listLoggersHandler, "GET")
-	}
 	return nil
 }
 

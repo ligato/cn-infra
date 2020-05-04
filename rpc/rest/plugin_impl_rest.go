@@ -55,14 +55,18 @@ type Deps struct {
 // Init is the plugin entry point called by Agent Core
 // - It prepares Gorilla MUX HTTP Router
 func (p *Plugin) Init() (err error) {
+	p.Log.Debug("Init()")
+
 	if p.Config == nil {
 		p.Config = DefaultConfig()
 	}
-	if err := PluginConfig(p.Cfg, p.Config, p.PluginName); err != nil {
-		return err
+	if p.Cfg != nil {
+		if err := PluginConfig(p.Cfg, p.Config, p.PluginName); err != nil {
+			return err
+		}
 	}
 	if p.Config.Disabled {
-		p.Log.Debugf("Init skipped (plugin disabled)")
+		p.Log.Debugf("Disabling HTTP server")
 		return nil
 	}
 
@@ -108,17 +112,9 @@ func (p *Plugin) AfterInit() (err error) {
 		return nil
 	}
 
-	h := p.makeHandler()
-
-	p.server, err = ListenAndServe(*p.Config, h)
+	err = p.StartServing()
 	if err != nil {
 		return err
-	}
-
-	if p.Config.UseHTTPS() {
-		p.Log.Info("Serving on https://", p.Config.Endpoint)
-	} else {
-		p.Log.Info("Serving on http://", p.Config.Endpoint)
 	}
 
 	return nil
@@ -129,7 +125,7 @@ func (p *Plugin) RegisterHTTPHandler(path string, provider HandlerProvider, meth
 	if p.Config.Disabled {
 		return nil
 	}
-	p.Log.Debugf("Registering handler: %s", path)
+	p.Log.Tracef("Registering handler: %s", path)
 
 	return p.mx.Handle(path, provider(p.formatter)).Methods(methods...)
 }
@@ -137,7 +133,7 @@ func (p *Plugin) RegisterHTTPHandler(path string, provider HandlerProvider, meth
 // RegisterPermissionGroup adds new permission group if token authentication is enabled
 func (p *Plugin) RegisterPermissionGroup(group ...*access.PermissionGroup) {
 	if p.Config.EnableTokenAuth {
-		p.Log.Debugf("Registering permission group(s): %s", group)
+		p.Log.Tracef("Registering permission group(s): %s", group)
 		p.auth.AddPermissionGroup(group...)
 	}
 }
@@ -155,14 +151,20 @@ func (p *Plugin) Close() error {
 	if p.Config.Disabled {
 		return nil
 	}
-	return p.server.Close()
+	if p.server != nil {
+		if err := p.server.Close(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (p *Plugin) makeHandler() http.Handler {
+func (p *Plugin) Router() *mux.Router {
 	var (
 		authFunc func(r *http.Request) (string, error)
 		permFunc func(user string, r *http.Request) error
 	)
+
 	if p.Config.EnableTokenAuth {
 		authFunc = p.auth.AuthorizeRequest
 		permFunc = p.auth.IsPermitted
@@ -188,4 +190,23 @@ func (p *Plugin) makeHandler() http.Handler {
 	}
 
 	return p.mx
+}
+
+func (p *Plugin) StartServing() error {
+	var err error
+
+	h := p.Router()
+
+	p.server, err = ListenAndServe(*p.Config, h)
+	if err != nil {
+		return err
+	}
+
+	if p.Config.UseHTTPS() {
+		p.Log.Info("Serving on https://", p.Config.Endpoint)
+	} else {
+		p.Log.Info("Serving on http://", p.Config.Endpoint)
+	}
+
+	return nil
 }

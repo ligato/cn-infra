@@ -190,7 +190,7 @@ func (p *Plugin) RegisterGaugeFunc(registryPath string, namespace string, subsys
 		p.Log.Errorf("GaugeFunc('%s') registration failed: %s", gaugeName, err)
 		return err
 	}
-	p.Log.Infof("GaugeFunc('%s') registered.", gaugeName)
+	p.Log.Tracef("GaugeFunc('%s') registered.", gaugeName)
 	return nil
 }
 

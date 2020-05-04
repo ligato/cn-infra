@@ -16,7 +16,6 @@ package grpc
 
 import (
 	"crypto/tls"
-	"fmt"
 
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"golang.org/x/time/rate"
@@ -45,11 +44,10 @@ func NewPlugin(opts ...Option) *Plugin {
 		p.Deps.Log = logging.ForPlugin(p.String())
 	}
 	if p.Deps.Cfg == nil {
-		p.Deps.Cfg = config.ForPlugin(p.String(),
-			config.WithExtraFlags(func(flags *config.FlagSet) {
-				flags.String(grpcPortFlag(p.PluginName), "", fmt.Sprintf(
-					"Configure %q server port", p.String()))
-			}))
+		p.Deps.Cfg = config.ForPlugin(p.String()) /*config.WithExtraFlags(func(flags *config.FlagSet) {
+			flags.String(grpcPortFlag(p.PluginName), "", fmt.Sprintf(
+				"Configure %q server port", p.String()))
+		})*/
 	}
 
 	return p

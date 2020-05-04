@@ -82,9 +82,11 @@ type Deps struct {
 // the connection cannot be established.
 func (p *Plugin) Init() (err error) {
 	// Read ETCD configuration file. Returns error if does not exists.
-	p.config, err = p.getEtcdConfig()
-	if err != nil || p.disabled {
-		return err
+	if p.config == nil {
+		p.config, err = p.getEtcdConfig()
+		if err != nil || p.disabled {
+			return err
+		}
 	}
 
 	// Transforms .yaml config to ETCD client configuration
@@ -284,16 +286,18 @@ func (p *Plugin) statusCheckProbe() (statuscheck.PluginState, error) {
 }
 
 func (p *Plugin) getEtcdConfig() (*Config, error) {
-	var etcdCfg Config
-	found, err := p.Cfg.LoadValue(&etcdCfg)
-	if err != nil {
-		return nil, err
+	var etcdCfg = DefaultConfig()
+	if p.Cfg != nil {
+		found, err := p.Cfg.LoadValue(etcdCfg)
+		if err != nil {
+			return nil, err
+		}
+		if !found {
+			p.Log.Info("ETCD config not found, skip loading this plugin")
+			p.disabled = true
+		}
 	}
-	if !found {
-		p.Log.Info("ETCD config not found, skip loading this plugin")
-		p.disabled = true
-	}
-	return &etcdCfg, nil
+	return etcdCfg, nil
 }
 
 func (p *Plugin) startPeriodicAutoCompact(period time.Duration) {

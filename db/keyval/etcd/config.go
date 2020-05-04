@@ -66,6 +66,8 @@ type ClientConfig struct {
 }
 
 const (
+	defaultEndpoint = "127.0.0.1:2379"
+
 	// defaultDialTimeout defines the default timeout for connecting to etcd.
 	defaultDialTimeout = 1 * time.Second
 
@@ -75,6 +77,15 @@ const (
 	// defaultSessionTTL defines the default TTL value (in seconds)
 	defaultSessionTTL = 5
 )
+
+func DefaultConfig() *Config {
+	return &Config{
+		DialTimeout: defaultDialTimeout,
+		OpTimeout:   defaultOpTimeout,
+		SessionTTL:  defaultSessionTTL,
+		Endpoints:   []string{defaultEndpoint},
+	}
+}
 
 // ConfigToClient transforms yaml configuration <yc> modelled by Config
 // into ClientConfig, which is ready for use with the underlying coreos/etcd
@@ -113,7 +124,7 @@ func ConfigToClient(yc *Config) (*ClientConfig, error) {
 		} else if ep := os.Getenv("ETCDV3_ENDPOINTS"); ep != "" { // this provides backwards compatiblity
 			cfg.Endpoints = strings.Split(ep, ",")
 		} else {
-			cfg.Endpoints = []string{"127.0.0.1:2379"}
+			cfg.Endpoints = []string{defaultEndpoint}
 		}
 	}
 

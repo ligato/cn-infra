@@ -21,6 +21,7 @@ import (
 
 	"go.ligato.io/cn-infra/v2/config"
 	"go.ligato.io/cn-infra/v2/infra"
+	"go.ligato.io/cn-infra/v2/logging"
 	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
@@ -46,6 +47,8 @@ type Plugin struct {
 
 // Init is called at plugin initialization.
 func (p *Plugin) Init() error {
+	logging.DefaultLogger.WithField("logger", "servicelabel").Debug("Init()")
+
 	if p.MicroserviceLabel == "" {
 		p.MicroserviceLabel = config.GetString("microservice-label")
 	}
