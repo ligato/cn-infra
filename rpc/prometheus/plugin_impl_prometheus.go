@@ -80,6 +80,13 @@ func (p *Plugin) Init() error {
 
 // AfterInit registers HTTP handlers.
 func (p *Plugin) AfterInit() error {
+
+	p.RegisterHandlers()
+
+	return nil
+}
+
+func (p *Plugin) RegisterHandlers() {
 	if p.HTTP != nil {
 		p.Lock()
 		defer p.Unlock()
@@ -91,8 +98,6 @@ func (p *Plugin) AfterInit() error {
 	} else {
 		p.Log.Info("Unable to register Prometheus metrics handlers, HTTP is nil")
 	}
-
-	return nil
 }
 
 // Close cleans up the allocated resources.

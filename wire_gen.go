@@ -7,111 +7,65 @@ package cninfra
 
 import (
 	"context"
+	"github.com/google/wire"
 	"go.ligato.io/cn-infra/v2/config"
-	"go.ligato.io/cn-infra/v2/datasync/resync"
-	"go.ligato.io/cn-infra/v2/health/probe"
 	"go.ligato.io/cn-infra/v2/health/statuscheck"
-	"go.ligato.io/cn-infra/v2/logging"
-	"go.ligato.io/cn-infra/v2/logging/logmanager"
 	"go.ligato.io/cn-infra/v2/rpc/grpc"
-	"go.ligato.io/cn-infra/v2/rpc/prometheus"
 	"go.ligato.io/cn-infra/v2/rpc/rest"
 	"go.ligato.io/cn-infra/v2/servicelabel"
 )
 
 // Injectors from wire.go:
 
-func InitializeCore(ctx context.Context, conf config.Config) (Core, func(), error) {
-	registry := _wireRegistryValue
+func InjectDefaultBase(ctx context.Context, conf config.Config) (Base, func(), error) {
 	plugin := servicelabel.Provider()
+	deps := statuscheck.NoPublishingDepsProvider()
+	statuscheckConfig := statuscheck.ConfigProvider(conf)
+	statuscheckPlugin := statuscheck.Provider(deps, statuscheckConfig)
+	base := Base{
+		ServiceLabel: plugin,
+		StatusCheck:  statuscheckPlugin,
+	}
+	return base, func() {
+	}, nil
+}
+
+func InjectDefaultServer(ctx context.Context, conf config.Config) (Server, func(), error) {
 	basicHTTPAuthenticator := _wireBasicHTTPAuthenticatorValue
 	deps := rest.Deps{
 		Authenticator: basicHTTPAuthenticator,
 	}
 	restConfig := rest.ConfigProvider(conf)
-	restPlugin, cleanup, err := rest.Provider(deps, restConfig)
+	plugin, cleanup, err := rest.Provider(deps, restConfig)
 	if err != nil {
-		return Core{}, nil, err
-	}
-	logmanagerDeps := logmanager.Deps{
-		ServiceLabel: plugin,
-		LogRegistry:  registry,
-		HTTP:         restPlugin,
-	}
-	logmanagerConfig := logmanager.ConfigProvider(conf)
-	logmanagerPlugin, err := logmanager.Provider(logmanagerDeps, logmanagerConfig)
-	if err != nil {
-		cleanup()
-		return Core{}, nil, err
-	}
-	statuscheckDeps := statuscheck.NoPublishingDepsProvider()
-	statuscheckConfig := statuscheck.ConfigProvider(conf)
-	statuscheckPlugin, cleanup2, err := statuscheck.Provider(statuscheckDeps, statuscheckConfig)
-	if err != nil {
-		cleanup()
-		return Core{}, nil, err
-	}
-	prometheusDeps := prometheus.Deps{
-		HTTP: restPlugin,
-	}
-	prometheusPlugin, err := prometheus.Provider(prometheusDeps)
-	if err != nil {
-		cleanup2()
-		cleanup()
-		return Core{}, nil, err
-	}
-	probeDeps := probe.Deps{
-		ServiceLabel: plugin,
-		StatusCheck:  statuscheckPlugin,
-		HTTP:         restPlugin,
-		Prometheus:   prometheusPlugin,
-	}
-	probePlugin, err := probe.Provider(probeDeps)
-	if err != nil {
-		cleanup2()
-		cleanup()
-		return Core{}, nil, err
-	}
-	resyncPlugin, cleanup3, err := resync.Provider()
-	if err != nil {
-		cleanup2()
-		cleanup()
-		return Core{}, nil, err
+		return Server{}, nil, err
 	}
 	grpcDeps := grpc.Deps{
-		HTTP: restPlugin,
+		HTTP: plugin,
 	}
 	grpcConfig := grpc.ConfigProvider(conf)
-	grpcPlugin, cleanup4, err := grpc.Provider(grpcDeps, grpcConfig)
+	grpcPlugin, cleanup2, err := grpc.Provider(grpcDeps, grpcConfig)
 	if err != nil {
-		cleanup3()
-		cleanup2()
 		cleanup()
-		return Core{}, nil, err
+		return Server{}, nil, err
 	}
 	server := Server{
-		HTTP: restPlugin,
+		HTTP: plugin,
 		GRPC: grpcPlugin,
 	}
-	core := Core{
-		LogRegistry:  registry,
-		LogManager:   logmanagerPlugin,
-		ServiceLabel: plugin,
-		StatusCheck:  statuscheckPlugin,
-		Probe:        probePlugin,
-		Prometheus:   prometheusPlugin,
-		Resync:       resyncPlugin,
-		Server:       server,
-	}
-	return core, func() {
-		cleanup4()
-		cleanup3()
+	return server, func() {
 		cleanup2()
 		cleanup()
 	}, nil
 }
 
 var (
-	_wireRegistryValue               = logging.DefaultRegistry
 	_wireBasicHTTPAuthenticatorValue = (rest.BasicHTTPAuthenticator)(nil)
+)
+
+// wire.go:
+
+var WireDefaultAll = wire.NewSet(
+	InjectDefaultBase,
+	InjectDefaultServer,
 )

@@ -78,7 +78,7 @@ func (p *Plugin) Init() error {
 	}
 	if defaultLogLvl != "" {
 		if err := p.LogRegistry.SetLevel("default", defaultLogLvl); err != nil {
-			p.Log.Warnf("setting default log level failed: %v", err)
+			p.Log.Fatalf("setting default log level failed: %v", err)
 		} else {
 			// All loggers created up to this point were created with initial log level set (defined
 			// via INITIAL_LOGLVL env. variable with value 'info' by default), so at first, let's set default

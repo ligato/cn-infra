@@ -45,14 +45,10 @@ func ConfigProvider(conf config.Config) *Config {
 	return cfg
 }
 
-func Provider(deps Deps, conf *Config) (*Plugin, func(), error) {
+func Provider(deps Deps, conf *Config) *Plugin {
 	p := &Plugin{Deps: deps}
 	p.conf = conf
 	p.Log = logging.ForPlugin("status-check")
-	cancel := func() {
-		if err := p.Close(); err != nil {
-			p.Log.Error(err)
-		}
-	}
-	return p, cancel, p.Init()
+	_ = p.Init() // initializes only variables
+	return p
 }

@@ -15,6 +15,7 @@
 package servicelabel
 
 import (
+	"fmt"
 	"path"
 
 	flag "github.com/spf13/pflag"
@@ -45,14 +46,28 @@ type Plugin struct {
 	MicroserviceLabel string
 }
 
+func (p *Plugin) InitLabel() error {
+	if p.MicroserviceLabel == "" {
+		p.MicroserviceLabel = config.GetString("microservice-label")
+	}
+
+	if p.MicroserviceLabel == "" {
+		return fmt.Errorf("microservice-label is empty")
+	}
+
+	logrus.DefaultLogger().Debugf("Microservice label is set to %v", p.MicroserviceLabel)
+
+	return nil
+}
+
 // Init is called at plugin initialization.
 func (p *Plugin) Init() error {
 	logging.DefaultLogger.WithField("logger", "servicelabel").Debug("Init()")
 
-	if p.MicroserviceLabel == "" {
-		p.MicroserviceLabel = config.GetString("microservice-label")
+	if err := p.InitLabel(); err != nil {
+		return err
 	}
-	logrus.DefaultLogger().Debugf("Microservice label is set to %v", p.MicroserviceLabel)
+
 	return nil
 }
 

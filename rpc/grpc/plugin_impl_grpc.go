@@ -63,6 +63,8 @@ type Deps struct {
 
 // Init prepares GRPC netListener for registration of individual service
 func (p *Plugin) Init() (err error) {
+	p.Log.Debug("Init()")
+
 	// Get GRPC configuration file
 	if p.Config == nil {
 		p.Config, err = p.getGrpcConfig()

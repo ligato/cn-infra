@@ -21,6 +21,7 @@ import (
 )
 
 const (
+	cninfraModulePath     = "go.ligato.io/cn-infra/v2/"
 	sirupsenLogrusPkgPath = "sirupsen/logrus."
 
 	maximumCallerDepth = 15

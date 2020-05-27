@@ -54,7 +54,7 @@ type PluginLogger interface {
 // and optionally created children (their name prefixed by plugin logger name)
 func ForPlugin(name string) PluginLogger {
 	if logger, found := DefaultRegistry.Lookup(name); found {
-		DefaultLogger.Tracef("using plugin logger for %q that was already initialized", name)
+		//DefaultLogger.Tracef("using plugin logger for %q that was already initialized", name)
 		return &ParentLogger{
 			Logger:  logger,
 			Prefix:  name,

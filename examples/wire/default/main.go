@@ -12,16 +12,8 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package servicelabel
+package main
 
-import "github.com/google/wire"
+func main() {
 
-var WireDefault = wire.NewSet(
-	Provider,
-	wire.Bind(new(ReaderAPI), new(*Plugin)),
-)
-
-func Provider() *Plugin {
-	p := &Plugin{}
-	return p
 }

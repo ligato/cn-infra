@@ -63,18 +63,53 @@ func NewFormatter() *Formatter {
 	return &Formatter{
 		Formatter: &logrus.TextFormatter{
 			EnvironmentOverrideColors: true,
-			TimestampFormat:           "2006-01-02 15:04:05.00000",
-			SortingFunc:               sortKeys,
+			//TimestampFormat:           "2006-01-02 15:04:05.00000",
+			//TimestampFormat: "2006-01-02 15:04:05.00000",
+			//FullTimestamp:   true,
+			SortingFunc: sortKeys,
 		},
 	}
 }
 
+const (
+	red    = 31
+	yellow = 33
+	blue   = 36
+	gray   = 37
+	black  = 90
+)
+
 func (f *Formatter) Format(entry *logrus.Entry) ([]byte, error) {
+	var levelColor int
+	switch entry.Level {
+	case logrus.TraceLevel:
+		levelColor = black
+	case logrus.DebugLevel:
+		levelColor = gray
+	case logrus.WarnLevel:
+		levelColor = yellow
+	case logrus.ErrorLevel, logrus.FatalLevel, logrus.PanicLevel:
+		levelColor = red
+	default:
+		levelColor = blue
+	}
+	if levelColor == int(logrus.TraceLevel) {
+		entry.Message = fmt.Sprintf("\x1b[%dm%s\x1b[0m", levelColor, entry.Message)
+	}
+
+	// Convert value of logger field into message prefix
+	if prefix, ok := entry.Data[LoggerKey]; ok {
+		entry.Message = fmt.Sprintf("\x1b[%dm%s\x1b[0m ‣ %s", levelColor, prefix, entry.Message)
+		delete(entry.Data, LoggerKey)
+	}
+
+	// Resolve caller function location
 	if f.Function || f.Location {
 		if caller := getCaller(); caller != nil {
 			data := logrus.Fields{}
 			if f.Function {
-				data[FunctionKey] = caller.Function
+				function := strings.TrimPrefix(caller.Function, cninfraModulePath)
+				data[FunctionKey] = function
 			}
 			if f.Location {
 				file := caller.File
@@ -90,5 +125,6 @@ func (f *Formatter) Format(entry *logrus.Entry) ([]byte, error) {
 			entry.Data = data
 		}
 	}
+
 	return f.Formatter.Format(entry)
 }

@@ -103,7 +103,9 @@ func (p *Plugin) Init() error {
 // Initial state data are published via the injected transport.
 func (p *Plugin) AfterInit() error {
 
-	p.StartProbing()
+	if err := p.StartProbing(); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -117,7 +119,7 @@ func (p *Plugin) Close() error {
 	return nil
 }
 
-func (p *Plugin) StartProbing() {
+func (p *Plugin) StartProbing() error {
 	// do periodic status probing for plugins that have provided the probe function
 	p.wg.Add(1)
 	go p.periodicProbing(p.ctx)
@@ -126,10 +128,10 @@ func (p *Plugin) StartProbing() {
 	p.wg.Add(1)
 	go p.periodicUpdates(p.ctx)
 
-	p.publishInitial()
+	return p.publishInitial()
 }
 
-func (p *Plugin) publishInitial() {
+func (p *Plugin) publishInitial() error {
 	p.access.Lock()
 	defer p.access.Unlock()
 
@@ -140,7 +142,12 @@ func (p *Plugin) publishInitial() {
 	}
 	if err := p.publishAgentData(); err != nil {
 		p.Log.Warnf("publishing agent status failed: %v", err)
+		return err
+	} else {
+		p.Log.Infof("Published agent status")
 	}
+
+	return nil
 }
 
 // GetAllPluginStatus returns a map containing pluginname and its status, for all plugins
@@ -187,7 +194,7 @@ func (p *Plugin) Register(pluginName infra.PluginName, probe PluginStateProbe) {
 		p.pluginProbe[string(pluginName)] = probe
 	}
 
-	p.Log.Tracef("Plugin %v: status check probe registered", pluginName)
+	p.Log.Tracef("Registered probe: %v", pluginName)
 
 	// write initial status data into ETCD
 	if err := p.publishPluginData(pluginName.String(), stat); err != nil {

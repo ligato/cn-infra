@@ -22,32 +22,38 @@ import (
 	"github.com/google/wire"
 
 	"go.ligato.io/cn-infra/v2/config"
-	"go.ligato.io/cn-infra/v2/datasync/resync"
-	"go.ligato.io/cn-infra/v2/health/probe"
 	"go.ligato.io/cn-infra/v2/health/statuscheck"
-	"go.ligato.io/cn-infra/v2/logging/logmanager"
 	"go.ligato.io/cn-infra/v2/rpc/grpc"
-	"go.ligato.io/cn-infra/v2/rpc/prometheus"
 	"go.ligato.io/cn-infra/v2/rpc/rest"
 	"go.ligato.io/cn-infra/v2/servicelabel"
 )
 
 //go:generate wire
 
-func InitializeCore(ctx context.Context, conf config.Config) (Core, func(), error) {
+func InjectDefaultBase(ctx context.Context, conf config.Config) (Base, func(), error) {
 	wire.Build(
-		WireDefaultLogRegistry,
-		logmanager.WireDefault,
+		//WireDefaultLogRegistry,
+		//logmanager.WireDefault,
+
 		servicelabel.WireDefault,
 		statuscheck.WireDefault,
-		probe.WireDefault,
-		prometheus.WireDefault,
-		resync.WireDefault,
-		wire.Struct(new(Core), "*"),
 
+		wire.Struct(new(Base), "*"),
+	)
+	return Base{}, nil, nil
+}
+
+func InjectDefaultServer(ctx context.Context, conf config.Config) (Server, func(), error) {
+	wire.Build(
 		rest.WireDefault,
 		grpc.WireDefault,
+
 		wire.Struct(new(Server), "*"),
 	)
-	return Core{}, nil, nil
+	return Server{}, nil, nil
 }
+
+var WireDefaultAll = wire.NewSet(
+	InjectDefaultBase,
+	InjectDefaultServer,
+)

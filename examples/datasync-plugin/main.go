@@ -13,7 +13,7 @@ import (
 	"go.ligato.io/cn-infra/v2/datasync/kvdbsync"
 	"go.ligato.io/cn-infra/v2/datasync/resync"
 	"go.ligato.io/cn-infra/v2/db/keyval/etcd"
-	"go.ligato.io/cn-infra/v2/examples/model"
+	etcdexample "go.ligato.io/cn-infra/v2/examples/model"
 	"go.ligato.io/cn-infra/v2/infra"
 	"go.ligato.io/cn-infra/v2/servicelabel"
 )
@@ -42,7 +42,7 @@ func main() {
 		exampleFinished: make(chan struct{}),
 	}
 	p.SetName("datasync-example")
-	p.SetupLog()
+	p.Setup()
 
 	// Start Agent with example plugin including dependencies
 	a := agent.NewAgent(

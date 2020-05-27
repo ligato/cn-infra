@@ -33,10 +33,24 @@ var initialLogLvl = logging.InfoLevel
 func init() {
 	if lvl, err := logging.ParseLogLevel(os.Getenv("INITIAL_LOGLVL")); err == nil {
 		initialLogLvl = lvl
-		defaultFormatter.Location = initialLogLvl >= logging.DebugLevel
-		defaultFormatter.Function = initialLogLvl >= logging.TraceLevel
+		//defaultFormatter.Location = initialLogLvl >= logging.DebugLevel
+		//defaultFormatter.Function = initialLogLvl >= logging.TraceLevel
 		defaultLogger.SetLevel(lvl)
 		defaultLogger.Tracef("initial log level: %v", lvl.String())
+		if err := defaultRegistry.SetLevel("default", initialLogLvl.String()); err != nil {
+			defaultLogger.Fatalf("setting default log level failed: %v", err)
+		} else {
+			// All loggers created up to this point were created with initial log level set (defined
+			// via INITIAL_LOGLVL env. variable with value 'info' by default), so at first, let's set default
+			// log level for all of them.
+			for loggerName := range defaultRegistry.ListLoggers() {
+				logger, exists := defaultRegistry.Lookup(loggerName)
+				if !exists {
+					continue
+				}
+				logger.SetLevel(lvl)
+			}
+		}
 	}
 	logging.DefaultLogger = DefaultLogger()
 }
@@ -206,7 +220,9 @@ func (logger *Logger) entryWithFields(fields logging.Fields) *logrus.Entry {
 	for k, v := range redactData(fields) {
 		data[k] = v
 	}
-	data[LoggerKey] = logger.name
+	if _, ok := data[LoggerKey]; !ok {
+		data[LoggerKey] = logger.name
+	}
 	return logger.Logger.WithFields(data)
 }
 
