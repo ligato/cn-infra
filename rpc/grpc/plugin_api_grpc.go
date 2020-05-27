@@ -21,7 +21,7 @@ import (
 // Server defines the API for getting grpc.Server instance that
 // is useful for registering new GRPC services
 type Server interface {
-	// Server is a getter for accessing grpc.Server (of a GRPC plugin)
+	// GetServer is a getter for accessing grpc.Server (of a GRPC plugin)
 	//
 	// Example usage:
 	//

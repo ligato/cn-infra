@@ -66,6 +66,15 @@ func (p *Plugin) Init() error {
 
 // AfterInit registers HTTP handlers for liveness and readiness probes.
 func (p *Plugin) AfterInit() error {
+
+	if err := p.RegisterProbes(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *Plugin) RegisterProbes() error {
 	if p.StatusCheck == nil {
 		p.Log.Warnf("Unable to register probe handlers, StatusCheck is nil")
 		return nil

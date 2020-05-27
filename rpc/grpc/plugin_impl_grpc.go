@@ -43,9 +43,6 @@ type Plugin struct {
 
 	*Config
 
-	// Plugin availability flag
-	disabled bool
-
 	// GRPC server instance
 	grpcServer *grpc.Server
 	// GRPC network listener
@@ -66,12 +63,18 @@ type Deps struct {
 
 // Init prepares GRPC netListener for registration of individual service
 func (p *Plugin) Init() (err error) {
+	p.Log.Debug("Init()")
+
 	// Get GRPC configuration file
 	if p.Config == nil {
 		p.Config, err = p.getGrpcConfig()
-		if err != nil || p.disabled {
+		if err != nil {
 			return err
 		}
+	}
+	if p.Config.Disabled {
+		p.Log.Infof("grpc server disabled via config")
+		return nil
 	}
 
 	// Prepare GRPC server
@@ -141,15 +144,6 @@ func (p *Plugin) Init() (err error) {
 	}
 	grpclog.SetLoggerV2(grpcLogger)
 
-	return nil
-}
-
-// AfterInit starts the HTTP netListener.
-func (p *Plugin) AfterInit() (err error) {
-	if p.disabled {
-		return nil
-	}
-
 	if p.Deps.HTTP != nil {
 		p.Log.Infof("exposing GRPC services via HTTP (port %v) on: /service", p.Deps.HTTP.GetPort())
 		p.Deps.HTTP.RegisterHTTPHandler("/service", func(formatter *render.Render) http.HandlerFunc {
@@ -159,17 +153,19 @@ func (p *Plugin) AfterInit() (err error) {
 		p.Log.Debugf("HTTP not set, skip exposing GRPC services")
 	}
 
-	// initialize prometheus metrics for grpc server
-	if p.metrics != nil {
-		p.metrics.InitializeMetrics(p.grpcServer)
+	return nil
+}
+
+// AfterInit starts the HTTP netListener.
+func (p *Plugin) AfterInit() (err error) {
+	if p.Config.Disabled {
+		return nil
 	}
 
-	// Start GRPC listener
-	p.netListener, err = ListenAndServe(p.Config, p.grpcServer)
+	err = p.StartServing()
 	if err != nil {
 		return err
 	}
-	p.Log.Infof("Listening GRPC on: %v", p.Config.Endpoint)
 
 	return nil
 }
@@ -190,18 +186,33 @@ func (p *Plugin) GetServer() *grpc.Server {
 // IsDisabled returns *true* if the plugin is not in use due to missing
 // grpc configuration.
 func (p *Plugin) IsDisabled() bool {
-	return p.disabled
+	return p.Config.Disabled
 }
 
 func (p *Plugin) getGrpcConfig() (*Config, error) {
-	var grpcCfg Config
-	found, err := p.Cfg.LoadValue(&grpcCfg)
+	grpcCfg := DefaultConfig()
+	found, err := p.Cfg.LoadValue(grpcCfg)
 	if err != nil {
-		return &grpcCfg, err
+		return grpcCfg, err
 	}
 	if !found {
-		p.Log.Info("GRPC config not found, skip loading this plugin")
-		p.disabled = true
+		p.Log.Infof("GRPC config not found, using default config: %+v", grpcCfg)
 	}
-	return &grpcCfg, nil
+	return grpcCfg, nil
+}
+
+func (p *Plugin) StartServing() (err error) {
+	// initialize prometheus metrics for grpc server
+	if p.metrics != nil {
+		p.metrics.InitializeMetrics(p.grpcServer)
+	}
+
+	// Start GRPC listener
+	p.netListener, err = ListenAndServe(p.Config, p.grpcServer)
+	if err != nil {
+		return err
+	}
+	p.Log.Infof("Listening GRPC on: %v", p.Config.Endpoint)
+
+	return nil
 }

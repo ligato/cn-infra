@@ -130,14 +130,16 @@ func (p *Plugin) Disabled() bool {
 
 func (p *Plugin) getConfig() (*Config, error) {
 	var cfg Config
-	found, err := p.Cfg.LoadValue(&cfg)
-	if err != nil {
-		return nil, err
-	}
-	if !found {
-		p.Log.Info("Consul config not found, skip loading this plugin")
-		p.disabled = true
-		return nil, nil
+	if p.Cfg != nil {
+		found, err := p.Cfg.LoadValue(&cfg)
+		if err != nil {
+			return nil, err
+		}
+		if !found {
+			p.Log.Info("Consul config not found, skip loading this plugin")
+			p.disabled = true
+			return nil, nil
+		}
 	}
 	return &cfg, nil
 }

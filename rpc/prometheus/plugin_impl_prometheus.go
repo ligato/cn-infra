@@ -80,6 +80,13 @@ func (p *Plugin) Init() error {
 
 // AfterInit registers HTTP handlers.
 func (p *Plugin) AfterInit() error {
+
+	p.RegisterHandlers()
+
+	return nil
+}
+
+func (p *Plugin) RegisterHandlers() {
 	if p.HTTP != nil {
 		p.Lock()
 		defer p.Unlock()
@@ -91,8 +98,6 @@ func (p *Plugin) AfterInit() error {
 	} else {
 		p.Log.Info("Unable to register Prometheus metrics handlers, HTTP is nil")
 	}
-
-	return nil
 }
 
 // Close cleans up the allocated resources.
@@ -190,7 +195,7 @@ func (p *Plugin) RegisterGaugeFunc(registryPath string, namespace string, subsys
 		p.Log.Errorf("GaugeFunc('%s') registration failed: %s", gaugeName, err)
 		return err
 	}
-	p.Log.Infof("GaugeFunc('%s') registered.", gaugeName)
+	p.Log.Tracef("GaugeFunc('%s') registered.", gaugeName)
 	return nil
 }
 

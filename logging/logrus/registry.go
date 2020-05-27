@@ -67,7 +67,9 @@ func checkLoggerName(name string) error {
 // refer the logger in registry.
 func (lr *LogRegistry) NewLogger(name string) logging.Logger {
 	if existingLogger := lr.getLoggerFromMapping(name); existingLogger != nil {
-		panic(fmt.Errorf("logger with name '%s' already exists", name))
+		//panic(fmt.Errorf("logger with name '%s' already exists", name))
+		fmt.Printf("logger with name '%s' already exists, returning previous logger\n", name)
+		return existingLogger
 	}
 	if err := checkLoggerName(name); err != nil {
 		panic(err)

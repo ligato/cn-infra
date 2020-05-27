@@ -15,12 +15,14 @@
 package servicelabel
 
 import (
+	"fmt"
 	"path"
 
 	flag "github.com/spf13/pflag"
 
 	"go.ligato.io/cn-infra/v2/config"
 	"go.ligato.io/cn-infra/v2/infra"
+	"go.ligato.io/cn-infra/v2/logging"
 	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
@@ -44,12 +46,28 @@ type Plugin struct {
 	MicroserviceLabel string
 }
 
-// Init is called at plugin initialization.
-func (p *Plugin) Init() error {
+func (p *Plugin) InitLabel() error {
 	if p.MicroserviceLabel == "" {
 		p.MicroserviceLabel = config.GetString("microservice-label")
 	}
+
+	if p.MicroserviceLabel == "" {
+		return fmt.Errorf("microservice-label is empty")
+	}
+
 	logrus.DefaultLogger().Debugf("Microservice label is set to %v", p.MicroserviceLabel)
+
+	return nil
+}
+
+// Init is called at plugin initialization.
+func (p *Plugin) Init() error {
+	logging.DefaultLogger.WithField("logger", "servicelabel").Debug("Init()")
+
+	if err := p.InitLabel(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
