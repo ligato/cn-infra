@@ -15,6 +15,7 @@
 package rest
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -182,7 +183,7 @@ func (cfg *Config) UseHTTPS() bool {
 func DeclareHTTPPortFlag(pluginName infra.PluginName, defaultPortOpts ...uint) {
 	var defaultPort string
 	if len(defaultPortOpts) > 0 {
-		defaultPort = string(defaultPortOpts[0])
+		defaultPort = fmt.Sprint(defaultPortOpts[0])
 	} else {
 		defaultPort = DefaultHTTPPort
 	}
