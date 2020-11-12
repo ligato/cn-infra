@@ -3,7 +3,6 @@
 [![Build Status](https://travis-ci.org/ligato/cn-infra.svg?branch=master)](https://travis-ci.org/ligato/cn-infra)
 [![Coverage Status](https://coveralls.io/repos/github/ligato/cn-infra/badge.svg?branch=master)](https://coveralls.io/github/ligato/cn-infra?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/ligato/cn-infra)](https://goreportcard.com/report/github.com/ligato/cn-infra)
-[![GoDoc](https://godoc.org/github.com/ligato/cn-infra?status.svg)](https://godoc.org/github.com/ligato/cn-infra)
 [![GitHub license](https://img.shields.io/badge/license-Apache%20license%202.0-blue.svg)](https://github.com/ligato/cn-infra/blob/master/LICENSE.md)
 
 CN-Infra (cloud-native infrastructure) is a Golang framework for building
@@ -12,10 +11,9 @@ basically a collection of components/libraries used in most control plane
 agents tied together with a common life-cycle management mechanism.
 
 ## Documentation
+[![PkgGoDev](https://pkg.go.dev/badge/go.ligato.io/cn-infra/v2)](https://pkg.go.dev/go.ligato.io/cn-infra/v2)
 
 Extensive documentation with [tutorials](https://docs.ligato.io/en/latest/tutorials/01_hello-world/) & how-to guides can be found at [docs.ligato.io](https://docs.ligato.io/).
-
-Go docs for the code can be found at [godoc.org/github.com/ligato/cn-infra](https://godoc.org/github.com/ligato/cn-infra).
 
 ## Quickstart
 
@@ -98,10 +96,10 @@ the following functional areas:
         
 * **Data Stores** - provides a common data store API for app plugins (the 
     Data Broker) and back-end clients. The data store related plugins are:
-  - [Consul][docs-consul] - key-value data store adpater for Consul
-  - [Etcd][docs-etcd] - key-value data store adpater for Etcd
-  - [Redis][docs-redis] - key-value data store adpater for Redis
-  - [Casssandra][cassandra] - key-value data store adpater for Cassandra
+  - [Consul][docs-consul] - key-value data store adapter for Consul
+  - [Etcd][docs-etcd] - key-value data store adapter for Etcd
+  - [Redis][docs-redis] - key-value data store adapter for Redis
+  - [Casssandra][cassandra] - key-value data store adapter for Cassandra
   - [FileDB][docs-filedb] - key-value data store using OS filesystem
     
 * **Messaging** - provides a common API and connectivity to message buses:
@@ -146,9 +144,9 @@ If you are interested in contributing, please see the [contribution guidelines](
 [cassandra]: db/sql/cassandra
 [config]: config
 [dockerhub]: https://hub.docker.com/r/ligato/dev-cn-infra/
-[docs-consul]: https://docs.ligato.io/en/latest/plugins/db-plugins/#consul-plugin
-[docs-etcd]: https://docs.ligato.io/en/latest/plugins/db-plugins/#etcd-plugin
-[docs-grpc]: https://docs.ligato.io/en/latest/plugins/connection-plugins/#vpp-agent-grpc
+[docs-consul]: https://docs.ligato.io/en/latest/plugins/db-plugins/#consul
+[docs-etcd]: https://docs.ligato.io/en/latest/plugins/db-plugins/#etcd
+[docs-grpc]: https://docs.ligato.io/en/latest/plugins/connection-plugins/#grpc-plugin
 [docs-kafka]: https://docs.ligato.io/en/latest/plugins/plugin-overview/#messagingkafka
 [docs-logmanager]: https://docs.ligato.io/en/latest/plugins/infra-plugins/#log-manager
 [docs-statuscheck]: https://docs.ligato.io/en/latest/plugins/infra-plugins/#status-check
