@@ -24,6 +24,17 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+func parseYamlFileForMerge(path string, data interface{}) error {
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	if err := yaml.Unmarshal(b, data); err != nil {
+		return err
+	}
+	return nil
+}
+
 // ParseConfigFromYamlFile parses a configuration from a file in YAML
 // format. The file's location is specified by the <path> parameter and the
 // resulting config is stored into the structure referenced by the <cfg>

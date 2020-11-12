@@ -15,18 +15,25 @@
 package servicelabel
 
 import (
-	"fmt"
+	"path"
 
-	"github.com/namsral/flag"
+	flag "github.com/spf13/pflag"
 
+	"go.ligato.io/cn-infra/v2/config"
 	"go.ligato.io/cn-infra/v2/infra"
 	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
-var microserviceLabelFlag string
+// MicroserviceLabelEnvVar label is inferred from the flag name.
+const MicroserviceLabelEnvVar = "MICROSERVICE_LABEL"
+
+const defaultServiceLabel = "vpp1"
 
 func init() {
-	flag.StringVar(&microserviceLabelFlag, "microservice-label", "vpp1", fmt.Sprintf("microservice label; also set via '%v' env variable.", MicroserviceLabelEnvVar))
+	config.SetDefault("microservice-label", defaultServiceLabel)
+	flag.String("microservice-label", defaultServiceLabel, "Microservice label sets service instance ID.")
+	config.BindEnv("microservice-label", MicroserviceLabelEnvVar)
+	config.BindFlag("microservice-label", flag.Lookup("microservice-label"))
 }
 
 // Plugin exposes the service label(i.e. the string used to identify the particular VNF) to the other plugins.
@@ -40,7 +47,7 @@ type Plugin struct {
 // Init is called at plugin initialization.
 func (p *Plugin) Init() error {
 	if p.MicroserviceLabel == "" {
-		p.MicroserviceLabel = microserviceLabelFlag
+		p.MicroserviceLabel = config.GetString("microservice-label")
 	}
 	logrus.DefaultLogger().Debugf("Microservice label is set to %v", p.MicroserviceLabel)
 	return nil
@@ -60,7 +67,7 @@ func (p *Plugin) GetAgentLabel() string {
 // GetAgentPrefix returns the string that is supposed to be used as the prefix for configuration of current
 // MicroserviceLabel "subtree" of the particular VPP Agent instance (e.g. in ETCD).
 func (p *Plugin) GetAgentPrefix() string {
-	return agentPrefix + p.MicroserviceLabel + "/"
+	return path.Join(agentPrefix, p.MicroserviceLabel) + "/"
 }
 
 // GetDifferentAgentPrefix returns the string that is supposed to be used as the prefix for configuration

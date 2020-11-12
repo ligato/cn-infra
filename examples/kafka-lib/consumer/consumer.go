@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/bsm/sarama-cluster"
-	"github.com/namsral/flag"
+	cluster "github.com/bsm/sarama-cluster"
+	flag "github.com/spf13/pflag"
 
 	"go.ligato.io/cn-infra/v2/logging"
 	"go.ligato.io/cn-infra/v2/logging/logrus"

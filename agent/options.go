@@ -21,6 +21,7 @@ import (
 	"syscall"
 	"time"
 
+	"go.ligato.io/cn-infra/v2/config"
 	"go.ligato.io/cn-infra/v2/infra"
 )
 
@@ -36,38 +37,59 @@ var (
 
 // Options specifies option list for the Agent
 type Options struct {
+	Name    string
+	Version string
+
+	Config config.Config
+	//FlagSet *config.FlagSet
+	Flags []config.Flag
+
 	StartTimeout time.Duration
 	StopTimeout  time.Duration
 	QuitSignals  []os.Signal
 	QuitChan     chan struct{}
 	Context      context.Context
-	Plugins      []infra.Plugin
 
-	pluginMap   map[infra.Plugin]struct{}
-	pluginNames map[string]struct{}
+	Plugins []infra.Plugin
+
+	initialized bool
 }
 
-func newOptions(opts ...Option) Options {
+func newOptions() Options {
 	opt := Options{
+		Name:         "agent",
+		Version:      "dev",
+		Config:       config.DefaultConfig,
 		StartTimeout: DefaultStartTimeout,
 		StopTimeout:  DefaultStopTimeout,
-		QuitSignals: []os.Signal{
-			os.Interrupt,
-			syscall.SIGTERM,
-		},
-		pluginMap:   make(map[infra.Plugin]struct{}),
-		pluginNames: make(map[string]struct{}),
+		QuitSignals:  []os.Signal{syscall.SIGINT, syscall.SIGTERM},
+		Context:      context.Background(),
 	}
-
-	for _, o := range opts {
-		o(&opt)
-	}
-
 	return opt
 }
 
 // Option is a function that operates on an Agent's Option
 type Option func(*Options)
+
+// Name sets agent name.
+func Name(name string) Option {
+	return func(o *Options) {
+		o.Name = name
+	}
+}
+
+// Version sets agent version.
+func Version(version string) Option {
+	return func(o *Options) {
+		o.Version = version
+	}
+}
+
+func Flags(flags ...config.Flag) Option {
+	return func(o *Options) {
+		o.Flags = append(o.Flags, flags...)
+	}
+}
 
 // StartTimeout returns an Option that sets timeout for the start of Agent.
 func StartTimeout(timeout time.Duration) Option {
@@ -83,8 +105,8 @@ func StopTimeout(timeout time.Duration) Option {
 	}
 }
 
-// Version returns an Option that sets the version of the Agent to the entered string
-func Version(buildVer, buildDate, commitHash string) Option {
+// VersionInfo sets the version of the Agent to the entered string
+func VersionInfo(buildVer, buildDate, commitHash string) Option {
 	return func(o *Options) {
 		BuildVersion = buildVer
 		BuildDate = buildDate
@@ -122,41 +144,48 @@ func Plugins(plugins ...infra.Plugin) Option {
 
 // AllPlugins creates an Option that adds all of the nested
 // plugins recursively to the Agent's plugin list.
-func AllPlugins(plugins ...infra.Plugin) Option {
+func AllPlugins(plugin infra.Plugin) Option {
+	pluginMap := make(map[infra.Plugin]struct{})
+	pluginNames := make(map[string]struct{})
+
 	return func(o *Options) {
-		infraLogger.Debugf("AllPlugins with %d plugins", len(plugins))
+		typ := reflect.TypeOf(plugin)
+		infraLogger.Debugf("searching for all deps in: %v (type: %v)", plugin, typ)
 
-		for _, plugin := range plugins {
-			typ := reflect.TypeOf(plugin)
-			infraLogger.Debugf("searching for all deps in: %v (type: %v)", plugin, typ)
-
-			foundPlugins, err := findPlugins(reflect.ValueOf(plugin), o.pluginMap)
-			if err != nil {
-				panic(err)
-			}
-
-			infraLogger.Debugf("found %d plugins in: %v (type: %v)", len(foundPlugins), plugin, typ)
-			for _, plug := range foundPlugins {
-				infraLogger.Debugf(" - plugin: %v (%v)", plug, reflect.TypeOf(plug))
-
-				if _, ok := o.pluginNames[plug.String()]; ok {
-					infraLogger.Fatalf("plugin with name %q already registered", plug.String())
-				}
-				o.pluginNames[plug.String()] = struct{}{}
-			}
-			o.Plugins = append(o.Plugins, foundPlugins...)
-
-			// TODO: perhaps set plugin name to typ.String() if it's empty
-			/*p, ok := plugin.(core.PluginNamed)
-			if !ok {
-				p = core.NamePlugin(typ.String(), plugin)
-			}*/
-
-			if _, ok := o.pluginNames[plugin.String()]; ok {
-				infraLogger.Fatalf("plugin with name %q already registered, custom name should be used", plugin.String())
-			}
-			o.pluginNames[plugin.String()] = struct{}{}
-			o.Plugins = append(o.Plugins, plugin)
+		foundPlugins, err := findPlugins(reflect.ValueOf(plugin), pluginMap)
+		if err != nil {
+			panic(err)
 		}
+
+		infraLogger.Debugf("found %d plugins in: %v (type: %v)", len(foundPlugins), plugin, typ)
+		for _, plug := range foundPlugins {
+			infraLogger.Debugf(" - plugin: %v (%v)", plug, reflect.TypeOf(plug))
+
+			if _, ok := pluginNames[plug.String()]; ok {
+				infraLogger.Fatalf("plugin with name %q already registered", plug.String())
+			}
+			pluginNames[plug.String()] = struct{}{}
+		}
+		o.Plugins = append(o.Plugins, foundPlugins...)
+
+		// TODO: perhaps set plugin name to typ.String() if it's empty
+		/*p, ok := plugin.(core.PluginNamed)
+		if !ok {
+			p = core.NamePlugin(typ.String(), plugin)
+		}*/
+
+		//pluginName := plugin.String()
+		/*if plugin.String() == "" {
+			if p, ok := plugin.(interface{ SetName(string) }); ok {
+				infraLogger.Warnf("setting plugin name to: %q", typ.String())
+				p.SetName(typ.String())
+			}
+		}*/
+
+		if _, ok := pluginNames[plugin.String()]; ok {
+			infraLogger.Fatalf("plugin with name %q already registered, custom name should be used", plugin.String())
+		}
+		pluginNames[plugin.String()] = struct{}{}
+		o.Plugins = append(o.Plugins, plugin)
 	}
 }

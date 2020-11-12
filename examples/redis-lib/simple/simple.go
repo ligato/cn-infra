@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/namsral/flag"
+	flag "github.com/spf13/pflag"
 
 	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/db/keyval"

@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/namsral/flag"
+	flag "github.com/spf13/pflag"
 
 	"go.ligato.io/cn-infra/v2/agent"
-	"go.ligato.io/cn-infra/v2/examples/model"
+	etcdexample "go.ligato.io/cn-infra/v2/examples/model"
 	"go.ligato.io/cn-infra/v2/logging"
 	"go.ligato.io/cn-infra/v2/messaging"
 	"go.ligato.io/cn-infra/v2/messaging/kafka"

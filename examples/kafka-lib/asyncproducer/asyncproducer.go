@@ -19,7 +19,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/namsral/flag"
+	flag "github.com/spf13/pflag"
 
 	"go.ligato.io/cn-infra/v2/examples/kafka-lib/utils"
 	"go.ligato.io/cn-infra/v2/logging/logrus"

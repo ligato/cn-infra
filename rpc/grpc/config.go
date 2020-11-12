@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/namsral/flag"
+	flag "github.com/spf13/pflag"
 	"google.golang.org/grpc"
 
 	"go.ligato.io/cn-infra/v2/config"

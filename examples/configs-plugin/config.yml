@@ -1,0 +1,8 @@
+version: v1
+example:
+  name: ConfigExample
+  # use default description
+  port: 4444
+  settings:
+    timeout: 3s
+    extra: notrecognized
