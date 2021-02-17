@@ -17,12 +17,13 @@ package etcd
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/pkg/tlsutil"
 )
 
 // Config represents a part of the etcd configuration that can be
@@ -124,34 +125,31 @@ func ConfigToClient(yc *Config) (*ClientConfig, error) {
 		return cfg, nil
 	}
 
-	var (
-		cert *tls.Certificate
-		cp   *x509.CertPool
-		err  error
-	)
-
-	if yc.Certfile != "" && yc.Keyfile != "" {
-		cert, err = tlsutil.NewCert(yc.Certfile, yc.Keyfile, nil)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if yc.CAfile != "" {
-		cp, err = tlsutil.NewCertPool([]string{yc.CAfile})
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	tlscfg := &tls.Config{
 		MinVersion:         tls.VersionTLS10,
 		InsecureSkipVerify: yc.InsecureSkipTLSVerify,
-		RootCAs:            cp,
 	}
-	if cert != nil {
-		tlscfg.Certificates = []tls.Certificate{*cert}
+
+	if yc.Certfile != "" && yc.Keyfile != "" {
+		cert, err := tls.LoadX509KeyPair(yc.Certfile, yc.Keyfile)
+		if err != nil {
+			return nil, fmt.Errorf("tls.LoadX509KeyPair() failed: %s", err)
+		}
+		tlscfg.Certificates = []tls.Certificate{cert}
 	}
+
+	if yc.CAfile != "" {
+		pemByte, err := ioutil.ReadFile(yc.CAfile)
+		if err != nil {
+			return nil, err
+		}
+
+		tlscfg.RootCAs = x509.NewCertPool()
+		if !tlscfg.RootCAs.AppendCertsFromPEM(pemByte) {
+			return nil, fmt.Errorf("failed to add CA from '%s' file", yc.CAfile)
+		}
+	}
+
 	if yc.Certfile != "" || yc.Keyfile != "" || yc.CAfile != "" {
 		cfg.TLS = tlscfg
 	}

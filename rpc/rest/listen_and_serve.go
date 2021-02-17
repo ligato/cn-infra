@@ -17,6 +17,7 @@ package rest
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -46,7 +47,9 @@ func ListenAndServe(config Config, handler http.Handler) (srv *http.Server, err 
 			if err != nil {
 				return nil, err
 			}
-			caCertPool.AppendCertsFromPEM(caCert)
+			if !caCertPool.AppendCertsFromPEM(caCert) {
+				return nil, fmt.Errorf("failed to add CA from '%s' file", c)
+			}
 		}
 
 		server.TLSConfig = &tls.Config{
