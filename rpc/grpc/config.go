@@ -108,9 +108,8 @@ func (cfg *Config) getTLS() (*tls.Config, error) {
 				return nil, err
 			}
 
-			ok := caCertPool.AppendCertsFromPEM(cert)
-			if !ok {
-				return nil, fmt.Errorf("unable to add CA from '%s' file", c)
+			if !caCertPool.AppendCertsFromPEM(cert) {
+				return nil, fmt.Errorf("failed to add CA from '%s' file", c)
 			}
 		}
 		tc.ClientCAs = caCertPool

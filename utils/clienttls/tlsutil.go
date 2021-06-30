@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Cisco and/or its affiliates.
+// Copyright (c) 2021 Cisco and/or its affiliates.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,8 +19,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-
-	"github.com/coreos/etcd/pkg/tlsutil"
+	"io/ioutil"
 )
 
 // TLS stores the client side TLS settings
@@ -34,32 +33,29 @@ type TLS struct {
 
 // CreateTLSConfig used to generate the crypto/tls Config
 func CreateTLSConfig(config TLS) (*tls.Config, error) {
-	var (
-		cert *tls.Certificate
-		cp   *x509.CertPool
-		err  error
-	)
-	if config.Certfile != "" && config.Keyfile != "" {
-		cert, err = tlsutil.NewCert(config.Certfile, config.Keyfile, nil)
-		if err != nil {
-			return nil, fmt.Errorf("tlsutil.NewCert() failed: %s", err)
-		}
-	}
-
-	if config.CAfile != "" {
-		cp, err = tlsutil.NewCertPool([]string{config.CAfile})
-		if err != nil {
-			return nil, fmt.Errorf("tlsutil.NewCertPool() failed: %s", err)
-		}
-	}
-
 	tlsConfig := &tls.Config{
 		MinVersion:         tls.VersionTLS10,
 		InsecureSkipVerify: config.SkipVerify,
-		RootCAs:            cp,
 	}
-	if cert != nil {
-		tlsConfig.Certificates = []tls.Certificate{*cert}
+
+	if config.Certfile != "" && config.Keyfile != "" {
+		cert, err := tls.LoadX509KeyPair(config.Certfile, config.Keyfile)
+		if err != nil {
+			return nil, fmt.Errorf("tls.LoadX509KeyPair() failed: %s", err)
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
+
+	if config.CAfile != "" {
+		pemByte, err := ioutil.ReadFile(config.CAfile)
+		if err != nil {
+			return nil, err
+		}
+
+		tlsConfig.RootCAs = x509.NewCertPool()
+		if !tlsConfig.RootCAs.AppendCertsFromPEM(pemByte) {
+			return nil, fmt.Errorf("failed to add CA from '%s' file", config.CAfile)
+		}
 	}
 
 	return tlsConfig, nil
