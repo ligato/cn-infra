@@ -15,8 +15,7 @@
 package etcd
 
 import (
-	"github.com/coreos/etcd/clientv3"
-
+	clientv3 "go.etcd.io/etcd/clientv3"
 	"go.ligato.io/cn-infra/v2/db/keyval"
 )
 

@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
+	"go.etcd.io/etcd/clientv3"
 )
 
 // Config represents a part of the etcd configuration that can be
