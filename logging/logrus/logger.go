@@ -85,6 +85,10 @@ func NewLogger(name string) *Logger {
 	return logger
 }
 
+func (logger *Logger) StandardLogger() *logrus.Logger {
+	return logger.Logger
+}
+
 func (logger *Logger) GetName() string {
 	return logger.name
 }
