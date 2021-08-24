@@ -64,10 +64,11 @@ require (
 	golang.org/x/net v0.0.0-20210503060351-7fd8e65b6420
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
 	google.golang.org/grpc v1.38.0
+	google.golang.org/protobuf v1.27.1
 )
 
 replace github.com/openhistogram/circonusllhist => github.com/circonus-labs/circonusllhist v0.3.0
 
 replace go.etcd.io/etcd => github.com/coreos/etcd v0.5.0-alpha.5.0.20210419091813-4276c3302675
 
-replace google.golang.org/grpc => google.golang.org/grpc v1.26.0
+replace google.golang.org/grpc => google.golang.org/grpc v1.27.0

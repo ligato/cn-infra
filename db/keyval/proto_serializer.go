@@ -15,17 +15,16 @@
 package keyval
 
 import (
-	"bytes"
 	"os"
 
-	"github.com/golang/protobuf/jsonpb"
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 // DefaultMarshaler is the marshaler used for JSON encoding.
 // It uses original names (from .proto by default).
-var DefaultMarshaler = &jsonpb.Marshaler{
-	OrigName: true,
+var DefaultMarshaler = &protojson.MarshalOptions{
+	UseProtoNames: true,
 }
 
 // Serializer is used to make conversions between raw and formatted data.
@@ -60,9 +59,9 @@ type SerializerJSON struct {
 func (sj *SerializerJSON) Unmarshal(data []byte, protoData proto.Message) error {
 	if sj.ExpandEnvVars {
 		expandedData := os.ExpandEnv(string(data))
-		return jsonpb.Unmarshal(bytes.NewBufferString(expandedData), protoData)
+		return protojson.Unmarshal([]byte(expandedData), protoData)
 	}
-	return jsonpb.Unmarshal(bytes.NewBuffer(data), protoData)
+	return protojson.Unmarshal(data, protoData)
 }
 
 // Marshal serializes proto message to the slice of bytes using
@@ -71,9 +70,9 @@ func (sj *SerializerJSON) Marshal(message proto.Message) ([]byte, error) {
 	if message == nil {
 		return []byte("null"), nil
 	}
-	var buf bytes.Buffer
-	if err := DefaultMarshaler.Marshal(&buf, message); err != nil {
+	b, err := DefaultMarshaler.Marshal(message)
+	if err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), nil
+	return b, nil
 }

@@ -15,17 +15,16 @@
 package msg
 
 import (
-	"bytes"
 	"context"
 
-	"github.com/golang/protobuf/jsonpb"
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 
 	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/logging/logrus"
 )
 
-//go:generate protoc --proto_path=. --go_out=plugins=grpc:. datamsg.proto
+//go:generate protoc --proto_path=. --go_out=paths=source_relative:. --go-grpc_out=paths=source_relative:. datamsg.proto
 
 // NewChangeWatchResp is a constructor.
 func NewChangeWatchResp(ctx context.Context, message *DataChangeRequest, callback func(error)) *ChangeEvent {
@@ -89,7 +88,7 @@ func (ev *ChangeWatchResp) GetRevision() int64 {
 
 // GetValue - see the comments in the interface datasync.ChangeEvent.
 func (ev *ChangeWatchResp) GetValue(val proto.Message) error {
-	return jsonpb.Unmarshal(bytes.NewReader(ev.message.Content), val) //TODO use contentType...
+	return protojson.Unmarshal(ev.message.Content, val) //TODO use contentType...
 }
 
 // GetPrevValue returns the value before change.

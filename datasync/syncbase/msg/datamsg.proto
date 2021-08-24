@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+option go_package = "go.ligato.io/cn-infra/v2/datasync/syncbase/msg";
+
 //import "google/protobuf/timestamp.proto";
 
 package msg;

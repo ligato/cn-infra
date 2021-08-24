@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+option go_package = "go.ligato.io/cn-infra/v2/examples/tutorials/04_kv-store/model";
+
 package model;
 
 message Greetings {

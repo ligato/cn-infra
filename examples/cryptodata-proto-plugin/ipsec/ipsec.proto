@@ -1,4 +1,7 @@
 syntax = "proto3";
+
+option go_package = "go.ligato.io/cn-infra/v2/examples/cryptodata-proto-plugin/ipsec";
+
 package ipsec;
 
 /* Cryptographic algorithm for encryption */

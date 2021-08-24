@@ -21,8 +21,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/proto"
 
 	"go.ligato.io/cn-infra/v2/logging"
 	. "go.ligato.io/cn-infra/v2/logging/logrus"
