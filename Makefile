@@ -80,7 +80,8 @@ test-examples:
 generate: generate-proto
 
 get-proto-generators:
-	go install github.com/golang/protobuf/protoc-gen-go
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.27.1
+	go install -v google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0
 
 generate-proto: get-proto-generators ## Generate proto
 	@echo "# generating proto"

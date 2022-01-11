@@ -1,6 +1,5 @@
 syntax = "proto3";
 
-
 option go_package = "go.ligato.io/cn-infra/v2/health/statuscheck/model/status";
 
 // Package status provides data model for status information of the agent.

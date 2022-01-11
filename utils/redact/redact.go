@@ -18,9 +18,9 @@ package redact
 import (
 	"reflect"
 
-	proto2 "github.com/golang/protobuf/proto"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/runtime/protoiface"
+	"google.golang.org/protobuf/runtime/protoimpl"
 )
 
 // StringRedactor is the default redactor for strings.
@@ -53,7 +53,7 @@ func Value(v interface{}) interface{} {
 	case proto.Message:
 		return redactProto(x)
 	case protoiface.MessageV1:
-		return redactProto(proto2.MessageV2(x))
+		return redactProto(protoimpl.X.ProtoMessageV2Of(x))
 	}
 
 	return v

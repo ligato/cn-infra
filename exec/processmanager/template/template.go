@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate protoc --proto_path=model/process --go_out=model/process model/process/process.proto
-
 package template
+
+//go:generate protoc --proto_path=. --go_out=paths=source_relative:. model/process/process.proto
 
 import (
 	"encoding/json"

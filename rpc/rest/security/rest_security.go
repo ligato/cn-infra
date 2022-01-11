@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate protoc --proto_path=model/access-security --go_out=model/access-security model/access-security/accesssecurity.proto
-
 package security
+
+//go:generate protoc --proto_path=. --go_out=paths=source_relative:. model/access-security/accesssecurity.proto
 
 import (
 	"encoding/json"
