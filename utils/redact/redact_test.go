@@ -16,6 +16,7 @@ package redact_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"go.ligato.io/cn-infra/v2/utils/redact"
@@ -63,11 +64,15 @@ func TestProto(t *testing.T) {
 		Password: "password123",
 	}
 	const (
-		expected = `username:"bob" password:"***********"`
+		expectedUser     = `username:"bob"`
+		expectedPassword = `password:"***********"`
 	)
 	out := fmt.Sprint(redact.Value(data))
-	if out != expected {
-		t.Fatalf("expected:\n%q, but got:\n%q", expected, out)
+	if !strings.Contains(out, expectedUser) {
+		t.Fatalf("expected to contain:\n%q, but got:\n%q", expectedUser, out)
+	}
+	if !strings.Contains(out, expectedPassword) {
+		t.Fatalf("expected to contain:\n%q, but got:\n%q", expectedPassword, out)
 	}
 }
 

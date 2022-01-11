@@ -38,7 +38,7 @@ type testCtx struct {
 func setupTest(t *testing.T) *testCtx {
 	RegisterTestingT(t)
 
-	srv, err := testutil.NewTestServer()
+	srv, err := testutil.NewTestServerConfigT(t, nil)
 	if err != nil {
 		t.Fatal("setting up test server failed:", err)
 	}
