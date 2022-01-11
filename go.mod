@@ -18,7 +18,6 @@ require (
 	github.com/bsm/sarama-cluster v2.1.15+incompatible
 	github.com/coreos/go-systemd v0.0.0-20181031085051-9002847aa142 // indirect
 	github.com/coreos/pkg v0.0.0-20180108230652-97fdf19511ea // indirect
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/eapache/go-resiliency v1.1.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
@@ -30,6 +29,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-redis/redis v6.14.2+incompatible
 	github.com/gocql/gocql v0.0.0-20181030013202-a84ce58083d3
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang/protobuf v1.5.2
 	github.com/gomodule/redigo v2.0.0+incompatible // indirect
 	github.com/gorilla/context v1.1.1 // indirect
