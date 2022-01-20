@@ -18,8 +18,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/golang/protobuf/proto"
 	. "github.com/onsi/gomega"
+	"google.golang.org/protobuf/proto"
 
 	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/datasync/syncbase/msg"

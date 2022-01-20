@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 // DecryptFunc is function that decrypts input data

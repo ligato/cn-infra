@@ -15,10 +15,9 @@
 package datasync
 
 import (
-	"github.com/golang/protobuf/proto"
-
 	"go.ligato.io/cn-infra/v2/logging"
 	"go.ligato.io/cn-infra/v2/utils/safeclose"
+	"google.golang.org/protobuf/proto"
 )
 
 // KVProtoWatchers is an adapter that allows multiple

@@ -15,13 +15,13 @@
 package statuscheck
 
 import (
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"go.ligato.io/cn-infra/v2/health/statuscheck/model/status"
 	"go.ligato.io/cn-infra/v2/infra"
 )
 
-//go:generate protoc --proto_path=model/status --go_out=model/status model/status/status.proto
+//go:generate protoc --proto_path=model/status --go_out=paths=source_relative:model/status --go-grpc_out=paths=source_relative:model/status model/status/status.proto
 
 // PluginState is a data type used to describe the current operational state
 // of a plugin.

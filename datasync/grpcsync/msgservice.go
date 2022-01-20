@@ -33,6 +33,7 @@ func NewDataMsgServiceServer(adapter *Adapter) *DataMsgServiceServer {
 // DataMsgServiceServer is //TODO
 type DataMsgServiceServer struct {
 	adapter *Adapter
+	msg.UnimplementedDataMsgServiceServer
 }
 
 // DataChanges propagates the events in the stream to go channels of registered plugins.

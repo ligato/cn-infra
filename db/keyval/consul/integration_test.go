@@ -18,7 +18,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/consul/api"
-	"github.com/hashicorp/consul/testutil"
+	"github.com/hashicorp/consul/sdk/testutil"
 	. "github.com/onsi/gomega"
 
 	"go.ligato.io/cn-infra/v2/db/keyval"
@@ -38,7 +38,7 @@ type testCtx struct {
 func setupTest(t *testing.T) *testCtx {
 	RegisterTestingT(t)
 
-	srv, err := testutil.NewTestServer()
+	srv, err := testutil.NewTestServerConfigT(t, nil)
 	if err != nil {
 		t.Fatal("setting up test server failed:", err)
 	}

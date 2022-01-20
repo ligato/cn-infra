@@ -19,20 +19,24 @@ import (
 	"testing"
 	"time"
 
+	. "github.com/onsi/gomega"
+	"go.etcd.io/etcd/api/v3/mvccpb"
+	clientv3 "go.etcd.io/etcd/client/v3"
+	"golang.org/x/net/context"
+
 	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/db/keyval"
 	"go.ligato.io/cn-infra/v2/logging/logrus"
-
-	"github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/mvcc/mvccpb"
-	. "github.com/onsi/gomega"
-	"golang.org/x/net/context"
 )
 
 // MockKV mocks KV for Etcd client.
 type MockKV struct {
 	mem        map[string]string
 	shouldFail bool
+}
+
+func (mock *MockKV) RequestProgress(ctx context.Context) error {
+	panic("implement me")
 }
 
 func (mock *MockKV) Put(ctx context.Context, key, val string, opts ...clientv3.OpOption) (*clientv3.PutResponse, error) {

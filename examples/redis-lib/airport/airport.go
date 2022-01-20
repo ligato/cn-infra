@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate protoc --proto_path=./model --go_out=./model ./model/flight.proto
+//go:generate protoc --proto_path=./model --go_out=paths=source_relative:./model --go-grpc_out=paths=source_relative:./model ./model/flight.proto
 
 package main
 
@@ -35,7 +35,7 @@ import (
 	"go.ligato.io/cn-infra/v2/db/keyval"
 	"go.ligato.io/cn-infra/v2/db/keyval/kvproto"
 	"go.ligato.io/cn-infra/v2/db/keyval/redis"
-	"go.ligato.io/cn-infra/v2/examples/redis-lib/airport/model"
+	flight "go.ligato.io/cn-infra/v2/examples/redis-lib/airport/model"
 	"go.ligato.io/cn-infra/v2/logging"
 	"go.ligato.io/cn-infra/v2/logging/logrus"
 	"go.ligato.io/cn-infra/v2/utils/safeclose"

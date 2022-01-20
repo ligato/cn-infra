@@ -34,7 +34,7 @@ import (
 	"go.ligato.io/cn-infra/v2/servicelabel"
 )
 
-//go:generate protoc --proto_path=. --go_out=plugins=grpc:. ipsec/ipsec.proto
+//go:generate protoc --proto_path=. --go_out=paths=source_relative:. --go-grpc_out=paths=source_relative:. ipsec/ipsec.proto
 
 // PluginName represents name of plugin.
 const PluginName = "example"

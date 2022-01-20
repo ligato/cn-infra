@@ -16,6 +16,7 @@ package redact_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"go.ligato.io/cn-infra/v2/utils/redact"
@@ -63,11 +64,15 @@ func TestProto(t *testing.T) {
 		Password: "password123",
 	}
 	const (
-		expected = `username:"bob" password:"***********" `
+		expectedUser     = `username:"bob"`
+		expectedPassword = `password:"***********"`
 	)
 	out := fmt.Sprint(redact.Value(data))
-	if out != expected {
-		t.Fatalf("expected:\n%q, but got:\n%q", expected, out)
+	if !strings.Contains(out, expectedUser) {
+		t.Fatalf("expected to contain:\n%q, but got:\n%q", expectedUser, out)
+	}
+	if !strings.Contains(out, expectedPassword) {
+		t.Fatalf("expected to contain:\n%q, but got:\n%q", expectedPassword, out)
 	}
 }
 
@@ -79,10 +84,15 @@ func TestProtoNested(t *testing.T) {
 			Password: "password123",
 		},
 	}
-	const (
-		expectRedacted  = `name:"SomeName" data:<username:"bob" password:"***********" > `
-		expectUnchanged = `name:"SomeName" data:<username:"bob" password:"password123" > `
-	)
+	expectUnchanged := fmt.Sprint(data)
+	expectRedacted := fmt.Sprint(&testdata.TestNested{
+		Name: "SomeName",
+		Data: &testdata.TestData{
+			Username: "bob",
+			Password: "***********",
+		},
+	})
+
 	// check if nested data is redacted
 	out := fmt.Sprint(redact.Value(data))
 	if out != expectRedacted {
@@ -109,10 +119,21 @@ func TestProtoSlice(t *testing.T) {
 			},
 		},
 	}
-	const (
-		expectRedacted  = `name:"SomeName" data:<username:"bob" password:"***********" > data:<username:"alice" password:"******" > `
-		expectUnchanged = `name:"SomeName" data:<username:"bob" password:"password123" > data:<username:"alice" password:"123456" > `
-	)
+	expectUnchanged := fmt.Sprint(data)
+	expectRedacted := fmt.Sprint(&testdata.TestSlice{
+		Name: "SomeName",
+		Data: []*testdata.TestData{
+			{
+				Username: "bob",
+				Password: "***********",
+			},
+			{
+				Username: "alice",
+				Password: "******",
+			},
+		},
+	})
+
 	// check if nested data is redacted
 	out := fmt.Sprint(redact.Value(data))
 	if out != expectRedacted {

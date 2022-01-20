@@ -36,7 +36,7 @@ func NewAdapter(grpcServer *grpc.Server) *Adapter {
 		base:   syncbase.NewRegistry(),
 		server: grpcServer,
 	}
-	msg.RegisterDataMsgServiceServer(grpcServer, &DataMsgServiceServer{adapter})
+	msg.RegisterDataMsgServiceServer(grpcServer, &DataMsgServiceServer{adapter: adapter})
 
 	return adapter
 }

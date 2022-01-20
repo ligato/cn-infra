@@ -15,12 +15,12 @@
 package testdata
 
 import (
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"go.ligato.io/cn-infra/v2/utils/redact"
 )
 
-//go:generate protoc --proto_path=. --go_out=. model.proto
+//go:generate protoc --proto_path=. --go_out=paths=source_relative:. --go-grpc_out=paths=source_relative:. model.proto
 
 func (m *TestData) Redacted() interface{} {
 	r := proto.Clone(m).(*TestData)

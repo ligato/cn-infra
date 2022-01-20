@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"go.ligato.io/cn-infra/v2/db/keyval"
 )

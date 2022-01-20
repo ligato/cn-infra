@@ -18,7 +18,9 @@ package redact
 import (
 	"reflect"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/runtime/protoiface"
+	"google.golang.org/protobuf/runtime/protoimpl"
 )
 
 // StringRedactor is the default redactor for strings.
@@ -44,12 +46,14 @@ func Value(v interface{}) interface{} {
 	if val.Kind() == reflect.Ptr && val.IsNil() {
 		return v
 	}
-	
+
 	switch x := v.(type) {
 	case Redactor:
 		return x.Redacted()
 	case proto.Message:
 		return redactProto(x)
+	case protoiface.MessageV1:
+		return redactProto(protoimpl.X.ProtoMessageV2Of(x))
 	}
 
 	return v

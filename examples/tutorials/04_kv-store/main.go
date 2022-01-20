@@ -28,7 +28,7 @@ import (
 	"go.ligato.io/cn-infra/v2/logging"
 )
 
-//go:generate protoc --proto_path=model --go_out=model ./model/model.proto
+//go:generate protoc --proto_path=model --go_out=paths=source_relative:model --go-grpc_out=paths=source_relative:model ./model/model.proto
 
 func main() {
 	// Create an instance of our plugin using its constructor.

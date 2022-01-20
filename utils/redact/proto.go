@@ -18,11 +18,12 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 var redactorType = reflect.TypeOf((*Redactor)(nil)).Elem()
-var protoMsgType = reflect.TypeOf((*proto.Message)(nil)).Elem()
+var protoMsgType = reflect.TypeOf((*protoreflect.Message)(nil)).Elem()
 
 func redactProto(msg proto.Message) proto.Message {
 	if !ContainsRedacted(msg) {
