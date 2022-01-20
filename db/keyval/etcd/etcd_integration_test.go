@@ -21,7 +21,7 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
-	"go.etcd.io/etcd/etcdserver/api/v3client"
+	"go.etcd.io/etcd/server/v3/etcdserver/api/v3client"
 
 	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/db/keyval"

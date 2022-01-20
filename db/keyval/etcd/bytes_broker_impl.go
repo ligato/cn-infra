@@ -17,15 +17,15 @@ package etcd
 import (
 	"time"
 
+	"go.etcd.io/etcd/api/v3/mvccpb"
+	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/client/v3/concurrency"
+	"go.etcd.io/etcd/client/v3/namespace"
+	"golang.org/x/net/context"
+
 	"go.ligato.io/cn-infra/v2/datasync"
 	"go.ligato.io/cn-infra/v2/db/keyval"
 	"go.ligato.io/cn-infra/v2/logging"
-
-	"go.etcd.io/etcd/clientv3"
-	"go.etcd.io/etcd/clientv3/concurrency"
-	"go.etcd.io/etcd/clientv3/namespace"
-	"go.etcd.io/etcd/mvcc/mvccpb"
-	"golang.org/x/net/context"
 )
 
 // BytesConnectionEtcd encapsulates the connection to etcd.

@@ -15,7 +15,7 @@
 package etcd
 
 import (
-	"go.etcd.io/etcd/clientv3"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"golang.org/x/net/context"
 
 	"go.ligato.io/cn-infra/v2/db/keyval"
