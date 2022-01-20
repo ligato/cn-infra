@@ -35,8 +35,8 @@
 //  cert-file: <filepath>
 //  insecure-skip-tls-verify: <bool>
 //  insecure-transport: <bool>
-//  dial-timeout: <nanoseconds>
-//  operation-timeout: <nanoseconds>
+//  dial-timeout: <duration>
+//  operation-timeout: <duration>
 //  endpoints:
 //    - <address_1>:<port>
 //    - <address_2>:<port>

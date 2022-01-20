@@ -143,10 +143,10 @@ after login, which grants him access to all permitted sites. The token is valid 
 The expiration time is a token claim, set in the config file:
 
 ```
-token-expiration: 600000000000  
+token-expiration: 1h
 ```
 
-Note that time is in nanoseconds. If no time is provided, the default value of 1 hour is set.
+If no time is provided, the default value of 1 hour is set.
 
 Token uses by default pre-defined signature string as the key to sign it. This can be also 
 changed via config file:
