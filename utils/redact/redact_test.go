@@ -77,8 +77,6 @@ func TestProto(t *testing.T) {
 }
 
 func TestProtoNested(t *testing.T) {
-	t.Skip("TODO")
-
 	data := &testdata.TestNested{
 		Name: "SomeName",
 		Data: &testdata.TestData{
@@ -86,10 +84,15 @@ func TestProtoNested(t *testing.T) {
 			Password: "password123",
 		},
 	}
-	const (
-		expectRedacted  = `name:"SomeName" data:<username:"bob" password:"***********" > `
-		expectUnchanged = `name:"SomeName" data:<username:"bob" password:"password123" > `
-	)
+	expectUnchanged := fmt.Sprint(data)
+	expectRedacted := fmt.Sprint(&testdata.TestNested{
+		Name: "SomeName",
+		Data: &testdata.TestData{
+			Username: "bob",
+			Password: "***********",
+		},
+	})
+
 	// check if nested data is redacted
 	out := fmt.Sprint(redact.Value(data))
 	if out != expectRedacted {
@@ -103,8 +106,6 @@ func TestProtoNested(t *testing.T) {
 }
 
 func TestProtoSlice(t *testing.T) {
-	t.Skip("TODO")
-
 	data := &testdata.TestSlice{
 		Name: "SomeName",
 		Data: []*testdata.TestData{
@@ -118,10 +119,21 @@ func TestProtoSlice(t *testing.T) {
 			},
 		},
 	}
-	const (
-		expectRedacted  = `name:"SomeName" data:<username:"bob" password:"***********" > data:<username:"alice" password:"******" > `
-		expectUnchanged = `name:"SomeName" data:<username:"bob" password:"password123" > data:<username:"alice" password:"123456" > `
-	)
+	expectUnchanged := fmt.Sprint(data)
+	expectRedacted := fmt.Sprint(&testdata.TestSlice{
+		Name: "SomeName",
+		Data: []*testdata.TestData{
+			{
+				Username: "bob",
+				Password: "***********",
+			},
+			{
+				Username: "alice",
+				Password: "******",
+			},
+		},
+	})
+
 	// check if nested data is redacted
 	out := fmt.Sprint(redact.Value(data))
 	if out != expectRedacted {
