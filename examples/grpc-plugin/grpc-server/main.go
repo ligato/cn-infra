@@ -81,7 +81,9 @@ func (p *ExamplePlugin) Close() error {
 
 // GreeterService implements GRPC GreeterServer interface (interface generated from protobuf definition file).
 // It is a simple implementation for testing/demo only purposes.
-type GreeterService struct{}
+type GreeterService struct {
+	helloworld.UnimplementedGreeterServer
+}
 
 // SayHello returns error if request.name was not filled otherwise: "hello " + request.Name
 func (*GreeterService) SayHello(ctx context.Context, request *helloworld.HelloRequest) (*helloworld.HelloReply, error) {
