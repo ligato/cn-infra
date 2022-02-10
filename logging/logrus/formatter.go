@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 )
@@ -47,7 +46,7 @@ func sortKeys(keys []string) {
 			keys[i] == FunctionKey && keys[j] != LocationKey {
 			return false
 		}
-		return strings.Compare(keys[i], keys[j]) == -1
+		return keys[i] < keys[j]
 	})
 }
 
