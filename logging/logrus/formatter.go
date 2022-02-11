@@ -17,7 +17,6 @@ package logrus
 import (
 	"fmt"
 	"path/filepath"
-	"sort"
 
 	"github.com/sirupsen/logrus"
 )
@@ -36,6 +35,8 @@ const (
 	LocationKey = "loc"
 )
 
+/* TODO: fix sorting
+
 func sortKeys(keys []string) {
 	sort.SliceStable(keys, func(i, j int) bool {
 		if keys[j] == LocationKey && keys[i] != FunctionKey ||
@@ -48,7 +49,7 @@ func sortKeys(keys []string) {
 		}
 		return keys[i] < keys[j]
 	})
-}
+}*/
 
 type Formatter struct {
 	Function bool
@@ -63,7 +64,7 @@ func NewFormatter() *Formatter {
 		Formatter: &logrus.TextFormatter{
 			EnvironmentOverrideColors: true,
 			TimestampFormat:           "2006-01-02 15:04:05.00000",
-			SortingFunc:               sortKeys,
+			//SortingFunc:               sortKeys,
 		},
 	}
 }
