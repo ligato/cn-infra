@@ -26,7 +26,7 @@ require (
 	github.com/namsral/flag v1.7.4-pre
 	github.com/onsi/gomega v1.4.3
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/client_golang v1.11.1
 	github.com/sirupsen/logrus v1.7.0
 	github.com/unrolled/render v0.0.0-20180914162206-b9786414de4d
 	github.com/willfaught/gockle v0.0.0-20160623235217-4f254e1e0f0a
