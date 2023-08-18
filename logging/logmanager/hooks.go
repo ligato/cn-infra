@@ -3,6 +3,7 @@ package logmanager
 import (
 	"fmt"
 	"log/syslog"
+	"net"
 	"strconv"
 
 	"github.com/bshuster-repo/logrus-logstash-hook"
@@ -47,10 +48,14 @@ func (p *Plugin) addHook(hookName string, hookConfig HookConfig) error {
 			p.ServiceLabel.GetAgentLabel(),
 		)
 	case HookLogStash:
-		lgHook, err = logrustash.NewHook(
-			hookConfig.Protocol,
-			hookConfig.Address+":"+strconv.Itoa(hookConfig.Port),
-			p.ServiceLabel.GetAgentLabel(),
+		var conn net.Conn
+		conn, err = net.Dial(hookConfig.Protocol, hookConfig.Address+":"+strconv.Itoa(hookConfig.Port))
+		if err != nil {
+			break
+		}
+		lgHook = logrustash.New(
+			conn,
+			logrustash.DefaultFormatter(logrus.Fields{"type": p.ServiceLabel.GetAgentLabel()}),
 		)
 	case HookFluent:
 		lgHook, err = logrus_fluent.NewWithConfig(logrus_fluent.Config{
