@@ -7,7 +7,7 @@ require (
 	github.com/Songmu/prompter v0.0.0-20150725163906-b5721e8d5566
 	github.com/alicebob/miniredis v2.4.5+incompatible
 	github.com/boltdb/bolt v1.3.2-0.20180302180052-fd01fc79c553
-	github.com/bshuster-repo/logrus-logstash-hook v0.4.1
+	github.com/bshuster-repo/logrus-logstash-hook v1.1.0
 	github.com/bsm/sarama-cluster v2.1.15+incompatible
 	github.com/evalphobia/logrus_fluent v0.4.0
 	github.com/fsnotify/fsnotify v1.4.7
@@ -27,7 +27,7 @@ require (
 	github.com/onsi/gomega v1.4.3
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.1
-	github.com/sirupsen/logrus v1.7.0
+	github.com/sirupsen/logrus v1.8.1
 	github.com/unrolled/render v0.0.0-20180914162206-b9786414de4d
 	github.com/willfaught/gockle v0.0.0-20160623235217-4f254e1e0f0a
 	go.etcd.io/etcd/api/v3 v3.5.7
